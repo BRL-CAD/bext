@@ -207,6 +207,10 @@ function(add_project pname)
   endforeach(grp ${A_GROUPS})
 endfunction(add_project pname)
 
+# With git submodules it's common to forget to clone with --recurse-submodules
+if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/patch/patch/README.md")
+  message(FATAL_ERROR "Repository clone is not fully populated - run \"git submodule update --init --recursive\" to correct this.\n\nTo clone with modules initially, use the \"git clone --recurse-submodules\" option")
+endif (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/patch/patch/README.md")
 
 ###############################################################################
 # Applying patch files cross platform is a challenging problem due to the
