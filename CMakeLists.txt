@@ -225,7 +225,7 @@ add_subdirectory(patch)
 # build targets intended for distribution, these outputs are all
 # targeted to the extnoinstall subdirectory.
 ###############################################################################
-#add_subdirectory(astyle)
+add_subdirectory(astyle)
 #add_subdirectory(lief)
 #add_subdirectory(perplex)
 #add_subdirectory(plief)
