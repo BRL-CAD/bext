@@ -226,7 +226,7 @@ add_subdirectory(patch)
 # targeted to the extnoinstall subdirectory.
 ###############################################################################
 add_subdirectory(astyle)
-#add_subdirectory(lief)
+add_subdirectory(lief)
 #add_subdirectory(perplex)
 #add_subdirectory(plief)
 #add_subdirectory(strclear)
