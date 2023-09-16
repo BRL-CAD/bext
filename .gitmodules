@@ -1,0 +1,3 @@
+[submodule "patch/patch"]
+	path = patch/patch
+	url = https://github.com/BRL-CAD/patch
