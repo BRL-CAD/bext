@@ -1,0 +1,15 @@
+--- opennurbs/example_brep/example_brep.cpp	2023-09-09 13:52:46.069647659 -0400
++++ openNURBS/example_brep/example_brep.cpp	2023-09-09 13:43:33.728976149 -0400
+@@ -589,9 +589,9 @@
+     brep = NULL;
+   }
+ 
+-  //ON_BOOL32 bIsManifold;
+-  //ON_BOOL32 bHasBoundary;
+-  //ON_BOOL32 b = brep->IsManifold( &bIsManifold,&bHasBoundary );
++  //bool bIsManifold;
++  //bool bHasBoundary;
++  //bool b = brep->IsManifold( &bIsManifold,&bHasBoundary );
+ 
+   return brep;
+ }

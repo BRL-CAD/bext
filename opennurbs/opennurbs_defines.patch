@@ -1,0 +1,32 @@
+--- opennurbs/opennurbs_defines.h	2023-09-09 13:52:46.157646417 -0400
++++ openNURBS/opennurbs_defines.h	2023-09-09 13:43:33.712976340 -0400
+@@ -102,6 +102,11 @@
+ #define ON_DECL __attribute__ ((visibility ("default")))
+ #define ON_EXTERN_DECL __attribute__ ((visibility ("default")))
+ 
++#elif defined(__GNUC__)
++#define ON_CLASS __attribute__ ((visibility ("default")))
++#define ON_DECL __attribute__ ((visibility ("default")))
++#define ON_EXTERN_DECL __attribute__ ((visibility ("default")))
++
+ #else
+ #error fill in your compiler dynamic linking decorations
+ #endif
+@@ -2133,7 +2138,7 @@
+   // the values.  The reason for the gaps between the enum
+   // values is to leave room for future snaps with prededence
+   // falling between existing snaps
+-  enum osnap_mode
++  enum osnap_mode: unsigned int
+   {
+     os_none          =          0,
+     os_near          =          2,
+@@ -2409,7 +2414,7 @@
+   // Do not change these values; they are stored in 3dm archives
+   // and provide a persistent way to indentify components of
+   // complex objects.
+-  enum TYPE
++  enum TYPE: unsigned int
+   {
+     invalid_type       =   0,
+ 

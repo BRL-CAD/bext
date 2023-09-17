@@ -1,0 +1,20 @@
+--- opennurbs/opennurbs_light.cpp	2023-09-09 13:52:46.161646361 -0400
++++ openNURBS/opennurbs_light.cpp	2023-09-09 13:43:33.720976246 -0400
+@@ -499,7 +499,7 @@
+ 
+ void ON_Light::SetAttenuation(double a,double b,double c)
+ {
+-  m_attenuation = ON_3dVector(a,b,c);;
++  m_attenuation = ON_3dVector(a,b,c);
+ }
+ 
+ void ON_Light::SetAttenuation(const ON_3dVector& att )
+@@ -709,7 +709,7 @@
+ 
+ void ON_Light::SetSpecular( ON_Color c )
+ {
+-  m_specular = c;;
++  m_specular = c;
+ }
+ 
+ ON_Color ON_Light::Ambient() const

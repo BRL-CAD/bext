@@ -1,0 +1,11 @@
+--- opennurbs/opennurbs.h	2023-09-09 13:52:46.153646473 -0400
++++ openNURBS/opennurbs.h	2023-09-09 13:43:33.708976388 -0400
+@@ -164,6 +164,8 @@
+ #include "opennurbs_dimension.h"
+ #include "opennurbs_dimensionformat.h" // Formatting dimension measurements to strings
+ 
++#include "opennurbs_x.h"               // intersection events
++
+ #include "opennurbs_photogrammetry.h"
+ 
+ #include "opennurbs_extensions.h"

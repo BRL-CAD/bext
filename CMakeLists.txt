@@ -326,7 +326,7 @@ add_project(openmesh GROUPS "BRLCAD")
 
 # openNURBS - Non-Uniform Rational BSpline library
 # https://github.com/mcneel/opennurbs
-#add_project(opennurbs GROUPS "BRLCAD")
+add_project(opennurbs GROUPS "BRLCAD")
 
 # OSMesa - Off Screen Mesa Rendering Library
 #add_project(osmesa GROUPS "BRLCAD")

@@ -1,0 +1,20 @@
+--- opennurbs/opennurbs_lookup.cpp	2023-09-09 13:52:46.161646361 -0400
++++ openNURBS/opennurbs_lookup.cpp	2023-09-09 13:43:33.720976246 -0400
+@@ -709,6 +709,9 @@
+   return m_active_id_count;
+ }
+ 
++// NOTE - optimization currently disabled for FirstElement due to compiler bug
++// in VS2022 - see https://github.com/microsoft/vcpkg/issues/19561
++#pragma optimize("", off)
+ struct ON_SerialNumberMap::SN_ELEMENT* ON_SerialNumberMap::FirstElement() const
+ {
+   struct SN_ELEMENT* e=0;
+@@ -768,6 +771,7 @@
+   }
+   return e;
+ }
++#pragma optimize("", on)
+ 
+ struct ON_SerialNumberMap::SN_ELEMENT* ON_SerialNumberMap::LastElement() const
+ {

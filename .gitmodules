@@ -80,3 +80,7 @@
 	path = openmesh/OpenMesh
 	url = https://github.com/BRL-CAD/OpenMesh
 	branch = RELEASE
+[submodule "opennurbs/opennurbs"]
+	path = opennurbs/opennurbs
+	url = https://github.com/BRL-CAD/opennurbs
+	branch = RELEASE

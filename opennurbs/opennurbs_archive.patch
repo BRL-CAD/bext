@@ -1,0 +1,11 @@
+--- opennurbs/opennurbs_archive.cpp	2023-09-09 13:52:46.153646473 -0400
++++ openNURBS/opennurbs_archive.cpp	2023-09-09 13:43:33.712976340 -0400
+@@ -3032,7 +3032,7 @@
+ bool ON_BinaryArchive::WriteBigSize(size_t sz)
+ {
+   ON__UINT64 u = (ON__UINT64)sz;
+-  return WriteInt64(1,(ON__INT64*)&u);;
++  return WriteInt64(1,(ON__INT64*)&u);
+ }
+ 
+ bool ON_BinaryArchive::ReadBigSize( size_t* sz )
