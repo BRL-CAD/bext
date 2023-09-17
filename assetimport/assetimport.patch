@@ -1,0 +1,308 @@
+diff -Naurw assimp-5.2.5/cmake-modules/FindZLIB.cmake assetimport/cmake-modules/FindZLIB.cmake
+--- assimp-5.2.5/cmake-modules/FindZLIB.cmake	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/cmake-modules/FindZLIB.cmake	2023-08-23 14:25:43.874725903 -0400
+@@ -1,48 +1,123 @@
+-#-------------------------------------------------------------------
+-# This file is part of the CMake build system for OGRE
+-#     (Object-oriented Graphics Rendering Engine)
+-# For the latest info, see http://www.ogre3d.org/
+-#
+-# The contents of this file are placed in the public domain. Feel
+-# free to make use of it in any way you like.
+-#-------------------------------------------------------------------
+-
+-# - Try to find ZLIB
+-# Once done, this will define
+-#
+-#  ZLIB_FOUND - system has ZLIB
+-#  ZLIB_INCLUDE_DIRS - the ZLIB include directories
+-#  ZLIB_LIBRARIES - link these to use ZLIB
+-
+-include(FindPkgMacros)
+-findpkg_begin(ZLIB)
+-
+-# Get path, convert backslashes as ${ENV_${var}}
+-getenv_path(ZLIB_HOME)
+-
+-# construct search paths
+-set(ZLIB_PREFIX_PATH ${ZLIB_HOME} ${ENV_ZLIB_HOME})
+-create_search_paths(ZLIB)
+-# redo search if prefix path changed
+-clear_if_changed(ZLIB_PREFIX_PATH
+-  ZLIB_LIBRARY_FWK
+-  ZLIB_LIBRARY_REL
+-  ZLIB_LIBRARY_DBG
+-  ZLIB_INCLUDE_DIR
+-)
+-
+-set(ZLIB_LIBRARY_NAMES z zlib zdll)
+-get_debug_names(ZLIB_LIBRARY_NAMES)
+-
+-use_pkgconfig(ZLIB_PKGC zzip-zlib-config)
+-
+-findpkg_framework(ZLIB)
+-
+-find_path(ZLIB_INCLUDE_DIR NAMES zlib.h HINTS ${ZLIB_INC_SEARCH_PATH} ${ZLIB_PKGC_INCLUDE_DIRS})
+-find_library(ZLIB_LIBRARY_REL NAMES ${ZLIB_LIBRARY_NAMES} HINTS ${ZLIB_LIB_SEARCH_PATH} ${ZLIB_PKGC_LIBRARY_DIRS} PATH_SUFFIXES "" release relwithdebinfo minsizerel)
+-find_library(ZLIB_LIBRARY_DBG NAMES ${ZLIB_LIBRARY_NAMES_DBG} HINTS ${ZLIB_LIB_SEARCH_PATH} ${ZLIB_PKGC_LIBRARY_DIRS} PATH_SUFFIXES "" debug)
++#.rst:
++# FindZLIB
++# --------
++#
++# Find the native ZLIB includes and library.
++#
++# IMPORTED Targets
++# ^^^^^^^^^^^^^^^^
++#
++# This module defines :prop_tgt:`IMPORTED` target ``ZLIB::ZLIB``, if
++# ZLIB has been found.
++#
++# Result Variables
++# ^^^^^^^^^^^^^^^^
++#
++# This module defines the following variables:
++#
++# ::
++#
++#   ZLIB_INCLUDE_DIRS   - where to find zlib.h, etc.
++#   ZLIB_LIBRARIES      - List of libraries when using zlib.
++#   ZLIB_FOUND          - True if zlib found.
++#
++# ::
++#
++#   ZLIB_VERSION_STRING - The version of zlib found (x.y.z)
++#   ZLIB_VERSION_MAJOR  - The major version of zlib
++#   ZLIB_VERSION_MINOR  - The minor version of zlib
++#   ZLIB_VERSION_PATCH  - The patch version of zlib
++#   ZLIB_VERSION_TWEAK  - The tweak version of zlib
++#
++# Backward Compatibility
++# ^^^^^^^^^^^^^^^^^^^^^^
++#
++# The following variable are provided for backward compatibility
++#
++# ::
++#
++#   ZLIB_MAJOR_VERSION  - The major version of zlib
++#   ZLIB_MINOR_VERSION  - The minor version of zlib
++#   ZLIB_PATCH_VERSION  - The patch version of zlib
++#
++# Hints
++# ^^^^^
++#
++# A user may set ``ZLIB_ROOT`` to a zlib installation root to tell this
++# module where to look.
+ 
+-make_library_set(ZLIB_LIBRARY)
++#=============================================================================
++# Copyright 2001-2011 Kitware, Inc.
++#
++# Distributed under the OSI-approved BSD License (the "License");
++# see accompanying file Copyright.txt for details.
++#
++# This software is distributed WITHOUT ANY WARRANTY; without even the
++# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++# See the License for more information.
++#=============================================================================
++# (To distribute this file outside of CMake, substitute the full
++#  License text for the above reference.)
++
++set(_ZLIB_SEARCHES)
++
++# Search ZLIB_ROOT first if it is set.
++if(ZLIB_ROOT)
++  set(_ZLIB_SEARCH_ROOT PATHS ${ZLIB_ROOT} NO_DEFAULT_PATH)
++  list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_ROOT)
++endif()
++
++# Normal search.
++set(_ZLIB_SEARCH_NORMAL
++  PATHS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\GnuWin32\\Zlib;InstallPath]"
++        "$ENV{PROGRAMFILES}/zlib"
++  )
++list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_NORMAL)
+ 
+-findpkg_finish(ZLIB)
++set(ZLIB_NAMES z_brl z zlib zdll zlib1 zlibd zlibd1)
+ 
++# Try each search configuration.
++foreach(search ${_ZLIB_SEARCHES})
++  find_path(ZLIB_INCLUDE_DIR NAMES zlib.h        ${${search}} PATH_SUFFIXES include)
++  find_library(ZLIB_LIBRARY  NAMES ${ZLIB_NAMES} ${${search}} PATH_SUFFIXES lib)
++endforeach()
++
++mark_as_advanced(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
++
++if(ZLIB_INCLUDE_DIR AND EXISTS "${ZLIB_INCLUDE_DIR}/zlib.h")
++    file(STRINGS "${ZLIB_INCLUDE_DIR}/zlib.h" ZLIB_H REGEX "^#define ZLIB_VERSION \"[^\"]*\"$")
++
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"([0-9]+).*$" "\\1" ZLIB_VERSION_MAJOR "${ZLIB_H}")
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_MINOR  "${ZLIB_H}")
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_PATCH "${ZLIB_H}")
++    set(ZLIB_VERSION_STRING "${ZLIB_VERSION_MAJOR}.${ZLIB_VERSION_MINOR}.${ZLIB_VERSION_PATCH}")
++
++    # only append a TWEAK version if it exists:
++    set(ZLIB_VERSION_TWEAK "")
++    if( "${ZLIB_H}" MATCHES "ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.[0-9]+\\.([0-9]+)")
++        set(ZLIB_VERSION_TWEAK "${CMAKE_MATCH_1}")
++        set(ZLIB_VERSION_STRING "${ZLIB_VERSION_STRING}.${ZLIB_VERSION_TWEAK}")
++    endif()
++
++    set(ZLIB_MAJOR_VERSION "${ZLIB_VERSION_MAJOR}")
++    set(ZLIB_MINOR_VERSION "${ZLIB_VERSION_MINOR}")
++    set(ZLIB_PATCH_VERSION "${ZLIB_VERSION_PATCH}")
++endif()
++
++# handle the QUIETLY and REQUIRED arguments and set ZLIB_FOUND to TRUE if
++# all listed variables are TRUE
++include(FindPackageHandleStandardArgs)
++FIND_PACKAGE_HANDLE_STANDARD_ARGS(ZLIB REQUIRED_VARS ZLIB_LIBRARY ZLIB_INCLUDE_DIR
++                                       VERSION_VAR ZLIB_VERSION_STRING)
++
++if(ZLIB_FOUND)
++    set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
++    set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
++
++    if(NOT TARGET ZLIB::ZLIB)
++      add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
++      set_target_properties(ZLIB::ZLIB PROPERTIES
++        IMPORTED_LOCATION "${ZLIB_LIBRARY}"
++        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
++    endif()
++endif()
+diff -Naurw assimp-5.2.5/code/AssetLib/Collada/ColladaParser.cpp assetimport/code/AssetLib/Collada/ColladaParser.cpp
+--- assimp-5.2.5/code/AssetLib/Collada/ColladaParser.cpp	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/code/AssetLib/Collada/ColladaParser.cpp	2023-08-23 14:25:43.878725829 -0400
+@@ -67,7 +67,7 @@
+     va_start(args, msg);
+ 
+     char szBuffer[3000];
+-    const int iLen = vsprintf(szBuffer, msg, args);
++    const int iLen = vsnprintf(szBuffer, 3000, msg, args);
+     ai_assert(iLen > 0);
+ 
+     va_end(args);
+diff -Naurw assimp-5.2.5/code/AssetLib/FBX/FBXExporter.cpp assetimport/code/AssetLib/FBX/FBXExporter.cpp
+--- assimp-5.2.5/code/AssetLib/FBX/FBXExporter.cpp	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/code/AssetLib/FBX/FBXExporter.cpp	2023-08-23 14:25:43.878725829 -0400
+@@ -1228,7 +1228,7 @@
+                 "Version", int32_t(101), outstream, binary, indent
+             );
+             char layerName[8];
+-            sprintf(layerName, "COLOR_%d", colorChannelIndex);
++            snprintf(layerName, 8, "COLOR_%d", colorChannelIndex);
+             FBX::Node::WritePropertyNode(
+                 "Name", (const char*)layerName, outstream, binary, indent
+             );
+diff -Naurw assimp-5.2.5/code/AssetLib/MD5/MD5Parser.cpp assetimport/code/AssetLib/MD5/MD5Parser.cpp
+--- assimp-5.2.5/code/AssetLib/MD5/MD5Parser.cpp	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/code/AssetLib/MD5/MD5Parser.cpp	2023-08-23 14:25:43.882725753 -0400
+@@ -102,7 +102,7 @@
+ // Report warning to the log stream
+ /*static*/ void MD5Parser::ReportWarning(const char *warn, unsigned int line) {
+     char szBuffer[1024];
+-    ::sprintf(szBuffer, "[MD5] Line %u: %s", line, warn);
++    ::snprintf(szBuffer, 1024, "[MD5] Line %u: %s", line, warn);
+     ASSIMP_LOG_WARN(szBuffer);
+ }
+ 
+diff -Naurw assimp-5.2.5/code/AssetLib/MDL/MDLFileData.h assetimport/code/AssetLib/MDL/MDLFileData.h
+--- assimp-5.2.5/code/AssetLib/MDL/MDLFileData.h	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/code/AssetLib/MDL/MDLFileData.h	2023-08-23 14:25:43.882725753 -0400
+@@ -876,7 +876,7 @@
+         : apcOutBones(),
+         iNum()
+     {
+-        abNeedMaterials.reserve(10);
++        //abNeedMaterials.resize(10);
+     }
+ 
+     //! Destruction: properly delete all allocated resources
+diff -Naurw assimp-5.2.5/code/AssetLib/MDL/MDLLoader.cpp assetimport/code/AssetLib/MDL/MDLLoader.cpp
+--- assimp-5.2.5/code/AssetLib/MDL/MDLLoader.cpp	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/code/AssetLib/MDL/MDLLoader.cpp	2023-08-23 14:25:43.882725753 -0400
+@@ -298,7 +298,7 @@
+         }
+ 
+         char szBuffer[1024];
+-        ::sprintf(szBuffer, "Invalid MDL file. The file is too small "
++        ::snprintf(szBuffer, 1024, "Invalid MDL file. The file is too small "
+                             "or contains invalid data (File: %s Line: %u)",
+                 szFilePtr, iLine);
+ 
+diff -Naurw assimp-5.2.5/code/CMakeLists.txt assetimport/code/CMakeLists.txt
+--- assimp-5.2.5/code/CMakeLists.txt	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/code/CMakeLists.txt	2023-08-23 14:25:43.886725678 -0400
+@@ -1242,6 +1242,7 @@
+   TARGET_LINK_LIBRARIES(assimp ${C4D_EXTRA_LIBRARIES})
+ ENDIF ()
+ 
++if(0)
+ if( MSVC )
+   # in order to prevent DLL hell, each of the DLLs have to be suffixed with the major version and msvc prefix
+   # CMake 3.12 added a variable for this
+@@ -1288,11 +1289,12 @@
+     target_compile_definitions(assimp PUBLIC WindowsStore)
+     TARGET_LINK_LIBRARIES(assimp advapi32)
+ endif()
++endif(0)
+ 
+ SET_TARGET_PROPERTIES( assimp PROPERTIES
+   VERSION ${ASSIMP_VERSION}
+   SOVERSION ${ASSIMP_SOVERSION} # use full version
+-  OUTPUT_NAME assimp${LIBRARY_SUFFIX}
++  #OUTPUT_NAME assimp${LIBRARY_SUFFIX}
+ )
+ 
+ if (APPLE)
+diff -Naurw assimp-5.2.5/code/PostProcessing/ValidateDataStructure.cpp assetimport/code/PostProcessing/ValidateDataStructure.cpp
+--- assimp-5.2.5/code/PostProcessing/ValidateDataStructure.cpp	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/code/PostProcessing/ValidateDataStructure.cpp	2023-08-23 14:25:43.890725602 -0400
+@@ -80,7 +80,7 @@
+     va_start(args, msg);
+ 
+     char szBuffer[3000];
+-    const int iLen = vsprintf(szBuffer, msg, args);
++    const int iLen = vsnprintf(szBuffer, 3000, msg, args);
+     ai_assert(iLen > 0);
+ 
+     va_end(args);
+@@ -95,7 +95,7 @@
+     va_start(args, msg);
+ 
+     char szBuffer[3000];
+-    const int iLen = vsprintf(szBuffer, msg, args);
++    const int iLen = vsnprintf(szBuffer, 3000, msg, args);
+     ai_assert(iLen > 0);
+ 
+     va_end(args);
+diff -Naurw assimp-5.2.5/contrib/openddlparser/code/OpenDDLExport.cpp assetimport/contrib/openddlparser/code/OpenDDLExport.cpp
+--- assimp-5.2.5/contrib/openddlparser/code/OpenDDLExport.cpp	2022-09-08 14:13:43.000000000 -0400
++++ assetimport/contrib/openddlparser/code/OpenDDLExport.cpp	2023-08-23 14:25:43.910725227 -0400
+@@ -224,7 +224,7 @@
+         statement += "[";
+         char buffer[256];
+         ::memset(buffer, '\0', 256 * sizeof(char));
+-        sprintf(buffer, "%d", static_cast<int>(numItems));
++        snprintf(buffer, 256, "%d", static_cast<int>(numItems));
+         statement += buffer;
+         statement += "]";
+     }
+@@ -255,7 +255,7 @@
+             std::stringstream stream;
+             char buffer[256];
+             ::memset(buffer, '\0', 256 * sizeof(char));
+-            sprintf(buffer, "%d", val->getInt16());
++            snprintf(buffer, 256, "%d", val->getInt16());
+             statement += buffer;
+         } break;
+         case Value::ValueType::ddl_int32: {
+@@ -263,7 +263,7 @@
+             char buffer[256];
+             ::memset(buffer, '\0', 256 * sizeof(char));
+             const int i = static_cast<int>(val->getInt32());
+-            sprintf(buffer, "%d", i);
++            snprintf(buffer, 256, "%d", i);
+             statement += buffer;
+         } break;
+         case Value::ValueType::ddl_int64: {

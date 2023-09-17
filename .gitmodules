@@ -68,3 +68,7 @@
 	path = gdal/gdal
 	url = https://github.com/BRL-CAD/gdal
 	branch = RELEASE
+[submodule "assetimport/assimp"]
+	path = assetimport/assimp
+	url = https://github.com/BRL-CAD/assimp
+	branch = RELEASE

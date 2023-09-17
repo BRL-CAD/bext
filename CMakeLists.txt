@@ -311,6 +311,33 @@ add_project(proj GROUPS "GDAL")
 # https://gdal.org
 add_project(gdal GROUPS "GDAL")
 
+# Open Asset Import Library - library for supporting I/O for a number of
+# Geometry file formats
+# https://github.com/assimp/assimp
+add_project(assetimport GROUPS "BRLCAD")
+
+# OpenCV - Open Source Computer Vision Library
+# http://opencv.org
+#add_project(opencv)
+
+# OpenMesh Library - library for representing and manipulating polygonal meshes
+# https://www.graphics.rwth-aachen.de/software/openmesh/
+#add_project(openmesh)
+
+# openNURBS - Non-Uniform Rational BSpline library
+# https://github.com/mcneel/opennurbs
+#add_project(opennurbs)
+
+# OSMesa - Off Screen Mesa Rendering Library
+#add_project(osmesa)
+
+# Poly2Tri - constrained Delaunay triangulation
+#add_project(poly2tri)
+
+# UtahRLE - Raster Image library
+#add_project(utahrle)
+
+
 # Local Variables:
 # tab-width: 8
 # mode: cmake
