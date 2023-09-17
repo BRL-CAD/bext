@@ -11,3 +11,7 @@
 [submodule "lemon/lemon"]
 	path = lemon/lemon
 	url = https://github.com/BRL-CAD/lemon
+[submodule "re2c/re2c"]
+	path = re2c/re2c
+	url = https://github.com/BRL-CAD/re2c
+	branch = RELEASE

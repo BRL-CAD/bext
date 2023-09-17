@@ -1,0 +1,51 @@
+# Unless we have ENABLE_ALL set, base the building of re2c on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_RE2C)
+  set(ENABLE_RE2C ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_RE2C)
+
+if (NOT ENABLE_RE2C)
+
+  find_package(RE2C)
+
+  if (NOT RE2C_FOUND AND NOT DEFINED ENABLE_RE2C)
+    set(ENABLE_RE2C "ON" CACHE BOOL "Enable re2c build")
+  endif (NOT RE2C_FOUND AND NOT DEFINED ENABLE_RE2C)
+
+endif (NOT ENABLE_RE2C)
+set(ENABLE_RE2C "${ENABLE_RE2C}" CACHE BOOL "Enable re2c build")
+
+if (ENABLE_RE2C)
+
+    ExternalProject_Add(RE2C_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/re2c"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/re2c.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DDATA_DIR=${DATA_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(RE2C_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+endif (ENABLE_RE2C)
+
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+
