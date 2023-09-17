@@ -21,3 +21,6 @@
 [submodule "plief/plief"]
 	path = plief/plief
 	url = https://github.com/BRL-CAD/plief
+[submodule "strclear/strclear"]
+	path = strclear/strclear
+	url = https://github.com/BRL-CAD/strclear
