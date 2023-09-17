@@ -299,6 +299,17 @@ add_project(eigen GROUPS "BRLCAD")
 # https://github.com/stepcode/stepcode
 add_project(stepcode GROUPS "BRLCAD")
 
+# SQLITE3 - embeddable database
+# https://www.sqlite.org
+add_project(sqlite3 GROUPS "GDAL")
+
+# PROJ - generic coordinate transformation
+# https://proj.org
+add_project(proj GROUPS "GDAL")
+
+# GDAL -  translator library for raster and vector geospatial data formats
+# https://gdal.org
+add_project(gdal GROUPS "GDAL")
 
 # Local Variables:
 # tab-width: 8

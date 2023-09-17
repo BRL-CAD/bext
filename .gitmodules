@@ -57,3 +57,14 @@
 	path = stepcode/stepcode
 	url = https://github.com/BRL-CAD/stepcode
 	branch = RELEASE
+[submodule "sqlite3/sqlite3"]
+	path = sqlite3/sqlite3
+	url = https://github.com/BRL-CAD/sqlite3.git
+[submodule "proj/PROJ"]
+	path = proj/PROJ
+	url = https://github.com/BRL-CAD/PROJ
+	branch = RELEASE
+[submodule "gdal/gdal"]
+	path = gdal/gdal
+	url = https://github.com/BRL-CAD/gdal
+	branch = RELEASE
