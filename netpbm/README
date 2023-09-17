@@ -1,0 +1,6 @@
+The BRL-CAD netpbm repository has a "brlcad" branch, where the (fairly
+extensive) portability mods we make to the vanilla NETPBM upstream sources are
+kept.  The submodule targets that branch, rather than main - main is used for
+the vanilla upstream sources to allow us to get per-version diffs and more
+easily merge upstream changes into the brlcad branch.
+

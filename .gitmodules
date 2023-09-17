@@ -34,3 +34,7 @@
 	path = png/libpng
 	url = https://github.com/BRL-CAD/libpng
 	branch = RELEASE
+[submodule "netpbm/netpbm"]
+	path = netpbm/netpbm
+	url = https://github.com/BRL-CAD/netpbm
+	branch = brlcad
