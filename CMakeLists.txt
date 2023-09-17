@@ -318,7 +318,7 @@ add_project(assetimport GROUPS "BRLCAD")
 
 # OpenCV - Open Source Computer Vision Library
 # http://opencv.org
-#add_project(opencv)
+add_project(opencv)
 
 # OpenMesh Library - library for representing and manipulating polygonal meshes
 # https://www.graphics.rwth-aachen.de/software/openmesh/

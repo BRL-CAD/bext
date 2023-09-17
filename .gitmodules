@@ -72,3 +72,7 @@
 	path = assetimport/assimp
 	url = https://github.com/BRL-CAD/assimp
 	branch = RELEASE
+[submodule "opencv/opencv"]
+	path = opencv/opencv
+	url = https://github.com/BRL-CAD/opencv
+	branch = RELEASE
