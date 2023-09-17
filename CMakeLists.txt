@@ -268,7 +268,11 @@ add_subdirectory(xmltools)
 
 # zlib compression/decompression library
 # https://zlib.net
-#add_project(zlib GROUPS "BRL-CAD")
+add_project(zlib GROUPS "BRLCAD")
+
+# libpng - Portable Network Graphics image file support
+# http://www.libpng.org/pub/png/libpng.html
+add_project(png GROUPS "BRLCAD;QT")
 
 
 # Local Variables:

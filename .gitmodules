@@ -27,3 +27,10 @@
 [submodule "xmltools/xmltools"]
 	path = xmltools/xmltools
 	url = https://github.com/BRL-CAD/xmltools
+[submodule "zlib/zlib"]
+	path = zlib/zlib
+	url = https://github.com/BRL-CAD/zlib
+[submodule "png/libpng"]
+	path = png/libpng
+	url = https://github.com/BRL-CAD/libpng
+	branch = RELEASE
