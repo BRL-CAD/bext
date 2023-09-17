@@ -271,6 +271,7 @@ add_subdirectory(xmltools)
 add_project(zlib GROUPS "BRLCAD")
 
 # Henry Spencer's regular expression matching library
+# https://github.com/BRL-CAD/regex
 add_project(regex GROUPS "BRLCAD")
 
 # netpbm library - support for pnm,ppm,pbm, etc. image files
@@ -282,6 +283,10 @@ add_project(netpbm GROUPS "BRLCAD")
 #
 # TODO - see if it makes sense for Qt to use our PNG
 add_project(png GROUPS "BRLCAD;QT")
+
+# UtahRLE - Raster Image library
+# https://github.com/BRL-CAD/utahrle
+add_project(utahrle GROUPS "BRLCAD")
 
 # Linenoise - line editing library
 # https://github.com/msteveb/linenoise
@@ -329,13 +334,12 @@ add_project(openmesh GROUPS "BRLCAD")
 add_project(opennurbs GROUPS "BRLCAD")
 
 # OSMesa - Off Screen Mesa Rendering Library
+# https://github.com/starseeker/osmesa
 add_project(osmesa GROUPS "BRLCAD")
 
 # Poly2Tri - constrained Delaunay triangulation
+# https://github.com/jhasse/poly2tri
 add_project(poly2tri GROUPS "BRLCAD")
-
-# UtahRLE - Raster Image library
-add_project(utahrle GROUPS "BRLCAD")
 
 
 # Local Variables:
