@@ -295,6 +295,11 @@ add_project(lmdb GROUPS "BRLCAD")
 # https://eigen.tuxfamily.org
 add_project(eigen GROUPS "BRLCAD")
 
+# STEPcode - support for reading and writing STEP files
+# https://github.com/stepcode/stepcode
+add_project(stepcode GROUPS "BRLCAD")
+
+
 # Local Variables:
 # tab-width: 8
 # mode: cmake

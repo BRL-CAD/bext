@@ -53,3 +53,7 @@
 	path = eigen/eigen
 	url = https://github.com/BRL-CAD/eigen
 	branch = RELEASE
+[submodule "stepcode/stepcode"]
+	path = stepcode/stepcode
+	url = https://github.com/BRL-CAD/stepcode
+	branch = RELEASE
