@@ -287,6 +287,10 @@ add_project(png GROUPS "BRLCAD;QT")
 # https://github.com/msteveb/linenoise
 add_project(linenoise GROUPS "BRLCAD")
 
+# Lightning Memory-Mapped Database
+# https://github.com/LMDB/lmdb
+add_project(lmdb GROUPS "BRLCAD")
+
 
 # Local Variables:
 # tab-width: 8

@@ -45,3 +45,7 @@
 	path = linenoise/linenoise
 	url = https://github.com/BRL-CAD/linenoise
 	branch = RELEASE
+[submodule "lmdb/lmdb"]
+	path = lmdb/lmdb
+	url = https://github.com/BRL-CAD/lmdb
+	branch = RELEASE
