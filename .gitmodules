@@ -38,3 +38,10 @@
 	path = netpbm/netpbm
 	url = https://github.com/BRL-CAD/netpbm
 	branch = brlcad
+[submodule "regex/regex"]
+	path = regex/regex
+	url = https://github.com/BRL-CAD/regex
+[submodule "linenoise/linenoise"]
+	path = linenoise/linenoise
+	url = https://github.com/BRL-CAD/linenoise
+	branch = RELEASE

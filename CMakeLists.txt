@@ -270,13 +270,22 @@ add_subdirectory(xmltools)
 # https://zlib.net
 add_project(zlib GROUPS "BRLCAD")
 
+# Henry Spencer's regular expression matching library
+add_project(regex GROUPS "BRLCAD")
+
 # netpbm library - support for pnm,ppm,pbm, etc. image files
 # http://netpbm.sourceforge.net/
 add_project(netpbm GROUPS "BRLCAD")
 
 # libpng - Portable Network Graphics image file support
 # http://www.libpng.org/pub/png/libpng.html
+#
+# TODO - see if it makes sense for Qt to use our PNG
 add_project(png GROUPS "BRLCAD;QT")
+
+# Linenoise - line editing library
+# https://github.com/msteveb/linenoise
+add_project(linenoise GROUPS "BRLCAD")
 
 
 # Local Variables:

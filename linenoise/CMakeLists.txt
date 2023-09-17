@@ -1,0 +1,59 @@
+# Unless we have ENABLE_ALL set, base the building of linenoise on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_LINENOISE)
+  set(ENABLE_LINENOISE ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_LINENOISE)
+
+if (NOT ENABLE_LINENOISE)
+
+  find_package(LINENOISE)
+
+  if (NOT LINENOISE_FOUND AND NOT DEFINED ENABLE_LINENOISE)
+    set(ENABLE_LINENOISE "ON" CACHE BOOL "Enable linenoise build")
+  endif (NOT LINENOISE_FOUND AND NOT DEFINED ENABLE_LINENOISE)
+
+endif (NOT ENABLE_LINENOISE)
+set(ENABLE_LINENOISE "${ENABLE_LINENOISE}" CACHE BOOL "Enable linenoise build")
+
+if (ENABLE_LINENOISE)
+
+    ExternalProject_Add(LINENOISE_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/linenoise"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/linenoise.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DZ_PREFIX_STR=${Z_PREFIX_STR}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(LINENOISE_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+endif (ENABLE_LINENOISE)
+
+# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/license.txt
+  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/linenoise.txt
+  COPYONLY
+  )
+
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+
