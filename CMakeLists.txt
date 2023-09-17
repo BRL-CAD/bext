@@ -291,6 +291,9 @@ add_project(linenoise GROUPS "BRLCAD")
 # https://github.com/LMDB/lmdb
 add_project(lmdb GROUPS "BRLCAD")
 
+# Eigen - linear algebra library
+# https://eigen.tuxfamily.org
+add_project(eigen GROUPS "BRLCAD")
 
 # Local Variables:
 # tab-width: 8

@@ -49,3 +49,7 @@
 	path = lmdb/lmdb
 	url = https://github.com/BRL-CAD/lmdb
 	branch = RELEASE
+[submodule "eigen/eigen"]
+	path = eigen/eigen
+	url = https://github.com/BRL-CAD/eigen
+	branch = RELEASE

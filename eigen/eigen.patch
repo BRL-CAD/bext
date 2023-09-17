@@ -1,0 +1,13 @@
+diff -Naur eigen.orig/Eigen/src/Core/util/Memory.h eigen/Eigen/src/Core/util/Memory.h
+--- eigen.orig/Eigen/src/Core/util/Memory.h	2023-09-12 19:23:02.737590519 -0400
++++ eigen/Eigen/src/Core/util/Memory.h	2023-09-12 19:24:31.555943337 -0400
+@@ -586,6 +586,9 @@
+ // to the appropriate stack allocation function
+ #if ! defined EIGEN_ALLOCA && ! defined EIGEN_GPU_COMPILE_PHASE
+   #if EIGEN_OS_LINUX || EIGEN_OS_MAC || (defined alloca)
++    #if EIGEN_OS_MAC
++    #  include <alloca.h>
++    #endif
+     #define EIGEN_ALLOCA alloca
+   #elif EIGEN_COMP_MSVC
+     #define EIGEN_ALLOCA _alloca
