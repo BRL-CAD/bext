@@ -329,13 +329,13 @@ add_project(openmesh GROUPS "BRLCAD")
 add_project(opennurbs GROUPS "BRLCAD")
 
 # OSMesa - Off Screen Mesa Rendering Library
-#add_project(osmesa GROUPS "BRLCAD")
+add_project(osmesa GROUPS "BRLCAD")
 
 # Poly2Tri - constrained Delaunay triangulation
-#add_project(poly2tri GROUPS "BRLCAD")
+add_project(poly2tri GROUPS "BRLCAD")
 
 # UtahRLE - Raster Image library
-#add_project(utahrle GROUPS "BRLCAD")
+add_project(utahrle GROUPS "BRLCAD")
 
 
 # Local Variables:

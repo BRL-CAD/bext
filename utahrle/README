@@ -1,0 +1,4 @@
+NOTE:  In principle, if a system version of libutahrle were available we could
+use it.  However, there isn't an active upstream for utahrle and in practice
+finding it from a distribution repository is unlikely.
+

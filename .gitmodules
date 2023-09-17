@@ -84,3 +84,13 @@
 	path = opennurbs/opennurbs
 	url = https://github.com/BRL-CAD/opennurbs
 	branch = RELEASE
+[submodule "osmesa/osmesa"]
+	path = osmesa/osmesa
+	url = https://github.com/BRL-CAD/osmesa
+[submodule "utahrle/utahrle"]
+	path = utahrle/utahrle
+	url = https://github.com/BRL-CAD/utahrle
+[submodule "poly2tri/poly2tri"]
+	path = poly2tri/poly2tri
+	url = https://github.com/BRL-CAD/poly2tri
+	branch = RELEASE
