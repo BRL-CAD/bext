@@ -18,3 +18,6 @@
 [submodule "perplex/perplex"]
 	path = perplex/perplex
 	url = https://github.com/BRL-CAD/perplex
+[submodule "plief/plief"]
+	path = plief/plief
+	url = https://github.com/BRL-CAD/plief

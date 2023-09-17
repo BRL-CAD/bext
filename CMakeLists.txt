@@ -254,7 +254,7 @@ add_subdirectory(lief)
 add_subdirectory(lemon)
 add_subdirectory(re2c)
 add_subdirectory(perplex)
-#add_subdirectory(plief)
+add_subdirectory(plief)
 #add_subdirectory(strclear)
 #add_subdirectory(xmltools)
 
