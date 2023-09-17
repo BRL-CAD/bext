@@ -15,3 +15,6 @@
 	path = re2c/re2c
 	url = https://github.com/BRL-CAD/re2c
 	branch = RELEASE
+[submodule "perplex/perplex"]
+	path = perplex/perplex
+	url = https://github.com/BRL-CAD/perplex

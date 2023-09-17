@@ -180,6 +180,28 @@ add_custom_target(BuildStamp ALL COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_NOBUN
 
 
 ###############################################################################
+# It is common for more complex targets to need to key build settings off of
+# whether or not their dependencies are being built locally.  These macros are
+# used to cut down on boilerplate code
+###############################################################################
+macro(TargetVars roots)
+  foreach(root ${${roots}})
+    if (TARGET ${root}_BLD)
+      set(${root}_TARGET 1)
+    endif (TARGET ${root}_BLD)
+  endforeach(root ${${roots}})
+endmacro(TargetVars root)
+
+macro(TargetInstallDeps croot roots)
+  foreach(root ${${roots}})
+    if (TARGET ${root}_BLD)
+      ExternalProject_Add_stepdependencies(${croot}_BLD configure ${root}_BLD-install)
+    endif (TARGET ${root}_BLD)
+  endforeach(root ${${root}})
+endmacro(TargetInstallDeps root)
+
+
+###############################################################################
 # There are a large number of external packages that may need to be built -
 # some of these are "dependencies of dependencies" which may be needed only if
 # specific high level capabilities are sought.  In order to try to make clear
@@ -231,7 +253,7 @@ add_subdirectory(astyle)
 add_subdirectory(lief)
 add_subdirectory(lemon)
 add_subdirectory(re2c)
-#add_subdirectory(perplex)
+add_subdirectory(perplex)
 #add_subdirectory(plief)
 #add_subdirectory(strclear)
 #add_subdirectory(xmltools)
