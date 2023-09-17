@@ -24,3 +24,6 @@
 [submodule "strclear/strclear"]
 	path = strclear/strclear
 	url = https://github.com/BRL-CAD/strclear
+[submodule "xmltools/xmltools"]
+	path = xmltools/xmltools
+	url = https://github.com/BRL-CAD/xmltools

@@ -1,0 +1,55 @@
+# xmltools provides the xsltproc and xmllint tools for Docbook processing
+if (ENABLE_ALL AND NOT DEFINED ENABLE_XMLTOOLS)
+  set(ENABLE_XMLTOOLS ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_XMLTOOLS)
+
+if (NOT ENABLE_XMLTOOLS)
+
+  find_program(XSLTPROC_EXECUTABLE xsltproc)
+  mark_as_advanced(XSLTPROC_EXECUTABLE)
+
+  find_program(XMLLINT_EXECUTABLE xmllint)
+  mark_as_advanced(XMLLINT_EXECUTABLE)
+
+  if (NOT XSLTPROC_EXECUTABLE OR NOT XMLLINT_EXECUTABLE)
+    if (NOT DEFINED ENABLE_XMLTOOLS)
+      set(ENABLE_XMLTOOLS "ON" CACHE BOOL "Enable xmltools build")
+    endif (NOT DEFINED ENABLE_XMLTOOLS)
+  endif (NOT XSLTPROC_EXECUTABLE OR NOT XMLLINT_EXECUTABLE)
+
+endif (NOT ENABLE_XMLTOOLS)
+set(ENABLE_XMLTOOLS "${ENABLE_XMLTOOLS}" CACHE BOOL "Enable xmltools build")
+
+if (ENABLE_XMLTOOLS)
+
+  ExternalProject_Add(XMLTOOLS_BLD
+    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xmltools"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(XMLTOOLS_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+endif (ENABLE_XMLTOOLS)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

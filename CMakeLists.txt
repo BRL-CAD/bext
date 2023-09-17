@@ -256,7 +256,7 @@ add_subdirectory(re2c)
 add_subdirectory(perplex)
 add_subdirectory(plief)
 add_subdirectory(strclear)
-#add_subdirectory(xmltools)
+add_subdirectory(xmltools)
 
 ###############################################################################
 # Build logic is broken out per-library, but the ordering is important.  Some
