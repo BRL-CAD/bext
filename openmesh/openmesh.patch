@@ -1,0 +1,35 @@
+diff -Naur OpenMesh-9.0.0/cmake-library/VCI/VCICommon.cmake openmesh/cmake-library/VCI/VCICommon.cmake
+--- OpenMesh-9.0.0/cmake-library/VCI/VCICommon.cmake	2022-01-20 06:53:38.000000000 -0500
++++ openmesh/cmake-library/VCI/VCICommon.cmake	2023-08-21 22:44:46.894935075 -0400
+@@ -41,7 +41,7 @@
+ if (CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
+   set (VCI_PROJECT_DATADIR ".")
+   set (VCI_PROJECT_LIBDIR "lib")
+-  set (VCI_PROJECT_BINDIR ".")
++  set (VCI_PROJECT_BINDIR "bin")
+   set (VCI_PROJECT_PLUGINDIR "Plugins")
+   if (NOT EXISTS ${CMAKE_BINARY_DIR}/Build/${VCI_PROJECT_LIBDIR})
+     file (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Build/${VCI_PROJECT_LIBDIR})
+diff -Naur OpenMesh-9.0.0/CMakeLists.txt openmesh/CMakeLists.txt
+--- OpenMesh-9.0.0/CMakeLists.txt	2022-01-20 06:53:44.000000000 -0500
++++ openmesh/CMakeLists.txt	2023-08-17 10:20:09.990681715 -0400
+@@ -38,7 +38,6 @@
+ 
+ # add our macro directory to cmake search path
+ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake-library/finders ${CMAKE_CURRENT_SOURCE_DIR}/cmake-library/VCI )
+-set (CMAKE_DEBUG_POSTFIX "d")
+ 
+ # include our cmake files
+ include (VCICommon)
+diff -Naur OpenMesh-9.0.0/src/OpenMesh/Core/CMakeLists.txt openmesh/src/OpenMesh/Core/CMakeLists.txt
+--- OpenMesh-9.0.0/src/OpenMesh/Core/CMakeLists.txt	2022-01-20 06:53:36.000000000 -0500
++++ openmesh/src/OpenMesh/Core/CMakeLists.txt	2023-08-21 19:13:44.011277327 -0400
+@@ -73,7 +73,7 @@
+     FILE(GLOB files_install_libs "${CMAKE_BINARY_DIR}/Build/lib/*.lib" )
+     FILE(GLOB files_install_dlls "${CMAKE_BINARY_DIR}/Build/*.dll" )
+     INSTALL(FILES ${files_install_libs} DESTINATION lib )
+-    INSTALL(FILES ${files_install_dlls} DESTINATION . )
++    INSTALL(FILES ${files_install_dlls} DESTINATION bin )
+   endif()
+ endif()
+ 

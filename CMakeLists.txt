@@ -318,24 +318,24 @@ add_project(assetimport GROUPS "BRLCAD")
 
 # OpenCV - Open Source Computer Vision Library
 # http://opencv.org
-add_project(opencv)
+add_project(opencv GROUPS "BRLCAD")
 
 # OpenMesh Library - library for representing and manipulating polygonal meshes
 # https://www.graphics.rwth-aachen.de/software/openmesh/
-#add_project(openmesh)
+add_project(openmesh GROUPS "BRLCAD")
 
 # openNURBS - Non-Uniform Rational BSpline library
 # https://github.com/mcneel/opennurbs
-#add_project(opennurbs)
+#add_project(opennurbs GROUPS "BRLCAD")
 
 # OSMesa - Off Screen Mesa Rendering Library
-#add_project(osmesa)
+#add_project(osmesa GROUPS "BRLCAD")
 
 # Poly2Tri - constrained Delaunay triangulation
-#add_project(poly2tri)
+#add_project(poly2tri GROUPS "BRLCAD")
 
 # UtahRLE - Raster Image library
-#add_project(utahrle)
+#add_project(utahrle GROUPS "BRLCAD")
 
 
 # Local Variables:

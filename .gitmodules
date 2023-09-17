@@ -76,3 +76,7 @@
 	path = opencv/opencv
 	url = https://github.com/BRL-CAD/opencv
 	branch = RELEASE
+[submodule "openmesh/OpenMesh"]
+	path = openmesh/OpenMesh
+	url = https://github.com/BRL-CAD/OpenMesh
+	branch = RELEASE
