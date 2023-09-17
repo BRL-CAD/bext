@@ -1,0 +1,23 @@
+diff -Naur lemon.orig/CMakeLists.txt lemon/CMakeLists.txt
+--- lemon.orig/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
++++ lemon/CMakeLists.txt	2023-09-16 21:52:20.191797751 -0400
+@@ -0,0 +1,19 @@
++cmake_minimum_required(VERSION 3.18)
++
++# set project name
++project(LEMON)
++
++# build the lemon binary
++add_executable(lemon lemon.c)
++
++install(TARGETS lemon DESTINATION ${BIN_DIR})
++
++# install the templates
++install(FILES lempar.c DESTINATION ${DATA_DIR}/lemon)
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8

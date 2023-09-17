@@ -8,3 +8,6 @@
 	path = lief/LIEF
 	url = https://github.com/BRL-CAD/LIEF
 	branch = RELEASE
+[submodule "lemon/lemon"]
+	path = lemon/lemon
+	url = https://github.com/BRL-CAD/lemon

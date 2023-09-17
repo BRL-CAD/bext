@@ -1,0 +1,51 @@
+# Unless we have ENABLE_ALL set, base the building of lemon on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_LEMON)
+  set(ENABLE_LEMON ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_LEMON)
+
+if (NOT ENABLE_LEMON)
+
+  find_package(LEMON)
+
+  if (NOT LEMON_FOUND AND NOT DEFINED ENABLE_LEMON)
+    set(ENABLE_LEMON "ON" CACHE BOOL "Enable lemon build")
+  endif (NOT LEMON_FOUND AND NOT DEFINED ENABLE_LEMON)
+
+endif (NOT ENABLE_LEMON)
+set(ENABLE_LEMON "${ENABLE_LEMON}" CACHE BOOL "Enable lemon build")
+
+if (ENABLE_LEMON)
+
+    ExternalProject_Add(LEMON_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/lemon"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lemon.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DDATA_DIR=${DATA_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(LEMON_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+endif (ENABLE_LEMON)
+
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

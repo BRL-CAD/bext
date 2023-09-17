@@ -218,8 +218,6 @@ endif (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/patch/patch/README.md")
 # https://gitlab.kitware.com/cmake/cmake/-/issues/16854 for more background on
 # this.  We need to address the patch build tool first thing, since any of the
 # other ExternalProject_Add builds that follow may depend on it.
-#
-# The patch bundled here is from https://github.com/shannonbooth/patch
 ###############################################################################
 add_subdirectory(patch)
 
@@ -231,6 +229,8 @@ add_subdirectory(patch)
 ###############################################################################
 add_subdirectory(astyle)
 add_subdirectory(lief)
+add_subdirectory(lemon)
+#add_subdirectory(re2c)
 #add_subdirectory(perplex)
 #add_subdirectory(plief)
 #add_subdirectory(strclear)
