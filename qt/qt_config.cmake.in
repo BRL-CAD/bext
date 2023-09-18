@@ -1,0 +1,43 @@
+set(CONFIG_FILE configure)
+set(ENV_VARS)
+set(CONFIG_EXTRA_OPTS)
+
+# Windows uses a different file
+if (WIN32)
+  set(CONFIG_FILE configure.bat)
+endif (WIN32)
+
+# If we're not on Windows, set some environment variables
+if (NOT WIN32)
+  set(ENV{LD_LIBRARY_PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+  set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+endif (NOT WIN32)
+
+# If we can't compile Qt with XCB on X11 platforms, we want a fatal error -
+# a non-GUI Qt build isn't helpful
+if (NOT APPLE AND NOT WIN32)
+  set(CONFIG_EXTRA_OPTS -xcb)
+endif (NOT APPLE AND NOT WIN32)
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+  set(QT_CONFIG_OPTS "-debug")
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+  set(QT_CONFIG_OPTS "-release")
+else ()
+  message(WARNING "Unexpected CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} preparing Qt6")
+endif ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+
+if (WIN32)
+  execute_process(COMMAND "@VCVARS_BAT@" && @CMAKE_CURRENT_SOURCE_DIR@/qt/qtbase/${CONFIG_FILE} ${CONFIG_EXTRA_OPTS} ${QT_CONFIG_OPTS} --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@ WORKING_DIRECTORY @QT_BUILD_DIR@)
+else (WIN32)
+  execute_process(COMMAND @CMAKE_CURRENT_SOURCE_DIR@/qt/qtbase/${CONFIG_FILE} ${CONFIG_EXTRA_OPTS} ${QT_CONFIG_OPTS} --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@ WORKING_DIRECTORY @QT_BUILD_DIR@ OUTPUT_VARIABLE MSG ERROR_VARIABLE MSG)
+endif (WIN32)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

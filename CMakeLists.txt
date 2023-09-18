@@ -353,6 +353,9 @@ add_project(iwidgets GROUPS "TCL")
 add_project(tkhtml GROUPS "TCL")
 add_project(tktable GROUPS "TCL")
 
+# Qt - cross-platform user interface/application development toolkit
+# https://download.qt.io/archive/qt
+add_project(qt GROUPS "QT")
 
 # Local Variables:
 # tab-width: 8

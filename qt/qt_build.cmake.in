@@ -1,0 +1,21 @@
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+  set(QT_CMAKE_OPTS "--config Debug --parallel 8")
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+  set(QT_CMAKE_OPTS "--config Release --parallel 8")
+else ()
+  message(WARNING "Unexpected CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} building Qt6")
+endif ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+
+if (WIN32)
+  execute_process(COMMAND "@VCVARS_BAT@" && cmake --build . ${QT_CMAKE_OPTS} WORKING_DIRECTORY @QT_BUILD_DIR@ OUTPUT_VARIABLE MSG ERROR_VARIABLE MSG)
+else (WIN32)
+  execute_process(COMMAND cmake --build . ${QT_CMAKE_OPTS} WORKING_DIRECTORY @QT_BUILD_DIR@ OUTPUT_VARIABLE MSG ERROR_VARIABLE MSG)
+endif (WIN32)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

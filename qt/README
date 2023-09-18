@@ -1,0 +1,7 @@
+Rather than attempting to build all of Qt's components, we deliberately focus
+on a more minimal subset for easier compilation.
+
+Sources are from:  https://download.qt.io/archive/qt
+
+Current version present:  6.5.2
+

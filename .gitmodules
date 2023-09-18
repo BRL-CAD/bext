@@ -119,3 +119,6 @@
 [submodule "tkhtml/tkhtml"]
 	path = tkhtml/tkhtml
 	url = https://github.com/BRL-CAD/tkhtml
+[submodule "qt/qt"]
+	path = qt/qt
+	url = https://github.com/BRL-CAD/qt
