@@ -10,3 +10,7 @@ diff -Naur tk8.6.13/unix/Makefile.in tk/unix/Makefile.in
  
  # support for building the Aqua resource file
  TK_RSRC_FILE		= @TK_RSRC_FILE@
+--- tk8.6.13/manifest.uuid	1969-12-31 19:00:00.000000000 -0500
++++ tk/manifest.uuid	2023-09-18 15:58:31.279973759 -0400
+@@ -0,0 +1 @@
++abf90cd012a519888fe42251221dc0550ddf984b6131076f80543aa750b5d436
