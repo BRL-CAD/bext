@@ -30,6 +30,8 @@ set(ENABLE_PATCH "${ENABLE_PATCH}" CACHE BOOL "Enable patch build")
 
 if (ENABLE_PATCH)
 
+  git_submodule_init(patch README.md)
+
   ExternalProject_Add(PATCH_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/patch"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}

@@ -17,6 +17,8 @@ set(ENABLE_OPENMESH "${ENABLE_OPENMESH}" CACHE BOOL "Enable OpenMesh build")
 
 if (ENABLE_OPENMESH)
 
+  git_submodule_init(openmesh CMakeLists.txt)
+
   ExternalProject_Add(OPENMESH_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/OpenMesh"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -43,6 +45,14 @@ if (ENABLE_OPENMESH)
     ExternalProject_Add_StepDependencies(OPENMESH_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/OpenMesh/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openmesh.txt
+    COPYONLY
+    )
+
 endif (ENABLE_OPENMESH)
 
 mark_as_advanced(OPENMESH_INCLUDE_DIRS)
@@ -59,16 +69,6 @@ mark_as_advanced(OPENMESH_TOOLS_SMOOTHER_DIR)
 mark_as_advanced(OPENMESH_TOOLS_SUBDIVIDER_DIR)
 mark_as_advanced(OPENMESH_TOOLS_UTILS_DIR)
 mark_as_advanced(OPENMESH_TOOLS_VDPM_DIR)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/OpenMesh/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openmesh.txt
-  COPYONLY
-  )
-
-
 
 # Local Variables:
 # tab-width: 8

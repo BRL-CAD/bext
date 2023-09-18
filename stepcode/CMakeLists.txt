@@ -17,10 +17,10 @@ set(ENABLE_STEPCODE "${ENABLE_STEPCODE}" CACHE BOOL "Enable stepcode build")
 
 if (ENABLE_STEPCODE)
 
-  set(SC_DEPS)
-  if (TARGET PERPLEX_BLD)
-    set(PERPLEX_TARGET PERPLEX_BLD)
-  endif (TARGET PERPLEX_BLD)
+  git_submodule_init(stepcode CMakeLists.txt)
+
+  set(STEPCODE_DEPENDS LEMON PERPLEX RE2C)
+  TargetVars(STEPCODE_DEPENDS)
 
   # For OSX, we need CMAKE_INSTALL_NAME_DIR
   set(CMAKE_INSTALL_NAME_DIR "@rpath")
@@ -54,23 +54,21 @@ if (ENABLE_STEPCODE)
     STEP_TARGETS install
     )
 
+  TargetInstallDeps(STEPCODE STEPCODE_DEPENDS)
+
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(STEPCODE_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-  if (TARGET PERPLEX_BLD)
-    ExternalProject_Add_StepDependencies(STEPCODE_BLD configure PERPLEX_BLD-install)
-  endif (TARGET PERPLEX_BLD)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/stepcode/COPYING
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/stepcode.txt
+    COPYONLY
+    )
 
 endif(ENABLE_STEPCODE)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/stepcode/COPYING
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/stepcode.txt
-  COPYONLY
-  )
 
 # Local Variables:
 # tab-width: 8

@@ -18,6 +18,8 @@ set(ENABLE_EIGEN "${ENABLE_EIGEN}" CACHE BOOL "Enable Eigen build")
 
 if (ENABLE_EIGEN)
 
+  git_submodule_init(eigen CMakeLists.txt)
+
   ExternalProject_Add(EIGEN_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/eigen"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}

@@ -23,10 +23,14 @@ set(ENABLE_TCL "${ENABLE_TCL}" CACHE BOOL "Enable tcl build")
 
 if (ENABLE_TCL)
 
+  git_submodule_init(tcl unix/configure)
+
+  set(TCL_DEPENDS ZLIB)
+  TargetVars(TCL_DEPENDS)
+
   set(TCL_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD")
 
   if (TARGET ZLIB_BLD)
-    set(ZLIB_TARGET ZLIB_BLD)
     set(ZLIB_PATCH_CMD ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl-z_brl.patch)
   endif (TARGET ZLIB_BLD)
 
@@ -87,13 +91,11 @@ if (ENABLE_TCL)
 
   endif (NOT MSVC)
 
+  TargetInstallDeps(TCL TCL_DEPENDS)
+
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(TCL_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
-
-  if (TARGET ZLIB_BLD)
-    ExternalProject_Add_StepDependencies(TCL_BLD configure ZLIB_BLD-install)
-  endif (TARGET ZLIB_BLD)
 
   # Scripts expect a non-versioned tclsh program, but the Tcl build doesn't provide one,
   # we must provide it ourselves
@@ -128,20 +130,19 @@ if (ENABLE_TCL)
       )
   endif (CHMOD_EXECUTABLE)
 
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/tcl/license.terms
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/tcl.txt
+    COPYONLY
+    )
+
 endif (ENABLE_TCL)
 
 mark_as_advanced(TCL_INCLUDE_DIRS)
 mark_as_advanced(TCL_LIBRARIES)
 mark_as_advanced(TCL_VERSION)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/tcl/license.terms
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/tcl.txt
-  COPYONLY
-  )
-
 
 # Local Variables:
 # tab-width: 8

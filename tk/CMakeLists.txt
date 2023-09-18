@@ -9,11 +9,15 @@ endif (NOT TK_LIBRARY OR TARGET TCL_BLD)
 
 if (TK_DO_BUILD)
 
+  git_submodule_init(tk unix/configure)
+
+  set(TK_DEPENDS TCL)
+  TargetVars(TK_DEPENDS)
+
   if (TARGET TCL_BLD)
     # If we're building against a compiled Tcl and not a system Tcl,
     # set some vars accordingly
     set(TCL_SRC_DIR "${CMAKE_BINARY_DIR}/tcl/TCL_BLD-prefix/src/TCL_BLD")
-    set(TCL_TARGET TCL_BLD)
   else (TARGET TCL_BLD)
     get_filename_component(TCLCONF_DIR "${TCL_LIBRARY}" DIRECTORY)
   endif (TARGET TCL_BLD)
@@ -91,13 +95,19 @@ if (TK_DO_BUILD)
       )
   endif (CHMOD_EXECUTABLE)
 
+  TargetInstallDeps(TK TK_DEPENDS)
+
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(TK_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-  if (TARGET TCL_BLD)
-    ExternalProject_Add_StepDependencies(TK_BLD configure TCL_BLD-install)
-  endif (TARGET TCL_BLD)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/tk/license.terms
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/tk.txt
+    COPYONLY
+    )
 
 endif (TK_DO_BUILD)
 
@@ -105,14 +115,6 @@ mark_as_advanced(TK_INCLUDE_DIRS)
 mark_as_advanced(TK_LIBRARIES)
 mark_as_advanced(TK_X11_GRAPHICS)
 mark_as_advanced(HAVE_TK)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/tk/license.terms
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/tk.txt
-  COPYONLY
-  )
 
 # Local Variables:
 # tab-width: 8

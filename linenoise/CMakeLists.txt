@@ -17,7 +17,9 @@ set(ENABLE_LINENOISE "${ENABLE_LINENOISE}" CACHE BOOL "Enable linenoise build")
 
 if (ENABLE_LINENOISE)
 
-    ExternalProject_Add(LINENOISE_BLD
+  git_submodule_init(linenoise linenoise.c)
+
+  ExternalProject_Add(LINENOISE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/linenoise"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/linenoise.patch
@@ -41,15 +43,15 @@ if (ENABLE_LINENOISE)
     ExternalProject_Add_StepDependencies(LINENOISE_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_LINENOISE)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/license.txt
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/linenoise.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/license.txt
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/linenoise.txt
-  COPYONLY
-  )
+endif (ENABLE_LINENOISE)
 
 # tab-width: 8
 # mode: cmake

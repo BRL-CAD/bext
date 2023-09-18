@@ -17,7 +17,9 @@ set(ENABLE_LMDB "${ENABLE_LMDB}" CACHE BOOL "Enable lmdb build")
 
 if (ENABLE_LMDB)
 
-    ExternalProject_Add(LMDB_BLD
+  git_submodule_init(lmdb libraries/liblmdb/mdb.c)
+
+  ExternalProject_Add(LMDB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lmdb"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lmdb.patch
@@ -41,15 +43,15 @@ if (ENABLE_LMDB)
     ExternalProject_Add_StepDependencies(LMDB_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_LMDB)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(READ ${CMAKE_CURRENT_SOURCE_DIR}/lmdb/libraries/liblmdb/COPYRIGHT LMDB_COPYRIGHT)
+  file(READ ${CMAKE_CURRENT_SOURCE_DIR}/lmdb/libraries/liblmdb/LICENSE LMDB_LICENSE)
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  file(WRITE ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/lmdb.txt "${LMDB_COPYRIGHT}")
+  file(APPEND ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/lmdb.txt "\n")
+  file(APPEND ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/lmdb.txt "${LMDB_LICENSE}")
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/lmdb/libraries/liblmdb/COPYRIGHT LMDB_COPYRIGHT)
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/lmdb/libraries/liblmdb/LICENSE LMDB_LICENSE)
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-file(WRITE ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/lmdb.txt "${LMDB_COPYRIGHT}")
-file(APPEND ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/lmdb.txt "\n")
-file(APPEND ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/lmdb.txt "${LMDB_LICENSE}")
+endif (ENABLE_LMDB)
 
 # Local Variables:
 # tab-width: 8

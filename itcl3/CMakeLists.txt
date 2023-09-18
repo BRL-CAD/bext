@@ -15,13 +15,14 @@ set(ENABLE_ITCL "${ENABLE_ITCL}" CACHE BOOL "Enable itcl build")
 
 if (ENABLE_ITCL)
 
+  git_submodule_init(itcl CMakeLists.txt)
+
+  set(ITCL_DEPENDS TCL)
+  TargetVars(ITCL_DEPENDS)
+
   # If we're building ITCL, it's path setup must take into account the
   # subdirectory in which we are storing the library.
   set(RPATH_SUFFIX itcl3.4)
-
-  if (TARGET TCL_BLD)
-    set(TCL_TARGET TCL_BLD)
-  endif (TARGET TCL_BLD)
 
   ExternalProject_Add(ITCL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/itcl"
@@ -47,31 +48,25 @@ if (ENABLE_ITCL)
     STEP_TARGETS install
     )
 
+  TargetInstallDeps(ITCL ITCL_DEPENDS)
+
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(ITCL_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-  if (TARGET TCL_BLD)
-    ExternalProject_Add_StepDependencies(ITCL_BLD configure TCL_BLD-install)
-  endif (TARGET TCL_BLD)
-
-  if (TARGET TK_BLD)
-    ExternalProject_Add_StepDependencies(ITCL_BLD configure TK_BLD-install)
-  endif (TARGET TK_BLD)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/itcl/license.terms
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/itcl3.txt
+    COPYONLY
+    )
 
 endif (ENABLE_ITCL)
 
 mark_as_advanced(ITCL_LIBRARY)
 mark_as_advanced(ITCL_LIBRARIES)
 mark_as_advanced(ITCL_VERSION)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/itcl/license.terms
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/itcl3.txt
-  COPYONLY
-  )
 
 # Local Variables:
 # tab-width: 8

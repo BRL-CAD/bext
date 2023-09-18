@@ -23,6 +23,8 @@ if (NOT MSVC AND NOT APPLE)
 
   if (ENABLE_LIEF)
 
+    git_submodule_init(LIEF CMakeLists.txt)
+
     ExternalProject_Add(LIEF_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/LIEF"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}

@@ -17,6 +17,8 @@ set(ENABLE_OSMESA "${ENABLE_OSMESA}" CACHE BOOL "Enable osmesa build")
 
 if (ENABLE_OSMESA)
 
+  git_submodule_init(osmesa CMakeLists.txt)
+
   ExternalProject_Add(OSMESA_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/osmesa"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -39,15 +41,15 @@ if (ENABLE_OSMESA)
     ExternalProject_Add_StepDependencies(OSMESA_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_OSMESA)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/osmesa/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/osmesa.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/osmesa/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/osmesa.txt
-  COPYONLY
-  )
+endif (ENABLE_OSMESA)
 
 # Local Variables:
 # tab-width: 8

@@ -17,6 +17,8 @@ set(ENABLE_GDAL "${ENABLE_GDAL}" CACHE BOOL "Enable gdal build")
 
 if (ENABLE_GDAL)
 
+  git_submodule_init(gdal CMakeLists.txt)
+
   set(GDAL_DEPENDS PNG PROJ SQLITE3 ZLIB)
   TargetVars(GDAL_DEPENDS)
 
@@ -173,15 +175,15 @@ if (ENABLE_GDAL)
     ExternalProject_Add_StepDependencies(GDAL_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_GDAL)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/gdal/LICENSE.TXT
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/gdal.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/gdal/LICENSE.TXT
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/gdal.txt
-  COPYONLY
-  )
+endif (ENABLE_GDAL)
 
 # Local Variables:
 # tab-width: 8

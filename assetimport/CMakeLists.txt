@@ -1,4 +1,4 @@
-# Unless we have ENABLE_ALL set, based the building of png on
+# Unless we have ENABLE_ALL set, base the building of png on
 # the system detection results
 if (ENABLE_ALL AND NOT DEFINED ENABLE_ASSETIMPORT)
   set(ENABLE_ASSETIMPORT ON)
@@ -16,6 +16,11 @@ endif (NOT ENABLE_ASSETIMPORT)
 set(ENABLE_ASSETIMPORT "${ENABLE_ASSETIMPORT}" CACHE BOOL "Enable assetimport build")
 
 if (ENABLE_ASSETIMPORT)
+
+  git_submodule_init(assimp CMakeLists.txt)
+
+  set(ASSETIMPORT_DEPENDS ZLIB)
+  TargetVars(ASSETIMPORT_DEPENDS)
 
   if (TARGET ZLIB_BLD)
     set(ZLIB_TARGET ZLIB_BLD)
@@ -49,24 +54,21 @@ if (ENABLE_ASSETIMPORT)
     STEP_TARGETS install
     )
 
+  TargetInstallDeps(ASSETIMPORT ASSETIMPORT_DEPENDS)
+
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(ASSETIMPORT_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-  if (TARGET ZLIB_BLD)
-    ExternalProject_Add_StepDependencies(ASSETIMPORT_BLD configure ZLIB_BLD-install)
-  endif (TARGET ZLIB_BLD)
-
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/assimp/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/assetimport.txt
+    COPYONLY
+    )
 
 endif (ENABLE_ASSETIMPORT)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/assimp/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/assetimport.txt
-  COPYONLY
-  )
 
 # Local Variables:
 # tab-width: 8

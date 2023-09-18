@@ -15,6 +15,11 @@ endif (NOT DEFINED ENABLE_IWIDGETS)
 
 if (ENABLE_IWIDGETS)
 
+  git_submodule_init(iwidgets CMakeLists.txt)
+
+  set(IWIDGETS_DEPENDS TCL TK ITCL ITK)
+  TargetVars(IWIDGETS_DEPENDS)
+
   ExternalProject_Add(IWIDGETS_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/iwidgets"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -30,35 +35,21 @@ if (ENABLE_IWIDGETS)
     STEP_TARGETS install
     )
 
+  TargetInstallDeps(IWIDGETS IWIDGETS_DEPENDS)
+
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(IWIDGETS_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-  if (TARGET TCL_BLD)
-    ExternalProject_Add_StepDependencies(IWIDGETS_BLD configure TCL_BLD-install)
-  endif (TARGET TCL_BLD)
-
-  if (TARGET TK_BLD)
-    ExternalProject_Add_StepDependencies(IWIDGETS_BLD configure TK_BLD-install)
-  endif (TARGET TK_BLD)
-
-  if (TARGET ITCL_BLD)
-    ExternalProject_Add_StepDependencies(IWIDGETS_BLD configure ITCL_BLD-install)
-  endif (TARGET ITCL_BLD)
-
-  if (TARGET ITK_BLD)
-    ExternalProject_Add_StepDependencies(IWIDGETS_BLD configure ITK_BLD-install)
-  endif (TARGET ITK_BLD)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/iwidgets/license.terms
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/iwidgets.txt
+    COPYONLY
+    )
 
 endif (ENABLE_IWIDGETS)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/iwidgets/license.terms
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/iwidgets.txt
-  COPYONLY
-  )
 
 # Local Variables:
 # tab-width: 8

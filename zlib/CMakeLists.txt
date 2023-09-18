@@ -17,6 +17,8 @@ set(ENABLE_ZLIB "${ENABLE_ZLIB}" CACHE BOOL "Enable zlib build")
 
 if (ENABLE_ZLIB)
 
+  git_submodule_init(zlib zlib.h)
+
   set(Z_PREFIX_STR "brl_")
   mark_as_advanced(Z_PREFIX_STR)
 
@@ -44,15 +46,15 @@ if (ENABLE_ZLIB)
     ExternalProject_Add_StepDependencies(ZLIB_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_ZLIB)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/zlib/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/zlib.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/zlib/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/zlib.txt
-  COPYONLY
-  )
+endif (ENABLE_ZLIB)
 
 # Local Variables:
 # tab-width: 8

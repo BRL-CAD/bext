@@ -18,6 +18,8 @@ set(ENABLE_PLIEF "${ENABLE_PLIEF}" CACHE BOOL "Enable plief build")
 
 if (ENABLE_PLIEF)
 
+  git_submodule_init(plief CMakeLists.txt)
+
   set(PLIEF_DEPENDS LIEF)
   TargetVars(PLIEF_DEPENDS)
 

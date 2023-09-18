@@ -36,13 +36,10 @@ set(ENABLE_ITK "${ENABLE_ITK}" CACHE BOOL "Enable itk build")
 
 if (ENABLE_ITK)
 
-  if (TARGET TCL_BLD)
-    set(TCL_TARGET TCL_BLD)
-  endif (TARGET TCL_BLD)
+  git_submodule_init(itk CMakeLists.txt)
 
-  if (TARGET ITCL_BLD)
-    set(ITCL_TARGET ITCL_BLD)
-  endif (TARGET ITCL_BLD)
+  set(ITK_DEPENDS TCL TK ITCL)
+  TargetVars(ITK_DEPENDS)
 
   # If we're building ITK, it's path setup must take into account the
   # subdirectory in which we are storing the library.
@@ -74,37 +71,25 @@ if (ENABLE_ITK)
     STEP_TARGETS install
     )
 
-  ExternalProject_Add_StepTargets(ITK_BLD install)
+  TargetInstallDeps(ITK ITK_DEPENDS)
 
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(ITK_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-  if (TARGET TCL_BLD)
-    ExternalProject_Add_StepDependencies(ITK_BLD configure TCL_BLD-install)
-  endif (TARGET TCL_BLD)
-
-  if (TARGET TK_BLD)
-    ExternalProject_Add_StepDependencies(ITK_BLD configure TK_BLD-install)
-  endif (TARGET TK_BLD)
-
-  if (TARGET ITCL_BLD)
-    ExternalProject_Add_StepDependencies(ITK_BLD configure ITCL_BLD-install)
-  endif (TARGET ITCL_BLD)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/itk/license.terms
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/itk3.txt
+    COPYONLY
+    )
 
 endif (ENABLE_ITK)
 
 mark_as_advanced(ITK_LIBRARY)
 mark_as_advanced(ITK_LIBRARIES)
 mark_as_advanced(ITK_VERSION)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/itk/license.terms
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/itk3.txt
-  COPYONLY
-  )
 
 # Local Variables:
 # tab-width: 8

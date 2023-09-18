@@ -18,6 +18,8 @@ set(ENABLE_ASTYLE "${ENABLE_ASTYLE}" CACHE BOOL "Enable astyle build")
 
 if (ENABLE_ASTYLE)
 
+  git_submodule_init(astyle CMakeLists.txt)
+
   ExternalProject_Add(ASTYLE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/astyle"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}

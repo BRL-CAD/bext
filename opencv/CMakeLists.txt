@@ -17,6 +17,8 @@ set(ENABLE_OPENCV "${ENABLE_OPENCV}" CACHE BOOL "Enable OpenCV build")
 
 if (ENABLE_OPENCV)
 
+  git_submodule_init(opencv CMakeLists.txt)
+
   set(OPENCV_DEPENDS PNG ZLIB)
   TargetVars(OPENCV_DEPENDS)
 
@@ -158,15 +160,15 @@ if (ENABLE_OPENCV)
     ExternalProject_Add_StepDependencies(OPENCV_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_OPENCV)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/opencv/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/opencv.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencv/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/opencv.txt
-  COPYONLY
-  )
+endif (ENABLE_OPENCV)
 
 # Local Variables:
 # tab-width: 8

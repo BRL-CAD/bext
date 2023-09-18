@@ -22,6 +22,8 @@ set(ENABLE_XMLTOOLS "${ENABLE_XMLTOOLS}" CACHE BOOL "Enable xmltools build")
 
 if (ENABLE_XMLTOOLS)
 
+  git_submodule_init(xmltools CMakeLists.txt)
+
   ExternalProject_Add(XMLTOOLS_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xmltools"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}

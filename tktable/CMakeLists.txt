@@ -32,13 +32,10 @@ set(ENABLE_TKTABLE "${ENABLE_TKTABLE}" CACHE BOOL "Enable Tktable build")
 
 if (ENABLE_TKTABLE)
 
-  if (TARGET TCL_BLD)
-    set(TCL_TARGET TCL_BLD)
-  endif (TARGET TCL_BLD)
+  git_submodule_init(tktable CMakeLists.txt)
 
-  if (TARGET TK_BLD)
-    set(TK_TARGET TK_BLD)
-  endif (TARGET TK_BLD)
+  set(TKTABLE_DEPENDS TCL TK)
+  TargetVars(TKTABLE_DEPENDS)
 
   ExternalProject_Add(TKTABLE_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tktable"
@@ -62,29 +59,21 @@ if (ENABLE_TKTABLE)
     STEP_TARGETS install
     )
 
-  ExternalProject_Add_StepTargets(TKTABLE_BLD install)
+  TargetInstallDeps(TKTABLE TKTABLE_DEPENDS)
 
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(TKTABLE_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-  if (TARGET TCL_BLD)
-    ExternalProject_Add_StepDependencies(TKTABLE_BLD configure TCL_BLD-install)
-  endif (TARGET TCL_BLD)
-
-  if (TARGET TK_BLD)
-    ExternalProject_Add_StepDependencies(TKTABLE_BLD configure TK_BLD-install)
-  endif (TARGET TK_BLD)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/tktable/license.txt
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/tktable.txt
+    COPYONLY
+    )
 
 endif (ENABLE_TKTABLE)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/tktable/license.txt
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/tktable.txt
-  COPYONLY
-  )
 
 # Local Variables:
 # tab-width: 8

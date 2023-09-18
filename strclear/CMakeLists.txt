@@ -18,7 +18,9 @@ set(ENABLE_STRCLEAR "${ENABLE_STRCLEAR}" CACHE BOOL "Enable strclear build")
 
 if (ENABLE_STRCLEAR)
 
-    ExternalProject_Add(STRCLEAR_BLD
+  git_submodule_init(strclear CMakeLists.txt)
+
+  ExternalProject_Add(STRCLEAR_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/strclear"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     CMAKE_ARGS

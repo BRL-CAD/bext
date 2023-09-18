@@ -17,6 +17,8 @@ set(ENABLE_SQLite3 "${ENABLE_SQLite3}" CACHE BOOL "Enable sqlite3 build")
 
 if (ENABLE_SQLite3)
 
+  git_submodule_init(sqlite3 sqlite3.c)
+
   ExternalProject_Add(SQLITE3_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -40,15 +42,15 @@ if (ENABLE_SQLite3)
     ExternalProject_Add_StepDependencies(SQLITE3_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_SQLite3)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/sqlite3.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/sqlite3.txt
-  COPYONLY
-  )
+endif (ENABLE_SQLite3)
 
 # Local Variables:
 # tab-width: 8

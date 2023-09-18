@@ -200,6 +200,23 @@ macro(TargetInstallDeps croot roots)
   endforeach(root ${${root}})
 endmacro(TargetInstallDeps root)
 
+###############################################################################
+# We're using submodules to avoid automatically having to download a huge
+# amount of source code if it isn't needed.  Define a convenience function
+# to use in the project to populate the submodule checkouts if needed.
+###############################################################################
+function(git_submodule_init path checkfile)
+  if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
+    find_program(GIT_EXECUTABLE git)
+    if (NOT GIT_EXECUTABLE)
+      message(FATAL_ERROR "Need to populate Git submodule, but unable to find git executable")
+    endif (NOT GIT_EXECUTABLE)
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} submodule update --init ${path}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      )
+  endif (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
+endfunction(git_submodule_init path)
 
 ###############################################################################
 # There are a large number of external packages that may need to be built -
@@ -228,11 +245,6 @@ function(add_project pname)
     endif (USE_${grp})
   endforeach(grp ${A_GROUPS})
 endfunction(add_project pname)
-
-# With git submodules it's common to forget to clone with --recurse-submodules
-if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/patch/patch/README.md")
-  message(FATAL_ERROR "Repository clone is not fully populated - run\ngit submodule update --init --recursive\n\nTo clone with modules initially, use:\ngit clone --recurse-submodules")
-endif (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/patch/patch/README.md")
 
 ###############################################################################
 # Applying patch files cross platform is a challenging problem due to the

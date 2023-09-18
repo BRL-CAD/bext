@@ -17,7 +17,9 @@ set(ENABLE_RE2C "${ENABLE_RE2C}" CACHE BOOL "Enable re2c build")
 
 if (ENABLE_RE2C)
 
-    ExternalProject_Add(RE2C_BLD
+  git_submodule_init(re2c CMakeLists.txt)
+
+  ExternalProject_Add(RE2C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/re2c"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/re2c.patch

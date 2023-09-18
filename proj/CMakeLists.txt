@@ -17,6 +17,8 @@ set(ENABLE_PROJ "${ENABLE_PROJ}" CACHE BOOL "Enable proj build")
 
 if (ENABLE_PROJ)
 
+  git_submodule_init(PROJ CMakeLists.txt)
+
   set(PROJ_DEPENDS SQLITE3)
   TargetVars(PROJ_DEPENDS)
 
@@ -58,16 +60,15 @@ if (ENABLE_PROJ)
     ExternalProject_Add_StepDependencies(PROJ_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/PROJ/COPYING
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/proj.txt
+    COPYONLY
+    )
+
 endif (ENABLE_PROJ)
-
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/PROJ/COPYING
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/proj.txt
-  COPYONLY
-  )
-
 
 # Local Variables:
 # tab-width: 8

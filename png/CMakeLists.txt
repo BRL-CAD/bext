@@ -20,6 +20,8 @@ set(ENABLE_PNG "${ENABLE_PNG}" CACHE BOOL "Enable png build")
 
 if (ENABLE_PNG)
 
+  git_submodule_init(png CMakeLists.txt)
+
   set(PNG_DEPENDS ZLIB)
   TargetVars(PNG_DEPENDS)
 
@@ -64,15 +66,15 @@ if (ENABLE_PNG)
     ExternalProject_Add_StepDependencies(PNG_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_PNG)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/libpng/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/png.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/libpng/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/png.txt
-  COPYONLY
-  )
+endif (ENABLE_PNG)
 
 # Local Variables:
 # tab-width: 8

@@ -21,6 +21,8 @@ set(ENABLE_OPENNURBS "${ENABLE_OPENNURBS}" CACHE BOOL "Enable opennurbs build")
 
 if (ENABLE_OPENNURBS)
 
+  git_submodule_init(opennurbs opennurbs.h)
+
   set(OPENNURBS_DEPENDS ZLIB)
   TargetVars(OPENNURBS_DEPENDS)
 
@@ -84,15 +86,15 @@ if (ENABLE_OPENNURBS)
     ExternalProject_Add_StepDependencies(OPENNURBS_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_OPENNURBS)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/opennurbs/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openNURBS.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/opennurbs/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openNURBS.txt
-  COPYONLY
-  )
+endif (ENABLE_OPENNURBS)
 
 # Local Variables:
 # tab-width: 8

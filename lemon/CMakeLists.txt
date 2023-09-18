@@ -17,7 +17,9 @@ set(ENABLE_LEMON "${ENABLE_LEMON}" CACHE BOOL "Enable lemon build")
 
 if (ENABLE_LEMON)
 
-    ExternalProject_Add(LEMON_BLD
+  git_submodule_init(lemon lemon.c)
+
+  ExternalProject_Add(LEMON_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lemon"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lemon_cmake.patch

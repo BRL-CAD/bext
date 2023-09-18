@@ -17,6 +17,8 @@ set(ENABLE_PERPLEX "${ENABLE_PERPLEX}" CACHE BOOL "Enable perplex build")
 
 if (ENABLE_PERPLEX)
 
+  git_submodule_init(perplex CMakeLists.txt)
+
   set(PERPLEX_DEPENDS LEMON RE2C)
   TargetVars(PERPLEX_DEPENDS)
 

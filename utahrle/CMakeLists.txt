@@ -17,6 +17,8 @@ set(ENABLE_UTAHRLE "${ENABLE_UTAHRLE}" CACHE BOOL "Enable utahrle build")
 
 if (ENABLE_UTAHRLE)
 
+  git_submodule_init(utahrle CMakeLists.txt)
+
   ExternalProject_Add(UTAHRLE_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/utahrle"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -39,15 +41,15 @@ if (ENABLE_UTAHRLE)
     ExternalProject_Add_StepDependencies(UTAHRLE_BLD configure PATCH_BLD-install)
   endif (TARGET PATCH_BLD)
 
-endif (ENABLE_UTAHRLE)
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/utahrle/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/utahrle.txt
+    COPYONLY
+    )
 
-# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/utahrle/LICENSE
-  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/utahrle.txt
-  COPYONLY
-  )
+endif (ENABLE_UTAHRLE)
 
 # Local Variables:
 # tab-width: 8

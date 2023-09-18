@@ -17,6 +17,9 @@ endif (NOT ENABLE_QT)
 set(ENABLE_QT "${ENABLE_QT}" CACHE BOOL "Enable Qt6 build")
 
 if (ENABLE_QT)
+
+  git_submodule_init(qt qtbase/configure)
+
   if (isMultiConfig)
     set(CBT $<CONFIG>)
   else (isMultiConfig)
@@ -82,20 +85,20 @@ if (ENABLE_QT)
 
   ExternalProject_Add_StepDependencies(Qt6Svg_BLD configure Qt6_BLD-install)
 
+  # Copy the license info into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtbase)
+  file(COPY qt/qtbase/LICENSES DESTINATION ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/)
+  file(RENAME ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/LICENSES ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtbase)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtsvg)
+  file(COPY qt/qtsvg/LICENSES DESTINATION ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/)
+  file(RENAME ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/LICENSES ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtsvg)
+
 endif (ENABLE_QT)
 
 mark_as_advanced(Qt6_INCLUDE_DIRS)
 mark_as_advanced(Qt6_LIBRARIES)
 mark_as_advanced(Qt6_VERSION)
-
-# Copy the license info into position in CMAKE_BUNDLE_INSTALL_PREFIX
-file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtbase)
-file(COPY qt/qtbase/LICENSES DESTINATION ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/)
-file(RENAME ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/LICENSES ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtbase)
-execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtsvg)
-file(COPY qt/qtsvg/LICENSES DESTINATION ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/)
-file(RENAME ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/LICENSES ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtsvg)
 
 # Local Variables:
 # tab-width: 8
