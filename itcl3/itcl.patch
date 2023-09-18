@@ -1,0 +1,879 @@
+diff -Naur itcl.orig/CMake/FindTCL.cmake ITCL_BLD/CMake/FindTCL.cmake
+--- itcl.orig/CMake/FindTCL.cmake	1969-12-31 19:00:00.000000000 -0500
++++ ITCL_BLD/CMake/FindTCL.cmake	2023-09-17 20:17:00.344656194 -0400
+@@ -0,0 +1,496 @@
++# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
++# file Copyright.txt or https://cmake.org/licensing for details.
++
++#[=======================================================================[.rst:
++FindTCL
++-------
++
++This module finds if Tcl is installed and determines where the include
++files and libraries are.  It also determines what the name of the
++library is.  This code sets the following variables:
++
++::
++
++TCL_FOUND              = Tcl was found
++TCLSH_FOUND            = TRUE if tclsh has been found
++TCL_LIBRARY            = path to Tcl library (tcl tcl80)
++TCL_INCLUDE_PATH       = path to where tcl.h can be found
++TCL_TCLSH              = path to tclsh binary (tcl tcl80)
++
++
++
++If TCL_ENABLE_TK is set, the following are also set:
++
++::
++
++TK_FOUND               = Tk was found
++TCLTK_FOUND            = Tcl and Tk were found
++TK_LIBRARY             = path to Tk library (tk tk80 etc)
++TK_INCLUDE_PATH        = path to where tk.h can be found
++TK_WISH                = full path to the wish executable
++TCL_STUB_LIBRARY       = path to Tcl stub library
++TK_STUB_LIBRARY        = path to Tk stub library
++TTK_STUB_LIBRARY       = path to ttk stub library
++
++#]=======================================================================]
++
++include(CMakeFindFrameworks)
++
++set(_TCL_SEARCHES)
++
++# Search TCL_ROOT first if it is set.
++if(TCL_ROOT)
++  set(_TCL_SEARCH_ROOT PATHS ${TCL_ROOT} NO_DEFAULT_PATH)
++  list(APPEND _TCL_SEARCHES _TCL_SEARCH_ROOT)
++endif()
++
++if(WIN32)
++  get_filename_component(
++    ActiveTcl_CurrentVersion
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\ActiveState\\ActiveTcl;CurrentVersion]"
++    NAME)
++  set(TCLTK_POSSIBLE_BIN_PATHS ${TCLTK_POSSIBLE_BIN_PATHS}
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\ActiveState\\ActiveTcl\\${ActiveTcl_CurrentVersion}]/bin"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.6;Root]/bin"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.5;Root]/bin"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.4;Root]/bin"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.3;Root]/bin"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.2;Root]/bin"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.0;Root]/bin"
++    )
++
++  get_filename_component(
++    ActiveTcl_CurrentVersion
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\ActiveState\\ActiveTcl;CurrentVersion]"
++    NAME)
++  set(TCLTK_POSSIBLE_LIB_PATHS ${TCLTK_POSSIBLE_LIB_PATHS}
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\ActiveState\\ActiveTcl\\${ActiveTcl_CurrentVersion}]/lib"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.6;Root]/lib"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.5;Root]/lib"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.4;Root]/lib"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.3;Root]/lib"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.2;Root]/lib"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.0;Root]/lib"
++    "$ENV{ProgramFiles}/Tcl/Lib"
++    "C:/Program Files/Tcl/lib"
++    "C:/Tcl/lib"
++    )
++
++  set(TCLTK_POSSIBLE_INCLUDE_PATHS ${TCLTK_POSSIBLE_INCLUDE_PATHS}
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\ActiveState\\ActiveTcl\\${ActiveTcl_CurrentVersion}]/include"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.6;Root]/include"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.5;Root]/include"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.4;Root]/include"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.3;Root]/include"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.2;Root]/include"
++    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Scriptics\\Tcl\\8.0;Root]/include"
++    "$ENV{ProgramFiles}/Tcl/include"
++    "C:/Program Files/Tcl/include"
++    "C:/Tcl/include"
++    )
++endif()
++
++set(TCL_TCLSH_NAMES
++  tclsh
++  tclsh${TCL_LIBRARY_VERSION} tclsh${TK_LIBRARY_VERSION} tclsh${TK_WISH_VERSION}
++  tclsh87 tclsh8.7
++  tclsh86 tclsh8.6
++  tclsh85 tclsh8.5
++  tclsh84 tclsh8.4
++  tclsh83 tclsh8.3
++  tclsh82 tclsh8.2
++  tclsh80 tclsh8.0
++  )
++if(CYGWIN)
++  set(TCL_TCLSH_NAMES ${TCL_TCLSH_NAMES} cygtclsh83 cygtclsh80)
++endif(CYGWIN)
++
++foreach(search ${_TCL_SEARCHES})
++  find_program(TCL_TCLSH NAMES ${TCL_TCLSH_NAMES} ${${search}} PATH_SUFFIXES bin)
++endforeach()
++if (NOT TCL_TCLSH)
++  find_program(TCL_TCLSH NAMES ${TCL_TCLSH_NAMES} HINTS ${TCLTK_POSSIBLE_BIN_PATHS})
++endif (NOT TCL_TCLSH)
++
++if (TCL_ENABLE_TK)
++  set(TK_WISH_NAMES
++    wish
++    wish${TCL_LIBRARY_VERSION} wish${TK_LIBRARY_VERSION} wish${TCL_TCLSH_VERSION}
++    wish86 wish8.6
++    wish85 wish8.5
++    wish84 wish8.4
++    wish83 wish8.3
++    wish82 wish8.2
++    wish80 wish8.0
++    )
++
++  if(CYGWIN)
++    set(TK_WISH_NAMES ${TK_WISH_NAMES} cygwish80 )
++  endif()
++
++  foreach(search ${_TCL_SEARCHES})
++    find_program(TK_WISH NAMES ${TK_WISH_NAMES} ${${search}} PATH_SUFFIXES bin)
++  endforeach()
++  if (NOT TK_WISH)
++    find_program(TK_WISH	NAMES ${TK_WISH_NAMES} HINTS ${TCLTK_POSSIBLE_BIN_PATHS})
++  endif (NOT TK_WISH)
++endif (TCL_ENABLE_TK)
++
++if(TCLSH_VERSION_STRING)
++  set(TCL_TCLSH_VERSION "${TCLSH_VERSION_STRING}")
++else()
++  get_filename_component(TCL_TCLSH_PATH "${TCL_TCLSH}" PATH)
++  get_filename_component(TCL_TCLSH_PATH_PARENT "${TCL_TCLSH_PATH}" PATH)
++  string(REGEX REPLACE
++    "^.*tclsh([0-9]\\.*[0-9]).*$" "\\1" TCL_TCLSH_VERSION "${TCL_TCLSH}")
++endif()
++
++set(TCLTK_POSSIBLE_LIB_PATHS
++  "${TCL_INCLUDE_PATH_PARENT}/lib"
++  "${TCL_LIBRARY_PATH}"
++  "${TCL_TCLSH_PATH_PARENT}/lib"
++  )
++if (TCL_ENABLE_TK)
++  set(TCLTK_POSSIBLE_LIB_PATHS
++    ${TCLTK_POSSIBLE_LIB_PATHS}
++    "${TK_INCLUDE_PATH_PARENT}/lib"
++    "${TK_LIBRARY_PATH}"
++    "${TK_WISH_PATH_PARENT}/lib"
++    )
++endif (TCL_ENABLE_TK)
++
++set(TCLTK_POSSIBLE_LIB_PATH_SUFFIXES
++  lib
++  lib/tcl
++  lib/tcl/tcl8.7
++  lib/tcl/tcl8.6
++  lib/tcl/tcl8.5
++  lib/tcl/tcl8.4
++  )
++if (TCL_ENABLE_TK)
++  set(TCLTK_POSSIBLE_LIB_PATH_SUFFIXES
++    ${TCLTK_POSSIBLE_LIB_PATH_SUFFIXES}
++    lib/tcl/tk8.7
++    lib/tcl/tk8.6
++    lib/tcl/tk8.5
++    lib/tcl/tk8.4
++    )
++endif (TCL_ENABLE_TK)
++
++set(TCL_POSSIBLE_LIB_NAMES
++  tcl
++  tcl${TCL_LIBRARY_VERSION} tcl${TCL_TCLSH_VERSION} tcl${TK_WISH_VERSION}
++  tcl87 tcl8.7 tcl87t tcl8.7t
++  tcl86 tcl8.6 tcl86t tcl8.6t
++  tcl85 tcl8.5
++  tcl84 tcl8.4
++  tcl83 tcl8.3
++  tcl82 tcl8.2
++  tcl80 tcl8.0
++  )
++
++if(NOT TCL_LIBRARY)
++  foreach(search ${_TCL_SEARCHES})
++    find_library(TCL_LIBRARY
++      NAMES ${TCL_POSSIBLE_LIB_NAMES}
++      NAMES_PER_DIR ${${search}}
++      PATH_SUFFIXES ${TCLTK_POSSIBLE_LIB_PATH_SUFFIXES})
++  endforeach()
++endif()
++if(NOT TCL_LIBRARY)
++  find_library(TCL_LIBRARY
++    NAMES ${TCL_POSSIBLE_LIB_NAMES}
++    PATHS ${TCLTK_POSSIBLE_LIB_PATHS}
++    PATH_SUFFIXES ${TCLTK_POSSIBLE_LIB_PATH_SUFFIXES}
++    )
++endif(NOT TCL_LIBRARY)
++
++set(TCLSTUB_POSSIBLE_LIB_NAMES
++  tclstub
++  tclstub${TK_LIBRARY_VERSION} tclstub${TCL_TCLSH_VERSION} tclstub${TK_WISH_VERSION}
++  tclstub87 tclstub8.7
++  tclstub86 tclstub8.6
++  tclstub85 tclstub8.5
++  tclstub84 tclstub8.4
++  tclstub83 tclstub8.3
++  tclstub82 tclstub8.2
++  tclstub80 tclstub8.0
++  )
++if(NOT TCL_STUB_LIBRARY)
++  foreach(search ${_TCL_SEARCHES})
++    find_library(TCL_STUB_LIBRARY
++      NAMES ${TCLSTUB_POSSIBLE_LIB_NAMES}
++      NAMES_PER_DIR ${${search}}
++      PATH_SUFFIXES ${TCLTK_POSSIBLE_LIB_PATH_SUFFIXES}
++      )
++  endforeach()
++endif()
++if(NOT TCL_STUB_LIBRARY)
++  find_library(TCL_STUB_LIBRARY
++    NAMES ${TCLSTUB_POSSIBLE_LIB_NAMES}
++    PATHS ${TCLTK_POSSIBLE_LIB_PATHS}
++    )
++endif()
++
++if (TCL_ENABLE_TK)
++  set(TK_POSSIBLE_LIB_NAMES
++    tk
++    tk${TK_LIBRARY_VERSION} tk${TCL_TCLSH_VERSION} tk${TK_WISH_VERSION}
++    tk87 tk8.7 tk87t tk8.7t
++    tk86 tk8.6 tk86t tk8.6t
++    tk85 tk8.5
++    tk84 tk8.4
++    tk83 tk8.3
++    tk82 tk8.2
++    tk80 tk8.0
++    )
++
++  if(NOT TK_LIBRARY)
++    foreach(search ${_TCL_SEARCHES})
++      find_library(TK_LIBRARY
++	NAMES ${TK_POSSIBLE_LIB_NAMES}
++	NAMES_PER_DIR ${${search}}
++	PATH_SUFFIXES ${TCLTK_POSSIBLE_LIB_PATH_SUFFIXES}
++	)
++    endforeach()
++  endif()
++  if(NOT TK_LIBRARY)
++    find_library(TK_LIBRARY
++      NAMES ${TK_POSSIBLE_LIB_NAMES}
++      PATHS ${TCLTK_POSSIBLE_LIB_PATHS}
++      PATH_SUFFIXES ${TCLTK_POSSIBLE_LIB_PATH_SUFFIXES}
++      )
++  endif(NOT TK_LIBRARY)
++
++  set(TK_STUB_POSSIBLE_LIB_NAMES
++    tkstub
++    tkstub${TCL_LIBRARY_VERSION} tkstub${TCL_TCLSH_VERSION} tkstub${TK_WISH_VERSION}
++    tkstub87 tkstub8.7
++    tkstub86 tkstub8.6
++    tkstub85 tkstub8.5
++    tkstub84 tkstub8.4
++    tkstub83 tkstub8.3
++    tkstub82 tkstub8.2
++    tkstub80 tkstub8.0
++    )
++
++  if(NOT TK_STUB_LIBRARY)
++    foreach(search ${_TCL_SEARCHES})
++      find_library(TK_STUB_LIBRARY
++	NAMES ${TK_STUB_POSSIBLE_LIB_NAMES}
++	NAMES_PER_DIR ${${search}}
++	PATH_SUFFIXES ${TCLTK_POSSIBLE_LIB_PATH_SUFFIXES}
++	)
++    endforeach()
++  endif()
++  if(NOT TK_STUB_LIBRARY)
++    find_library(TK_STUB_LIBRARY
++      NAMES ${TK_STUB_POSSIBLE_LIB_NAMES}
++      PATHS ${TCLTK_POSSIBLE_LIB_PATHS}
++      )
++  endif()
++
++  set(TTK_STUB_POSSIBLE_LIB_NAMES
++    ttkstub
++    ttkstub${TCL_LIBRARY_VERSION} ttkstub${TCL_TCLSH_VERSION} ttkstub${TK_WISH_VERSION}
++    ttkstub88 ttkstub8.8
++    ttkstub87 ttkstub8.7
++    ttkstub86 ttkstub8.6
++    ttkstub85 ttkstub8.5
++    )
++
++  if(NOT TTK_STUB_LIBRARY)
++    foreach(search ${_TCL_SEARCHES})
++      find_library(TTK_STUB_LIBRARY
++	NAMES ${TTK_STUB_POSSIBLE_LIB_NAMES}
++	NAMES_PER_DIR ${${search}}
++	PATH_SUFFIXES ${TCLTK_POSSIBLE_LIB_PATH_SUFFIXES}
++	)
++    endforeach()
++  endif()
++  if(NOT TTK_STUB_LIBRARY)
++    find_library(TTK_STUB_LIBRARY
++      NAMES ${TTK_STUB_POSSIBLE_LIB_NAMES}
++      PATHS ${TCLTK_POSSIBLE_LIB_PATHS}
++      )
++  endif()
++endif (TCL_ENABLE_TK)
++
++CMAKE_FIND_FRAMEWORKS(Tcl)
++if (TCL_ENABLE_TK)
++  CMAKE_FIND_FRAMEWORKS(Tk)
++endif (TCL_ENABLE_TK)
++
++set(TCL_FRAMEWORK_INCLUDES)
++if(Tcl_FRAMEWORKS)
++  if(NOT TCL_INCLUDE_PATH)
++    foreach(dir ${Tcl_FRAMEWORKS})
++      set(TCL_FRAMEWORK_INCLUDES ${TCL_FRAMEWORK_INCLUDES} ${dir}/Headers)
++    endforeach()
++  endif()
++endif()
++
++if (TCL_ENABLE_TK)
++  set(TK_FRAMEWORK_INCLUDES)
++  if(Tk_FRAMEWORKS)
++    if(NOT TK_INCLUDE_PATH)
++      foreach(dir ${Tk_FRAMEWORKS})
++	set(TK_FRAMEWORK_INCLUDES ${TK_FRAMEWORK_INCLUDES}
++	  ${dir}/Headers ${dir}/PrivateHeaders)
++      endforeach()
++    endif()
++  endif()
++endif (TCL_ENABLE_TK)
++
++set(TCLTK_POSSIBLE_INCLUDE_PATHS
++  "${TCL_LIBRARY_PATH_PARENT}/include"
++  "${TCL_INCLUDE_PATH}"
++  ${TCL_FRAMEWORK_INCLUDES}
++  "${TCL_TCLSH_PATH_PARENT}/include"
++  )
++if (TCL_ENABLE_TK)
++  set(TCLTK_POSSIBLE_INCLUDE_PATHS
++    ${TCLTK_POSSIBLE_INCLUDE_PATHS}
++    "${TCL_LIBRARY_PATH_PARENT}/include"
++    "${TCL_INCLUDE_PATH}"
++    ${TCL_FRAMEWORK_INCLUDES}
++    "${TCL_TCLSH_PATH_PARENT}/include"
++    )
++endif (TCL_ENABLE_TK)
++
++set(TCLTK_POSSIBLE_INCLUDE_PATH_SUFFIXES
++  include
++  include/tcl${TCL_LIBRARY_VERSION}
++  include/tcl8.7
++  include/tcl8.6
++  include/tcl8.5
++  include/tcl8.4
++  include/tcl8.3
++  include/tcl8.2
++  include/tcl8.0
++  )
++
++if (TCL_ENABLE_TK)
++  set(TCLTK_POSSIBLE_INCLUDE_PATH_SUFFIXES
++    ${TCLTK_POSSIBLE_INCLUDE_PATH_SUFFIXES}
++    include/tcl${TK_LIBRARY_VERSION}
++    include/tk8.7
++    include/tk8.6
++    include/tk8.5
++    include/tk8.4
++    )
++endif (TCL_ENABLE_TK)
++
++
++foreach(search ${_TCL_SEARCHES})
++  find_path(TCL_INCLUDE_PATH
++    NAMES tcl.h ${${search}}
++    PATH_SUFFIXES ${TCLTK_POSSIBLE_INCLUDE_PATH_SUFFIXES}
++    )
++endforeach()
++if (NOT TCL_INCLUDE_PATH)
++  find_path(TCL_INCLUDE_PATH
++    NAMES tcl.h
++    HINTS ${TCLTK_POSSIBLE_INCLUDE_PATHS}
++    PATH_SUFFIXES ${TCLTK_POSSIBLE_INCLUDE_PATH_SUFFIXES}
++    )
++endif()
++
++if (TCL_ENABLE_TK)
++
++  foreach(search ${_TCL_SEARCHES})
++    find_path(TK_INCLUDE_PATH
++      NAMES tk.h ${${search}}
++      PATH_SUFFIXES ${TCLTK_POSSIBLE_INCLUDE_PATH_SUFFIXES}
++      )
++  endforeach()
++  if (NOT TK_INCLUDE_PATH)
++    find_path(TK_INCLUDE_PATH
++      NAMES tk.h
++      HINTS ${TCLTK_POSSIBLE_INCLUDE_PATHS}
++      PATH_SUFFIXES ${TCLTK_POSSIBLE_INCLUDE_PATH_SUFFIXES}
++      )
++  endif()
++
++  # IFF we have TCL_TK_SYSTEM_GRAPHICS set and have a system TK_WISH, check that the
++  # windowing system matches the specified type
++  if (NOT "${TCL_TK_SYSTEM_GRAPHICS}" STREQUAL "" AND TK_WISH AND NOT TARGET "${TK_WISH}")
++    set(tkwin_script "
++    set filename \"${CMAKE_BINARY_DIR}/CMakeTmp/TK_WINDOWINGSYSTEM\"
++    set fileId [open $filename \"w\"]
++    set windowingsystem [tk windowingsystem]
++    puts $fileId $windowingsystem
++    close $fileId
++    exit
++    ")
++    set(tkwin_scriptfile "${CMAKE_BINARY_DIR}/CMakeTmp/tk_windowingsystem.tcl")
++    set(WSYS "wm-NOTFOUND")
++    file(WRITE ${tkwin_scriptfile} ${tkwin_script})
++    execute_process(COMMAND ${TK_WISH} ${tkwin_scriptfile} OUTPUT_VARIABLE EXECOUTPUT)
++    if (EXISTS "${CMAKE_BINARY_DIR}/CMakeTmp/TK_WINDOWINGSYSTEM")
++      file(READ "${CMAKE_BINARY_DIR}/CMakeTmp/TK_WINDOWINGSYSTEM" readresultvar)
++      string(REGEX REPLACE "\n" "" WSYS "${readresultvar}")
++    endif (EXISTS "${CMAKE_BINARY_DIR}/CMakeTmp/TK_WINDOWINGSYSTEM")
++
++    # If we have no information about the windowing system or it does not match
++    # a specified system, the find_package detection has failed
++    if (NOT "${WSYS}" STREQUAL "${TCL_TK_SYSTEM_GRAPHICS}")
++      unset(TCL_LIBRARY CACHE)
++      unset(TCL_STUB_LIBRARY CACHE)
++      unset(TK_LIBRARY CACHE)
++      unset(TK_STUB_LIBRARY CACHE)
++      unset(TCL_FOUND CACHE)
++      unset(TK_FOUND CACHE)
++      unset(TCLTK_FOUND CACHE)
++      unset(TCLSH_FOUND CACHE)
++      unset(TCL_LIBRARY CACHE)
++      unset(TCL_INCLUDE_PATH CACHE)
++      unset(TCL_TCLSH CACHE)
++      unset(TK_LIBRARY CACHE)
++      unset(TK_INCLUDE_PATH CACHE)
++      unset(TK_WISH CACHE)
++      unset(TCL_STUB_LIBRARY CACHE)
++      unset(TK_STUB_LIBRARY CACHE)
++      unset(TTK_STUB_LIBRARY CACHE)
++    endif (NOT "${WSYS}" STREQUAL "${TCL_TK_SYSTEM_GRAPHICS}")
++  endif (NOT "${TCL_TK_SYSTEM_GRAPHICS}" STREQUAL "" AND TK_WISH AND NOT TARGET "${TK_WISH}")
++endif (TCL_ENABLE_TK)
++
++include(FindPackageHandleStandardArgs)
++
++FIND_PACKAGE_HANDLE_STANDARD_ARGS(TCL
++  REQUIRED_VARS TCL_LIBRARY TCL_STUB_LIBRARY TCL_INCLUDE_PATH TCL_TCLSH
++  VERSION_VAR TCLSH_VERSION_STRING)
++
++if (TCL_ENABLE_TK)
++  set(FPHSA_NAME_MISMATCHED 1)
++  set(TCLTK_FIND_REQUIRED ${TCL_FIND_REQUIRED})
++  set(TCLTK_FIND_QUIETLY  ${TCL_FIND_QUIETLY})
++  FIND_PACKAGE_HANDLE_STANDARD_ARGS(TCLTK
++    REQUIRED_VARS TCL_LIBRARY TCL_STUB_LIBRARY TCL_INCLUDE_PATH TK_LIBRARY TK_STUB_LIBRARY TK_INCLUDE_PATH)
++  set(TK_FIND_REQUIRED ${TCL_FIND_REQUIRED})
++  set(TK_FIND_QUIETLY  ${TCL_FIND_QUIETLY})
++  FIND_PACKAGE_HANDLE_STANDARD_ARGS(TK
++    REQUIRED_VARS TK_LIBRARY TK_STUB_LIBRARY TK_INCLUDE_PATH TK_WISH)
++  unset(FPHSA_NAME_MISMATCHED)
++endif (TCL_ENABLE_TK)
++
++mark_as_advanced(
++  TCL_INCLUDE_PATH
++  TCL_LIBRARY
++  TCL_STUB_LIBRARY
++  TCL_TCLSH
++  TK_INCLUDE_PATH
++  TK_LIBRARY
++  TK_STUB_LIBRARY
++  TK_WISH
++  TTK_STUB_LIBRARY
++  )
++
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
+diff -Naur itcl.orig/CMakeLists.txt ITCL_BLD/CMakeLists.txt
+--- itcl.orig/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
++++ ITCL_BLD/CMakeLists.txt	2023-09-17 20:17:00.344656194 -0400
+@@ -0,0 +1,230 @@
++#                     C M A K E L I S T S . T X T
++# ITCL
++#
++# Copyright (c) 2010 United States Government as represented by
++# the U.S. Army Research Laboratory.
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++#
++# 1. Redistributions of source code must retain the above copyright
++# notice, this list of conditions and the following disclaimer.
++#
++# 2. Redistributions in binary form must reproduce the above
++# copyright notice, this list of conditions and the following
++# disclaimer in the documentation and/or other materials provided
++# with the distribution.
++#
++# 3. The name of the author may not be used to endorse or promote
++# products derived from this software without specific prior written
++# permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
++# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
++# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
++# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++# *******************************************************************
++# ***                   ITCL CMakeLists.txt                       ***
++# *******************************************************************
++
++# Minimum required version of CMake
++cmake_minimum_required(VERSION 3.18)
++
++# set CMake project name
++project(ITCL)
++
++# install(CODE) uses generator expressions - requires 3.14 or newer.
++# We want it to be on, but until we can bump our minimum requirement
++# set it to OLD to make sure we don't break anything.
++if (POLICY CMP0087)
++  cmake_policy(SET CMP0087 OLD)
++endif (POLICY CMP0087)
++
++list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
++
++set(CMAKE_FIND_FRAMEWORK NEVER)
++find_package(TCL)
++
++# version numbers
++set(ITCL_VERSION_MAJOR 3)
++set(ITCL_VERSION_MINOR 4)
++set(ITCL_PATCH_LEVEL 3)
++
++set(ITCL_VERSION "${ITCL_VERSION_MAJOR}.${ITCL_VERSION_MINOR}")
++
++#---------------------------------------------------------------------
++# Initialize some relative variable names
++if(NOT BIN_DIR)
++  if (WIN32)
++    set(BIN_DIR lib)
++  else (WIN32)
++    set(BIN_DIR bin)
++  endif (WIN32)
++endif(NOT BIN_DIR)
++if(NOT SHARED_DIR)
++  set(SHARED_DIR lib)
++endif(NOT SHARED_DIR)
++if(NOT LIB_DIR)
++  set(LIB_DIR lib)
++endif(NOT LIB_DIR)
++if(NOT INCLUDE_DIR)
++  set(INCLUDE_DIR include)
++endif(NOT INCLUDE_DIR)
++
++#----------------------------------------------------------------------------
++# First, get some standard options out of the way
++add_definitions(-DSTDC_HEADERS=1)
++
++# We're building Itcl
++add_definitions(-DBUILD_itcl)
++
++# Use fPIC if we have it
++include(CheckCCompilerFlag)
++check_c_compiler_flag(-fPIC HAVE_PIC_COMPILER_FLAG)
++if(HAVE_PIC_COMPILER_FLAG)
++  add_definitions(-fPIC)
++endif(HAVE_PIC_COMPILER_FLAG)
++
++#--------------------------------------------------------------------
++# Header checks.
++#--------------------------------------------------------------------
++
++include(CMakeParseArguments)
++include(CheckIncludeFiles)
++include(CheckCSourceCompiles)
++function(Tcl_Check_Include_File filename)
++  cmake_parse_arguments(OPT "USE" "" "" ${ARGN})
++  string(REPLACE "." "_" var "${filename}")
++  string(REPLACE "/" "_" var "${var}")
++  string(TOUPPER "${var}" var)
++  check_include_files(${filename} HAVE_${var})
++  if(HAVE_${var})
++    set(CVAR HAVE_${var})
++    if(OPT_USE)
++      # Usability test requested - we're not done yet.
++      check_c_source_compiles("#include <${filename}>\nint main() {return 0;}" ${var}_USABLE)
++      if(${var}_USABLE)
++	set(HAVE_${var} 1 PARENT_SCOPE)
++	set(${CVAR} 1 PARENT_SCOPE)
++	add_definitions(-D${CVAR}=1)
++      endif(${var}_USABLE)
++    else(OPT_USE)
++      set(HAVE_${var} 1 PARENT_SCOPE)
++      set(${CVAR} 1 PARENT_SCOPE)
++      add_definitions(-D${CVAR}=1)
++    endif(OPT_USE)
++  endif(HAVE_${var})
++endfunction(Tcl_Check_Include_File)
++
++Tcl_Check_Include_File(sys/types.h)
++Tcl_Check_Include_File(sys/stat.h)
++Tcl_Check_Include_File(stdlib.h)
++Tcl_Check_Include_File(string.h)
++Tcl_Check_Include_File(strings.h)
++Tcl_Check_Include_File(memory.h)
++Tcl_Check_Include_File(inttypes.h)
++Tcl_Check_Include_File(stdint.h)
++Tcl_Check_Include_File(unistd.h)
++Tcl_Check_Include_File(net/errno.h)
++Tcl_Check_Include_File(dirent.h)
++Tcl_Check_Include_File(errno.h USE)
++Tcl_Check_Include_File(float.h USE)
++Tcl_Check_Include_File(values.h USE)
++Tcl_Check_Include_File(limits.h USE)
++Tcl_Check_Include_File(sys/wait.h USE)
++Tcl_Check_Include_File(dlfcn.h USE)
++Tcl_Check_Include_File(sys/param.h USE)
++
++set(ITCL_SRCS
++  generic/itclStubInit.c
++  generic/itclStubLib.c
++  generic/itcl_bicmds.c
++  generic/itcl_class.c
++  generic/itcl_cmds.c
++  generic/itcl_ensemble.c
++  generic/itcl_linkage.c
++  generic/itcl_methods.c
++  generic/itcl_migrate.c
++  generic/itcl_objects.c
++  generic/itcl_parse.c
++  generic/itcl_util.c
++  )
++
++if(WIN32)
++  set(ITCL_SRCS ${ITCL_SRCS} win/dllEntryPoint.c)
++endif(WIN32)
++
++set(ITCL_STUB_SRCS generic/itclStubLib.c)
++
++set(ITCL_INCLUDE_PATH ${ITCL_SOURCE_DIR}/generic ${ITCL_BINARY_DIR}/include)
++mark_as_advanced(ITCL_INCLUDE_PATH)
++
++# ITcl requires private Tcl headers, which we can't assume from a system
++# install of Tcl.  The fallback is to use our local copies and hope they
++# work. (Ugh.)
++if (NOT DEFINED TCL_SOURCE_DIR)
++  message(FATAL_ERROR "Itcl3 needs to know where to find the Tcl source directory")
++endif (NOT DEFINED TCL_SOURCE_DIR)
++set(TCL_PRIVATE_HDRS ${TCL_SOURCE_DIR}/generic)
++if(NOT WIN32)
++  set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/unix)
++else(NOT WIN32)
++  set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/win)
++endif(NOT WIN32)
++
++include_directories(
++  ${TCL_INCLUDE_PATH}
++  ${ITCL_INCLUDE_PATH}
++  ${TCL_PRIVATE_HDRS}
++  )
++
++add_library(itcl${ITCL_VERSION} SHARED ${ITCL_SRCS})
++target_link_libraries(itcl${ITCL_VERSION} ${M_LIBRARY} ${TCL_STUB_LIBRARY} )
++set_property(TARGET itcl${ITCL_VERSION} APPEND PROPERTY COMPILE_DEFINITIONS USE_TCL_STUBS)
++install(TARGETS itcl${ITCL_VERSION}
++  RUNTIME DESTINATION ${BIN_DIR}/itcl${ITCL_VERSION}
++  LIBRARY DESTINATION ${SHARED_DIR}/itcl${ITCL_VERSION}
++  ARCHIVE DESTINATION ${LIB_DIR}/itcl${ITCL_VERSION})
++
++add_library(itclstub STATIC ${ITCL_STUB_SRCS})
++install(TARGETS itclstub
++  RUNTIME DESTINATION ${BIN_DIR}/itcl${ITCL_VERSION}
++  LIBRARY DESTINATION ${LIB_DIR}/itcl${ITCL_VERSION}
++  ARCHIVE DESTINATION ${LIB_DIR}/itcl${ITCL_VERSION})
++set_property(TARGET itclstub APPEND PROPERTY COMPILE_DEFINITIONS USE_TCL_STUBS)
++
++# Create pkgIndex.tcl files
++file(GENERATE
++  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/pkgIndex.tcl"
++  CONTENT "
++if {![package vsatisfies [package provide Tcl] 8.5]} {return}
++package ifneeded Itcl ${ITCL_VERSION} [list load [file join $dir ../../${SHARED_DIR}/itcl${ITCL_VERSION} $<TARGET_FILE_NAME:itcl${ITCL_VERSION}>] Itcl]
++")
++install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pkgIndex.tcl DESTINATION ${LIB_DIR}/itcl${ITCL_VERSION})
++
++install(FILES library/itcl.tcl DESTINATION ${LIB_DIR}/itcl${ITCL_VERSION})
++
++set(ITCL_HDRS
++  generic/itcl.h
++  generic/itclDecls.h
++  generic/itclInt.h
++  generic/itclIntDecls.h
++  )
++install(FILES ${ITCL_HDRS} DESTINATION ${INCLUDE_DIR})
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
++
+diff -Naur itcl.orig/generic/itcl_cmds.c ITCL_BLD/generic/itcl_cmds.c
+--- itcl.orig/generic/itcl_cmds.c	2023-09-17 20:16:39.177011583 -0400
++++ ITCL_BLD/generic/itcl_cmds.c	2023-09-17 20:17:00.348656127 -0400
+@@ -53,9 +53,6 @@
+         if {[info exists library]} {\n\
+             lappend dirs $library\n\
+         } else {\n\
+-            if {[catch {uplevel #0 source -rsrc itcl}] == 0} {\n\
+-                return\n\
+-            }\n\
+             set dirs {}\n\
+             if {[info exists env(ITCL_LIBRARY)]} {\n\
+                 lappend dirs $env(ITCL_LIBRARY)\n\
+@@ -866,7 +863,7 @@
+     int objc;                /* number of arguments */
+     Tcl_Obj *CONST objv[];   /* argument objects */
+ {
+-    int pLevel = (int)clientData;
++    int pLevel = (int)(size_t)clientData;
+ 
+     int result;
+     int oldLevel;
+@@ -1145,7 +1142,7 @@
+         if (!entry) {
+             Tcl_AppendResult(interp,
+                 "can't scope variable \"", token,
+-                "\": missing object context\"",
++                "\": missing object context",
+                 (char*)NULL);
+             result = TCL_ERROR;
+             goto scopeCmdDone;
+diff -Naur itcl.orig/generic/itclInt.decls ITCL_BLD/generic/itclInt.decls
+--- itcl.orig/generic/itclInt.decls	2023-09-17 20:16:39.177011583 -0400
++++ ITCL_BLD/generic/itclInt.decls	2023-09-17 20:17:00.344656194 -0400
+@@ -252,7 +252,7 @@
+         CONST char* arglist, CONST char* body, ItclMemberCode** mcodePtr)
+ }
+ declare 58 generic {
+-    void Itcl_DeleteMemberCode (CONST char* cdata)
++    void Itcl_DeleteMemberCode (char* cdata)
+ }
+ declare 59 generic {
+     int Itcl_GetMemberCode (Tcl_Interp* interp, ItclMember* member)
+diff -Naur itcl.orig/generic/itclIntDecls.h ITCL_BLD/generic/itclIntDecls.h
+--- itcl.orig/generic/itclIntDecls.h	2023-09-17 20:16:39.177011583 -0400
++++ ITCL_BLD/generic/itclIntDecls.h	2023-09-17 20:17:00.344656194 -0400
+@@ -410,7 +410,7 @@
+ #ifndef Itcl_DeleteMemberCode_TCL_DECLARED
+ #define Itcl_DeleteMemberCode_TCL_DECLARED
+ /* 58 */
+-TCL_EXTERN(void)	Itcl_DeleteMemberCode _ANSI_ARGS_((CONST char* cdata));
++TCL_EXTERN(void)	Itcl_DeleteMemberCode _ANSI_ARGS_((char* cdata));
+ #endif
+ #ifndef Itcl_GetMemberCode_TCL_DECLARED
+ #define Itcl_GetMemberCode_TCL_DECLARED
+@@ -853,7 +853,7 @@
+     int (*itcl_ChangeMemberFunc) _ANSI_ARGS_((Tcl_Interp* interp, ItclMemberFunc* mfunc, CONST char* arglist, CONST char* body)); /* 55 */
+     void (*itcl_DeleteMemberFunc) _ANSI_ARGS_((CONST char* cdata)); /* 56 */
+     int (*itcl_CreateMemberCode) _ANSI_ARGS_((Tcl_Interp* interp, ItclClass * cdefn, CONST char* arglist, CONST char* body, ItclMemberCode** mcodePtr)); /* 57 */
+-    void (*itcl_DeleteMemberCode) _ANSI_ARGS_((CONST char* cdata)); /* 58 */
++    void (*itcl_DeleteMemberCode) _ANSI_ARGS_((char* cdata)); /* 58 */
+     int (*itcl_GetMemberCode) _ANSI_ARGS_((Tcl_Interp* interp, ItclMember* member)); /* 59 */
+     void *reserved60;
+     int (*itcl_EvalMemberCode) _ANSI_ARGS_((Tcl_Interp * interp, ItclMemberFunc * mfunc, ItclMember * member, ItclObject * contextObj, int objc, Tcl_Obj *CONST objv[])); /* 61 */
+diff -Naur itcl.orig/generic/itcl_methods.c ITCL_BLD/generic/itcl_methods.c
+--- itcl.orig/generic/itcl_methods.c	2023-09-17 20:16:39.177011583 -0400
++++ ITCL_BLD/generic/itcl_methods.c	2023-09-17 20:17:00.352656061 -0400
+@@ -731,8 +731,7 @@
+  * ------------------------------------------------------------------------
+  */
+ void
+-Itcl_DeleteMemberCode(cdata)
+-    CONST char* cdata;  /* pointer to member function definition */
++Itcl_DeleteMemberCode(char *cdata)
+ {
+     ItclMemberCode* mcode = (ItclMemberCode*)cdata;
+ 
+@@ -1156,7 +1155,7 @@
+     nameLen = strlen(name);
+ 
+     localPtr = (CompiledLocal*)ckalloc(
+-        (unsigned)(sizeof(CompiledLocal)-sizeof(localPtr->name) + nameLen+1)
++        TclOffset(CompiledLocal, name) + nameLen+1
+     );
+ 
+     localPtr->nextPtr = NULL;
+diff -Naur itcl.orig/win/itcl.rc ITCL_BLD/win/itcl.rc
+--- itcl.orig/win/itcl.rc	1969-12-31 19:00:00.000000000 -0500
++++ ITCL_BLD/win/itcl.rc	2023-09-17 20:17:00.356655994 -0400
+@@ -0,0 +1,55 @@
++//
++// Version resource script.
++//
++
++#include <winver.h>
++#include <itcl.h>
++
++//
++// build-up the name suffix that defines the type of build this is.
++//
++#if DEBUG && !UNCHECKED
++#define SUFFIX_DEBUG	    "g"
++#else
++#define SUFFIX_DEBUG	    ""
++#endif
++
++#define SUFFIX		    SUFFIX_DEBUG
++
++
++VS_VERSION_INFO VERSIONINFO
++ FILEVERSION	ITCL_MAJOR_VERSION,ITCL_MINOR_VERSION,ITCL_RELEASE_LEVEL,ITCL_RELEASE_SERIAL
++ PRODUCTVERSION	ITCL_MAJOR_VERSION,ITCL_MINOR_VERSION,ITCL_RELEASE_LEVEL,ITCL_RELEASE_SERIAL
++ FILEFLAGSMASK	0x3fL
++#ifdef DEBUG
++ FILEFLAGS 	VS_FF_DEBUG
++#else
++ FILEFLAGS 	0x0L
++#endif
++ FILEOS 	VOS__WINDOWS32
++ FILETYPE 	VFT_DLL
++ FILESUBTYPE	0x0L
++BEGIN
++    BLOCK "StringFileInfo"
++    BEGIN
++	BLOCK "040904b0"
++	BEGIN
++	    VALUE "FileDescription", "Itcl language extension for Tcl\0"
++	    VALUE "Authors", "Michael McLennan\0"
++	    VALUE "OriginalFilename", "itcl" STRINGIFY(ITCL_MAJOR_VERSION) STRINGIFY(ITCL_MINOR_VERSION) SUFFIX ".dll\0"
++	    VALUE "CompanyName", "Bell Labs Innovations for Lucent Technologies\0"
++	    VALUE "FileVersion", ITCL_PATCH_LEVEL
++	    VALUE "LegalCopyright", "Copyright \251 1993-2004\0"
++	    VALUE "ProductName", "[Incr Tcl] " ITCL_VERSION " for Windows\0"
++	    VALUE "ProductVersion", ITCL_PATCH_LEVEL
++	END
++    END
++    BLOCK "VarFileInfo"
++    BEGIN
++	VALUE "Translation", 0x409, 1200
++    END
++END
++
++
++
++

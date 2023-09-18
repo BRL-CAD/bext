@@ -1,0 +1,342 @@
+diff -Naur tcl8.6.13/macosx/configure tcl/macosx/configure
+--- tcl8.6.13/macosx/configure	2023-08-24 14:40:07.796214804 -0400
++++ tcl/macosx/configure	2023-08-24 14:34:46.073659818 -0400
+@@ -4625,9 +4625,9 @@
+ 
+ if test $zlib_ok = yes; then :
+ 
+-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing deflateSetHeader" >&5
+-$as_echo_n "checking for library containing deflateSetHeader... " >&6; }
+-if ${ac_cv_search_deflateSetHeader+:} false; then :
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing brl_deflateSetHeader" >&5
++$as_echo_n "checking for library containing brl_deflateSetHeader... " >&6; }
++if ${ac_cv_search_brl_deflateSetHeader+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+   ac_func_search_save_LIBS=$LIBS
+@@ -4640,16 +4640,16 @@
+ #ifdef __cplusplus
+ extern "C"
+ #endif
+-char deflateSetHeader ();
++char brl_deflateSetHeader ();
+ int
+ main ()
+ {
+-return deflateSetHeader ();
++return brl_deflateSetHeader ();
+   ;
+   return 0;
+ }
+ _ACEOF
+-for ac_lib in '' z; do
++for ac_lib in '' z_brl; do
+   if test -z "$ac_lib"; then
+     ac_res="none required"
+   else
+@@ -4657,25 +4657,25 @@
+     LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+   fi
+   if ac_fn_c_try_link "$LINENO"; then :
+-  ac_cv_search_deflateSetHeader=$ac_res
++  ac_cv_search_brl_deflateSetHeader=$ac_res
+ fi
+ rm -f core conftest.err conftest.$ac_objext \
+     conftest$ac_exeext
+-  if ${ac_cv_search_deflateSetHeader+:} false; then :
++  if ${ac_cv_search_brl_deflateSetHeader+:} false; then :
+   break
+ fi
+ done
+-if ${ac_cv_search_deflateSetHeader+:} false; then :
++if ${ac_cv_search_brl_deflateSetHeader+:} false; then :
+ 
+ else
+-  ac_cv_search_deflateSetHeader=no
++  ac_cv_search_brl_deflateSetHeader=no
+ fi
+ rm conftest.$ac_ext
+ LIBS=$ac_func_search_save_LIBS
+ fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_deflateSetHeader" >&5
+-$as_echo "$ac_cv_search_deflateSetHeader" >&6; }
+-ac_res=$ac_cv_search_deflateSetHeader
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_brl_deflateSetHeader" >&5
++$as_echo "$ac_cv_search_brl_deflateSetHeader" >&6; }
++ac_res=$ac_cv_search_brl_deflateSetHeader
+ if test "$ac_res" != no; then :
+   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+ 
+diff -Naur tcl8.6.13/pkgs/itcl4.2.3/tclconfig/tcl.m4 tcl/pkgs/itcl4.2.3/tclconfig/tcl.m4
+--- tcl8.6.13/pkgs/itcl4.2.3/tclconfig/tcl.m4	2023-08-24 14:30:16.634258638 -0400
++++ tcl/pkgs/itcl4.2.3/tclconfig/tcl.m4	2023-08-24 14:43:59.068281488 -0400
+@@ -2516,8 +2516,8 @@
+ 	    [LIBS="$LIBS -lnsl"])])
+     AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
+ 	    [LIBS="$LIBS -ltommath"])])
+-    AC_CHECK_FUNC(deflateSetHeader, , [AC_CHECK_LIB(z, deflateSetHeader,
+-	    [LIBS="$LIBS -lz"])])
++    AC_CHECK_FUNC(brl_deflateSetHeader, , [AC_CHECK_LIB(z_brl, brl_deflateSetHeader,
++	    [LIBS="$LIBS -lz_brl"])])
+ ])
+ 
+ #--------------------------------------------------------------------
+@@ -4069,4 +4069,4 @@
+ 
+ # Local Variables:
+ # mode: autoconf
+-# End:
+\ No newline at end of file
++# End:
+diff -Naur tcl8.6.13/pkgs/sqlite3.40.0/tclconfig/tcl.m4 tcl/pkgs/sqlite3.40.0/tclconfig/tcl.m4
+--- tcl8.6.13/pkgs/sqlite3.40.0/tclconfig/tcl.m4	2023-08-24 14:30:16.634258638 -0400
++++ tcl/pkgs/sqlite3.40.0/tclconfig/tcl.m4	2023-08-24 14:44:39.531592238 -0400
+@@ -2516,8 +2516,8 @@
+ 	    [LIBS="$LIBS -lnsl"])])
+     AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
+ 	    [LIBS="$LIBS -ltommath"])])
+-    AC_CHECK_FUNC(deflateSetHeader, , [AC_CHECK_LIB(z, deflateSetHeader,
+-	    [LIBS="$LIBS -lz"])])
++    AC_CHECK_FUNC(brl_deflateSetHeader, , [AC_CHECK_LIB(z_brl, brl_deflateSetHeader,
++	    [LIBS="$LIBS -lz_brl"])])
+ ])
+ 
+ #--------------------------------------------------------------------
+@@ -4069,4 +4069,4 @@
+ 
+ # Local Variables:
+ # mode: autoconf
+-# End:
+\ No newline at end of file
++# End:
+diff -Naur tcl8.6.13/pkgs/tdbc1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbc1.1.5/tclconfig/tcl.m4
+--- tcl8.6.13/pkgs/tdbc1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.626258775 -0400
++++ tcl/pkgs/tdbc1.1.5/tclconfig/tcl.m4	2023-08-24 14:45:01.079225054 -0400
+@@ -2516,8 +2516,8 @@
+ 	    [LIBS="$LIBS -lnsl"])])
+     AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
+ 	    [LIBS="$LIBS -ltommath"])])
+-    AC_CHECK_FUNC(deflateSetHeader, , [AC_CHECK_LIB(z, deflateSetHeader,
+-	    [LIBS="$LIBS -lz"])])
++    AC_CHECK_FUNC(brl_deflateSetHeader, , [AC_CHECK_LIB(z_brl, brl_deflateSetHeader,
++	    [LIBS="$LIBS -lz_brl"])])
+ ])
+ 
+ #--------------------------------------------------------------------
+@@ -4069,4 +4069,4 @@
+ 
+ # Local Variables:
+ # mode: autoconf
+-# End:
+\ No newline at end of file
++# End:
+diff -Naur tcl8.6.13/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4
+--- tcl8.6.13/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.622258844 -0400
++++ tcl/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4	2023-08-24 14:43:27.268822961 -0400
+@@ -2516,8 +2516,8 @@
+ 	    [LIBS="$LIBS -lnsl"])])
+     AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
+ 	    [LIBS="$LIBS -ltommath"])])
+-    AC_CHECK_FUNC(deflateSetHeader, , [AC_CHECK_LIB(z, deflateSetHeader,
+-	    [LIBS="$LIBS -lz"])])
++    AC_CHECK_FUNC(brl_deflateSetHeader, , [AC_CHECK_LIB(z_brl, brl_deflateSetHeader,
++	    [LIBS="$LIBS -lz_brl"])])
+ ])
+ 
+ #--------------------------------------------------------------------
+@@ -4069,4 +4069,4 @@
+ 
+ # Local Variables:
+ # mode: autoconf
+-# End:
+\ No newline at end of file
++# End:
+diff -Naur tcl8.6.13/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4
+--- tcl8.6.13/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.622258844 -0400
++++ tcl/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4	2023-08-24 14:42:52.601413057 -0400
+@@ -2516,8 +2516,8 @@
+ 	    [LIBS="$LIBS -lnsl"])])
+     AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
+ 	    [LIBS="$LIBS -ltommath"])])
+-    AC_CHECK_FUNC(deflateSetHeader, , [AC_CHECK_LIB(z, deflateSetHeader,
+-	    [LIBS="$LIBS -lz"])])
++    AC_CHECK_FUNC(brl_deflateSetHeader, , [AC_CHECK_LIB(z_brl, brl_deflateSetHeader,
++	    [LIBS="$LIBS -lz_brl"])])
+ ])
+ 
+ #--------------------------------------------------------------------
+@@ -4069,4 +4069,4 @@
+ 
+ # Local Variables:
+ # mode: autoconf
+-# End:
+\ No newline at end of file
++# End:
+diff -Naur tcl8.6.13/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4
+--- tcl8.6.13/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.622258844 -0400
++++ tcl/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4	2023-08-24 14:44:21.667896585 -0400
+@@ -2516,8 +2516,8 @@
+ 	    [LIBS="$LIBS -lnsl"])])
+     AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
+ 	    [LIBS="$LIBS -ltommath"])])
+-    AC_CHECK_FUNC(deflateSetHeader, , [AC_CHECK_LIB(z, deflateSetHeader,
+-	    [LIBS="$LIBS -lz"])])
++    AC_CHECK_FUNC(brl_deflateSetHeader, , [AC_CHECK_LIB(z_brl, brl_deflateSetHeader,
++	    [LIBS="$LIBS -lz_brl"])])
+ ])
+ 
+ #--------------------------------------------------------------------
+@@ -4069,4 +4069,4 @@
+ 
+ # Local Variables:
+ # mode: autoconf
+-# End:
+\ No newline at end of file
++# End:
+diff -Naur tcl8.6.13/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4
+--- tcl8.6.13/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.622258844 -0400
++++ tcl/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4	2023-08-24 14:45:31.974698409 -0400
+@@ -2516,8 +2516,8 @@
+ 	    [LIBS="$LIBS -lnsl"])])
+     AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
+ 	    [LIBS="$LIBS -ltommath"])])
+-    AC_CHECK_FUNC(deflateSetHeader, , [AC_CHECK_LIB(z, deflateSetHeader,
+-	    [LIBS="$LIBS -lz"])])
++    AC_CHECK_FUNC(brl_deflateSetHeader, , [AC_CHECK_LIB(z_brl, brl_deflateSetHeader,
++	    [LIBS="$LIBS -lz_brl"])])
+ ])
+ 
+ #--------------------------------------------------------------------
+@@ -4069,4 +4069,4 @@
+ 
+ # Local Variables:
+ # mode: autoconf
+-# End:
+\ No newline at end of file
++# End:
+diff -Naur tcl8.6.13/pkgs/thread2.8.8/tclconfig/tcl.m4 tcl/pkgs/thread2.8.8/tclconfig/tcl.m4
+--- tcl8.6.13/pkgs/thread2.8.8/tclconfig/tcl.m4	2023-08-24 14:30:16.618258913 -0400
++++ tcl/pkgs/thread2.8.8/tclconfig/tcl.m4	2023-08-24 14:45:15.846973332 -0400
+@@ -2516,8 +2516,8 @@
+ 	    [LIBS="$LIBS -lnsl"])])
+     AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
+ 	    [LIBS="$LIBS -ltommath"])])
+-    AC_CHECK_FUNC(deflateSetHeader, , [AC_CHECK_LIB(z, deflateSetHeader,
+-	    [LIBS="$LIBS -lz"])])
++    AC_CHECK_FUNC(brl_deflateSetHeader, , [AC_CHECK_LIB(z_brl, brl_deflateSetHeader,
++	    [LIBS="$LIBS -lz_brl"])])
+ ])
+ 
+ #--------------------------------------------------------------------
+@@ -4069,4 +4069,4 @@
+ 
+ # Local Variables:
+ # mode: autoconf
+-# End:
+\ No newline at end of file
++# End:
+diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
+--- tcl8.6.13/unix/configure	2023-08-24 14:40:07.800214739 -0400
++++ tcl/unix/configure	2023-08-24 14:34:58.781445569 -0400
+@@ -5991,13 +5991,13 @@
+ 
+ if test $zlib_ok = yes; then
+ 
+-  echo "$as_me:$LINENO: checking for library containing deflateSetHeader" >&5
+-echo $ECHO_N "checking for library containing deflateSetHeader... $ECHO_C" >&6
+-if test "${ac_cv_search_deflateSetHeader+set}" = set; then
++  echo "$as_me:$LINENO: checking for library containing brl_deflateSetHeader" >&5
++echo $ECHO_N "checking for library containing brl_deflateSetHeader... $ECHO_C" >&6
++if test "${ac_cv_search_brl_deflateSetHeader+set}" = set; then
+   echo $ECHO_N "(cached) $ECHO_C" >&6
+ else
+   ac_func_search_save_LIBS=$LIBS
+-ac_cv_search_deflateSetHeader=no
++ac_cv_search_brl_deflateSetHeader=no
+ cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+ _ACEOF
+@@ -6011,11 +6011,11 @@
+ #endif
+ /* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+-char deflateSetHeader ();
++char brl_deflateSetHeader ();
+ int
+ main ()
+ {
+-deflateSetHeader ();
++brl_deflateSetHeader ();
+   ;
+   return 0;
+ }
+@@ -6042,7 +6042,7 @@
+   ac_status=$?
+   echo "$as_me:$LINENO: \$? = $ac_status" >&5
+   (exit $ac_status); }; }; then
+-  ac_cv_search_deflateSetHeader="none required"
++  ac_cv_search_brl_deflateSetHeader="none required"
+ else
+   echo "$as_me: failed program was:" >&5
+ sed 's/^/| /' conftest.$ac_ext >&5
+@@ -6050,8 +6050,8 @@
+ fi
+ rm -f conftest.err conftest.$ac_objext \
+       conftest$ac_exeext conftest.$ac_ext
+-if test "$ac_cv_search_deflateSetHeader" = no; then
+-  for ac_lib in z; do
++if test "$ac_cv_search_brl_deflateSetHeader" = no; then
++  for ac_lib in z_brl; do
+     LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+     cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+@@ -6066,11 +6066,11 @@
+ #endif
+ /* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+-char deflateSetHeader ();
++char brl_deflateSetHeader ();
+ int
+ main ()
+ {
+-deflateSetHeader ();
++brl_deflateSetHeader ();
+   ;
+   return 0;
+ }
+@@ -6097,7 +6097,7 @@
+   ac_status=$?
+   echo "$as_me:$LINENO: \$? = $ac_status" >&5
+   (exit $ac_status); }; }; then
+-  ac_cv_search_deflateSetHeader="-l$ac_lib"
++  ac_cv_search_brl_deflateSetHeader="-l$ac_lib"
+ break
+ else
+   echo "$as_me: failed program was:" >&5
+@@ -6110,10 +6110,10 @@
+ fi
+ LIBS=$ac_func_search_save_LIBS
+ fi
+-echo "$as_me:$LINENO: result: $ac_cv_search_deflateSetHeader" >&5
+-echo "${ECHO_T}$ac_cv_search_deflateSetHeader" >&6
+-if test "$ac_cv_search_deflateSetHeader" != no; then
+-  test "$ac_cv_search_deflateSetHeader" = "none required" || LIBS="$ac_cv_search_deflateSetHeader $LIBS"
++echo "$as_me:$LINENO: result: $ac_cv_search_brl_deflateSetHeader" >&5
++echo "${ECHO_T}$ac_cv_search_brl_deflateSetHeader" >&6
++if test "$ac_cv_search_brl_deflateSetHeader" != no; then
++  test "$ac_cv_search_brl_deflateSetHeader" = "none required" || LIBS="$ac_cv_search_brl_deflateSetHeader $LIBS"
+ 
+ else
+ 
+diff -Naur tcl8.6.13/unix/configure.in tcl/unix/configure.in
+--- tcl8.6.13/unix/configure.in	2023-08-24 14:40:07.800214739 -0400
++++ tcl/unix/configure.in	2023-08-24 14:41:46.294541096 -0400
+@@ -163,7 +163,7 @@
+   AC_CHECK_TYPE([gz_header],[],[zlib_ok=no],[#include <zlib.h>])],[
+   zlib_ok=no])
+ AS_IF([test $zlib_ok = yes], [
+-  AC_SEARCH_LIBS([deflateSetHeader],[z],[],[
++  AC_SEARCH_LIBS([brl_deflateSetHeader],[z_brl],[],[
+     zlib_ok=no
+   ])])
+ AS_IF([test $zlib_ok = no], [

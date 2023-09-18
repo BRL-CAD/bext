@@ -1,0 +1,366 @@
+diff -Naur tcl8.6.13/generic/tclConfig.c tcl/generic/tclConfig.c
+--- tcl8.6.13/generic/tclConfig.c	2023-08-24 16:44:06.600914558 -0400
++++ tcl/generic/tclConfig.c	2023-08-24 16:45:59.130997625 -0400
+@@ -261,6 +261,37 @@
+ 	 * Value is stored as-is in a byte array, see Bug [9b2e636361],
+ 	 * so we have to decode it first.
+ 	 */
++	/* We're storing the CFG_RUNTIME and CFG_INSTALL values as relative paths
++	 * to make Tcl relocatable - hard coded paths will be invalid if the Tcl
++	 * install is moved. */
++	if (Tcl_StringMatch(Tcl_GetString(objv[0]), "::tcl::pkgconfig")) {
++	   if (Tcl_StringMatch(Tcl_GetString(objv[2]), "*,runtime") || Tcl_StringMatch(Tcl_GetString(objv[2]), "*,install")) {
++	      const char *texec = Tcl_GetNameOfExecutable();
++	      Tcl_Obj *tpath = Tcl_NewStringObj(texec, strlen(texec)+1);
++	      Tcl_FSConvertToPathType(interp, tpath);
++	      int tpath_elements;
++	      Tcl_Obj *tlist = Tcl_FSSplitPath(tpath, &tpath_elements);
++	      Tcl_ListObjReplace(interp, tlist, tpath_elements-2, 2, 0, NULL);
++	      Tcl_Obj *tdir = Tcl_FSJoinPath(tlist, tpath_elements-2);
++	      Tcl_DecrRefCount(tlist);
++
++	      const char *rpath_str = (const char *) Tcl_GetByteArrayFromObj(val, &n);
++	      Tcl_Obj *dict_rpath = Tcl_NewStringObj(rpath_str, n);
++	      Tcl_FSConvertToPathType(interp, dict_rpath);
++	      Tcl_Obj *cpaths[2] = {NULL};
++	      cpaths[0] = dict_rpath;
++	      Tcl_Obj *comb_path = Tcl_FSJoinToPath(tdir, 1, cpaths);
++
++	      int pn;
++	      const char *jpath = (const char *) Tcl_GetByteArrayFromObj(comb_path, &pn);
++	      Tcl_DecrRefCount(comb_path);
++	      jpath = Tcl_ExternalToUtfDString(venc, jpath, pn, &conv);
++	      Tcl_SetObjResult(interp, Tcl_NewStringObj(jpath, Tcl_DStringLength(&conv)));
++	      Tcl_DStringFree(&conv);
++	      return TCL_OK;
++	   }
++	}
++
+ 	value = (const char *) Tcl_GetByteArrayFromObj(val, &n);
+ 	value = Tcl_ExternalToUtfDString(venc, value, n, &conv);
+ 	Tcl_SetObjResult(interp, Tcl_NewStringObj(value,
+diff -Naur tcl8.6.13/macosx/configure tcl/macosx/configure
+--- tcl8.6.13/macosx/configure	2023-08-24 16:44:06.248920559 -0400
++++ tcl/macosx/configure	2023-08-24 16:45:59.134997556 -0400
+@@ -10268,7 +10268,7 @@
+ 
+ eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
+ 
+-test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
++test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
+ PRIVATE_INCLUDE_DIR='$(includedir)'
+ HTML_DIR='$(DISTDIR)/html'
+ 
+@@ -10397,9 +10397,9 @@
+     test -z "$TCL_MODULE_PATH"  && \
+ 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
+ elif test "$prefix/lib" != "$libdir"; then
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib} ${TCL_PACKAGE_PATH}"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {lib} ${TCL_PACKAGE_PATH}"
+ else
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${prefix}/lib} ${TCL_PACKAGE_PATH}"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{lib} ${TCL_PACKAGE_PATH}"
+ fi
+ 
+ #--------------------------------------------------------------------
+diff -Naur tcl8.6.13/macosx/Tcl-Common.xcconfig tcl/macosx/Tcl-Common.xcconfig
+--- tcl8.6.13/macosx/Tcl-Common.xcconfig	2023-08-24 16:44:06.252920493 -0400
++++ tcl/macosx/Tcl-Common.xcconfig	2023-08-24 16:45:59.134997556 -0400
+@@ -25,8 +25,8 @@
+ CPPFLAGS = -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET) $(CPPFLAGS)
+ FRAMEWORK_INSTALL_PATH = /Library/Frameworks
+ INCLUDEDIR = $(PREFIX)/include
+-LIBDIR = $(PREFIX)/lib
+-MANDIR = $(PREFIX)/man
++LIBDIR = lib
++MANDIR = man
+ PER_ARCH_CFLAGS_ppc = -mcpu=G3 -mtune=G4 $(PER_ARCH_CFLAGS_ppc)
+ PER_ARCH_CFLAGS_ppc64 = -mcpu=G5 -mpowerpc64 $(PER_ARCH_CFLAGS_ppc64)
+ PREFIX = /usr/local
+diff -Naur tcl8.6.13/macosx/Tcl.xcode/project.pbxproj tcl/macosx/Tcl.xcode/project.pbxproj
+--- tcl8.6.13/macosx/Tcl.xcode/project.pbxproj	2023-08-24 16:44:06.248920559 -0400
++++ tcl/macosx/Tcl.xcode/project.pbxproj	2023-08-24 16:45:59.134997556 -0400
+@@ -69,7 +69,7 @@
+ 		F96D45B008F272BC004A47F5 /* tclPathObj.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1108F272A7004A47F5 /* tclPathObj.c */; };
+ 		F96D45B108F272BC004A47F5 /* tclPipe.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1208F272A7004A47F5 /* tclPipe.c */; };
+ 		F96D45B208F272BC004A47F5 /* tclPkg.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1308F272A7004A47F5 /* tclPkg.c */; };
+-		F96D45B308F272BC004A47F5 /* tclPkgConfig.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1408F272A7004A47F5 /* tclPkgConfig.c */; settings = {COMPILER_FLAGS = "-DCFG_INSTALL_LIBDIR=\\\"$(LIBDIR)\\\" -DCFG_INSTALL_BINDIR=\\\"$(BINDIR)\\\" -DCFG_INSTALL_SCRDIR=\\\"$(TCL_LIBRARY)\\\" -DCFG_INSTALL_INCDIR=\\\"$(INCLUDEDIR)\\\" -DCFG_INSTALL_DOCDIR=\\\"$(MANDIR)\\\" -DCFG_RUNTIME_LIBDIR=\\\"$(LIBDIR)\\\" -DCFG_RUNTIME_BINDIR=\\\"$(BINDIR)\\\" -DCFG_RUNTIME_SCRDIR=\\\"$(TCL_LIBRARY)\\\" -DCFG_RUNTIME_INCDIR=\\\"$(INCLUDEDIR)\\\" -DCFG_RUNTIME_DOCDIR=\\\"$(MANDIR)\\\""; }; };
++		F96D45B308F272BC004A47F5 /* tclPkgConfig.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1408F272A7004A47F5 /* tclPkgConfig.c */; settings = {COMPILER_FLAGS = "-DCFG_INSTALL_LIBDIR=\\\"lib\\\" -DCFG_INSTALL_BINDIR=\\\"bin\\\" -DCFG_INSTALL_SCRDIR=\\\"lib/tcl8.6\\\" -DCFG_INSTALL_INCDIR=\\\"include\\\" -DCFG_INSTALL_DOCDIR=\\\"man\\\" -DCFG_RUNTIME_LIBDIR=\\\"lib\\\" -DCFG_RUNTIME_BINDIR=\\\"bin\\\" -DCFG_RUNTIME_SCRDIR=\\\"lib/tcl8.6\\\" -DCFG_RUNTIME_INCDIR=\\\"include\\\" -DCFG_RUNTIME_DOCDIR=\\\"man\\\""; }; };
+ 		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
+ 		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
+ 		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
+diff -Naur tcl8.6.13/macosx/Tcl.xcodeproj/project.pbxproj tcl/macosx/Tcl.xcodeproj/project.pbxproj
+--- tcl8.6.13/macosx/Tcl.xcodeproj/project.pbxproj	2023-08-24 16:44:06.248920559 -0400
++++ tcl/macosx/Tcl.xcodeproj/project.pbxproj	2023-08-24 16:45:59.134997556 -0400
+@@ -69,7 +69,7 @@
+ 		F96D45B008F272BC004A47F5 /* tclPathObj.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1108F272A7004A47F5 /* tclPathObj.c */; };
+ 		F96D45B108F272BC004A47F5 /* tclPipe.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1208F272A7004A47F5 /* tclPipe.c */; };
+ 		F96D45B208F272BC004A47F5 /* tclPkg.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1308F272A7004A47F5 /* tclPkg.c */; };
+-		F96D45B308F272BC004A47F5 /* tclPkgConfig.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1408F272A7004A47F5 /* tclPkgConfig.c */; settings = {COMPILER_FLAGS = "-DCFG_INSTALL_LIBDIR=\\\"$(LIBDIR)\\\" -DCFG_INSTALL_BINDIR=\\\"$(BINDIR)\\\" -DCFG_INSTALL_SCRDIR=\\\"$(TCL_LIBRARY)\\\" -DCFG_INSTALL_INCDIR=\\\"$(INCLUDEDIR)\\\" -DCFG_INSTALL_DOCDIR=\\\"$(MANDIR)\\\" -DCFG_RUNTIME_LIBDIR=\\\"$(LIBDIR)\\\" -DCFG_RUNTIME_BINDIR=\\\"$(BINDIR)\\\" -DCFG_RUNTIME_SCRDIR=\\\"$(TCL_LIBRARY)\\\" -DCFG_RUNTIME_INCDIR=\\\"$(INCLUDEDIR)\\\" -DCFG_RUNTIME_DOCDIR=\\\"$(MANDIR)\\\""; }; };
++		F96D45B308F272BC004A47F5 /* tclPkgConfig.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1408F272A7004A47F5 /* tclPkgConfig.c */; settings = {COMPILER_FLAGS = "-DCFG_INSTALL_LIBDIR=\\\"lib\\\" -DCFG_INSTALL_BINDIR=\\\"bin\\\" -DCFG_INSTALL_SCRDIR=\\\"lib/tcl8.6\\\" -DCFG_INSTALL_INCDIR=\\\"include\\\" -DCFG_INSTALL_DOCDIR=\\\"man\\\" -DCFG_RUNTIME_LIBDIR=\\\"lib\\\" -DCFG_RUNTIME_BINDIR=\\\"bin\\\" -DCFG_RUNTIME_SCRDIR=\\\"lib/tcl8.6\\\" -DCFG_RUNTIME_INCDIR=\\\"include\\\" -DCFG_RUNTIME_DOCDIR=\\\"man\\\""; }; };
+ 		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
+ 		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
+ 		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
+diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
+--- tcl8.6.13/unix/configure	2023-08-24 16:44:06.624914151 -0400
++++ tcl/unix/configure	2023-08-24 16:45:59.138997487 -0400
+@@ -18821,7 +18821,7 @@
+ 
+ eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
+ 
+-test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
++test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
+ PRIVATE_INCLUDE_DIR='$(includedir)'
+ HTML_DIR='$(DISTDIR)/html'
+ 
+@@ -18952,9 +18952,9 @@
+     test -z "$TCL_MODULE_PATH"  && \
+ 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
+ elif test "$prefix/lib" != "$libdir"; then
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib} ${TCL_PACKAGE_PATH}"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {lib} ${TCL_PACKAGE_PATH}"
+ else
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${prefix}/lib} ${TCL_PACKAGE_PATH}"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{lib} ${TCL_PACKAGE_PATH}"
+ fi
+ 
+ #--------------------------------------------------------------------
+diff -Naur tcl8.6.13/unix/configure.in tcl/unix/configure.in
+--- tcl8.6.13/unix/configure.in	2023-08-24 16:44:06.620914220 -0400
++++ tcl/unix/configure.in	2023-08-24 16:45:59.138997487 -0400
+@@ -773,7 +773,7 @@
+ 
+ eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
+ 
+-test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
++test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
+ PRIVATE_INCLUDE_DIR='$(includedir)'
+ HTML_DIR='$(DISTDIR)/html'
+ 
+@@ -866,9 +866,9 @@
+     test -z "$TCL_MODULE_PATH"  && \
+ 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
+ elif test "$prefix/lib" != "$libdir"; then
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib} ${TCL_PACKAGE_PATH}"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {lib} ${TCL_PACKAGE_PATH}"
+ else
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${prefix}/lib} ${TCL_PACKAGE_PATH}"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{lib} ${TCL_PACKAGE_PATH}"
+ fi
+ 
+ #--------------------------------------------------------------------
+diff -Naur tcl8.6.13/unix/Makefile.in tcl/unix/Makefile.in
+--- tcl8.6.13/unix/Makefile.in	2023-08-24 16:44:06.624914151 -0400
++++ tcl/unix/Makefile.in	2023-08-24 16:46:27.630512462 -0400
+@@ -51,7 +51,7 @@
+ DLL_INSTALL_DIR		= @DLL_INSTALL_DIR@
+ 
+ # Path name to use when installing library scripts.
+-SCRIPT_INSTALL_DIR	= $(INSTALL_ROOT)$(TCL_LIBRARY)
++SCRIPT_INSTALL_DIR	= $(INSTALL_ROOT)$(prefix)/$(TCL_LIBRARY)
+ 
+ # Path name to use when installing Tcl modules.
+ MODULE_INSTALL_DIR	= $(SCRIPT_INSTALL_DIR)/../tcl8
+@@ -209,7 +209,7 @@
+ #TCL_LIB_FLAG		= -ltcl
+ 
+ # support for embedded libraries on Darwin / Mac OS X
+-DYLIB_INSTALL_DIR	= $(libdir)
++DYLIB_INSTALL_DIR	= @executable_path/../lib
+ 
+ #--------------------------------------------------------------------------
+ # The information below is modified by the configure script when Makefile is
+@@ -1365,16 +1365,16 @@
+ 
+ tclPkgConfig.o: $(GENERIC_DIR)/tclPkgConfig.c
+ 	$(CC) -c $(CC_SWITCHES) \
+-		-DCFG_INSTALL_LIBDIR="\"$(LIB_INSTALL_DIR)\"" \
+-		-DCFG_INSTALL_BINDIR="\"$(BIN_INSTALL_DIR)\"" \
+-		-DCFG_INSTALL_SCRDIR="\"$(SCRIPT_INSTALL_DIR)\"" \
+-		-DCFG_INSTALL_INCDIR="\"$(INCLUDE_INSTALL_DIR)\"" \
+-		-DCFG_INSTALL_DOCDIR="\"$(MAN_INSTALL_DIR)\"" \
+-		-DCFG_RUNTIME_LIBDIR="\"$(libdir)\"" \
+-		-DCFG_RUNTIME_BINDIR="\"$(bindir)\"" \
+-		-DCFG_RUNTIME_SCRDIR="\"$(TCL_LIBRARY)\"" \
+-		-DCFG_RUNTIME_INCDIR="\"$(includedir)\"" \
+-		-DCFG_RUNTIME_DOCDIR="\"$(mandir)\"" \
++		-DCFG_INSTALL_LIBDIR="\"lib\"" \
++		-DCFG_INSTALL_BINDIR="\"bin\"" \
++		-DCFG_INSTALL_SCRDIR="\"lib/tcl8.6\"" \
++		-DCFG_INSTALL_INCDIR="\"include\"" \
++		-DCFG_INSTALL_DOCDIR="\"man\"" \
++		-DCFG_RUNTIME_LIBDIR="\"lib\"" \
++		-DCFG_RUNTIME_BINDIR="\"bin\"" \
++		-DCFG_RUNTIME_SCRDIR="\"lib/tcl8.6\"" \
++		-DCFG_RUNTIME_INCDIR="\"include\"" \
++		-DCFG_RUNTIME_DOCDIR="\"man\"" \
+ 		-DCFG_RUNTIME_DLLFILE="\"$(TCL_LIB_FILE)\"" \
+ 		$(GENERIC_DIR)/tclPkgConfig.c
+ 
+diff -Naur tcl8.6.13/win/configure tcl/win/configure
+--- tcl8.6.13/win/configure	2023-08-24 16:44:06.268920220 -0400
++++ tcl/win/configure	2023-08-24 16:45:59.138997487 -0400
+@@ -5288,9 +5288,9 @@
+ #--------------------------------------------------------------------
+ 
+ if test "$prefix/lib" != "$libdir"; then
+-    TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib}"
++    TCL_PACKAGE_PATH="{${libdir}} {lib}"
+ else
+-    TCL_PACKAGE_PATH="{${prefix}/lib}"
++    TCL_PACKAGE_PATH="{lib}"
+ fi
+ 
+ # The tclsh.exe.manifest requires these
+diff -Naur tcl8.6.13/win/configure.in tcl/win/configure.in
+--- tcl8.6.13/win/configure.in	2023-08-24 16:44:06.268920220 -0400
++++ tcl/win/configure.in	2023-08-24 16:45:59.138997487 -0400
+@@ -368,9 +368,9 @@
+ #--------------------------------------------------------------------
+ 
+ if test "$prefix/lib" != "$libdir"; then
+-    TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib}"
++    TCL_PACKAGE_PATH="{${libdir}} {lib}"
+ else
+-    TCL_PACKAGE_PATH="{${prefix}/lib}"
++    TCL_PACKAGE_PATH="{lib}"
+ fi
+ 
+ # The tclsh.exe.manifest requires these
+diff -Naur tcl8.6.13/win/Makefile.in tcl/win/Makefile.in
+--- tcl8.6.13/win/Makefile.in	2023-08-24 16:44:06.268920220 -0400
++++ tcl/win/Makefile.in	2023-08-24 16:45:59.138997487 -0400
+@@ -35,7 +35,7 @@
+ # Directory from which applications will reference the library of Tcl scripts
+ # (note: you can set the TCL_LIBRARY environment variable at run-time to
+ # override this value):
+-TCL_LIBRARY	= $(prefix)/lib/tcl$(VERSION)
++TCL_LIBRARY	= lib/tcl$(VERSION)
+ 
+ # Path to use at runtime to refer to LIB_INSTALL_DIR:
+ LIB_RUNTIME_DIR		= $(libdir)
+@@ -567,17 +567,17 @@
+ 
+ tclPkgConfig.${OBJEXT}: tclPkgConfig.c
+ 	$(CC)	-c $(CC_SWITCHES)			\
+-		-DCFG_INSTALL_LIBDIR="\"$(LIB_INSTALL_DIR_NATIVE)\"" \
+-		-DCFG_INSTALL_BINDIR="\"$(BIN_INSTALL_DIR_NATIVE)\"" \
+-		-DCFG_INSTALL_SCRDIR="\"$(SCRIPT_INSTALL_DIR_NATIVE)\"" \
+-		-DCFG_INSTALL_INCDIR="\"$(INCLUDE_INSTALL_DIR_NATIVE)\"" \
+-		-DCFG_INSTALL_DOCDIR="\"$(MAN_INSTALL_DIR_NATIVE)\"" \
++		-DCFG_INSTALL_LIBDIR="\"lib\"" \
++		-DCFG_INSTALL_BINDIR="\"bin\"" \
++		-DCFG_INSTALL_SCRDIR="\"lib/tcl8.6\"" \
++		-DCFG_INSTALL_INCDIR="\"include\"" \
++		-DCFG_INSTALL_DOCDIR="\"man\"" \
+ 		\
+-		-DCFG_RUNTIME_LIBDIR="\"$(libdir_native)\"" \
+-		-DCFG_RUNTIME_BINDIR="\"$(bindir_native)\"" \
+-		-DCFG_RUNTIME_SCRDIR="\"$(TCL_LIBRARY_NATIVE)\"" \
+-		-DCFG_RUNTIME_INCDIR="\"$(includedir_native)\"" \
+-		-DCFG_RUNTIME_DOCDIR="\"$(mandir_native)\"" \
++		-DCFG_RUNTIME_LIBDIR="\"lib\"" \
++		-DCFG_RUNTIME_BINDIR="\"bin\"" \
++		-DCFG_RUNTIME_SCRDIR="\"lib/tcl8.6\"" \
++		-DCFG_RUNTIME_INCDIR="\"include\"" \
++		-DCFG_RUNTIME_DOCDIR="\"man\"" \
+ 		-DBUILD_tcl \
+ 		@DEPARG@ $(CC_OBJNAME)
+ 
+diff -Naur tcl8.6.13/win/makefile.vc tcl/win/makefile.vc
+--- tcl8.6.13/win/makefile.vc	2023-08-24 16:44:06.252920493 -0400
++++ tcl/win/makefile.vc	2023-08-24 16:45:59.138997487 -0400
+@@ -303,7 +303,6 @@
+ 	$(TMP_DIR)\tclVar.obj \
+ 	$(TMP_DIR)\tclZlib.obj
+ 
+-!if $(STATIC_BUILD)
+ ZLIBOBJS = \
+ 	$(TMP_DIR)\adler32.obj \
+ 	$(TMP_DIR)\compress.obj \
+@@ -316,9 +315,6 @@
+ 	$(TMP_DIR)\trees.obj \
+ 	$(TMP_DIR)\uncompr.obj \
+ 	$(TMP_DIR)\zutil.obj
+-!else
+-ZLIBOBJS = $(OUT_DIR)\zdll.lib
+-!endif
+ 
+ TOMMATHOBJS = \
+ 	$(TMP_DIR)\bn_mp_add.obj \
+@@ -442,7 +438,7 @@
+ release:    setup $(TCLSH) $(TCLSTUBLIB) dlls pkgs
+ core:	    setup $(TCLLIB) $(TCLSTUBLIB)
+ shell:	    setup $(TCLSH)
+-dlls:	    setup $(TCLREGLIB) $(TCLDDELIB) $(OUT_DIR)\zlib1.dll
++dlls:	    setup $(TCLREGLIB) $(TCLDDELIB)
+ all:	    setup $(TCLSH) $(TCLSTUBLIB) dlls $(CAT32) pkgs
+ tcltest:    setup $(TCLTEST) dlls $(CAT32)
+ install:    install-binaries install-libraries install-docs install-pkgs
+@@ -515,23 +511,6 @@
+ 	$(_VC_MANIFEST_EMBED_DLL)
+ !endif
+ 
+-!if "$(MACHINE)" == "ARM64"
+-$(OUT_DIR)\zlib1.dll:	$(COMPATDIR)\zlib\win64-arm\zlib1.dll
+-	$(COPY) $(COMPATDIR)\zlib\win64-arm\zlib1.dll $(OUT_DIR)\zlib1.dll
+-$(OUT_DIR)\zdll.lib:	$(COMPATDIR)\zlib\win64-arm\zdll.lib
+-	$(COPY) $(COMPATDIR)\zlib\win64-arm\zdll.lib $(OUT_DIR)\zdll.lib
+-!elseif "$(MACHINE)" == "IX86"
+-$(OUT_DIR)\zlib1.dll:	$(COMPATDIR)\zlib\win32\zlib1.dll
+-	$(COPY) $(COMPATDIR)\zlib\win32\zlib1.dll $(OUT_DIR)\zlib1.dll
+-$(OUT_DIR)\zdll.lib:	$(COMPATDIR)\zlib\win32\zdll.lib
+-	$(COPY) $(COMPATDIR)\zlib\win32\zdll.lib $(OUT_DIR)\zdll.lib
+-!else
+-$(OUT_DIR)\zlib1.dll:	$(COMPATDIR)\zlib\win64\zlib1.dll
+-	$(COPY) $(COMPATDIR)\zlib\win64\zlib1.dll $(OUT_DIR)\zlib1.dll
+-$(OUT_DIR)\zdll.lib:	$(COMPATDIR)\zlib\win64\zdll.lib
+-	$(COPY) $(COMPATDIR)\zlib\win64\zdll.lib $(OUT_DIR)\zdll.lib
+-!endif
+-
+ pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+@@ -784,16 +763,16 @@
+ 
+ $(TMP_DIR)\tclPkgConfig.obj: $(GENERICDIR)\tclPkgConfig.c
+ 	$(cc32) $(pkgcflags) \
+-	/DCFG_INSTALL_LIBDIR="\"$(LIB_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_INSTALL_BINDIR="\"$(BIN_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_INSTALL_SCRDIR="\"$(SCRIPT_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_INSTALL_INCDIR="\"$(INCLUDE_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_INSTALL_DOCDIR="\"$(DOC_INSTALL_DIR:\=\\)\""	\
+-	/DCFG_RUNTIME_LIBDIR="\"$(LIB_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_RUNTIME_BINDIR="\"$(BIN_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_RUNTIME_SCRDIR="\"$(SCRIPT_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_RUNTIME_INCDIR="\"$(INCLUDE_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_RUNTIME_DOCDIR="\"$(DOC_INSTALL_DIR:\=\\)\""     \
++	/DCFG_INSTALL_LIBDIR="\"lib\"" \
++	/DCFG_INSTALL_BINDIR="\"bin\"" \
++	/DCFG_INSTALL_SCRDIR="\"lib/tcl8.6\"" \
++	/DCFG_INSTALL_INCDIR="\"include\"" \
++	/DCFG_INSTALL_DOCDIR="\"man\""	\
++	/DCFG_RUNTIME_LIBDIR="\"lib\"" \
++	/DCFG_RUNTIME_BINDIR="\"bin\"" \
++	/DCFG_RUNTIME_SCRDIR="\"lib/tcl8.6\"" \
++	/DCFG_RUNTIME_INCDIR="\"include\"" \
++	/DCFG_RUNTIME_DOCDIR="\"man\""     \
+ 	-Fo$@ $?
+ 
+ $(TMP_DIR)\tclAppInit.obj: $(WIN_DIR)\tclAppInit.c
+@@ -896,7 +875,6 @@
+ 	@$(CPY) "$(TCLLIB)" "$(BIN_INSTALL_DIR)\"
+ !endif
+ 	@$(CPY) "$(TCLIMPLIB)" "$(LIB_INSTALL_DIR)\"
+-	@$(CPY) "$(OUT_DIR)\zlib1.dll" "$(BIN_INSTALL_DIR)\"
+ !if exist($(TCLSH))
+ 	@echo Installing $(TCLSHNAME)
+ 	@$(CPY) "$(TCLSH)" "$(BIN_INSTALL_DIR)\"
+@@ -945,7 +923,6 @@
+ 	@$(CPY) "$(WIN_DIR)\rules.vc"              "$(LIB_INSTALL_DIR)\nmake\"
+ 	@$(CPY) "$(WIN_DIR)\targets.vc"              "$(LIB_INSTALL_DIR)\nmake\"
+ 	@$(CPY) "$(WIN_DIR)\nmakehlp.c"            "$(LIB_INSTALL_DIR)\nmake\"
+-	@$(CPY) "$(WIN_DIR)\x86_64-w64-mingw32-nmakehlp.exe" "$(LIB_INSTALL_DIR)\nmake\"
+ 	@$(CPY) "$(OUT_DIR)\tcl.nmake"            "$(LIB_INSTALL_DIR)\nmake\"
+ 	@echo Installing package http 1.0 (obsolete)
+ 	@$(CPY) "$(ROOT)\library\http1.0\*.tcl" \

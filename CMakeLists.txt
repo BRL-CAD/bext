@@ -341,6 +341,18 @@ add_project(osmesa GROUPS "BRLCAD")
 # https://github.com/jhasse/poly2tri
 add_project(poly2tri GROUPS "BRLCAD")
 
+# TCL - scripting language.  For Tcl/Tk builds we want
+# static lib building on so we get the stub libraries.
+# https://www.tcl.tk
+set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
+add_project(tcl GROUPS "TCL")
+add_project(tk GROUPS "TCL")
+add_project(itcl3 GROUPS "TCL")
+add_project(itk3 GROUPS "TCL")
+add_project(iwidgets GROUPS "TCL")
+add_project(tkhtml GROUPS "TCL")
+add_project(tktable GROUPS "TCL")
+
 
 # Local Variables:
 # tab-width: 8

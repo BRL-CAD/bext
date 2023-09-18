@@ -94,3 +94,28 @@
 	path = poly2tri/poly2tri
 	url = https://github.com/BRL-CAD/poly2tri
 	branch = RELEASE
+[submodule "tcl/tcl"]
+	path = tcl/tcl
+	url = https://github.com/BRL-CAD/tcl
+	branch = RELEASE
+[submodule "tk/tk"]
+	path = tk/tk
+	url = https://github.com/BRL-CAD/tk
+	branch = RELEASE
+[submodule "itcl3/itcl"]
+	path = itcl3/itcl
+	url = https://github.com/BRL-CAD/itcl
+	branch = RELEASE
+[submodule "itk3/itk"]
+	path = itk3/itk
+	url = https://github.com/BRL-CAD/itk
+	branch = RELEASE
+[submodule "iwidgets/iwidgets"]
+	path = iwidgets/iwidgets
+	url = https://github.com/BRL-CAD/iwidgets
+[submodule "tktable/tktable"]
+	path = tktable/tktable
+	url = https://github.com/BRL-CAD/tktable
+[submodule "tkhtml/tkhtml"]
+	path = tkhtml/tkhtml
+	url = https://github.com/BRL-CAD/tkhtml
