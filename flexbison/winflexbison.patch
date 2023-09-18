@@ -1,0 +1,35 @@
+diff -Naur winflexbison-2.5.25/CMakeLists.txt winflexbison/CMakeLists.txt
+--- winflexbison-2.5.25/CMakeLists.txt	2022-01-09 23:47:26.000000000 -0500
++++ winflexbison/CMakeLists.txt	2023-09-14 13:19:51.353807462 -0400
+@@ -66,16 +66,16 @@
+ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+     # CPACK
+     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+-      install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}/" DESTINATION "./")
++      install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}/" DESTINATION "bin/")
+     else()
+-      install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}/" DESTINATION "./")
++      install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}/" DESTINATION "bin/")
+     endif()
+ 
+-    install(DIRECTORY "custom_build_rules/" DESTINATION "./custom_build_rules/")
+-    install(DIRECTORY "bison/data/" DESTINATION "./data/")
+-    install(FILES "flex/src/FlexLexer.h" DESTINATION "./")
+-    install(FILES "changelog.md" DESTINATION "./")
+-    install(FILES "README.md" DESTINATION "./")
++    install(DIRECTORY "custom_build_rules/" DESTINATION "share/custom_build_rules/")
++    install(DIRECTORY "bison/data/" DESTINATION "share/data/")
++    install(FILES "flex/src/FlexLexer.h" DESTINATION "include/winflexbison/")
++    install(FILES "changelog.md" DESTINATION "share/winflexbison")
++    install(FILES "README.md" DESTINATION "share/winflexbison")
+ 
+     set(PACKAGE_GENERATORS_DEFAULT ZIP)
+ 
+@@ -96,4 +96,5 @@
+     set(CPACK_PACKAGE_FILE_NAME "win_flex_bison-${CPACK_PACKAGE_VERSION}")
+ 
+     include(CPack)
+-endif()
+\ No newline at end of file
++endif()
++

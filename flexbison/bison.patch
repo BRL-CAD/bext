@@ -1,0 +1,83 @@
+diff -Naur bison-3.8/autogen.sh bison/autogen.sh
+--- bison-3.8/autogen.sh	1969-12-31 19:00:00.000000000 -0500
++++ bison/autogen.sh	2023-09-14 10:59:17.620985283 -0400
+@@ -0,0 +1,51 @@
++#!/bin/sh
++
++#  This file is part of flex.
++
++#  Redistribution and use in source and binary forms, with or without
++#  modification, are permitted provided that the following conditions
++#  are met:
++
++#  1. Redistributions of source code must retain the above copyright
++#     notice, this list of conditions and the following disclaimer.
++#  2. Redistributions in binary form must reproduce the above copyright
++#     notice, this list of conditions and the following disclaimer in the
++#     documentation and/or other materials provided with the distribution.
++
++#  Neither the name of the University nor the names of its contributors
++#  may be used to endorse or promote products derived from this software
++#  without specific prior written permission.
++
++#  THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
++#  IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
++#  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++#  PURPOSE.
++
++# If you see no configure script, then run ./autogen.sh to create it
++# and procede with the "normal" build procedures.
++
++# use LIBTOOLIZE, if set
++LIBTOOLIZE_ORIG="$LIBTOOLIZE";
++if test "x$LIBTOOLIZE" = "x"; then LIBTOOLIZE=libtoolize; fi
++
++# test libtoolize
++$LIBTOOLIZE --version 2>/dev/null
++if test "$?" -ne 0; then
++   LIBTOOLIZE=glibtoolize
++   $LIBTOOLIZE --version 2>/dev/null
++   if test "$?" -ne 0; then
++      echo "error: libtoolize not working, re-run with LIBTOOLIZE=/path/to/libtoolize"
++      echo "       LIBTOOLIZE is currently \"$LIBTOOLIZE_ORIG\""
++      exit 1
++   fi
++fi
++
++#if we pretend to have a ChangeLog, then automake is less
++#worried. (Don't worry, we *do* have a ChangeLog, we just need the
++#Makefile first.)
++
++if ! test -f ChangeLog; then
++   touch ChangeLog
++fi
++"$LIBTOOLIZE" --install --force
++autoreconf --install --force
+diff -Naur bison-3.8/lib/gnulib.mk bison/lib/gnulib.mk
+--- bison-3.8/lib/gnulib.mk	2021-09-07 06:54:09.000000000 -0400
++++ bison/lib/gnulib.mk	2023-09-14 11:00:31.903736511 -0400
+@@ -1223,7 +1223,7 @@
+ 	mv $(top_srcdir)/lib/iconv_open-zos.h-t $(top_srcdir)/lib/iconv_open-zos.h
+ BUILT_SOURCES        += lib/iconv_open-aix.h lib/iconv_open-hpux.h lib/iconv_open-irix.h lib/iconv_open-osf.h lib/iconv_open-solaris.h lib/iconv_open-zos.h
+ MOSTLYCLEANFILES     += lib/iconv_open-aix.h-t lib/iconv_open-hpux.h-t lib/iconv_open-irix.h-t lib/iconv_open-osf.h-t lib/iconv_open-solaris.h-t lib/iconv_open-zos.h-t
+-MAINTAINERCLEANFILES += lib/iconv_open-aix.h lib/iconv_open-hpux.h lib/iconv_open-irix.h lib/iconv_open-osf.h lib/iconv_open-solaris.h lib/iconv_open-zos.h
++MAINTAINERCLEANFILES = lib/iconv_open-aix.h lib/iconv_open-hpux.h lib/iconv_open-irix.h lib/iconv_open-osf.h lib/iconv_open-solaris.h lib/iconv_open-zos.h
+ EXTRA_DIST           += lib/iconv_open-aix.h lib/iconv_open-hpux.h lib/iconv_open-irix.h lib/iconv_open-osf.h lib/iconv_open-solaris.h lib/iconv_open-zos.h
+ 
+ EXTRA_DIST += lib/iconv.c lib/iconv_close.c lib/iconv_open-aix.gperf lib/iconv_open-hpux.gperf lib/iconv_open-irix.gperf lib/iconv_open-osf.gperf lib/iconv_open-solaris.gperf lib/iconv_open-zos.gperf lib/iconv_open.c
+diff -Naur bison-3.8/Makefile.am bison/Makefile.am
+--- bison-3.8/Makefile.am	2021-06-23 00:48:48.000000000 -0400
++++ bison/Makefile.am	2023-09-14 10:57:47.586496865 -0400
+@@ -66,12 +66,8 @@
+ 
+ include build-aux/local.mk
+ include data/local.mk
+-include doc/local.mk
+-include etc/local.mk
+-include examples/local.mk
+ include lib/local.mk
+ include src/local.mk
+-include tests/local.mk
+ 
+ clean-local:
+ 	rm -rf $(CLEANDIRS)

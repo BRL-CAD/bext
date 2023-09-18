@@ -1,0 +1,15 @@
+The Flex lexer (https://github.com/westes/flex) and GNU Bison parser generator
+tools (https://www.gnu.org/software/bison/) aren't targeted for WIN32
+deployment by their original upstreams.  Consequently, we also include the
+winflexbison project from https://github.com/lexxmark/winflexbison to provide
+these tools on that platform as well.
+
+We patch the build files of both flex and bison(a vanilla build on Ubuntu
+failed with both, during initial testing.)  However, this means we also need to
+regenerate the build files and require at least a minimal autotools chain for
+successful building on platforms other than Windows.
+
+NOTE:  These are build-only tools, not intended to be bundled with BRL-CAD.  In
+particular, GNU Bison uses the GNU General Public License (GPLv3) and is not a
+candidate for distribution with BRL-CAD.
+

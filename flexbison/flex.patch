@@ -1,0 +1,15 @@
+diff -Naur flex-2.6.4/Makefile.am flex/Makefile.am
+--- flex-2.6.4/Makefile.am	2017-05-03 16:16:37.000000000 -0400
++++ flex/Makefile.am	2023-09-14 10:54:03.506247328 -0400
+@@ -43,10 +43,6 @@
+ 
+ SUBDIRS = \
+ 	src \
+-	doc \
+-	examples \
+-	po \
+-	tests \
+ 	tools
+ 
+ # Create the ChangeLog, but only if we're inside a git working directory
+

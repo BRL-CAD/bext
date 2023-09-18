@@ -122,3 +122,14 @@
 [submodule "qt/qt"]
 	path = qt/qt
 	url = https://github.com/BRL-CAD/qt
+[submodule "flexbison/bison"]
+	path = flexbison/bison
+	url = https://github.com/BRL-CAD/bison
+[submodule "flexbison/flex"]
+	path = flexbison/flex
+	url = https://github.com/BRL-CAD/flex
+	branch = RELEASE
+[submodule "flexbison/winflexbison"]
+	path = flexbison/winflexbison
+	url = https://github.com/BRL-CAD/winflexbison
+	branch = RELEASE

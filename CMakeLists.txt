@@ -286,6 +286,7 @@ add_subdirectory(patch)
 # targeted to the extnoinstall subdirectory.
 ###############################################################################
 add_project(astyle GROUPS "BRLCAD")
+add_project(flexbison GROUPS "APPLESEED;OSPRAY")
 add_project(lief GROUPS "BRLCAD")
 add_project(perplex GROUPS "BRLCAD")
 add_project(plief GROUPS "BRLCAD")
