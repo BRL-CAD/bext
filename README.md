@@ -6,8 +6,17 @@ This repository manages the building of dependencies used by large scale compute
 
 * Clone this repository
 ```sh
+git clone https://github.com/starseeker/bext
+```
+
+Note - if you know you are going to build most or all of the component projects you can immediately populate all submodules when performing the clone:
+
+```sh
 git clone --recurse-submodules https://github.com/starseeker/bext
 ```
+
+If you don't recurse through submodules when cloning, the configure step will populate those submodule directories needed based on the build settings.
+
 * Make a build directory
 ```sh
 mkdir bext_build && cd bext_build
