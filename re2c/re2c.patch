@@ -1,0 +1,57 @@
+diff -Naur re2c/CMakeLists.txt RE2C_BLD/CMakeLists.txt
+--- re2c/CMakeLists.txt	2023-09-18 13:54:03.771615948 -0400
++++ RE2C_BLD/CMakeLists.txt	2023-09-18 17:06:59.078943914 -0400
+@@ -33,11 +33,7 @@
+ option(RE2C_REGEN_BENCHMARKS "Regenerate C code for benchmarks" OFF)
+ 
+ # checks for programs
+-find_package(Python3 COMPONENTS Interpreter)
+-# starting from cmake 3.19 find_package can do version check, but we are on 3.12
+-if(Python3_VERSION VERSION_LESS 3.7)
+-    message(FATAL_ERROR "python version 3.7 or higher is required")
+-endif()
++if (Python3_EXECUTABLE)
+ if(RE2C_REBUILD_DOCS)
+     execute_process(
+         COMMAND "${Python3_EXECUTABLE}" -c "import docutils"
+@@ -48,6 +44,7 @@
+         message(FATAL_ERROR "python package docutils (needed for docs) not found")
+     endif()
+ endif()
++endif (Python3_EXECUTABLE)
+ 
+ # Use C++11 standard. Note that without `set(CMAKE_CXX_EXTENSIONS OFF)` this enables
+ # -std=gnu++11, not -std=c++11. Extensions are needed to enable POSIX functions on
+@@ -86,7 +83,6 @@
+ 
+ set(top_srcdir "${CMAKE_CURRENT_SOURCE_DIR}")
+ set(top_builddir "${CMAKE_CURRENT_BINARY_DIR}")
+-set(PYTHON "${Python3_EXECUTABLE}")
+ 
+ configure_file(doc/manpage.rst.in doc/manpage.rst @ONLY)
+ configure_file(doc/help.rst.in doc/help.rst @ONLY)
+@@ -347,6 +343,7 @@
+     )
+ 
+     # tests
++	 if (Python3_EXECUTABLE)
+     add_custom_target(tests
+         DEPENDS "${RE2C_RUN_TESTS}"
+         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+@@ -397,6 +394,7 @@
+         re2c_test_ver_to_vernum
+         re2c_test_argsubst
+     )
++	 endif (Python3_EXECUTABLE)
+ endif()
+ 
+ if (RE2C_BUILD_LIBS)
+@@ -532,6 +530,8 @@
+ 
+ # only add check target if toplevel project
+ if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
++	 if (Python3_EXECUTABLE)
+     add_custom_target(check)
+     add_dependencies(check check_re2c check_libre2c)
++	 endif (Python3_EXECUTABLE)
+ endif()
