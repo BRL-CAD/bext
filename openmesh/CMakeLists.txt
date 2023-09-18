@@ -17,7 +17,7 @@ set(ENABLE_OPENMESH "${ENABLE_OPENMESH}" CACHE BOOL "Enable OpenMesh build")
 
 if (ENABLE_OPENMESH)
 
-  git_submodule_init(openmesh CMakeLists.txt)
+  git_submodule_init(OpenMesh CMakeLists.txt)
 
   ExternalProject_Add(OPENMESH_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/OpenMesh"

@@ -20,7 +20,7 @@ set(ENABLE_PNG "${ENABLE_PNG}" CACHE BOOL "Enable png build")
 
 if (ENABLE_PNG)
 
-  git_submodule_init(png CMakeLists.txt)
+  git_submodule_init(libpng CMakeLists.txt)
 
   set(PNG_DEPENDS ZLIB)
   TargetVars(PNG_DEPENDS)

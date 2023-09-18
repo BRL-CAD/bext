@@ -60,7 +60,6 @@ if (ENABLE_TCL)
       BUILD_COMMAND make -j${pcnt}
       INSTALL_COMMAND make install
       ${RPATH_CMD}
-      DEPENDS ${ZLIB_TARGET}
       # Note - LOG_CONFIGURE doesn't seem to be compatible with complex CONFIGURE_COMMAND setups
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
@@ -81,7 +80,6 @@ if (ENABLE_TCL)
       BINARY_DIR ${TCL_SRC_DIR}/win
       BUILD_COMMAND ${VCVARS_BAT} && nmake -f makefile.vc INSTALLDIR=${CMAKE_BUNDLE_INSTALL_PREFIX} SUFX=
       INSTALL_COMMAND ${VCVARS_BAT} && nmake -f makefile.vc install INSTALLDIR=${CMAKE_BUNDLE_INSTALL_PREFIX} SUFX=
-      DEPENDS ${ZLIB_TARGET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
