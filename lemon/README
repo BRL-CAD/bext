@@ -1,0 +1,4 @@
+TODO:  The only reasons we're patching lemon are 1) to add a CMake build and 2)
+to step the new version down to and older one that works with wfobj.  CMake is
+fine, but the patch should be JUST that - we need to fix wfobj to work with the
+newest lemon.
