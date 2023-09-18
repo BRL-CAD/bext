@@ -20,7 +20,7 @@ if (ENABLE_SQLite3)
   git_submodule_init(sqlite3 sqlite3.c)
 
   ExternalProject_Add(SQLITE3_BLD
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3"
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/sqlite3.patch
     CMAKE_ARGS
