@@ -227,10 +227,12 @@ endfunction(git_submodule_init path)
 # as "tags" that control adding packages.  If at least one of the tags for a
 # given package is set, that package will be built.
 ###############################################################################
-option(USE_BRLCAD "BRL-CAD required dependency"  ON)
-option(USE_GDAL   "GDAL terrain support"         ON)
-option(USE_QT     "Qt graphical toolkit support" ON)
-option(USE_TCL    "Tcl/Tk support"               ON)
+option(USE_APPLESEED "Appleseed rendering system"   OFF)
+option(USE_BRLCAD    "BRL-CAD required dependency"  ON)
+option(USE_GDAL      "GDAL terrain support"         ON)
+option(USE_OSPRAY    "OSPRay rendering system"      OFF)
+option(USE_QT        "Qt graphical toolkit support" ON)
+option(USE_TCL       "Tcl/Tk support"               ON)
 
 function(add_project pname)
   cmake_parse_arguments(A "" "GROUPS" "" ${ARGN})
@@ -247,6 +249,28 @@ function(add_project pname)
 endfunction(add_project pname)
 
 ###############################################################################
+# OSPRay offers some particular challenges when it comes to toolchain
+# bootstrapping - look here for those we can't yet provide.
+###############################################################################
+if (USE_OSPRAY)
+
+  # For the moment, we can't bootstrap GNU m4 readily, and ISPC *needs* it for
+  # compilation.  (Ideally we would enhance the OpenBSD m4 to support the ISPC
+  # features needed, but as of 2023-09-18 it doesn't have them yet.)
+  find_program(M4_EXECUTABLE m4 REQUIRED)
+
+  # TODO - I think Python is just a build-time dependency for ISPC - the
+  # executable does not seem to be linking to it.  If that's true, what we
+  # might be able to do for this is try building Python3 IFF we don't find a
+  # system Python3, since https://github.com/python/cpython/issues/90737 sounds
+  # like the problem may be when we try to build this with an already-in-place
+  # system python3?
+  find_package(Python3 REQUIRED)
+
+endif (USE_OSPRAY)
+
+
+###############################################################################
 # Applying patch files cross platform is a challenging problem due to the
 # shortage of portable tools and issues with LF vs CRLF files - see
 # https://gitlab.kitware.com/cmake/cmake/-/issues/16854 for more background on
@@ -261,14 +285,12 @@ add_subdirectory(patch)
 # build targets intended for distribution, these outputs are all
 # targeted to the extnoinstall subdirectory.
 ###############################################################################
-add_subdirectory(astyle)
-add_subdirectory(lief)
-add_subdirectory(lemon)
-add_subdirectory(re2c)
-add_subdirectory(perplex)
-add_subdirectory(plief)
-add_subdirectory(strclear)
-add_subdirectory(xmltools)
+add_project(astyle GROUPS "BRLCAD")
+add_project(lief GROUPS "BRLCAD")
+add_project(perplex GROUPS "BRLCAD")
+add_project(plief GROUPS "BRLCAD")
+add_project(strclear GROUPS "BRLCAD")
+add_project(xmltools GROUPS "BRLCAD")  # Used for Docbook building
 
 ###############################################################################
 # Build logic is broken out per-library, but the ordering is important.  Some

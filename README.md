@@ -1,6 +1,6 @@
 # bext - External Dependencies Management
 
-This repository manages the building of dependencies used by large scale computer graphics projects, with a primary focuse on the [BRL-CAD](https://github.com/BRL-CAD/brlcad) computer aided design system.
+This repository manages the building of dependencies used by large scale computer graphics projects, with a primary focus on the [BRL-CAD](https://github.com/BRL-CAD/brlcad) computer aided design system.
 
 # Quick start
 
@@ -8,20 +8,11 @@ This repository manages the building of dependencies used by large scale compute
 ```sh
 git clone https://github.com/starseeker/bext
 ```
-
-Note - if you know you are going to build most or all of the component projects you can immediately populate all submodules when performing the clone:
-
-```sh
-git clone --recurse-submodules https://github.com/starseeker/bext
-```
-
-If you don't recurse through submodules when cloning, the configure step will populate those submodule directories needed based on the build settings.
-
 * Make a build directory
 ```sh
 mkdir bext_build && cd bext_build
 ```
-* Configure with CMake.  Individual components can be enabled or disabled, but the ENABLE_ALL flag is used to automatically turn on all the projects.  There are also USE_* variables that can enable or disable various groupings of componentsbased on which specific application stacks the user wishes to support.
+* Configure with CMake.  Individual components can be enabled or disabled, but the ENABLE_ALL flag is used to automatically turn on all the projects.  There are also USE_* variables that can enable or disable various groupings of components based on which specific application stacks the user wishes to support.
 ```sh
 cmake ../bext -DENABLE_ALL=ON
 ```
@@ -29,6 +20,25 @@ cmake ../bext -DENABLE_ALL=ON
 ```sh
 cmake --build . --config Release --parallel 8
 ```
+
+Note that if you know you are going to build most or all of the component projects you can immediately populate all submodules when performing the clone by adding the --recurse-submodules option:
+
+```sh
+git clone --recurse-submodules https://github.com/starseeker/bext
+```
+
+This is primarily useful if you want to do all the downloading at once up front or you are preparing to work in an environment without an internet connection. If you don't recurse through submodules when cloning, the configure step will populate those submodule directories needed based on the build settings. That deferring of the submodule downloads means you then must have internet access at configure time to use the normal workflow.
+
+# USE_* Options
+
+A complete ENABLE_ALL build of all components in this repository is a *very* large build, and developers not needing some subset of the components may wish to avoid paying the price of building *all* submodules.  That is why the USE_* options are defined - ENABLE_ALL will only enable those submodules that indicate they are used by at least one active USE_* option.  By default, USE_BRLCAD, USE_GDAL and USE_TCL are enabled as they collectively define the most common set of dependencies used by a standard BRL-CAD build.  However, if a developer is building BRL-CAD without terrain support and without Tcl/Tk support, setting USE_GDAL and USE_TCL to OFF will skip compilation of those submodules.  Available USE_* options are:
+
+* USE_BRLCAD - the core BRL-CAD dependencies.
+* USE_GDAL - Geospatial Data Abstraction Library and dependencies
+* USE_TCL - Tcl/Tk and associated packages
+* USE_QT - Qt - cross-platform software for creating graphical user interfaces
+* USE_APPLESEED - Physically-based global illumination rendering engine
+* USE_OSPRAY - Intel high performance ray tracing engine
 
 # Using the Build Outputs with BRL-CAD
 
