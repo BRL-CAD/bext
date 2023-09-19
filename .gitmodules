@@ -221,3 +221,8 @@
 	url = https://github.com/BRL-CAD/icu
 	branch = RELEASE
 	shallow = true
+[submodule "jpeg/libjpeg-turbo"]
+	path = jpeg/libjpeg-turbo
+	url = https://github.com/BRL-CAD/libjpeg-turbo
+	branch = RELEASE
+	shallow = true
