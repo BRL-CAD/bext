@@ -231,3 +231,8 @@
 	url = https://github.com/BRL-CAD/libtiff
 	branch = RELEASE
 	shallow = true
+[submodule "onetbb/oneTBB"]
+	path = onetbb/oneTBB
+	url = https://github.com/BRL-CAD/oneTBB
+	branch = RELEASE
+	shallow = true

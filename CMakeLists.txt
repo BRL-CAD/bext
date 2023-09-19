@@ -387,6 +387,10 @@ add_project(lmdb GROUPS "BRLCAD")
 # https://eigen.tuxfamily.org
 add_project(eigen GROUPS "BRLCAD")
 
+# oneTBB - Threading Building Blocks
+# https://github.com/oneapi-src/oneTBB
+add_project(onetbb GROUPS "APPLESEED;OSPRAY")
+
 # STEPcode - support for reading and writing STEP files
 # https://github.com/stepcode/stepcode
 add_project(stepcode GROUPS "BRLCAD")
