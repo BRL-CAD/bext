@@ -1,0 +1,684 @@
+diff -Naur llvm/clang/lib/CodeGen/CodeGenFunction.cpp LLVM_BLD/clang/lib/CodeGen/CodeGenFunction.cpp
+--- llvm/clang/lib/CodeGen/CodeGenFunction.cpp	2023-09-14 14:51:50.658669839 -0400
++++ LLVM_BLD/clang/lib/CodeGen/CodeGenFunction.cpp	2023-09-14 15:18:42.728872125 -0400
+@@ -844,7 +844,7 @@
+     if (FuncGroups > 1) {
+       auto FuncName = llvm::makeArrayRef<uint8_t>(
+           CurFn->getName().bytes_begin(), CurFn->getName().bytes_end());
+-      auto Group = crc32(FuncName) % FuncGroups;
++      auto Group = brl_crc32(FuncName) % FuncGroups;
+       if (Group != CGM.getCodeGenOpts().XRaySelectedFunctionGroup &&
+           !AlwaysXRayAttr)
+         Fn->addFnAttr("function-instrument", "xray-never");
+diff -Naur llvm/clang/lib/CodeGen/CodeGenModule.cpp LLVM_BLD/clang/lib/CodeGen/CodeGenModule.cpp
+--- llvm/clang/lib/CodeGen/CodeGenModule.cpp	2023-09-14 14:51:50.658669839 -0400
++++ LLVM_BLD/clang/lib/CodeGen/CodeGenModule.cpp	2023-09-14 15:10:56.303766091 -0400
+@@ -2927,7 +2927,7 @@
+ 
+   auto NumGroups = getCodeGenOpts().ProfileTotalFunctionGroups;
+   if (NumGroups > 1) {
+-    auto Group = llvm::crc32(arrayRefFromStringRef(Fn->getName())) % NumGroups;
++    auto Group = llvm::brl_crc32(arrayRefFromStringRef(Fn->getName())) % NumGroups;
+     if (Group != getCodeGenOpts().ProfileSelectedFunctionGroup)
+       return true;
+   }
+diff -Naur llvm/clang/lib/Serialization/ASTReader.cpp LLVM_BLD/clang/lib/Serialization/ASTReader.cpp
+--- llvm/clang/lib/Serialization/ASTReader.cpp	2023-09-14 14:51:50.686669380 -0400
++++ LLVM_BLD/clang/lib/Serialization/ASTReader.cpp	2023-09-14 14:58:56.579658890 -0400
+@@ -1493,7 +1493,7 @@
+         return nullptr;
+       }
+       SmallVector<uint8_t, 0> Uncompressed;
+-      if (llvm::Error E = llvm::compression::zlib::uncompress(
++      if (llvm::Error E = llvm::compression::zlib::brl_uncompress(
+               llvm::arrayRefFromStringRef(Blob), Uncompressed, Record[0])) {
+         Error("could not decompress embedded file contents: " +
+               llvm::toString(std::move(E)));
+diff -Naur llvm/clang/lib/Serialization/ASTWriter.cpp LLVM_BLD/clang/lib/Serialization/ASTWriter.cpp
+--- llvm/clang/lib/Serialization/ASTWriter.cpp	2023-09-14 14:51:50.686669380 -0400
++++ LLVM_BLD/clang/lib/Serialization/ASTWriter.cpp	2023-09-14 14:59:53.686716691 -0400
+@@ -2002,7 +2002,7 @@
+   // consumers will not want its contents.
+   SmallVector<uint8_t, 0> CompressedBuffer;
+   if (llvm::compression::zlib::isAvailable()) {
+-    llvm::compression::zlib::compress(
++    llvm::compression::zlib::brl_compress(
+         llvm::arrayRefFromStringRef(Blob.drop_back(1)), CompressedBuffer);
+     RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB_COMPRESSED, Blob.size() - 1};
+     Stream.EmitRecordWithBlob(SLocBufferBlobCompressedAbbrv, Record,
+diff -Naur llvm/clang-tools-extra/clangd/index/Serialization.cpp LLVM_BLD/clang-tools-extra/clangd/index/Serialization.cpp
+--- llvm/clang-tools-extra/clangd/index/Serialization.cpp	2023-09-14 14:51:51.774651517 -0400
++++ LLVM_BLD/clang-tools-extra/clangd/index/Serialization.cpp	2023-09-14 15:00:03.522554376 -0400
+@@ -192,7 +192,7 @@
+     }
+     if (llvm::compression::zlib::isAvailable()) {
+       llvm::SmallVector<uint8_t, 0> Compressed;
+-      llvm::compression::zlib::compress(llvm::arrayRefFromStringRef(RawTable),
++      llvm::compression::zlib::brl_compress(llvm::arrayRefFromStringRef(RawTable),
+                                         Compressed);
+       write32(RawTable.size(), OS);
+       OS << llvm::toStringRef(Compressed);
+@@ -234,7 +234,7 @@
+       return error("Bad stri table: uncompress {0} -> {1} bytes is implausible",
+                    R.rest().size(), UncompressedSize);
+ 
+-    if (llvm::Error E = llvm::compression::zlib::uncompress(
++    if (llvm::Error E = llvm::compression::zlib::brl_uncompress(
+             llvm::arrayRefFromStringRef(R.rest()), UncompressedStorage,
+             UncompressedSize))
+       return std::move(E);
+diff -Naur llvm/lld/ELF/InputSection.cpp LLVM_BLD/lld/ELF/InputSection.cpp
+--- llvm/lld/ELF/InputSection.cpp	2023-09-14 14:51:48.394706998 -0400
++++ LLVM_BLD/lld/ELF/InputSection.cpp	2023-09-14 15:00:53.649727004 -0400
+@@ -118,7 +118,7 @@
+     uncompressedBuf = bAlloc().Allocate<uint8_t>(size);
+   }
+ 
+-  if (Error e = compression::zlib::uncompress(rawData, uncompressedBuf, size))
++  if (Error e = compression::zlib::brl_uncompress(rawData, uncompressedBuf, size))
+     fatal(toString(this) +
+           ": uncompress failed: " + llvm::toString(std::move(e)));
+   rawData = makeArrayRef(uncompressedBuf, size);
+@@ -1218,7 +1218,7 @@
+   // to the buffer.
+   if (uncompressedSize >= 0) {
+     size_t size = uncompressedSize;
+-    if (Error e = compression::zlib::uncompress(rawData, buf, size))
++    if (Error e = compression::zlib::brl_uncompress(rawData, buf, size))
+       fatal(toString(this) +
+             ": uncompress failed: " + llvm::toString(std::move(e)));
+     uint8_t *bufEnd = buf + size;
+diff -Naur llvm/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp LLVM_BLD/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp
+--- llvm/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp	2023-09-14 14:51:48.538704635 -0400
++++ LLVM_BLD/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp	2023-09-14 15:11:09.727544038 -0400
+@@ -430,7 +430,7 @@
+ }
+ 
+ static uint32_t calc_crc32(uint32_t init, const DataExtractor &data) {
+-  return llvm::crc32(
++  return llvm::brl_crc32(
+       init, llvm::makeArrayRef(data.GetDataStart(), data.GetByteSize()));
+ }
+ 
+diff -Naur llvm/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp LLVM_BLD/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp
+--- llvm/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp	2023-09-14 14:51:48.538704635 -0400
++++ LLVM_BLD/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp	2023-09-14 15:11:19.295385766 -0400
+@@ -166,7 +166,7 @@
+         "Calculating module crc32 %s with size %" PRIu64 " KiB",
+         FileSpec(coff_obj.getFileName()).GetLastPathComponent().AsCString(),
+         static_cast<lldb::offset_t>(raw_data.size()) / 1024);
+-    gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
++    gnu_debuglink_crc = llvm::brl_crc32(0, llvm::arrayRefFromStringRef(raw_data));
+   }
+   // Use 4 bytes of crc from the .gnu_debuglink section.
+   llvm::support::ulittle32_t data(gnu_debuglink_crc);
+diff -Naur llvm/llvm/cmake/modules/FindZLIB.cmake LLVM_BLD/llvm/cmake/modules/FindZLIB.cmake
+--- llvm/llvm/cmake/modules/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
++++ LLVM_BLD/llvm/cmake/modules/FindZLIB.cmake	2023-09-14 15:25:55.126140483 -0400
+@@ -0,0 +1,123 @@
++#.rst:
++# FindZLIB
++# --------
++#
++# Find the native ZLIB includes and library.
++#
++# IMPORTED Targets
++# ^^^^^^^^^^^^^^^^
++#
++# This module defines :prop_tgt:`IMPORTED` target ``ZLIB::ZLIB``, if
++# ZLIB has been found.
++#
++# Result Variables
++# ^^^^^^^^^^^^^^^^
++#
++# This module defines the following variables:
++#
++# ::
++#
++#   ZLIB_INCLUDE_DIRS   - where to find zlib.h, etc.
++#   ZLIB_LIBRARIES      - List of libraries when using zlib.
++#   ZLIB_FOUND          - True if zlib found.
++#
++# ::
++#
++#   ZLIB_VERSION_STRING - The version of zlib found (x.y.z)
++#   ZLIB_VERSION_MAJOR  - The major version of zlib
++#   ZLIB_VERSION_MINOR  - The minor version of zlib
++#   ZLIB_VERSION_PATCH  - The patch version of zlib
++#   ZLIB_VERSION_TWEAK  - The tweak version of zlib
++#
++# Backward Compatibility
++# ^^^^^^^^^^^^^^^^^^^^^^
++#
++# The following variable are provided for backward compatibility
++#
++# ::
++#
++#   ZLIB_MAJOR_VERSION  - The major version of zlib
++#   ZLIB_MINOR_VERSION  - The minor version of zlib
++#   ZLIB_PATCH_VERSION  - The patch version of zlib
++#
++# Hints
++# ^^^^^
++#
++# A user may set ``ZLIB_ROOT`` to a zlib installation root to tell this
++# module where to look.
++
++#=============================================================================
++# Copyright 2001-2011 Kitware, Inc.
++#
++# Distributed under the OSI-approved BSD License (the "License");
++# see accompanying file Copyright.txt for details.
++#
++# This software is distributed WITHOUT ANY WARRANTY; without even the
++# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++# See the License for more information.
++#=============================================================================
++# (To distribute this file outside of CMake, substitute the full
++#  License text for the above reference.)
++
++set(_ZLIB_SEARCHES)
++
++# Search ZLIB_ROOT first if it is set.
++if(ZLIB_ROOT)
++  set(_ZLIB_SEARCH_ROOT PATHS ${ZLIB_ROOT} NO_DEFAULT_PATH)
++  list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_ROOT)
++endif()
++
++# Normal search.
++set(_ZLIB_SEARCH_NORMAL
++  PATHS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\GnuWin32\\Zlib;InstallPath]"
++        "$ENV{PROGRAMFILES}/zlib"
++  )
++list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_NORMAL)
++
++set(ZLIB_NAMES z_brl z zlib zdll zlib1 zlibd zlibd1)
++
++# Try each search configuration.
++foreach(search ${_ZLIB_SEARCHES})
++  find_path(ZLIB_INCLUDE_DIR NAMES zlib.h        ${${search}} PATH_SUFFIXES include)
++  find_library(ZLIB_LIBRARY  NAMES ${ZLIB_NAMES} ${${search}} PATH_SUFFIXES lib)
++endforeach()
++
++mark_as_advanced(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
++
++if(ZLIB_INCLUDE_DIR AND EXISTS "${ZLIB_INCLUDE_DIR}/zlib.h")
++    file(STRINGS "${ZLIB_INCLUDE_DIR}/zlib.h" ZLIB_H REGEX "^#define ZLIB_VERSION \"[^\"]*\"$")
++
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"([0-9]+).*$" "\\1" ZLIB_VERSION_MAJOR "${ZLIB_H}")
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_MINOR  "${ZLIB_H}")
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_PATCH "${ZLIB_H}")
++    set(ZLIB_VERSION_STRING "${ZLIB_VERSION_MAJOR}.${ZLIB_VERSION_MINOR}.${ZLIB_VERSION_PATCH}")
++
++    # only append a TWEAK version if it exists:
++    set(ZLIB_VERSION_TWEAK "")
++    if( "${ZLIB_H}" MATCHES "ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.[0-9]+\\.([0-9]+)")
++        set(ZLIB_VERSION_TWEAK "${CMAKE_MATCH_1}")
++        set(ZLIB_VERSION_STRING "${ZLIB_VERSION_STRING}.${ZLIB_VERSION_TWEAK}")
++    endif()
++
++    set(ZLIB_MAJOR_VERSION "${ZLIB_VERSION_MAJOR}")
++    set(ZLIB_MINOR_VERSION "${ZLIB_VERSION_MINOR}")
++    set(ZLIB_PATCH_VERSION "${ZLIB_VERSION_PATCH}")
++endif()
++
++# handle the QUIETLY and REQUIRED arguments and set ZLIB_FOUND to TRUE if
++# all listed variables are TRUE
++include(FindPackageHandleStandardArgs)
++FIND_PACKAGE_HANDLE_STANDARD_ARGS(ZLIB REQUIRED_VARS ZLIB_LIBRARY ZLIB_INCLUDE_DIR
++                                       VERSION_VAR ZLIB_VERSION_STRING)
++
++if(ZLIB_FOUND)
++    set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
++    set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
++
++    if(NOT TARGET ZLIB::ZLIB)
++      add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
++      set_target_properties(ZLIB::ZLIB PROPERTIES
++        IMPORTED_LOCATION "${ZLIB_LIBRARY}"
++        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
++    endif()
++endif()
+diff -Naur llvm/llvm/include/llvm/Support/Compression.h LLVM_BLD/llvm/include/llvm/Support/Compression.h
+--- llvm/llvm/include/llvm/Support/Compression.h	2023-09-14 14:51:48.818700039 -0400
++++ LLVM_BLD/llvm/include/llvm/Support/Compression.h	2023-09-14 15:01:35.465036657 -0400
+@@ -30,14 +30,14 @@
+ 
+ bool isAvailable();
+ 
+-void compress(ArrayRef<uint8_t> Input,
++void brl_compress(ArrayRef<uint8_t> Input,
+               SmallVectorImpl<uint8_t> &CompressedBuffer,
+               int Level = DefaultCompression);
+ 
+-Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
++Error brl_uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+                  size_t &UncompressedSize);
+ 
+-Error uncompress(ArrayRef<uint8_t> Input,
++Error brl_uncompress(ArrayRef<uint8_t> Input,
+                  SmallVectorImpl<uint8_t> &UncompressedBuffer,
+                  size_t UncompressedSize);
+ 
+@@ -52,14 +52,14 @@
+ 
+ bool isAvailable();
+ 
+-void compress(ArrayRef<uint8_t> Input,
++void brl_compress(ArrayRef<uint8_t> Input,
+               SmallVectorImpl<uint8_t> &CompressedBuffer,
+               int Level = DefaultCompression);
+ 
+-Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
++Error brl_uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+                  size_t &UncompressedSize);
+ 
+-Error uncompress(ArrayRef<uint8_t> Input,
++Error brl_uncompress(ArrayRef<uint8_t> Input,
+                  SmallVectorImpl<uint8_t> &UncompressedBuffer,
+                  size_t UncompressedSize);
+ 
+diff -Naur llvm/llvm/include/llvm/Support/CRC.h LLVM_BLD/llvm/include/llvm/Support/CRC.h
+--- llvm/llvm/include/llvm/Support/CRC.h	2023-09-14 14:51:48.822699974 -0400
++++ LLVM_BLD/llvm/include/llvm/Support/CRC.h	2023-09-14 15:01:35.465036657 -0400
+@@ -19,11 +19,11 @@
+ template <typename T> class ArrayRef;
+ 
+ // Compute the CRC-32 of Data.
+-uint32_t crc32(ArrayRef<uint8_t> Data);
++uint32_t brl_crc32(ArrayRef<uint8_t> Data);
+ 
+ // Compute the running CRC-32 of Data, with CRC being the previous value of the
+ // checksum.
+-uint32_t crc32(uint32_t CRC, ArrayRef<uint8_t> Data);
++uint32_t brl_crc32(uint32_t CRC, ArrayRef<uint8_t> Data);
+ 
+ // Class for computing the JamCRC.
+ //
+diff -Naur llvm/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp LLVM_BLD/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp
+--- llvm/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp	2023-09-14 14:51:48.862699317 -0400
++++ LLVM_BLD/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp	2023-09-14 15:12:21.894485469 -0400
+@@ -263,7 +263,7 @@
+       MemoryBuffer::getFileOrSTDIN(Path);
+   if (!MB)
+     return false;
+-  return CRCHash == llvm::crc32(arrayRefFromStringRef(MB.get()->getBuffer()));
++  return CRCHash == llvm::brl_crc32(arrayRefFromStringRef(MB.get()->getBuffer()));
+ }
+ 
+ bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
+diff -Naur llvm/llvm/lib/MC/ELFObjectWriter.cpp LLVM_BLD/llvm/lib/MC/ELFObjectWriter.cpp
+--- llvm/llvm/lib/MC/ELFObjectWriter.cpp	2023-09-14 14:51:48.870699185 -0400
++++ LLVM_BLD/llvm/lib/MC/ELFObjectWriter.cpp	2023-09-14 15:01:35.469036591 -0400
+@@ -864,7 +864,7 @@
+ 
+   SmallVector<uint8_t, 128> Compressed;
+   const uint32_t ChType = ELF::ELFCOMPRESS_ZLIB;
+-  compression::zlib::compress(
++  compression::zlib::brl_compress(
+       makeArrayRef(reinterpret_cast<uint8_t *>(UncompressedData.data()),
+                    UncompressedData.size()),
+       Compressed);
+diff -Naur llvm/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp LLVM_BLD/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp
+--- llvm/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp	2023-09-14 14:51:48.874699120 -0400
++++ LLVM_BLD/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp	2023-09-14 15:12:34.218311305 -0400
+@@ -46,7 +46,7 @@
+   if (!LinkTargetOrErr)
+     return createFileError(File, LinkTargetOrErr.getError());
+   auto LinkTarget = std::move(*LinkTargetOrErr);
+-  uint32_t CRC32 = llvm::crc32(arrayRefFromStringRef(LinkTarget->getBuffer()));
++  uint32_t CRC32 = llvm::brl_crc32(arrayRefFromStringRef(LinkTarget->getBuffer()));
+ 
+   StringRef FileName = sys::path::filename(File);
+   size_t CRCPos = alignTo(FileName.size() + 1, 4);
+diff -Naur llvm/llvm/lib/ObjCopy/ELF/ELFObject.cpp LLVM_BLD/llvm/lib/ObjCopy/ELF/ELFObject.cpp
+--- llvm/llvm/lib/ObjCopy/ELF/ELFObject.cpp	2023-09-14 14:51:48.874699120 -0400
++++ LLVM_BLD/llvm/lib/ObjCopy/ELF/ELFObject.cpp	2023-09-14 15:01:11.125438501 -0400
+@@ -439,7 +439,7 @@
+   ArrayRef<uint8_t> Compressed =
+       Sec.OriginalData.slice(sizeof(Elf_Chdr_Impl<ELFT>));
+   SmallVector<uint8_t, 128> DecompressedContent;
+-  if (Error Err = compression::zlib::uncompress(Compressed, DecompressedContent,
++  if (Error Err = compression::zlib::brl_uncompress(Compressed, DecompressedContent,
+                                                 static_cast<size_t>(Sec.Size)))
+     return createStringError(errc::invalid_argument,
+                              "'" + Sec.Name + "': " + toString(std::move(Err)));
+@@ -512,7 +512,7 @@
+                                      DebugCompressionType CompressionType)
+     : SectionBase(Sec), CompressionType(CompressionType),
+       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
+-  compression::zlib::compress(OriginalData, CompressedData);
++  compression::zlib::brl_compress(OriginalData, CompressedData);
+ 
+   assert(CompressionType != DebugCompressionType::None);
+   Flags |= ELF::SHF_COMPRESSED;
+diff -Naur llvm/llvm/lib/Object/Decompressor.cpp LLVM_BLD/llvm/lib/Object/Decompressor.cpp
+--- llvm/llvm/lib/Object/Decompressor.cpp	2023-09-14 14:51:48.874699120 -0400
++++ LLVM_BLD/llvm/lib/Object/Decompressor.cpp	2023-09-14 14:58:43.523874239 -0400
+@@ -57,6 +57,6 @@
+ 
+ Error Decompressor::decompress(MutableArrayRef<uint8_t> Buffer) {
+   size_t Size = Buffer.size();
+-  return compression::zlib::uncompress(arrayRefFromStringRef(SectionData),
++  return compression::zlib::brl_uncompress(arrayRefFromStringRef(SectionData),
+                                        Buffer.data(), Size);
+ }
+diff -Naur llvm/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp
+--- llvm/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp	2023-09-14 14:51:48.878699057 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp	2023-09-14 14:58:41.411909075 -0400
+@@ -129,7 +129,7 @@
+     // Read compressed filenames.
+     StringRef CompressedFilenames = Data.substr(0, CompressedLen);
+     Data = Data.substr(CompressedLen);
+-    auto Err = compression::zlib::uncompress(
++    auto Err = compression::zlib::brl_uncompress(
+         arrayRefFromStringRef(CompressedFilenames), StorageBuf,
+         UncompressedLen);
+     if (Err) {
+diff -Naur llvm/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp
+--- llvm/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp	2023-09-14 14:51:48.878699057 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp	2023-09-14 15:00:39.173965961 -0400
+@@ -50,7 +50,7 @@
+   bool doCompression = Compress && compression::zlib::isAvailable() &&
+                        DoInstrProfNameCompression;
+   if (doCompression)
+-    compression::zlib::compress(arrayRefFromStringRef(FilenamesStr),
++    compression::zlib::brl_compress(arrayRefFromStringRef(FilenamesStr),
+                                 CompressedStr,
+                                 compression::zlib::BestSizeCompression);
+ 
+diff -Naur llvm/llvm/lib/ProfileData/InstrProf.cpp LLVM_BLD/llvm/lib/ProfileData/InstrProf.cpp
+--- llvm/llvm/lib/ProfileData/InstrProf.cpp	2023-09-14 14:51:48.878699057 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/InstrProf.cpp	2023-09-14 15:00:52.569744834 -0400
+@@ -465,7 +465,7 @@
+   }
+ 
+   SmallVector<uint8_t, 128> CompressedNameStrings;
+-  compression::zlib::compress(arrayRefFromStringRef(UncompressedNameStrings),
++  compression::zlib::brl_compress(arrayRefFromStringRef(UncompressedNameStrings),
+                               CompressedNameStrings,
+                               compression::zlib::BestSizeCompression);
+ 
+@@ -506,7 +506,7 @@
+       if (!llvm::compression::zlib::isAvailable())
+         return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
+ 
+-      if (Error E = compression::zlib::uncompress(
++      if (Error E = compression::zlib::brl_uncompress(
+               makeArrayRef(P, CompressedSize), UncompressedNameStrings,
+               UncompressedSize)) {
+         consumeError(std::move(E));
+diff -Naur llvm/llvm/lib/ProfileData/SampleProfReader.cpp LLVM_BLD/llvm/lib/ProfileData/SampleProfReader.cpp
+--- llvm/llvm/lib/ProfileData/SampleProfReader.cpp	2023-09-14 14:51:48.878699057 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/SampleProfReader.cpp	2023-09-14 14:58:41.411909075 -0400
+@@ -882,7 +882,7 @@
+ 
+   uint8_t *Buffer = Allocator.Allocate<uint8_t>(DecompressBufSize);
+   size_t UCSize = DecompressBufSize;
+-  llvm::Error E = compression::zlib::uncompress(
++  llvm::Error E = compression::zlib::brl_uncompress(
+       makeArrayRef(Data, *CompressSize), Buffer, UCSize);
+   if (E)
+     return sampleprof_error::uncompress_failed;
+diff -Naur llvm/llvm/lib/ProfileData/SampleProfWriter.cpp LLVM_BLD/llvm/lib/ProfileData/SampleProfWriter.cpp
+--- llvm/llvm/lib/ProfileData/SampleProfWriter.cpp	2023-09-14 14:51:48.878699057 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/SampleProfWriter.cpp	2023-09-14 15:01:02.165586420 -0400
+@@ -86,7 +86,7 @@
+     return sampleprof_error::success;
+   auto &OS = *OutputStream;
+   SmallVector<uint8_t, 128> CompressedStrings;
+-  compression::zlib::compress(arrayRefFromStringRef(UncompressedStrings),
++  compression::zlib::brl_compress(arrayRefFromStringRef(UncompressedStrings),
+                               CompressedStrings,
+                               compression::zlib::BestSizeCompression);
+   encodeULEB128(UncompressedStrings.size(), OS);
+diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compression.cpp
+--- llvm/llvm/lib/Support/Compression.cpp	2023-09-14 14:51:48.878699057 -0400
++++ LLVM_BLD/llvm/lib/Support/Compression.cpp	2023-09-14 15:01:35.469036591 -0400
+@@ -47,7 +47,7 @@
+ 
+ bool zlib::isAvailable() { return true; }
+ 
+-void zlib::compress(ArrayRef<uint8_t> Input,
++void zlib::brl_compress(ArrayRef<uint8_t> Input,
+                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
+   unsigned long CompressedSize = ::compressBound(Input.size());
+   CompressedBuffer.resize_for_overwrite(CompressedSize);
+@@ -63,10 +63,10 @@
+     CompressedBuffer.truncate(CompressedSize);
+ }
+ 
+-Error zlib::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
++Error zlib::brl_uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+                        size_t &UncompressedSize) {
+   int Res =
+-      ::uncompress((Bytef *)UncompressedBuffer, (uLongf *)&UncompressedSize,
++      ::brl_uncompress((Bytef *)UncompressedBuffer, (uLongf *)&UncompressedSize,
+                    (const Bytef *)Input.data(), Input.size());
+   // Tell MemorySanitizer that zlib output buffer is fully initialized.
+   // This avoids a false report when running LLVM with uninstrumented ZLib.
+@@ -76,12 +76,12 @@
+              : Error::success();
+ }
+ 
+-Error zlib::uncompress(ArrayRef<uint8_t> Input,
++Error zlib::brl_uncompress(ArrayRef<uint8_t> Input,
+                        SmallVectorImpl<uint8_t> &UncompressedBuffer,
+                        size_t UncompressedSize) {
+   UncompressedBuffer.resize_for_overwrite(UncompressedSize);
+   Error E =
+-      zlib::uncompress(Input, UncompressedBuffer.data(), UncompressedSize);
++      zlib::brl_uncompress(Input, UncompressedBuffer.data(), UncompressedSize);
+   if (UncompressedSize < UncompressedBuffer.size())
+     UncompressedBuffer.truncate(UncompressedSize);
+   return E;
+@@ -89,18 +89,18 @@
+ 
+ #else
+ bool zlib::isAvailable() { return false; }
+-void zlib::compress(ArrayRef<uint8_t> Input,
++void zlib::brl_compress(ArrayRef<uint8_t> Input,
+                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
+-  llvm_unreachable("zlib::compress is unavailable");
++  llvm_unreachable("zlib::brl_compress is unavailable");
+ }
+-Error zlib::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
++Error zlib::brl_uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+                        size_t &UncompressedSize) {
+-  llvm_unreachable("zlib::uncompress is unavailable");
++  llvm_unreachable("zlib::brl_uncompress is unavailable");
+ }
+-Error zlib::uncompress(ArrayRef<uint8_t> Input,
++Error zlib::brl_uncompress(ArrayRef<uint8_t> Input,
+                        SmallVectorImpl<uint8_t> &UncompressedBuffer,
+                        size_t UncompressedSize) {
+-  llvm_unreachable("zlib::uncompress is unavailable");
++  llvm_unreachable("zlib::brl_uncompress is unavailable");
+ }
+ #endif
+ 
+@@ -108,7 +108,7 @@
+ 
+ bool zstd::isAvailable() { return true; }
+ 
+-void zstd::compress(ArrayRef<uint8_t> Input,
++void zstd::brl_compress(ArrayRef<uint8_t> Input,
+                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
+   unsigned long CompressedBufferSize = ::ZSTD_compressBound(Input.size());
+   CompressedBuffer.resize_for_overwrite(CompressedBufferSize);
+@@ -124,7 +124,7 @@
+     CompressedBuffer.truncate(CompressedSize);
+ }
+ 
+-Error zstd::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
++Error zstd::brl_uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+                        size_t &UncompressedSize) {
+   const size_t Res =
+       ::ZSTD_decompress(UncompressedBuffer, UncompressedSize,
+@@ -138,12 +138,12 @@
+                            : Error::success();
+ }
+ 
+-Error zstd::uncompress(ArrayRef<uint8_t> Input,
++Error zstd::brl_uncompress(ArrayRef<uint8_t> Input,
+                        SmallVectorImpl<uint8_t> &UncompressedBuffer,
+                        size_t UncompressedSize) {
+   UncompressedBuffer.resize_for_overwrite(UncompressedSize);
+   Error E =
+-      zstd::uncompress(Input, UncompressedBuffer.data(), UncompressedSize);
++      zstd::brl_uncompress(Input, UncompressedBuffer.data(), UncompressedSize);
+   if (UncompressedSize < UncompressedBuffer.size())
+     UncompressedBuffer.truncate(UncompressedSize);
+   return E;
+@@ -151,17 +151,17 @@
+ 
+ #else
+ bool zstd::isAvailable() { return false; }
+-void zstd::compress(ArrayRef<uint8_t> Input,
++void zstd::brl_compress(ArrayRef<uint8_t> Input,
+                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
+-  llvm_unreachable("zstd::compress is unavailable");
++  llvm_unreachable("zstd::brl_compress is unavailable");
+ }
+-Error zstd::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
++Error zstd::brl_uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+                        size_t &UncompressedSize) {
+-  llvm_unreachable("zstd::uncompress is unavailable");
++  llvm_unreachable("zstd::brl_uncompress is unavailable");
+ }
+-Error zstd::uncompress(ArrayRef<uint8_t> Input,
++Error zstd::brl_uncompress(ArrayRef<uint8_t> Input,
+                        SmallVectorImpl<uint8_t> &UncompressedBuffer,
+                        size_t UncompressedSize) {
+-  llvm_unreachable("zstd::uncompress is unavailable");
++  llvm_unreachable("zstd::brl_uncompress is unavailable");
+ }
+ #endif
+diff -Naur llvm/llvm/lib/Support/CRC.cpp LLVM_BLD/llvm/lib/Support/CRC.cpp
+--- llvm/llvm/lib/Support/CRC.cpp	2023-09-14 14:51:48.882698988 -0400
++++ LLVM_BLD/llvm/lib/Support/CRC.cpp	2023-09-14 15:01:35.469036591 -0400
+@@ -72,7 +72,7 @@
+     0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
+     0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d};
+ 
+-uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
++uint32_t llvm::brl_crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
+   CRC ^= 0xFFFFFFFFU;
+   for (uint8_t Byte : Data) {
+     int TableIdx = (CRC ^ Byte) & 0xff;
+@@ -84,13 +84,13 @@
+ #else
+ 
+ #include <zlib.h>
+-uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
++uint32_t llvm::brl_crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
+   // Zlib's crc32() only takes a 32-bit length, so we have to iterate for larger
+   // sizes. One could use crc32_z() instead, but that's a recent (2017) addition
+   // and may not be available on all systems.
+   do {
+     ArrayRef<uint8_t> Slice = Data.take_front(UINT32_MAX);
+-    CRC = ::crc32(CRC, (const Bytef *)Slice.data(), (uInt)Slice.size());
++    CRC = ::brl_crc32(CRC, (const Bytef *)Slice.data(), (uInt)Slice.size());
+     Data = Data.drop_front(Slice.size());
+   } while (Data.size() > 0);
+   return CRC;
+@@ -98,10 +98,10 @@
+ 
+ #endif
+ 
+-uint32_t llvm::crc32(ArrayRef<uint8_t> Data) { return crc32(0, Data); }
++uint32_t llvm::brl_crc32(ArrayRef<uint8_t> Data) { return brl_crc32(0, Data); }
+ 
+ void JamCRC::update(ArrayRef<uint8_t> Data) {
+   CRC ^= 0xFFFFFFFFU; // Undo CRC-32 Init.
+-  CRC = crc32(CRC, Data);
++  CRC = brl_crc32(CRC, Data);
+   CRC ^= 0xFFFFFFFFU; // Undo CRC-32 XorOut.
+ }
+diff -Naur llvm/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp LLVM_BLD/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp
+--- llvm/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp	2023-09-14 14:51:50.434673513 -0400
++++ LLVM_BLD/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp	2023-09-14 15:47:39.180649538 -0400
+@@ -216,7 +216,7 @@
+ 
+   /// See raw_ostream::write_impl.
+   void write_impl(const char *Ptr, size_t Size) override {
+-    CRC32 = crc32(
++    CRC32 = brl_crc32(
+         CRC32, ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Ptr), Size));
+     OS.write(Ptr, Size);
+   }
+diff -Naur llvm/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp LLVM_BLD/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp
+--- llvm/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp	2023-09-14 14:51:50.438673448 -0400
++++ LLVM_BLD/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp	2023-09-14 15:12:44.158170403 -0400
+@@ -745,7 +745,7 @@
+       return createFileError(Config.AddGnuDebugLink, DebugOrErr.getError());
+     auto Debug = std::move(*DebugOrErr);
+     Config.GnuDebugLinkCRC32 =
+-        llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
++        llvm::brl_crc32(arrayRefFromStringRef(Debug->getBuffer()));
+   }
+   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
+   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
+diff -Naur llvm/llvm/unittests/Support/CompressionTest.cpp LLVM_BLD/llvm/unittests/Support/CompressionTest.cpp
+--- llvm/llvm/unittests/Support/CompressionTest.cpp	2023-09-14 14:51:50.466672991 -0400
++++ LLVM_BLD/llvm/unittests/Support/CompressionTest.cpp	2023-09-14 15:00:15.570355545 -0400
+@@ -26,16 +26,16 @@
+ static void testZlibCompression(StringRef Input, int Level) {
+   SmallVector<uint8_t, 0> Compressed;
+   SmallVector<uint8_t, 0> Uncompressed;
+-  zlib::compress(arrayRefFromStringRef(Input), Compressed, Level);
++  zlib::brl_compress(arrayRefFromStringRef(Input), Compressed, Level);
+ 
+   // Check that uncompressed buffer is the same as original.
+-  Error E = zlib::uncompress(Compressed, Uncompressed, Input.size());
++  Error E = zlib::brl_uncompress(Compressed, Uncompressed, Input.size());
+   consumeError(std::move(E));
+ 
+   EXPECT_EQ(Input, toStringRef(Uncompressed));
+   if (Input.size() > 0) {
+     // Uncompression fails if expected length is too short.
+-    E = zlib::uncompress(Compressed, Uncompressed, Input.size() - 1);
++    E = zlib::brl_uncompress(Compressed, Uncompressed, Input.size() - 1);
+     EXPECT_EQ("zlib error: Z_BUF_ERROR", llvm::toString(std::move(E)));
+   }
+ }
+diff -Naur llvm/llvm/unittests/Support/CRCTest.cpp LLVM_BLD/llvm/unittests/Support/CRCTest.cpp
+--- llvm/llvm/unittests/Support/CRCTest.cpp	2023-09-14 14:51:50.466672991 -0400
++++ LLVM_BLD/llvm/unittests/Support/CRCTest.cpp	2023-09-14 15:11:39.635077596 -0400
+@@ -20,12 +20,12 @@
+ namespace {
+ 
+ TEST(CRCTest, CRC32) {
+-  EXPECT_EQ(0x414FA339U, llvm::crc32(arrayRefFromStringRef(
++  EXPECT_EQ(0x414FA339U, llvm::brl_crc32(arrayRefFromStringRef(
+                              "The quick brown fox jumps over the lazy dog")));
+ 
+   // CRC-32/ISO-HDLC test vector
+   // http://reveng.sourceforge.net/crc-catalogue/17plus.htm#crc.cat.crc-32c
+-  EXPECT_EQ(0xCBF43926U, llvm::crc32(arrayRefFromStringRef("123456789")));
++  EXPECT_EQ(0xCBF43926U, llvm::brl_crc32(arrayRefFromStringRef("123456789")));
+ 
+   // Check the CRC-32 of each byte value, exercising all of CRCTable.
+   for (int i = 0; i < 256; i++) {
+@@ -38,10 +38,10 @@
+ 
+     // CRCTable[i] is the CRC-32 of i without the initial and final bit flips.
+     uint8_t byte = i;
+-    EXPECT_EQ(crc, ~llvm::crc32(0xFFFFFFFFU, byte));
++    EXPECT_EQ(crc, ~llvm::brl_crc32(0xFFFFFFFFU, byte));
+   }
+ 
+-  EXPECT_EQ(0x00000000U, llvm::crc32(arrayRefFromStringRef("")));
++  EXPECT_EQ(0x00000000U, llvm::brl_crc32(arrayRefFromStringRef("")));
+ }
+ 
+ #if (SIZE_MAX > UINT32_MAX) && defined(EXPENSIVE_CHECKS)
+@@ -55,7 +55,7 @@
+   // Test expectation generated with:
+   // $ truncate --size=`echo 2^32-1+42 | bc` /tmp/foo
+   // $ crc32 /tmp/foo
+-  EXPECT_EQ(0xE46F28FBU, llvm::crc32(makeArrayRef(TestData, TestSize)));
++  EXPECT_EQ(0xE46F28FBU, llvm::brl_crc32(makeArrayRef(TestData, TestSize)));
+ 
+   free(TestData);
+ }

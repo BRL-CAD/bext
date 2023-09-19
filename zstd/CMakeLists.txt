@@ -1,0 +1,63 @@
+# Unless we have ENABLE_ALL set, base the building of zstd on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_ZSTD)
+  set(ENABLE_ZSTD ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_ZSTD)
+
+if (NOT ENABLE_ZSTD)
+
+  find_package(ZSTD)
+
+  if (NOT ZSTD_FOUND AND NOT DEFINED ENABLE_ZSTD)
+    set(ENABLE_ZSTD "ON" CACHE BOOL "Enable zstd build")
+  endif (NOT ZSTD_FOUND AND NOT DEFINED ENABLE_ZSTD)
+
+endif (NOT ENABLE_ZSTD)
+set(ENABLE_ZSTD "${ENABLE_ZSTD}" CACHE BOOL "Enable zstd build")
+
+if (ENABLE_ZSTD)
+
+  #git_submodule_init(zstd LICENSE)
+
+  ExternalProject_Add(ZSTD_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/zstd"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    SOURCE_SUBDIR build/cmake
+    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/zstd.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DZ_PREFIX_STR=${Z_PREFIX_STR}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(ZSTD_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/zstd/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/zstd.txt
+    COPYONLY
+    )
+
+endif (ENABLE_ZSTD)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

@@ -1,0 +1,4 @@
+Note that the version of LLVM targeted by the submodule is NOT the latest
+release of LLVM by upstream, but the newest one supported by the Open Shading
+Language project.
+

@@ -307,6 +307,10 @@ add_project(xmltools GROUPS "BRLCAD")  # Used for Docbook building
 # https://zlib.net
 add_project(zlib GROUPS "APPLESEED;BRLCAD;OSPRAY")
 
+# zstd - fast lossless compression library
+# https://github.com/facebook/zstd
+add_project(zstd GROUPS "APPLESEED;OSPRAY")
+
 # minizip-ng - zip manipulation library written in C
 # https://github.com/zlib-ng/minizip-ng
 add_project(minizip-ng GROUPS "APPLESEED")
@@ -390,6 +394,10 @@ add_project(eigen GROUPS "BRLCAD")
 # oneTBB - Threading Building Blocks
 # https://github.com/oneapi-src/oneTBB
 add_project(onetbb GROUPS "APPLESEED;OSPRAY")
+
+# LLVM - code generation support
+# https://llvm.org/
+add_project(llvm GROUPS "APPLESEED;OSPRAY")
 
 # STEPcode - support for reading and writing STEP files
 # https://github.com/stepcode/stepcode
