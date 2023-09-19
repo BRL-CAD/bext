@@ -309,6 +309,10 @@ add_project(zlib GROUPS "APPLESEED;BRLCAD;OSPRAY")
 # https://github.com/zlib-ng/minizip-ng
 add_project(minizip-ng GROUPS "APPLESEED")
 
+# LZ4 - lossless compression algorithm
+# https://github.com/lz4/lz4
+add_project(lz4 GROUPS "APPLESEED")
+
 # Henry Spencer's regular expression matching library
 # https://github.com/BRL-CAD/regex
 add_project(regex GROUPS "BRLCAD")

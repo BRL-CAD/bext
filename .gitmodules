@@ -137,3 +137,7 @@
 	path = minizip-ng/minizip-ng
 	url = https://github.com/BRL-CAD/minizip-ng
 	branch = RELEASE
+[submodule "lz4/lz4"]
+	path = lz4/lz4
+	url = https://github.com/BRL-CAD/lz4
+	branch = RELEASE
