@@ -24,7 +24,7 @@ cmake --build . --config Release --parallel 8
 Note that if you know you are going to build most or all of the component projects you can immediately populate all submodules when performing the clone by adding the --recurse-submodules option:
 
 ```sh
-git clone --recurse-submodules https://github.com/starseeker/bext
+git clone --depth=1 --recursive --shallow-submodules https://github.com/starseeker/bext
 ```
 
 This is primarily useful if you want to do all the downloading at once up front or you are preparing to work in an environment without an internet connection. If you don't recurse through submodules when cloning, the configure step will populate those submodule directories needed based on the build settings. That deferring of the submodule downloads means you then must have internet access at configure time to use the normal workflow.

@@ -212,7 +212,7 @@ function(git_submodule_init path checkfile)
       message(FATAL_ERROR "Need to populate Git submodule, but unable to find git executable")
     endif (NOT GIT_EXECUTABLE)
     execute_process(
-      COMMAND ${GIT_EXECUTABLE} submodule update --init ${path}
+      COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --depth=1 ${path}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       )
   endif (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
@@ -288,6 +288,8 @@ add_subdirectory(patch)
 add_project(astyle GROUPS "BRLCAD")
 add_project(flexbison GROUPS "APPLESEED;OSPRAY")
 add_project(lief GROUPS "BRLCAD")
+add_project(lemon GROUPS "BRLCAD")
+add_project(re2c GROUPS "BRLCAD")
 add_project(perplex GROUPS "BRLCAD")
 add_project(plief GROUPS "BRLCAD")
 add_project(strclear GROUPS "BRLCAD")
