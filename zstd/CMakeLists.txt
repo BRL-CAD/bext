@@ -17,7 +17,7 @@ set(ENABLE_ZSTD "${ENABLE_ZSTD}" CACHE BOOL "Enable zstd build")
 
 if (ENABLE_ZSTD)
 
-  #git_submodule_init(zstd LICENSE)
+  git_submodule_init(zstd LICENSE)
 
   ExternalProject_Add(ZSTD_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/zstd"
