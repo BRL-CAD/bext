@@ -342,6 +342,10 @@ add_project(expat GROUPS "APPLESEED")
 # https://pugixml.org/
 add_project(pugixml GROUPS "APPLESEED")
 
+# International Components for Unicode
+# https://github.com/unicode-org/icu
+add_project(icu GROUPS "APPLESEED")
+
 # Xerces-C++ - a validating XML parser
 # https://xerces.apache.org/xerces-c/
 add_project(xerces-c GROUPS "APPLESEED")

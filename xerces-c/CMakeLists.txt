@@ -19,12 +19,16 @@ if (ENABLE_XERCES_C)
 
   git_submodule_init(xerces-c CMakeLists.txt)
 
+  set(XERCES_C_DEPENDS ICU)
+  TargetVars(XERCES_C_DEPENDS)
+
   ExternalProject_Add(XERCES_C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/xerces-c"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/xerces-c.patch
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
+    -DICU_ROOT=$<$<BOOL:${ICU_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -Dnetwork=OFF
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
@@ -39,6 +43,8 @@ if (ENABLE_XERCES_C)
     LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
     STEP_TARGETS install
     )
+
+  TargetInstallDeps(XERCES_C XERCES_C_DEPENDS)
 
   if (TARGET PATCH_BLD)
     ExternalProject_Add_StepDependencies(XERCES_C_BLD configure PATCH_BLD-install)

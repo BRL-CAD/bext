@@ -169,3 +169,7 @@
 	path = xerces-c/xerces-c
 	url = https://github.com/BRL-CAD/xerces-c
 	branch = RELEASE
+[submodule "icu/icu"]
+	path = icu/icu
+	url = https://github.com/BRL-CAD/icu
+	branch = RELEASE
