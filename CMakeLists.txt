@@ -317,6 +317,19 @@ add_project(lz4 GROUPS "APPLESEED")
 # https://github.com/ebiggers/libdeflate
 add_project(deflate GROUPS "APPLESEED")
 
+# fmt  - formatting library providing an alternative to C++ iostreams
+# https://github.com/fmtlib/fmt
+add_project(fmt GROUPS "APPLESEED")
+
+# yaml-cpp - YAML parser and emitter in C++ matching the YAML 1.2 spec
+# https://github.com/jbeder/yaml-cpp
+add_project(yaml-cpp GROUPS "APPLESEED")
+
+# pystring - collection of C++ functions which match the interface and behavior
+# of python's string class methods
+# https://github.com/imageworks/pystring
+add_project(pystring GROUPS "APPLESEED")
+
 # Henry Spencer's regular expression matching library
 # https://github.com/BRL-CAD/regex
 add_project(regex GROUPS "BRLCAD")

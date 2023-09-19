@@ -145,3 +145,15 @@
 	path = deflate/libdeflate
 	url = https://github.com/BRL-CAD/libdeflate
 	branch = RELEASE
+[submodule "fmt/fmt"]
+	path = fmt/fmt
+	url = https://github.com/BRL-CAD/fmt
+	branch = RELEASE
+[submodule "yaml-cpp/yaml-cpp"]
+	path = yaml-cpp/yaml-cpp
+	url = https://github.com/BRL-CAD/yaml-cpp
+	branch = RELEASE
+[submodule "pystring/pystring"]
+	path = pystring/pystring
+	url = https://github.com/BRL-CAD/pystring
+	branch = RELEASE
