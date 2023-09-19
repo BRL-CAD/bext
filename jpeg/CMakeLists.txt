@@ -17,6 +17,8 @@ set(ENABLE_JPEG "${ENABLE_JPEG}" CACHE BOOL "Enable jpeg build")
 
 if (ENABLE_JPEG)
 
+  git_submodule_init(libjpeg-turbo CMakeLists.txt)
+
   ExternalProject_Add(JPEG_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libjpeg-turbo"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
