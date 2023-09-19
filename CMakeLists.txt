@@ -364,7 +364,7 @@ add_project(jpeg GROUPS "APPLESEED")
 # http://www.libpng.org/pub/png/libpng.html
 #
 # TODO - see if it makes sense for Qt to use our PNG
-add_project(png GROUPS "BRLCAD;QT")
+add_project(png GROUPS "APPLESEED;BRLCAD;QT")
 
 # UtahRLE - Raster Image library
 # https://github.com/BRL-CAD/utahrle
