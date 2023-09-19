@@ -334,6 +334,18 @@ add_project(pystring GROUPS "APPLESEED")
 # https://github.com/BRL-CAD/regex
 add_project(regex GROUPS "BRLCAD")
 
+# expat - library for parsing XML 1.0 Fourth Edition
+# https://github.com/libexpat/libexpat
+add_project(expat GROUPS "APPLESEED")
+
+# pugixml - a light-weight C++ XML processing library
+# https://pugixml.org/
+add_project(pugixml GROUPS "APPLESEED")
+
+# Xerces-C++ - a validating XML parser
+# https://xerces.apache.org/xerces-c/
+add_project(xerces-c GROUPS "APPLESEED")
+
 # netpbm library - support for pnm,ppm,pbm, etc. image files
 # http://netpbm.sourceforge.net/
 add_project(netpbm GROUPS "BRLCAD")

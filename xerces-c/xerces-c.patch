@@ -1,0 +1,17 @@
+diff -Naur xerces-c-3.2.4/CMakeLists.txt xerces-c/CMakeLists.txt
+--- xerces-c-3.2.4/CMakeLists.txt	2022-10-10 12:01:08.000000000 -0400
++++ xerces-c/CMakeLists.txt	2023-09-14 08:23:46.650390454 -0400
+@@ -164,10 +164,10 @@
+   COMPONENT "development")
+ 
+ # Process subdirectories
+-add_subdirectory(doc)
++#add_subdirectory(doc)
+ add_subdirectory(src)
+-add_subdirectory(tests)
+-add_subdirectory(samples)
++#add_subdirectory(tests)
++#add_subdirectory(samples)
+ 
+ # Display configuration summary
+ message(STATUS "")

@@ -157,3 +157,15 @@
 	path = pystring/pystring
 	url = https://github.com/BRL-CAD/pystring
 	branch = RELEASE
+[submodule "expat/libexpat"]
+	path = expat/libexpat
+	url = https://github.com/BRL-CAD/libexpat
+	branch = RELEASE
+[submodule "pugixml/pugixml"]
+	path = pugixml/pugixml
+	url = https://github.com/BRL-CAD/pugixml
+	branch = RELEASE
+[submodule "xerces-c/xerces-c"]
+	path = xerces-c/xerces-c
+	url = https://github.com/BRL-CAD/xerces-c
+	branch = RELEASE
