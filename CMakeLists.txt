@@ -369,7 +369,7 @@ add_project(png GROUPS "APPLESEED;BRLCAD;QT")
 # libtiff - Tag Image File Format (TIFF) support
 # https://libtiff.gitlab.io/libtiff/
 # https://gitlab.com/libtiff/libtiff
-add_project(tiff GROUPS "APPLESEED")
+add_project(tiff GROUPS "APPLESEED;GDAL")
 
 # UtahRLE - Raster Image library
 # https://github.com/BRL-CAD/utahrle
