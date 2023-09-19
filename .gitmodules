@@ -141,3 +141,7 @@
 	path = lz4/lz4
 	url = https://github.com/BRL-CAD/lz4
 	branch = RELEASE
+[submodule "deflate/libdeflate"]
+	path = deflate/libdeflate
+	url = https://github.com/BRL-CAD/libdeflate
+	branch = RELEASE

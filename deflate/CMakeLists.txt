@@ -1,0 +1,62 @@
+# Unless we have ENABLE_ALL set, based the building of deflate on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_DEFLATE)
+  set(ENABLE_DEFLATE ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_DEFLATE)
+
+if (NOT ENABLE_DEFLATE)
+
+  find_package(DEFLATE)
+
+  if (NOT DEFLATE_FOUND AND NOT DEFINED ENABLE_DEFLATE)
+    set(ENABLE_DEFLATE "ON" CACHE BOOL "Enable deflate build")
+  endif (NOT DEFLATE_FOUND AND NOT DEFINED ENABLE_DEFLATE)
+
+endif (NOT ENABLE_DEFLATE)
+set(ENABLE_DEFLATE "${ENABLE_DEFLATE}" CACHE BOOL "Enable deflate build")
+
+if (ENABLE_DEFLATE)
+
+  git_submodule_init(libdeflate CMakeLists.txt)
+
+  ExternalProject_Add(DEFLATE_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/libdeflate"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DDEFLATE_BUILD_CLI=OFF
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DZ_PREFIX_STR=${Z_PREFIX_STR}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(DEFLATE_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/libdeflate/COPYING
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/deflate.txt
+    COPYONLY
+    )
+
+endif (ENABLE_DEFLATE)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

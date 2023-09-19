@@ -313,6 +313,10 @@ add_project(minizip-ng GROUPS "APPLESEED")
 # https://github.com/lz4/lz4
 add_project(lz4 GROUPS "APPLESEED")
 
+# libdeflate fast, whole-buffer DEFLATE-based compression
+# https://github.com/ebiggers/libdeflate
+add_project(deflate GROUPS "APPLESEED")
+
 # Henry Spencer's regular expression matching library
 # https://github.com/BRL-CAD/regex
 add_project(regex GROUPS "BRLCAD")
