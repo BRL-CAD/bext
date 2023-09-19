@@ -133,3 +133,7 @@
 	path = flexbison/winflexbison
 	url = https://github.com/BRL-CAD/winflexbison
 	branch = RELEASE
+[submodule "minizip-ng/minizip-ng"]
+	path = minizip-ng/minizip-ng
+	url = https://github.com/BRL-CAD/minizip-ng
+	branch = RELEASE

@@ -303,7 +303,11 @@ add_project(xmltools GROUPS "BRLCAD")  # Used for Docbook building
 
 # zlib compression/decompression library
 # https://zlib.net
-add_project(zlib GROUPS "BRLCAD")
+add_project(zlib GROUPS "APPLESEED;BRLCAD;OSPRAY")
+
+# minizip-ng - zip manipulation library written in C
+# https://github.com/zlib-ng/minizip-ng
+add_project(minizip-ng GROUPS "APPLESEED")
 
 # Henry Spencer's regular expression matching library
 # https://github.com/BRL-CAD/regex

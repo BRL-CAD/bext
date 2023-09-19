@@ -1,0 +1,69 @@
+# Unless we have ENABLE_ALL set, based the building of minizip-ng on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_MINIZIP_NG)
+  set(ENABLE_MINIZIP_NG ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_MINIZIP_NG)
+
+if (NOT ENABLE_MINIZIP_NG)
+
+  find_package(MINIZIP_NG)
+
+  if (NOT MINIZIP_NG_FOUND AND NOT DEFINED ENABLE_MINIZIP_NG)
+    set(ENABLE_MINIZIP_NG "ON" CACHE BOOL "Enable minizip-ng build")
+  endif (NOT MINIZIP_NG_FOUND AND NOT DEFINED ENABLE_MINIZIP_NG)
+
+endif (NOT ENABLE_MINIZIP_NG)
+set(ENABLE_MINIZIP_NG "${ENABLE_MINIZIP_NG}" CACHE BOOL "Enable minizip-ng build")
+
+if (ENABLE_MINIZIP_NG)
+
+  git_submodule_init(minizip-ng CMakeLists.txt)
+
+  ExternalProject_Add(MINIZIP_NG_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/minizip-ng"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DMZ_BZIP2=OFF
+    -DMZ_ICONV=OFF
+    -DMZ_LIBBSD=OFF
+    -DMZ_LIBCOMP=OFF
+    -DMZ_LZMA=OFF
+    -DMZ_OPENSSL=OFF
+    -DMZ_ZSTD=OFF
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DZ_PREFIX_STR=${Z_PREFIX_STR}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(MINIZIP_NG_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+endif (ENABLE_MINIZIP_NG)
+
+# Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/minizip-ng/LICENSE
+  ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/minizip-ng.txt
+  COPYONLY
+  )
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+
