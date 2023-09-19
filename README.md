@@ -28,7 +28,7 @@ Note that if you know you are going to build most or all of the component projec
 git clone --depth=1 --recursive --shallow-submodules https://github.com/starseeker/bext
 ```
 
-This is primarily useful if you want to do all the downloading at once up front or you are preparing to work in an environment without an internet connection. If you don't recurse through submodules when cloning, the configure step will populate those submodule directories needed based on the build settings. That deferring of the submodule downloads means you then must have internet access at configure time to use the normal workflow.
+This is primarily useful if you want to do all the downloading at once up front or you are preparing to work in an environment without an internet connection.
 
 # USE_* Options
 
@@ -75,32 +75,20 @@ dependencies repository.
 
 # About This Repository
 
-In broad, the structure of the source tree is two tiered - the top level directories
-each denote a specific dependency project (Tcl, Qt, GDAL, etc.).  Within that
-directory are found:
+In broad, the structure of the source tree is two tiered - the top level directories each denote a specific dependency project (Tcl, Qt, GDAL, etc.).  Within that directory are found:
 
-* A reference to a copy of the upstream source code
+* A reference (using git submodules) to a copy of the upstream source code
 * Our managing CMakeLists.txt file defining the logic for building that project
-* Any patch files or other supporting resources not part of the upstream build.
+* Any patch files or other supporting resources not part of the upstream tree
 
-Sometimes third party libraries will depend on other third party libraries (for
-example, libpng's use of zlib) - when a bundled component that is a dependency
-of other bundled projects is enabled, the expectation is that the other bundled
+Sometimes third party libraries will depend on other third party libraries (for example, libpng's use of zlib) - when a bundled component that is a dependency of other bundled projects is enabled, the expectation is that the other bundled
 components will use our copy rather than system copies of those libraries.
 
 # Compilation-Only Tools
 
-Although most of the components here are intended for bundling with the
-eventual binary software distribution, there are some exceptions to that rule.
-A few of the projects (AStyle, patch, LIEF, etc.) target a different
-installation folder and are used only for compilation (for this repository
-and/or when bundling the results of building this repository with other
-applications.)
+Although most of the components here are intended for bundling with the eventual binary software distribution, there are some exceptions to that rule. A few of the projects (AStyle, patch, LIEF, etc.) target a different installation folder and are used only for compilation (for this repository and/or when bundling the results of building this repository with other applications.)
 
-There are also header-only "libraries" such as Eigen that are needed only for
-compilation, and do not need to be distributed with our packages.
+There are also header-only "libraries" such as Eigen that are needed only for compilation, and do not need to be distributed with our packages.
 
-To figure out which projects are in these categories, check for a
-CMAKE_NOBUNDLE_INSTALL_PREFIX target being used by their top level
-CMakeLists.txt file managing the ExternalProject_Add build definition.
+To figure out which projects are in these categories, check for a CMAKE_NOBUNDLE_INSTALL_PREFIX target being used by their top level CMakeLists.txt file managing the ExternalProject_Add build definition.
 
