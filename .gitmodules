@@ -226,3 +226,8 @@
 	url = https://github.com/BRL-CAD/libjpeg-turbo
 	branch = RELEASE
 	shallow = true
+[submodule "tiff/libtiff"]
+	path = tiff/libtiff
+	url = https://github.com/BRL-CAD/libtiff
+	branch = RELEASE
+	shallow = true

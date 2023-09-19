@@ -366,6 +366,11 @@ add_project(jpeg GROUPS "APPLESEED")
 # TODO - see if it makes sense for Qt to use our PNG
 add_project(png GROUPS "APPLESEED;BRLCAD;QT")
 
+# libtiff - Tag Image File Format (TIFF) support
+# https://libtiff.gitlab.io/libtiff/
+# https://gitlab.com/libtiff/libtiff
+add_project(tiff GROUPS "APPLESEED")
+
 # UtahRLE - Raster Image library
 # https://github.com/BRL-CAD/utahrle
 add_project(utahrle GROUPS "BRLCAD")
