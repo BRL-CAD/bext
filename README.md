@@ -8,6 +8,7 @@ This repository manages the building of dependencies used by large scale compute
 ```sh
 git clone https://github.com/starseeker/bext
 ```
+(This should be fast - by default most of the downloading happens during the configure process.)
 * Make a build directory
 ```sh
 mkdir bext_build && cd bext_build
@@ -21,7 +22,7 @@ cmake ../bext -DENABLE_ALL=ON
 cmake --build . --config Release --parallel 8
 ```
 
-Note that if you know you are going to build most or all of the component projects you can immediately populate all submodules when performing the clone by adding the --recurse-submodules option:
+Note that if you know you are going to build most or all of the component projects you can immediately populate all submodules when performing the clone.  By default the configure logic creates shallow clones of submodules for build purposes (i.e. it doesn't make a full local copy of the complete history).  To do the same thing with an up front recursive clone:
 
 ```sh
 git clone --depth=1 --recursive --shallow-submodules https://github.com/starseeker/bext
