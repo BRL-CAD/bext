@@ -1,0 +1,42 @@
+The upstream boost repository we are using itself uses submodules (a LOT of
+them).  For our fork to reference them, we'd also have to folk all (100+)
+submodules in the BRL-CAD project.  In this case the main point is to have a
+CMake build of boost someone else is maintaining, so we need to work around the
+submodule issue.
+
+In the BRL-CAD fork, the RELEASE branch we made has been modified to remove the
+submodules and instead check in a set of fully populated clones from the
+upstream boostorg/boost repository.  The procedure was roughly:
+
+Prepare the upstream repository:
+
+git clone https://github.com/boostorg/boost.git
+mv boost boost_upstream
+cd boost_upstream
+git co boost-1.83.0
+git submodule update --init --recursive --depth=1
+For all the submodules (found by using "find . -name .git", excluding the top level .git folder)
+rm -rf <path_to_submodule>/.git
+cd ..
+
+
+Check out the BRL-CAD fork (referenced the procedure at
+https://gist.github.com/myusuf3/7f645819ded92bda6677 for part ofof this:)
+
+git clone https://github.com/boostorg/boost.git
+cd boost
+git co boost-1.83.0
+git switch -c RELEASE
+git rm .gitmodules
+For all the submodules (found by using "find . -name .git", excluding the top level .git folder)
+git rm --cached <path_to_submodule>
+git commit -m "Remove submodules"
+cp -r ../boost_upstream/* .
+git add -A
+git commit -m "Populate repository with full copies of submodules"
+
+For the next Boost release bump, in the release branch we'll merge the new tag,
+prepare another copy of boostorg/boost.git the same way we did above, remove the
+current files from the working copy of RELEASE (without committing), and copy in
+the new boostorg/boost contents.  This will let us make a fully populated tree of
+the next release.
