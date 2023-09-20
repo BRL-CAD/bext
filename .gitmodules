@@ -263,3 +263,7 @@
 	path = openimageio/oiio
 	url = https://github.com/BRL-CAD/oiio
 	branch = RELEASE
+[submodule "osl/OpenShadingLanguage"]
+	path = osl/OpenShadingLanguage
+	url = https://github.com/BRL-CAD/OpenShadingLanguage
+	branch = RELEASE

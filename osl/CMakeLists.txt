@@ -1,0 +1,80 @@
+# Unless we have ENABLE_ALL set, based the building of openshadinglanguage on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_OSL)
+  set(ENABLE_OSL ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_OSL)
+
+if (NOT ENABLE_OSL)
+
+  find_package(OSL)
+
+  if (NOT OSL_FOUND AND NOT DEFINED ENABLE_OSL)
+    set(ENABLE_OSL "ON" CACHE BOOL "Enable OpenShadingLanguage build")
+  endif (NOT OSL_FOUND AND NOT DEFINED ENABLE_OSL)
+
+endif (NOT ENABLE_OSL)
+set(ENABLE_OSL "${ENABLE_OSL}" CACHE BOOL "Enable OpenShadingLanguage build")
+
+if (ENABLE_OSL)
+
+  git_submodule_init(OpenShadingLanguage CMakeLists.txt)
+
+  set(OSL_DEPENDS BISON BOOST FLEX LLVM OPENIMAGEIO PUGIXML ZLIB)
+  TargetVars(OSL_DEPENDS)
+  if (TARGET ZLIB_BLD)
+    set(Z_PREFIX_STR "brl_")
+  endif (TARGET ZLIB_BLD)
+
+  ExternalProject_Add(OSL_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/OpenShadingLanguage"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/osl.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
+    $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
+    -DBoost_ROOT=$<$<BOOL:${BOOST_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DBISON_ROOT=$<$<BOOL:${BISON_TARGET}>:${CMAKE_NOBUNDLE_INSTALL_PREFIX}>
+    -DFLEX_ROOT=$<$<BOOL:${FLEX_TARGET}>:${CMAKE_NOBUNDLE_INSTALL_PREFIX}>
+    -DLLVM_ROOT=$<$<BOOL:${LLVM_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DOpenImageIO_ROOT=$<$<BOOL:${OPENIMAGEIO_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DPUGIXML_ROOT=$<$<BOOL:${PUGIXML_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DUSE_PYTHON=OFF
+    -DUSE_QT=OFF
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(OSL OSL_DEPENDS)
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(OSL_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/OpenShadingLanguage/LICENSE.md
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openshadinglanguage.txt
+    COPYONLY
+    )
+
+endif (ENABLE_OSL)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

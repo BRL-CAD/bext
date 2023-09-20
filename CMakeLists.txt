@@ -462,6 +462,13 @@ add_project(osmesa GROUPS "BRLCAD")
 # https://github.com/jhasse/poly2tri
 add_project(poly2tri GROUPS "BRLCAD")
 
+# Open Shading Language (OSL) - language for programmable shading
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+#
+# TODO - need to check if https://github.com/lexxmark/winflexbison will
+# work for Windows for OSL's usage of flex/bison...
+add_project(osl GROUPS "APPLESEED")
+
 # TCL - scripting language.  For Tcl/Tk builds we want
 # static lib building on so we get the stub libraries.
 # https://www.tcl.tk
