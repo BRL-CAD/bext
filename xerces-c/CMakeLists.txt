@@ -1,3 +1,8 @@
+# NOTE - I thought xerces-c was having problems linking to icu,
+# but it turns out the actual problem was a problem with the LIEF
+# library BRL-CAD was using to update the RPATH - for whatever
+# reason it doesn't seem to handle libicuuc.so successfully...
+
 # Unless we have ENABLE_ALL set, based the building of xerces-c on
 # the system detection results
 if (ENABLE_ALL AND NOT DEFINED ENABLE_XERCES_C)
