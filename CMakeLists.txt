@@ -489,6 +489,10 @@ add_project(tktable GROUPS "TCL")
 # https://download.qt.io/archive/qt
 add_project(qt GROUPS "QT")
 
+# Appleseed - global illumination rendering engine
+# https://github.com/appleseedhq/appleseed
+add_project(appleseed GROUPS "APPLESEED")
+
 # Local Variables:
 # tab-width: 8
 # mode: cmake
