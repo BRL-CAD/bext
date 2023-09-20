@@ -399,6 +399,11 @@ add_project(onetbb GROUPS "APPLESEED;OSPRAY")
 # https://llvm.org/
 add_project(llvm GROUPS "APPLESEED;OSPRAY")
 
+# Boost - C++ libraries
+# https://www.boost.org
+# https://github.com/boostorg/boost
+add_project(boost GROUPS "APPLESEED")
+
 # STEPcode - support for reading and writing STEP files
 # https://github.com/stepcode/stepcode
 add_project(stepcode GROUPS "BRLCAD")

@@ -246,3 +246,8 @@
 	url = https://github.com/BRL-CAD/zstd
 	branch = RELEASE
 	shallow = true
+[submodule "boost/boost"]
+	path = boost/boost
+	url = https://github.com/BRL-CAD/boost
+	branch = RELEASE
+	shallow = true
