@@ -1,0 +1,66 @@
+# Unless we have ENABLE_ALL set, based the building of openexr on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_OPENEXR)
+  set(ENABLE_OPENEXR ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_OPENEXR)
+
+if (NOT ENABLE_OPENEXR)
+
+  find_package(OPENEXR)
+
+  if (NOT OPENEXR_FOUND AND NOT DEFINED ENABLE_OPENEXR)
+    set(ENABLE_OPENEXR "ON" CACHE BOOL "Enable openexr build")
+  endif (NOT OPENEXR_FOUND AND NOT DEFINED ENABLE_OPENEXR)
+
+endif (NOT ENABLE_OPENEXR)
+set(ENABLE_OPENEXR "${ENABLE_OPENEXR}" CACHE BOOL "Enable openexr build")
+
+if (ENABLE_OPENEXR)
+
+  git_submodule_init(openexr CMakeLists.txt)
+
+  set(OPENEXR_DEPENDS DEFLATE)
+  TargetVars(OPENEXR_DEPENDS)
+
+  ExternalProject_Add(OPENEXR_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/openexr"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DOPENEXR_BUILD_CLI=OFF
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(OPENEXR OPENEXR_DEPENDS)
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(OPENEXR_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/openexr/LICENSE.md
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openexr.txt
+    COPYONLY
+    )
+
+endif (ENABLE_OPENEXR)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

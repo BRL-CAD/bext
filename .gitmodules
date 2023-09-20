@@ -251,3 +251,7 @@
 	url = https://github.com/BRL-CAD/boost
 	branch = RELEASE
 	shallow = true
+[submodule "openexr/openexr"]
+	path = openexr/openexr
+	url = https://github.com/BRL-CAD/openexr
+	branch = RELEASE
