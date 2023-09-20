@@ -255,3 +255,11 @@
 	path = openexr/openexr
 	url = https://github.com/BRL-CAD/openexr
 	branch = RELEASE
+[submodule "opencolorio/OpenColorIO"]
+	path = opencolorio/OpenColorIO
+	url = https://github.com/BRL-CAD/OpenColorIO
+	branch = RELEASE
+[submodule "openimageio/oiio"]
+	path = openimageio/oiio
+	url = https://github.com/BRL-CAD/oiio
+	branch = RELEASE

@@ -1,0 +1,630 @@
+diff -Naur oiio-2.4.15.0/src/cmake/externalpackages.cmake openimageio/src/cmake/externalpackages.cmake
+--- oiio-2.4.15.0/src/cmake/externalpackages.cmake	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/cmake/externalpackages.cmake	2023-09-13 19:23:10.626198612 -0400
+@@ -179,6 +179,7 @@
+ checked_find_package (Freetype
+                    DEFINITIONS  -DUSE_FREETYPE=1 )
+ 
++if (NOT OIIO_DISABLE_OCIO)
+ checked_find_package (OpenColorIO
+                       DEFINITIONS  -DUSE_OCIO=1 -DUSE_OPENCOLORIO=1
+                       # PREFER_CONFIG
+@@ -186,8 +187,12 @@
+ if (NOT OpenColorIO_FOUND)
+     set (OpenColorIO_FOUND 0)
+ endif ()
++endif (NOT OIIO_DISABLE_OCIO)
++
++if (NOT OIIO_DISABLE_OPENCV)
+ checked_find_package (OpenCV 3.0
+                    DEFINITIONS  -DUSE_OPENCV=1)
++endif (NOT OIIO_DISABLE_OPENCV)
+ 
+ # Intel TBB
+ set (TBB_USE_DEBUG_BUILD OFF)
+@@ -230,10 +235,12 @@
+ # Note: Recent OpenJPEG versions have exported cmake configs, but we don't
+ # find them reliable at all, so we stick to our FindOpenJPEG.cmake module.
+ 
++if (NOT OIIO_DISABLE_VDB)
+ checked_find_package (OpenVDB
+                       VERSION_MIN 5.0
+                       DEPS         TBB
+                       DEFINITIONS  -DUSE_OPENVDB=1)
++endif (NOT OIIO_DISABLE_VDB)
+ 
+ checked_find_package (Ptex PREFER_CONFIG)
+ if (NOT Ptex_FOUND OR NOT Ptex_VERSION)
+diff -Naur oiio-2.4.15.0/src/cmake/FindJPEG.cmake openimageio/src/cmake/FindJPEG.cmake
+--- oiio-2.4.15.0/src/cmake/FindJPEG.cmake	1969-12-31 19:00:00.000000000 -0500
++++ openimageio/src/cmake/FindJPEG.cmake	2023-09-13 19:01:03.440145833 -0400
+@@ -0,0 +1,153 @@
++# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
++# file Copyright.txt or https://cmake.org/licensing for details.
++
++#[=======================================================================[.rst:
++FindJPEG
++--------
++
++Find the Joint Photographic Experts Group (JPEG) library (``libjpeg``)
++
++Imported targets
++^^^^^^^^^^^^^^^^
++
++.. versionadded:: 3.12
++
++This module defines the following :prop_tgt:`IMPORTED` targets:
++
++``JPEG::JPEG``
++  The JPEG library, if found.
++
++Result variables
++^^^^^^^^^^^^^^^^
++
++This module will set the following variables in your project:
++
++``JPEG_FOUND``
++  If false, do not try to use JPEG.
++``JPEG_INCLUDE_DIRS``
++  where to find jpeglib.h, etc.
++``JPEG_LIBRARIES``
++  the libraries needed to use JPEG.
++``JPEG_VERSION``
++  .. versionadded:: 3.12
++    the version of the JPEG library found
++
++Cache variables
++^^^^^^^^^^^^^^^
++
++The following cache variables may also be set:
++
++``JPEG_INCLUDE_DIRS``
++  where to find jpeglib.h, etc.
++``JPEG_LIBRARY_RELEASE``
++  where to find the JPEG library (optimized).
++``JPEG_LIBRARY_DEBUG``
++  where to find the JPEG library (debug).
++
++.. versionadded:: 3.12
++  Debug and Release variand are found separately.
++
++Obsolete variables
++^^^^^^^^^^^^^^^^^^
++
++``JPEG_INCLUDE_DIR``
++  where to find jpeglib.h, etc. (same as JPEG_INCLUDE_DIRS)
++``JPEG_LIBRARY``
++  where to find the JPEG library.
++#]=======================================================================]
++
++set(_JPEG_SEARCHES)
++
++# Search JPEG_ROOT first if it is set.
++if(JPEG_ROOT)
++  set(_JPEG_SEARCH_ROOT PATHS ${JPEG_ROOT} NO_DEFAULT_PATH)
++  list(APPEND _JPEG_SEARCHES _JPEG_SEARCH_ROOT)
++endif()
++
++set(JPEG_NAMES ${JPEG_NAMES} jpeg jpeg-static libjpeg libjpeg-static)
++foreach(name ${JPEG_NAMES})
++  list(APPEND JPEG_NAMES_DEBUG "${name}d")
++endforeach()
++
++# Try each search configuration.
++foreach(search ${_JPEG_SEARCHES})
++	message("search: ${search}")
++	message("JPEG_NAMES: ${JPEG_NAMES}")
++  find_path(JPEG_INCLUDE_DIR NAMES jpeglib.h     ${${search}} PATH_SUFFIXES include)
++  find_library(JPEG_LIBRARY_RELEASE NAMES ${JPEG_NAMES} ${${search}} PATH_SUFFIXES lib)
++  find_library(JPEG_LIBRARY_DEBUG NAMES ${JPEG_NAMES_DEBUG} ${${search}} PATH_SUFFIXES lib)
++  include(SelectLibraryConfigurations)
++  select_library_configurations(JPEG)
++  mark_as_advanced(JPEG_LIBRARY_RELEASE JPEG_LIBRARY_DEBUG)
++endforeach()
++
++unset(JPEG_NAMES)
++unset(JPEG_NAMES_DEBUG)
++
++if(JPEG_INCLUDE_DIR)
++  file(GLOB _JPEG_CONFIG_HEADERS_FEDORA "${JPEG_INCLUDE_DIR}/jconfig*.h")
++  file(GLOB _JPEG_CONFIG_HEADERS_DEBIAN "${JPEG_INCLUDE_DIR}/*/jconfig.h")
++  set(_JPEG_CONFIG_HEADERS
++    "${JPEG_INCLUDE_DIR}/jpeglib.h"
++    ${_JPEG_CONFIG_HEADERS_FEDORA}
++    ${_JPEG_CONFIG_HEADERS_DEBIAN})
++  foreach (_JPEG_CONFIG_HEADER IN LISTS _JPEG_CONFIG_HEADERS)
++    if (NOT EXISTS "${_JPEG_CONFIG_HEADER}")
++      continue ()
++    endif ()
++    file(STRINGS "${_JPEG_CONFIG_HEADER}"
++      jpeg_lib_version REGEX "^#define[\t ]+JPEG_LIB_VERSION[\t ]+.*")
++
++    if (NOT jpeg_lib_version)
++      continue ()
++    endif ()
++
++    string(REGEX REPLACE "^#define[\t ]+JPEG_LIB_VERSION[\t ]+([0-9]+).*"
++      "\\1" JPEG_VERSION "${jpeg_lib_version}")
++    break ()
++  endforeach ()
++  unset(jpeg_lib_version)
++  unset(_JPEG_CONFIG_HEADER)
++  unset(_JPEG_CONFIG_HEADERS)
++  unset(_JPEG_CONFIG_HEADERS_FEDORA)
++  unset(_JPEG_CONFIG_HEADERS_DEBIAN)
++endif()
++
++include(FindPackageHandleStandardArgs)
++find_package_handle_standard_args(JPEG
++  REQUIRED_VARS JPEG_LIBRARY JPEG_INCLUDE_DIR
++  VERSION_VAR JPEG_VERSION)
++
++if(JPEG_FOUND)
++  set(JPEG_LIBRARIES ${JPEG_LIBRARY})
++  set(JPEG_INCLUDE_DIRS "${JPEG_INCLUDE_DIR}")
++
++  if(NOT TARGET JPEG::JPEG)
++    add_library(JPEG::JPEG UNKNOWN IMPORTED)
++    if(JPEG_INCLUDE_DIRS)
++      set_target_properties(JPEG::JPEG PROPERTIES
++        INTERFACE_INCLUDE_DIRECTORIES "${JPEG_INCLUDE_DIRS}")
++    endif()
++    if(EXISTS "${JPEG_LIBRARY}")
++      set_target_properties(JPEG::JPEG PROPERTIES
++        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
++        IMPORTED_LOCATION "${JPEG_LIBRARY}")
++    endif()
++    if(EXISTS "${JPEG_LIBRARY_RELEASE}")
++      set_property(TARGET JPEG::JPEG APPEND PROPERTY
++        IMPORTED_CONFIGURATIONS RELEASE)
++      set_target_properties(JPEG::JPEG PROPERTIES
++        IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "C"
++        IMPORTED_LOCATION_RELEASE "${JPEG_LIBRARY_RELEASE}")
++    endif()
++    if(EXISTS "${JPEG_LIBRARY_DEBUG}")
++      set_property(TARGET JPEG::JPEG APPEND PROPERTY
++        IMPORTED_CONFIGURATIONS DEBUG)
++      set_target_properties(JPEG::JPEG PROPERTIES
++        IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
++        IMPORTED_LOCATION_DEBUG "${JPEG_LIBRARY_DEBUG}")
++    endif()
++  endif()
++endif()
++
++mark_as_advanced(JPEG_LIBRARY JPEG_INCLUDE_DIR)
+diff -Naur oiio-2.4.15.0/src/cmake/FindPNG.cmake openimageio/src/cmake/FindPNG.cmake
+--- oiio-2.4.15.0/src/cmake/FindPNG.cmake	1969-12-31 19:00:00.000000000 -0500
++++ openimageio/src/cmake/FindPNG.cmake	2023-09-13 19:00:55.404281891 -0400
+@@ -0,0 +1,161 @@
++# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
++# file Copyright.txt or https://cmake.org/licensing for details.
++
++#[=======================================================================[.rst:
++FindPNG
++-------
++
++Find libpng, the official reference library for the PNG image format.
++
++Imported targets
++^^^^^^^^^^^^^^^^
++
++.. versionadded:: 3.5
++
++This module defines the following :prop_tgt:`IMPORTED` target:
++
++``PNG::PNG``
++  The libpng library, if found.
++
++Result variables
++^^^^^^^^^^^^^^^^
++
++This module will set the following variables in your project:
++
++``PNG_INCLUDE_DIRS``
++  where to find png.h, etc.
++``PNG_LIBRARIES``
++  the libraries to link against to use PNG.
++``PNG_DEFINITIONS``
++  You should add_definitions(${PNG_DEFINITIONS}) before compiling code
++  that includes png library files.
++``PNG_FOUND``
++  If false, do not try to use PNG.
++``PNG_VERSION_STRING``
++  the version of the PNG library found (since CMake 2.8.8)
++
++Obsolete variables
++^^^^^^^^^^^^^^^^^^
++
++The following variables may also be set, for backwards compatibility:
++
++``PNG_LIBRARY``
++  where to find the PNG library.
++``PNG_INCLUDE_DIR``
++  where to find the PNG headers (same as PNG_INCLUDE_DIRS)
++
++Since PNG depends on the ZLib compression library, none of the above
++will be defined unless ZLib can be found.
++#]=======================================================================]
++
++if(PNG_FIND_QUIETLY)
++  set(_FIND_ZLIB_ARG QUIET)
++endif()
++find_package(ZLIB ${_FIND_ZLIB_ARG})
++
++if(ZLIB_FOUND)
++  find_path(PNG_PNG_INCLUDE_DIR png.h PATH_SUFFIXES include/libpng)
++  mark_as_advanced(PNG_PNG_INCLUDE_DIR)
++
++  list(APPEND PNG_NAMES png_brl libpng_brl png libpng)
++  unset(PNG_NAMES_DEBUG)
++  set(_PNG_VERSION_SUFFIXES 17 16 15 14 12)
++  if (PNG_FIND_VERSION MATCHES "^([0-9]+)\\.([0-9]+)(\\..*)?$")
++    set(_PNG_VERSION_SUFFIX_MIN "${CMAKE_MATCH_1}${CMAKE_MATCH_2}")
++    if (PNG_FIND_VERSION_EXACT)
++      set(_PNG_VERSION_SUFFIXES ${_PNG_VERSION_SUFFIX_MIN})
++    else ()
++      string(REGEX REPLACE
++          "${_PNG_VERSION_SUFFIX_MIN}.*" "${_PNG_VERSION_SUFFIX_MIN}"
++          _PNG_VERSION_SUFFIXES "${_PNG_VERSION_SUFFIXES}")
++    endif ()
++    unset(_PNG_VERSION_SUFFIX_MIN)
++  endif ()
++  foreach(v IN LISTS _PNG_VERSION_SUFFIXES)
++    list(APPEND PNG_NAMES png_brl${v} libpng_brl${v} png${v} libpng${v} libpng${v}_static)
++    list(APPEND PNG_NAMES_DEBUG png_brl${v}d libpng_brl${v}d png${v}d libpng${v}d libpng${v}_staticd)
++  endforeach()
++  unset(_PNG_VERSION_SUFFIXES)
++  # For compatibility with versions prior to this multi-config search, honor
++  # any PNG_LIBRARY that is already specified and skip the search.
++  if(NOT PNG_LIBRARY)
++    find_library(PNG_LIBRARY_RELEASE NAMES ${PNG_NAMES} NAMES_PER_DIR)
++    find_library(PNG_LIBRARY_DEBUG NAMES ${PNG_NAMES_DEBUG} NAMES_PER_DIR)
++    include(SelectLibraryConfigurations)
++    select_library_configurations(PNG)
++    mark_as_advanced(PNG_LIBRARY_RELEASE PNG_LIBRARY_DEBUG)
++  endif()
++  unset(PNG_NAMES)
++  unset(PNG_NAMES_DEBUG)
++
++  # Set by select_library_configurations(), but we want the one from
++  # find_package_handle_standard_args() below.
++  unset(PNG_FOUND)
++
++  if (PNG_LIBRARY AND PNG_PNG_INCLUDE_DIR)
++      # png.h includes zlib.h. Sigh.
++      set(PNG_INCLUDE_DIRS ${PNG_PNG_INCLUDE_DIR} ${ZLIB_INCLUDE_DIR} )
++      set(PNG_INCLUDE_DIR ${PNG_INCLUDE_DIRS} ) # for backward compatibility
++      set(PNG_LIBRARIES ${PNG_LIBRARY} ${ZLIB_LIBRARY})
++      if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND
++         ("${PNG_LIBRARY}" MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$"))
++        list(APPEND PNG_LIBRARIES m)
++      endif()
++
++      if (CYGWIN)
++        if(BUILD_SHARED_LIBS)
++           # No need to define PNG_USE_DLL here, because it's default for Cygwin.
++        else()
++          set (PNG_DEFINITIONS -DPNG_STATIC)
++          set(_PNG_COMPILE_DEFINITIONS PNG_STATIC)
++        endif()
++      endif ()
++
++      if(NOT TARGET PNG::PNG)
++        add_library(PNG::PNG UNKNOWN IMPORTED)
++        set_target_properties(PNG::PNG PROPERTIES
++          INTERFACE_COMPILE_DEFINITIONS "${_PNG_COMPILE_DEFINITIONS}"
++          INTERFACE_INCLUDE_DIRECTORIES "${PNG_INCLUDE_DIRS}"
++          INTERFACE_LINK_LIBRARIES ZLIB::ZLIB)
++        if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND
++           ("${PNG_LIBRARY}" MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$"))
++          set_property(TARGET PNG::PNG APPEND PROPERTY
++            INTERFACE_LINK_LIBRARIES m)
++        endif()
++
++        if(EXISTS "${PNG_LIBRARY}")
++          set_target_properties(PNG::PNG PROPERTIES
++            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
++            IMPORTED_LOCATION "${PNG_LIBRARY}")
++        endif()
++        if(EXISTS "${PNG_LIBRARY_RELEASE}")
++          set_property(TARGET PNG::PNG APPEND PROPERTY
++            IMPORTED_CONFIGURATIONS RELEASE)
++          set_target_properties(PNG::PNG PROPERTIES
++            IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "C"
++            IMPORTED_LOCATION_RELEASE "${PNG_LIBRARY_RELEASE}")
++        endif()
++        if(EXISTS "${PNG_LIBRARY_DEBUG}")
++          set_property(TARGET PNG::PNG APPEND PROPERTY
++            IMPORTED_CONFIGURATIONS DEBUG)
++          set_target_properties(PNG::PNG PROPERTIES
++            IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
++            IMPORTED_LOCATION_DEBUG "${PNG_LIBRARY_DEBUG}")
++        endif()
++      endif()
++
++      unset(_PNG_COMPILE_DEFINITIONS)
++  endif ()
++
++  if (PNG_PNG_INCLUDE_DIR AND EXISTS "${PNG_PNG_INCLUDE_DIR}/png.h")
++      file(STRINGS "${PNG_PNG_INCLUDE_DIR}/png.h" png_version_str REGEX "^#define[ \t]+PNG_LIBPNG_VER_STRING[ \t]+\".+\"")
++
++      string(REGEX REPLACE "^#define[ \t]+PNG_LIBPNG_VER_STRING[ \t]+\"([^\"]+)\".*" "\\1" PNG_VERSION_STRING "${png_version_str}")
++      unset(png_version_str)
++  endif ()
++endif()
++
++include(FindPackageHandleStandardArgs)
++find_package_handle_standard_args(PNG
++                                  REQUIRED_VARS PNG_LIBRARY PNG_PNG_INCLUDE_DIR
++                                  VERSION_VAR PNG_VERSION_STRING)
+diff -Naur oiio-2.4.15.0/src/cmake/FindZLIB.cmake openimageio/src/cmake/FindZLIB.cmake
+--- oiio-2.4.15.0/src/cmake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
++++ openimageio/src/cmake/FindZLIB.cmake	2023-09-13 19:00:58.616227508 -0400
+@@ -0,0 +1,123 @@
++#.rst:
++# FindZLIB
++# --------
++#
++# Find the native ZLIB includes and library.
++#
++# IMPORTED Targets
++# ^^^^^^^^^^^^^^^^
++#
++# This module defines :prop_tgt:`IMPORTED` target ``ZLIB::ZLIB``, if
++# ZLIB has been found.
++#
++# Result Variables
++# ^^^^^^^^^^^^^^^^
++#
++# This module defines the following variables:
++#
++# ::
++#
++#   ZLIB_INCLUDE_DIRS   - where to find zlib.h, etc.
++#   ZLIB_LIBRARIES      - List of libraries when using zlib.
++#   ZLIB_FOUND          - True if zlib found.
++#
++# ::
++#
++#   ZLIB_VERSION_STRING - The version of zlib found (x.y.z)
++#   ZLIB_VERSION_MAJOR  - The major version of zlib
++#   ZLIB_VERSION_MINOR  - The minor version of zlib
++#   ZLIB_VERSION_PATCH  - The patch version of zlib
++#   ZLIB_VERSION_TWEAK  - The tweak version of zlib
++#
++# Backward Compatibility
++# ^^^^^^^^^^^^^^^^^^^^^^
++#
++# The following variable are provided for backward compatibility
++#
++# ::
++#
++#   ZLIB_MAJOR_VERSION  - The major version of zlib
++#   ZLIB_MINOR_VERSION  - The minor version of zlib
++#   ZLIB_PATCH_VERSION  - The patch version of zlib
++#
++# Hints
++# ^^^^^
++#
++# A user may set ``ZLIB_ROOT`` to a zlib installation root to tell this
++# module where to look.
++
++#=============================================================================
++# Copyright 2001-2011 Kitware, Inc.
++#
++# Distributed under the OSI-approved BSD License (the "License");
++# see accompanying file Copyright.txt for details.
++#
++# This software is distributed WITHOUT ANY WARRANTY; without even the
++# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++# See the License for more information.
++#=============================================================================
++# (To distribute this file outside of CMake, substitute the full
++#  License text for the above reference.)
++
++set(_ZLIB_SEARCHES)
++
++# Search ZLIB_ROOT first if it is set.
++if(ZLIB_ROOT)
++  set(_ZLIB_SEARCH_ROOT PATHS ${ZLIB_ROOT} NO_DEFAULT_PATH)
++  list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_ROOT)
++endif()
++
++# Normal search.
++set(_ZLIB_SEARCH_NORMAL
++  PATHS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\GnuWin32\\Zlib;InstallPath]"
++        "$ENV{PROGRAMFILES}/zlib"
++  )
++list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_NORMAL)
++
++set(ZLIB_NAMES z_brl z zlib zdll zlib1 zlibd zlibd1)
++
++# Try each search configuration.
++foreach(search ${_ZLIB_SEARCHES})
++  find_path(ZLIB_INCLUDE_DIR NAMES zlib.h        ${${search}} PATH_SUFFIXES include)
++  find_library(ZLIB_LIBRARY  NAMES ${ZLIB_NAMES} ${${search}} PATH_SUFFIXES lib)
++endforeach()
++
++mark_as_advanced(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
++
++if(ZLIB_INCLUDE_DIR AND EXISTS "${ZLIB_INCLUDE_DIR}/zlib.h")
++    file(STRINGS "${ZLIB_INCLUDE_DIR}/zlib.h" ZLIB_H REGEX "^#define ZLIB_VERSION \"[^\"]*\"$")
++
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"([0-9]+).*$" "\\1" ZLIB_VERSION_MAJOR "${ZLIB_H}")
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_MINOR  "${ZLIB_H}")
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_PATCH "${ZLIB_H}")
++    set(ZLIB_VERSION_STRING "${ZLIB_VERSION_MAJOR}.${ZLIB_VERSION_MINOR}.${ZLIB_VERSION_PATCH}")
++
++    # only append a TWEAK version if it exists:
++    set(ZLIB_VERSION_TWEAK "")
++    if( "${ZLIB_H}" MATCHES "ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.[0-9]+\\.([0-9]+)")
++        set(ZLIB_VERSION_TWEAK "${CMAKE_MATCH_1}")
++        set(ZLIB_VERSION_STRING "${ZLIB_VERSION_STRING}.${ZLIB_VERSION_TWEAK}")
++    endif()
++
++    set(ZLIB_MAJOR_VERSION "${ZLIB_VERSION_MAJOR}")
++    set(ZLIB_MINOR_VERSION "${ZLIB_VERSION_MINOR}")
++    set(ZLIB_PATCH_VERSION "${ZLIB_VERSION_PATCH}")
++endif()
++
++# handle the QUIETLY and REQUIRED arguments and set ZLIB_FOUND to TRUE if
++# all listed variables are TRUE
++include(FindPackageHandleStandardArgs)
++FIND_PACKAGE_HANDLE_STANDARD_ARGS(ZLIB REQUIRED_VARS ZLIB_LIBRARY ZLIB_INCLUDE_DIR
++                                       VERSION_VAR ZLIB_VERSION_STRING)
++
++if(ZLIB_FOUND)
++    set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
++    set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
++
++    if(NOT TARGET ZLIB::ZLIB)
++      add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
++      set_target_properties(ZLIB::ZLIB PROPERTIES
++        IMPORTED_LOCATION "${ZLIB_LIBRARY}"
++        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
++    endif()
++endif()
+diff -Naur oiio-2.4.15.0/src/dicom.imageio/CMakeLists.txt openimageio/src/dicom.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/dicom.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/dicom.imageio/CMakeLists.txt	2023-09-13 19:12:09.060823647 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (DCMTK_FOUND)
++if (DCMTK_FOUND AND NOT OIIO_DISABLE_DCMTK)
+     add_oiio_plugin (dicominput.cpp
+                      INCLUDE_DIRS ${DCMTK_INCLUDE_DIR}
+                      LINK_LIBRARIES ${DCMTK_LIBRARIES}
+diff -Naur oiio-2.4.15.0/src/ffmpeg.imageio/CMakeLists.txt openimageio/src/ffmpeg.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/ffmpeg.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/ffmpeg.imageio/CMakeLists.txt	2023-09-13 19:12:00.092976643 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (FFmpeg_FOUND)
++if (FFmpeg_FOUND AND NOT OIIO_DISABLE_FFMPEG)
+     add_oiio_plugin (ffmpeginput.cpp
+                      INCLUDE_DIRS ${FFMPEG_INCLUDES}
+                      LINK_LIBRARIES ${FFMPEG_LIBRARIES}
+diff -Naur oiio-2.4.15.0/src/gif.imageio/CMakeLists.txt openimageio/src/gif.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/gif.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/gif.imageio/CMakeLists.txt	2023-09-13 19:11:40.853304859 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (GIF_FOUND)
++if (GIF_FOUND AND NOT OIIO_DISABLE_GIF)
+     add_oiio_plugin (gifinput.cpp gifoutput.cpp
+                      INCLUDE_DIRS ${GIF_INCLUDE_DIRS}
+                      LINK_LIBRARIES ${GIF_LIBRARIES}
+diff -Naur oiio-2.4.15.0/src/heif.imageio/CMakeLists.txt openimageio/src/heif.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/heif.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/heif.imageio/CMakeLists.txt	2023-09-13 19:11:14.261758445 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (Libheif_FOUND)
++if (Libheif_FOUND AND NOT OIIO_DISABLE_HEIF)
+     add_oiio_plugin (heifinput.cpp heifoutput.cpp
+                      INCLUDE_DIRS ${LIBHEIF_INCLUDES}
+                      LINK_LIBRARIES ${LIBHEIF_LIBRARIES}
+diff -Naur oiio-2.4.15.0/src/ico.imageio/CMakeLists.txt openimageio/src/ico.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/ico.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/ico.imageio/CMakeLists.txt	2023-09-13 19:11:07.549872933 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (TARGET PNG::PNG)
++if (TARGET PNG::PNG AND NOT OIIO_DISABLE_PNG)
+     add_oiio_plugin (icoinput.cpp icooutput.cpp
+                      LINK_LIBRARIES PNG::PNG ZLIB::ZLIB)
+ else ()
+diff -Naur oiio-2.4.15.0/src/jpeg2000.imageio/CMakeLists.txt openimageio/src/jpeg2000.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/jpeg2000.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/jpeg2000.imageio/CMakeLists.txt	2023-09-13 19:10:49.766176225 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (OPENJPEG_FOUND)
++if (OPENJPEG_FOUND AND NOT OIIO_DISABLE_OPENJPEG)
+     add_oiio_plugin (jpeg2000input.cpp jpeg2000output.cpp
+                      INCLUDE_DIRS ${OPENJPEG_INCLUDES}
+                      LINK_LIBRARIES ${OPENJPEG_LIBRARIES}
+diff -Naur oiio-2.4.15.0/src/openvdb.imageio/CMakeLists.txt openimageio/src/openvdb.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/openvdb.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/openvdb.imageio/CMakeLists.txt	2023-09-13 19:10:18.730705345 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (OpenVDB_FOUND)
++if (OpenVDB_FOUND AND NOT OIIO_DISABLE_VDB)
+     add_oiio_plugin (openvdbinput.cpp
+                      INCLUDE_DIRS  ${OPENVDB_INCLUDES} ${TBB_INCLUDE_DIRS}
+                      LINK_LIBRARIES  ${OPENVDB_LIBRARIES}
+diff -Naur oiio-2.4.15.0/src/png.imageio/CMakeLists.txt openimageio/src/png.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/png.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/png.imageio/CMakeLists.txt	2023-09-13 19:10:10.730841716 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (TARGET PNG::PNG)
++if (TARGET PNG::PNG AND NOT OIIO_DISABLE_PNG)
+     add_oiio_plugin (pnginput.cpp pngoutput.cpp
+                      LINK_LIBRARIES PNG::PNG ZLIB::ZLIB)
+ else ()
+diff -Naur oiio-2.4.15.0/src/ptex.imageio/CMakeLists.txt openimageio/src/ptex.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/ptex.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/ptex.imageio/CMakeLists.txt	2023-09-13 19:09:58.355052692 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (Ptex_FOUND)
++if (Ptex_FOUND AND NOT OIIO_DISABLE_PTEX)
+     add_oiio_plugin (ptexinput.cpp
+                      LINK_LIBRARIES Ptex::Ptex_dynamic ZLIB::ZLIB
+                      DEFINITIONS "-DUSE_PTEX")
+diff -Naur oiio-2.4.15.0/src/r3d.imageio/CMakeLists.txt openimageio/src/r3d.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/r3d.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/r3d.imageio/CMakeLists.txt	2023-09-13 19:09:16.415767428 -0400
+@@ -11,7 +11,7 @@
+                              )
+ endif()
+ 
+-if (R3DSDK_FOUND)
++if (R3DSDK_FOUND AND NOT OIIO_DISABLE_R3DSDK)
+     add_oiio_plugin (r3dinput.cpp
+                      INCLUDE_DIRS ${R3DSDK_INCLUDE_DIR}
+                      LINK_LIBRARIES ${R3DSDK_LIBRARIES}
+diff -Naur oiio-2.4.15.0/src/raw.imageio/CMakeLists.txt openimageio/src/raw.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/raw.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/raw.imageio/CMakeLists.txt	2023-09-13 19:08:52.512174703 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (LIBRAW_FOUND)
++if (LIBRAW_FOUND AND NOT OIIO_DISABLE_RAW)
+     add_oiio_plugin (rawinput.cpp
+                      INCLUDE_DIRS ${LibRaw_INCLUDE_DIR}
+                      LINK_LIBRARIES ${LibRaw_r_LIBRARIES}
+diff -Naur oiio-2.4.15.0/src/webp.imageio/CMakeLists.txt openimageio/src/webp.imageio/CMakeLists.txt
+--- oiio-2.4.15.0/src/webp.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
++++ openimageio/src/webp.imageio/CMakeLists.txt	2023-09-13 19:08:01.389045558 -0400
+@@ -2,7 +2,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # https://github.com/OpenImageIO/oiio
+ 
+-if (WebP_FOUND)
++if (WebP_FOUND AND NOT OIIO_DISABLE_WEBP)
+     add_oiio_plugin (webpinput.cpp webpoutput.cpp
+                      LINK_LIBRARIES WebP::webp WebP::webpdemux
+                      DEFINITIONS "-DUSE_WEBP=1")

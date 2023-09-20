@@ -384,6 +384,18 @@ add_project(openexr GROUPS "APPLESEED")
 # https://github.com/BRL-CAD/utahrle
 add_project(utahrle GROUPS "BRLCAD")
 
+# OpenColorIO - color management
+# https://opencolorio.org
+# https://github.com/AcademySoftwareFoundation/OpenColorIO
+# Note - the VFX Reference Platform (https://vfxplatform.com/)
+# is a useful reference for what versions to expect elements
+# of the rendering pipeline software stack to use/require
+add_project(opencolorio GROUPS "APPLESEED")
+
+# OpenImageIO - reading and writing images, aimed at VFX studios
+# https://github.com/OpenImageIO/oiio
+add_project(openimageio GROUPS "APPLESEED")
+
 # Linenoise - line editing library
 # https://github.com/msteveb/linenoise
 add_project(linenoise GROUPS "BRLCAD")
