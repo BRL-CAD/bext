@@ -235,7 +235,7 @@ option(USE_QT        "Qt graphical toolkit support" ON)
 option(USE_TCL       "Tcl/Tk support"               ON)
 
 function(add_project pname)
-  cmake_parse_arguments(A "" "GROUPS" "" ${ARGN})
+  cmake_parse_arguments(A "" "" "GROUPS" ${ARGN})
   if (NOT A_GROUPS)
     add_subdirectory(${pname})
     return()
