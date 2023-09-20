@@ -1,0 +1,76 @@
+# Unless we have ENABLE_ALL set, based the building of embree on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_EMBREE)
+  set(ENABLE_EMBREE ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_EMBREE)
+
+if (NOT ENABLE_EMBREE)
+
+  find_package(EMBREE)
+
+  if (NOT EMBREE_FOUND AND NOT DEFINED ENABLE_EMBREE)
+    set(ENABLE_EMBREE "ON" CACHE BOOL "Enable embree build")
+  endif (NOT EMBREE_FOUND AND NOT DEFINED ENABLE_EMBREE)
+
+endif (NOT ENABLE_EMBREE)
+set(ENABLE_EMBREE "${ENABLE_EMBREE}" CACHE BOOL "Enable embree build")
+
+if (ENABLE_EMBREE)
+
+  git_submodule_init(embree CMakeLists.txt)
+
+  set(EMBREE_DEPENDS BOOST ISPC TBB ZLIB)
+  TargetVars(EMBREE_DEPENDS)
+  if (TARGET ZLIB_BLD)
+    set(Z_PREFIX_STR "brl_")
+  endif (TARGET ZLIB_BLD)
+
+  ExternalProject_Add(EMBREE_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/embree"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/embree.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
+    $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
+    -DTBB_ROOT=$<$<BOOL:${TBB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DISPC_ROOT=$<$<BOOL:${ISPC_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DEMBREE_TUTORIALS=OFF
+    $<$<BOOL:${USE_OSPRAY}>:-DEMBREE_ISPC_SUPPORT=ON>
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(EMBREE EMBREE_DEPENDS)
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(EMBREE_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/embree/LICENSE.txt
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/embree.txt
+    COPYONLY
+    )
+
+endif (ENABLE_EMBREE)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

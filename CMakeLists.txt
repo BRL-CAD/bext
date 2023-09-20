@@ -469,6 +469,10 @@ add_project(poly2tri GROUPS "BRLCAD")
 # work for Windows for OSL's usage of flex/bison...
 add_project(osl GROUPS "APPLESEED")
 
+# Embree raytracing kernel
+# https://github.com/embree/embree
+add_project(embree GROUPS "APPLESEED;OSPRAY")
+
 # TCL - scripting language.  For Tcl/Tk builds we want
 # static lib building on so we get the stub libraries.
 # https://www.tcl.tk
