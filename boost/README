@@ -40,3 +40,15 @@ prepare another copy of boostorg/boost.git the same way we did above, remove the
 current files from the working copy of RELEASE (without committing), and copy in
 the new boostorg/boost contents.  This will let us make a fully populated tree of
 the next release.
+
+Once the upstream RELEASE branch is ready, we bump the submodule reference in this repository
+with:
+
+git submodule update --remote boost (TODO - do we also need the --merge option here?)
+
+Test the build.  If everything works:
+
+git add boost
+git commit -m "Update boost dependency to v<new version>"
+git push
+
