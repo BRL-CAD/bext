@@ -27,7 +27,7 @@ if (NOT WIN32 AND NOT APPLE)
       SOURCE_SUBDIR icu4c/source
       BUILD_IN_SOURCE ON
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      CONFIGURE_COMMAND <SOURCE_DIR>/<SOURCE_SUBDIR>/configure --disable-extras --disable-tools --disable-tests --disable-samples --disable-renaming --prefix=${CMAKE_BUNDLE_INSTALL_PREFIX}
+      CONFIGURE_COMMAND <SOURCE_DIR>/<SOURCE_SUBDIR>/configure --disable-extras --disable-tools --disable-tests --disable-samples --prefix=${CMAKE_BUNDLE_INSTALL_PREFIX}
       BUILD_COMMAND make -j${pcnt}
       INSTALL_COMMAND make install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
