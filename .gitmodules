@@ -271,3 +271,15 @@
 	path = embree/embree
 	url = https://github.com/BRL-CAD/embree
 	branch = RELEASE
+[submodule "rkcommon/rkcommon"]
+	path = rkcommon/rkcommon
+	url = https://github.com/BRL-CAD/rkcommon
+	branch = RELEASE
+[submodule "ispc/ispc"]
+	path = ispc/ispc
+	url = https://github.com/BRL-CAD/ispc
+	branch = RELEASE
+[submodule "ospray/ospray"]
+	path = ospray/ospray
+	url = https://github.com/BRL-CAD/ospray
+	branch = RELEASE

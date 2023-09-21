@@ -1,0 +1,65 @@
+# Unless we have ENABLE_ALL set, based the building of rkcommon on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_RKCOMMON)
+  set(ENABLE_RKCOMMON ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_RKCOMMON)
+
+if (NOT ENABLE_RKCOMMON)
+
+  find_package(RKCOMMON)
+
+  if (NOT RKCOMMON_FOUND AND NOT DEFINED ENABLE_RKCOMMON)
+    set(ENABLE_RKCOMMON "ON" CACHE BOOL "Enable rkcommon build")
+  endif (NOT RKCOMMON_FOUND AND NOT DEFINED ENABLE_RKCOMMON)
+
+endif (NOT ENABLE_RKCOMMON)
+set(ENABLE_RKCOMMON "${ENABLE_RKCOMMON}" CACHE BOOL "Enable rkcommon build")
+
+if (ENABLE_RKCOMMON)
+
+  git_submodule_init(rkcommon CMakeLists.txt)
+
+  set(RKCOMMON_DEPENDS TBB)
+  TargetVars(RKCOMMON_DEPENDS)
+
+    ExternalProject_Add(RKCOMMON_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/rkcommon"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/rkcommon.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(RKCOMMON RKCOMMON_DEPENDS)
+
+  if (TARGET PATCH_BLD)
+    ExternalProject_Add_StepDependencies(RKCOMMON_BLD configure PATCH_BLD-install)
+  endif (TARGET PATCH_BLD)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/rkcommon/LICENSE.txt
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/rkcommon.txt
+    COPYONLY
+    )
+
+endif (ENABLE_RKCOMMON)
+
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

@@ -400,6 +400,10 @@ add_project(opencolorio GROUPS "APPLESEED")
 # https://github.com/OpenImageIO/oiio
 add_project(openimageio GROUPS "APPLESEED")
 
+# ncurses - text-based user interfaces library
+# https://invisible-island.net/ncurses/
+#add_project(ncurses GROUPS "OSPRAY")
+
 # Linenoise - line editing library
 # https://github.com/msteveb/linenoise
 add_project(linenoise GROUPS "BRLCAD")
@@ -416,9 +420,18 @@ add_project(eigen GROUPS "BRLCAD")
 # https://github.com/oneapi-src/oneTBB
 add_project(onetbb GROUPS "APPLESEED;OSPRAY")
 
+# rkcommon -  C++ infrastructure and CMake utilities
+# https://github.com/ospray/rkcommon
+add_project(rkcommon GROUPS "OSPRAY")
+
 # LLVM - code generation support
 # https://llvm.org/
 add_project(llvm GROUPS "APPLESEED;OSPRAY")
+
+# ISPC - Implicit SPMD Program Compiler
+# https://ispc.github.io
+# https://github.com/ispc/ispc
+add_project(ispc GROUPS "OSPRAY")
 
 # Boost - C++ libraries
 # https://www.boost.org
@@ -496,6 +509,10 @@ add_project(qt GROUPS "QT")
 # Appleseed - global illumination rendering engine
 # https://github.com/appleseedhq/appleseed
 add_project(appleseed GROUPS "APPLESEED")
+
+# OSPRay - ray tracing engine
+# https://github.com/ospray/OSPRay
+add_project(ospray GROUPS "OSPRAY")
 
 # Local Variables:
 # tab-width: 8
