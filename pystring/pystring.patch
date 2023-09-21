@@ -1,0 +1,77 @@
+diff -Naur pystring.orig/CMakeLists.txt PYSTRING_BLD/CMakeLists.txt
+--- pystring.orig/CMakeLists.txt	2023-09-21 08:54:36.117249456 -0400
++++ PYSTRING_BLD/CMakeLists.txt	2023-09-21 09:02:35.430203313 -0400
+@@ -1,22 +1,55 @@
+ cmake_minimum_required(VERSION 3.2)
+ project(pystring CXX)
+ 
+-set(BUILD_SHARED_LIBS YES)
+-
+-add_library(pystring
+-    pystring.cpp
+-    pystring.h
+-)
+-
+-add_executable (pystring_test test.cpp)
+-TARGET_LINK_LIBRARIES (pystring_test pystring)
+-
+-enable_testing()
+-add_test(NAME PyStringTest COMMAND pystring_test)
+-
+-include(GNUInstallDirs)
+-
+-install(TARGETS pystring
+-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+-)
++option(BUILD_SHARED_LIBS "Build shared library" ON)
++option(BUILD_STATIC_LIBS "Build static library" ON)
+ 
++if (NOT DEFINED BIN_DIR)
++  set (BIN_DIR bin)
++endif (NOT DEFINED BIN_DIR)
++
++if (NOT DEFINED LIB_DIR)
++  set (LIB_DIR lib)
++endif (NOT DEFINED LIB_DIR)
++
++if (NOT DEFINED INCLUDE_DIR)
++  set (INCLUDE_DIR include)
++endif (NOT DEFINED INCLUDE_DIR)
++
++set(PYSTRING_SRCS
++  pystring.cpp
++  pystring.h
++  )
++
++if (BUILD_SHARED_LIBS)
++  add_library(pystring SHARED ${PYSTRING_SRCS})
++  install(TARGETS pystring
++    RUNTIME DESTINATION ${BIN_DIR}
++    LIBRARY DESTINATION ${LIB_DIR}
++    ARCHIVE DESTINATION ${LIB_DIR})
++endif (BUILD_SHARED_LIBS)
++
++if (BUILD_STATIC_LIBS)
++  add_library(pystring_static STATIC ${PYSTRING_SRCS})
++  if (NOT MSVC)
++    set_target_properties(pystring_static PROPERTIES OUTPUT_NAME "pystring")
++  endif (NOT MSVC)
++  install(TARGETS pystring_static
++    RUNTIME DESTINATION ${BIN_DIR}
++    LIBRARY DESTINATION ${LIB_DIR}
++    ARCHIVE DESTINATION ${LIB_DIR})
++endif (BUILD_STATIC_LIBS)
++
++if (ENABLE_TESTING)
++  add_executable (pystring_test test.cpp)
++  target_link_libraries(pystring_test pystring)
++  enable_testing()
++  add_test(NAME PyStringTest COMMAND pystring_test)
++endif (ENABLE_TESTING)
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
