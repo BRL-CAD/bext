@@ -249,24 +249,29 @@ function(add_project pname)
 endfunction(add_project pname)
 
 ###############################################################################
-# OSPRay offers some particular challenges when it comes to toolchain
-# bootstrapping - look here for those we can't yet provide.
+# Python is a build-time dependency for both LLVM and ISPC.  I think
+# it's only build time in both cases, but short of a lot of rework the
+# upstreams probably wouldn't be inclined to take anyway we're going
+# to have to have it available.  Unfortunately, bootstrapping our own
+# local copy is problematic on Linux right now - saw this issue immediately
+# when I tried:  https://github.com/python/cpython/issues/90737
+#
+# What we might be able to do for this is try building Python3 IFF we don't
+# find a system Python3 if we really don't need to bundle it - if we don't
+# have a system version available there wont' be anything to conflict with.
+# For now just hard require it and move on...
+if (USE_APPLESEED OR USE_OSPRAY)
+  find_package(Python3 REQUIRED)
+endif (USE_APPLESEED OR USE_OSPRAY)
+###############################################################################
+
+###############################################################################
+# For the moment, we can't bootstrap GNU m4 readily, and ISPC *needs* it for
+# compilation.  (Ideally we would enhance the OpenBSD m4 to support the ISPC
+# features needed, but as of 2023-09-18 it doesn't have them yet.)
 ###############################################################################
 if (USE_OSPRAY)
-
-  # For the moment, we can't bootstrap GNU m4 readily, and ISPC *needs* it for
-  # compilation.  (Ideally we would enhance the OpenBSD m4 to support the ISPC
-  # features needed, but as of 2023-09-18 it doesn't have them yet.)
   find_program(M4_EXECUTABLE m4 REQUIRED)
-
-  # TODO - I think Python is just a build-time dependency for ISPC - the
-  # executable does not seem to be linking to it.  If that's true, what we
-  # might be able to do for this is try building Python3 IFF we don't find a
-  # system Python3, since https://github.com/python/cpython/issues/90737 sounds
-  # like the problem may be when we try to build this with an already-in-place
-  # system python3?
-  find_package(Python3 REQUIRED)
-
 endif (USE_OSPRAY)
 
 
