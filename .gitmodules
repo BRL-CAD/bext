@@ -9,7 +9,7 @@
 [submodule "lief/LIEF"]
 	path = lief/LIEF
 	url = https://github.com/BRL-CAD/LIEF
-	branch = RELEASE
+	branch = master
 	shallow = true
 [submodule "lemon/lemon"]
 	path = lemon/lemon
