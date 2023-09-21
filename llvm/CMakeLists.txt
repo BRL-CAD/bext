@@ -32,7 +32,7 @@ if (ENABLE_LLVM)
 
   # llvm needs zlib - need to do the magic to get it using ours.
   # shows up when trying to compile ispc
-  set(LLVM_DEPENDS ZLIB)
+  set(LLVM_DEPENDS ZLIB ZSTD)
   TargetVars(LLVM_DEPENDS)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
@@ -54,6 +54,7 @@ if (ENABLE_LLVM)
     -DLLVM_BUILD_EXAMPLES=OFF
     -DLLVM_ENABLE_LIBEDIT=OFF
     -DLLVM_ENABLE_PROJECTS=clang
+    -DCLANG_TOOLING_BUILD_AST_INTROSPECTION=OFF
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
