@@ -169,15 +169,6 @@ diff -Naur poly2tri.orig/CMakeLists.txt POLY2TRI_BLD/CMakeLists.txt
 diff -Naur poly2tri.orig/poly2tri/common/dll_symbol.h POLY2TRI_BLD/poly2tri/common/dll_symbol.h
 --- poly2tri.orig/poly2tri/common/dll_symbol.h	2023-09-17 14:48:01.014182570 -0400
 +++ POLY2TRI_BLD/poly2tri/common/dll_symbol.h	2023-09-17 14:48:33.341620451 -0400
-@@ -1,6 +1,6 @@
- /*
-- * Poly2Tri Copyright (c) 2009-2022, Poly2Tri Contributors
-- * https://github.com/jhasse/poly2tri
-+ * Poly2Tri Copyright (c) 2009-2010, Poly2Tri Contributors
-+ * http://code.google.com/p/poly2tri/
-  *
-  * All rights reserved.
-  *
 @@ -32,22 +32,21 @@
  #pragma once
  
@@ -2031,15 +2022,6 @@ diff -Naur poly2tri.orig/poly2tri/sweep/advancing_front.h POLY2TRI_BLD/poly2tri/
 diff -Naur poly2tri.orig/poly2tri/sweep/cdt.cc POLY2TRI_BLD/poly2tri/sweep/cdt.cc
 --- poly2tri.orig/poly2tri/sweep/cdt.cc	2023-09-17 14:48:01.014182570 -0400
 +++ POLY2TRI_BLD/poly2tri/sweep/cdt.cc	2023-09-17 14:48:33.345620383 -0400
-@@ -1,6 +1,6 @@
- /*
-- * Poly2Tri Copyright (c) 2009-2021, Poly2Tri Contributors
-- * https://github.com/jhasse/poly2tri
-+ * Poly2Tri Copyright (c) 2009-2010, Poly2Tri Contributors
-+ * http://code.google.com/p/poly2tri/
-  *
-  * All rights reserved.
-  *
 @@ -32,40 +32,65 @@
  
  namespace p2t {
@@ -4114,15 +4096,6 @@ diff -Naur poly2tri.orig/poly2tri/sweep/sweep.cc POLY2TRI_BLD/poly2tri/sweep/swe
 diff -Naur poly2tri.orig/poly2tri/sweep/sweep_context.cc POLY2TRI_BLD/poly2tri/sweep/sweep_context.cc
 --- poly2tri.orig/poly2tri/sweep/sweep_context.cc	2023-09-17 14:48:01.014182570 -0400
 +++ POLY2TRI_BLD/poly2tri/sweep/sweep_context.cc	2023-09-17 14:48:33.345620383 -0400
-@@ -1,6 +1,6 @@
- /*
-- * Poly2Tri Copyright (c) 2009-2022, Poly2Tri Contributors
-- * https://github.com/jhasse/poly2tri
-+ * Poly2Tri Copyright (c) 2009-2010, Poly2Tri Contributors
-+ * http://code.google.com/p/poly2tri/
-  *
-  * All rights reserved.
-  *
 @@ -30,177 +30,247 @@
   */
  #include "sweep_context.h"
@@ -4514,15 +4487,6 @@ diff -Naur poly2tri.orig/poly2tri/sweep/sweep_context.cc POLY2TRI_BLD/poly2tri/s
 diff -Naur poly2tri.orig/poly2tri/sweep/sweep_context.h POLY2TRI_BLD/poly2tri/sweep/sweep_context.h
 --- poly2tri.orig/poly2tri/sweep/sweep_context.h	2023-09-17 14:48:01.014182570 -0400
 +++ POLY2TRI_BLD/poly2tri/sweep/sweep_context.h	2023-09-17 14:48:33.345620383 -0400
-@@ -1,6 +1,6 @@
- /*
-- * Poly2Tri Copyright (c) 2009-2022, Poly2Tri Contributors
-- * https://github.com/jhasse/poly2tri
-+ * Poly2Tri Copyright (c) 2009-2010, Poly2Tri Contributors
-+ * http://code.google.com/p/poly2tri/
-  *
-  * All rights reserved.
-  *
 @@ -29,156 +29,179 @@
   * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   */
@@ -4809,7 +4773,6 @@ diff -Naur poly2tri.orig/poly2tri/sweep/sweep_context.h POLY2TRI_BLD/poly2tri/sw
 diff -Naur poly2tri.orig/poly2tri/sweep/sweep.h POLY2TRI_BLD/poly2tri/sweep/sweep.h
 --- poly2tri.orig/poly2tri/sweep/sweep.h	2023-09-17 14:48:01.014182570 -0400
 +++ POLY2TRI_BLD/poly2tri/sweep/sweep.h	2023-09-17 14:48:33.345620383 -0400
-@@ -1,6 +1,6 @@
 @@ -33,251 +33,241 @@
   * Zalik, B.(2008)'Sweep-line algorithm for constrained Delaunay triangulation',
   * International Journal of Geographical Information Science
