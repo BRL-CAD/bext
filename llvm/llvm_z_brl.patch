@@ -1,6 +1,6 @@
-diff -Naur llvm/clang/lib/CodeGen/CodeGenFunction.cpp LLVM_BLD/clang/lib/CodeGen/CodeGenFunction.cpp
---- llvm/clang/lib/CodeGen/CodeGenFunction.cpp	2023-09-14 14:51:50.658669839 -0400
-+++ LLVM_BLD/clang/lib/CodeGen/CodeGenFunction.cpp	2023-09-14 15:18:42.728872125 -0400
+diff -Naur llvm-project/clang/lib/CodeGen/CodeGenFunction.cpp LLVM_BLD/clang/lib/CodeGen/CodeGenFunction.cpp
+--- llvm-project/clang/lib/CodeGen/CodeGenFunction.cpp	2023-09-21 13:48:21.449069692 -0400
++++ LLVM_BLD/clang/lib/CodeGen/CodeGenFunction.cpp	2023-09-21 12:28:58.551653328 -0400
 @@ -844,7 +844,7 @@
      if (FuncGroups > 1) {
        auto FuncName = llvm::makeArrayRef<uint8_t>(
@@ -10,9 +10,9 @@ diff -Naur llvm/clang/lib/CodeGen/CodeGenFunction.cpp LLVM_BLD/clang/lib/CodeGen
        if (Group != CGM.getCodeGenOpts().XRaySelectedFunctionGroup &&
            !AlwaysXRayAttr)
          Fn->addFnAttr("function-instrument", "xray-never");
-diff -Naur llvm/clang/lib/CodeGen/CodeGenModule.cpp LLVM_BLD/clang/lib/CodeGen/CodeGenModule.cpp
---- llvm/clang/lib/CodeGen/CodeGenModule.cpp	2023-09-14 14:51:50.658669839 -0400
-+++ LLVM_BLD/clang/lib/CodeGen/CodeGenModule.cpp	2023-09-14 15:10:56.303766091 -0400
+diff -Naur llvm-project/clang/lib/CodeGen/CodeGenModule.cpp LLVM_BLD/clang/lib/CodeGen/CodeGenModule.cpp
+--- llvm-project/clang/lib/CodeGen/CodeGenModule.cpp	2023-09-21 13:48:21.449069692 -0400
++++ LLVM_BLD/clang/lib/CodeGen/CodeGenModule.cpp	2023-09-21 12:28:58.563653124 -0400
 @@ -2927,7 +2927,7 @@
  
    auto NumGroups = getCodeGenOpts().ProfileTotalFunctionGroups;
@@ -22,9 +22,9 @@ diff -Naur llvm/clang/lib/CodeGen/CodeGenModule.cpp LLVM_BLD/clang/lib/CodeGen/C
      if (Group != getCodeGenOpts().ProfileSelectedFunctionGroup)
        return true;
    }
-diff -Naur llvm/clang/lib/Serialization/ASTReader.cpp LLVM_BLD/clang/lib/Serialization/ASTReader.cpp
---- llvm/clang/lib/Serialization/ASTReader.cpp	2023-09-14 14:51:50.686669380 -0400
-+++ LLVM_BLD/clang/lib/Serialization/ASTReader.cpp	2023-09-14 14:58:56.579658890 -0400
+diff -Naur llvm-project/clang/lib/Serialization/ASTReader.cpp LLVM_BLD/clang/lib/Serialization/ASTReader.cpp
+--- llvm-project/clang/lib/Serialization/ASTReader.cpp	2023-09-21 13:48:21.601066693 -0400
++++ LLVM_BLD/clang/lib/Serialization/ASTReader.cpp	2023-09-21 12:28:58.575652914 -0400
 @@ -1493,7 +1493,7 @@
          return nullptr;
        }
@@ -34,9 +34,9 @@ diff -Naur llvm/clang/lib/Serialization/ASTReader.cpp LLVM_BLD/clang/lib/Seriali
                llvm::arrayRefFromStringRef(Blob), Uncompressed, Record[0])) {
          Error("could not decompress embedded file contents: " +
                llvm::toString(std::move(E)));
-diff -Naur llvm/clang/lib/Serialization/ASTWriter.cpp LLVM_BLD/clang/lib/Serialization/ASTWriter.cpp
---- llvm/clang/lib/Serialization/ASTWriter.cpp	2023-09-14 14:51:50.686669380 -0400
-+++ LLVM_BLD/clang/lib/Serialization/ASTWriter.cpp	2023-09-14 14:59:53.686716691 -0400
+diff -Naur llvm-project/clang/lib/Serialization/ASTWriter.cpp LLVM_BLD/clang/lib/Serialization/ASTWriter.cpp
+--- llvm-project/clang/lib/Serialization/ASTWriter.cpp	2023-09-21 13:48:21.605066613 -0400
++++ LLVM_BLD/clang/lib/Serialization/ASTWriter.cpp	2023-09-21 12:28:58.587652707 -0400
 @@ -2002,7 +2002,7 @@
    // consumers will not want its contents.
    SmallVector<uint8_t, 0> CompressedBuffer;
@@ -46,9 +46,9 @@ diff -Naur llvm/clang/lib/Serialization/ASTWriter.cpp LLVM_BLD/clang/lib/Seriali
          llvm::arrayRefFromStringRef(Blob.drop_back(1)), CompressedBuffer);
      RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB_COMPRESSED, Blob.size() - 1};
      Stream.EmitRecordWithBlob(SLocBufferBlobCompressedAbbrv, Record,
-diff -Naur llvm/clang-tools-extra/clangd/index/Serialization.cpp LLVM_BLD/clang-tools-extra/clangd/index/Serialization.cpp
---- llvm/clang-tools-extra/clangd/index/Serialization.cpp	2023-09-14 14:51:51.774651517 -0400
-+++ LLVM_BLD/clang-tools-extra/clangd/index/Serialization.cpp	2023-09-14 15:00:03.522554376 -0400
+diff -Naur llvm-project/clang-tools-extra/clangd/index/Serialization.cpp LLVM_BLD/clang-tools-extra/clangd/index/Serialization.cpp
+--- llvm-project/clang-tools-extra/clangd/index/Serialization.cpp	2023-09-21 13:48:20.817082157 -0400
++++ LLVM_BLD/clang-tools-extra/clangd/index/Serialization.cpp	2023-09-21 12:28:58.599652501 -0400
 @@ -192,7 +192,7 @@
      }
      if (llvm::compression::zlib::isAvailable()) {
@@ -67,9 +67,9 @@ diff -Naur llvm/clang-tools-extra/clangd/index/Serialization.cpp LLVM_BLD/clang-
              llvm::arrayRefFromStringRef(R.rest()), UncompressedStorage,
              UncompressedSize))
        return std::move(E);
-diff -Naur llvm/lld/ELF/InputSection.cpp LLVM_BLD/lld/ELF/InputSection.cpp
---- llvm/lld/ELF/InputSection.cpp	2023-09-14 14:51:48.394706998 -0400
-+++ LLVM_BLD/lld/ELF/InputSection.cpp	2023-09-14 15:00:53.649727004 -0400
+diff -Naur llvm-project/lld/ELF/InputSection.cpp LLVM_BLD/lld/ELF/InputSection.cpp
+--- llvm-project/lld/ELF/InputSection.cpp	2023-09-21 13:48:28.608928598 -0400
++++ LLVM_BLD/lld/ELF/InputSection.cpp	2023-09-21 12:28:58.599652501 -0400
 @@ -118,7 +118,7 @@
      uncompressedBuf = bAlloc().Allocate<uint8_t>(size);
    }
@@ -88,9 +88,9 @@ diff -Naur llvm/lld/ELF/InputSection.cpp LLVM_BLD/lld/ELF/InputSection.cpp
        fatal(toString(this) +
              ": uncompress failed: " + llvm::toString(std::move(e)));
      uint8_t *bufEnd = buf + size;
-diff -Naur llvm/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp LLVM_BLD/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp
---- llvm/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp	2023-09-14 14:51:48.538704635 -0400
-+++ LLVM_BLD/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp	2023-09-14 15:11:09.727544038 -0400
+diff -Naur llvm-project/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp LLVM_BLD/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp
+--- llvm-project/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp	2023-09-21 13:48:29.388913241 -0400
++++ LLVM_BLD/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp	2023-09-21 12:28:58.603652434 -0400
 @@ -430,7 +430,7 @@
  }
  
@@ -100,9 +100,9 @@ diff -Naur llvm/lldb/source/Plugins/ObjectFile/ELF/ObjectFileELF.cpp LLVM_BLD/ll
        init, llvm::makeArrayRef(data.GetDataStart(), data.GetByteSize()));
  }
  
-diff -Naur llvm/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp LLVM_BLD/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp
---- llvm/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp	2023-09-14 14:51:48.538704635 -0400
-+++ LLVM_BLD/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp	2023-09-14 15:11:19.295385766 -0400
+diff -Naur llvm-project/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp LLVM_BLD/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp
+--- llvm-project/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp	2023-09-21 13:48:29.392913165 -0400
++++ LLVM_BLD/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp	2023-09-21 12:28:58.603652434 -0400
 @@ -166,7 +166,7 @@
          "Calculating module crc32 %s with size %" PRIu64 " KiB",
          FileSpec(coff_obj.getFileName()).GetLastPathComponent().AsCString(),
@@ -112,9 +112,9 @@ diff -Naur llvm/lldb/source/Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.cpp LLVM_
    }
    // Use 4 bytes of crc from the .gnu_debuglink section.
    llvm::support::ulittle32_t data(gnu_debuglink_crc);
-diff -Naur llvm/llvm/cmake/modules/FindZLIB.cmake LLVM_BLD/llvm/cmake/modules/FindZLIB.cmake
---- llvm/llvm/cmake/modules/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ LLVM_BLD/llvm/cmake/modules/FindZLIB.cmake	2023-09-14 15:25:55.126140483 -0400
+diff -Naur llvm-project/llvm/cmake/modules/FindZLIB.cmake LLVM_BLD/llvm/cmake/modules/FindZLIB.cmake
+--- llvm-project/llvm/cmake/modules/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
++++ LLVM_BLD/llvm/cmake/modules/FindZLIB.cmake	2023-09-21 12:28:58.607652362 -0400
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -239,9 +239,9 @@ diff -Naur llvm/llvm/cmake/modules/FindZLIB.cmake LLVM_BLD/llvm/cmake/modules/Fi
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naur llvm/llvm/include/llvm/Support/Compression.h LLVM_BLD/llvm/include/llvm/Support/Compression.h
---- llvm/llvm/include/llvm/Support/Compression.h	2023-09-14 14:51:48.818700039 -0400
-+++ LLVM_BLD/llvm/include/llvm/Support/Compression.h	2023-09-14 15:01:35.465036657 -0400
+diff -Naur llvm-project/llvm/include/llvm/Support/Compression.h LLVM_BLD/llvm/include/llvm/Support/Compression.h
+--- llvm-project/llvm/include/llvm/Support/Compression.h	2023-09-21 13:48:31.428873099 -0400
++++ LLVM_BLD/llvm/include/llvm/Support/Compression.h	2023-09-21 12:28:58.607652362 -0400
 @@ -30,14 +30,14 @@
  
  bool isAvailable();
@@ -278,9 +278,9 @@ diff -Naur llvm/llvm/include/llvm/Support/Compression.h LLVM_BLD/llvm/include/ll
                   SmallVectorImpl<uint8_t> &UncompressedBuffer,
                   size_t UncompressedSize);
  
-diff -Naur llvm/llvm/include/llvm/Support/CRC.h LLVM_BLD/llvm/include/llvm/Support/CRC.h
---- llvm/llvm/include/llvm/Support/CRC.h	2023-09-14 14:51:48.822699974 -0400
-+++ LLVM_BLD/llvm/include/llvm/Support/CRC.h	2023-09-14 15:01:35.465036657 -0400
+diff -Naur llvm-project/llvm/include/llvm/Support/CRC.h LLVM_BLD/llvm/include/llvm/Support/CRC.h
+--- llvm-project/llvm/include/llvm/Support/CRC.h	2023-09-21 13:48:31.424873178 -0400
++++ LLVM_BLD/llvm/include/llvm/Support/CRC.h	2023-09-21 12:28:58.607652362 -0400
 @@ -19,11 +19,11 @@
  template <typename T> class ArrayRef;
  
@@ -295,9 +295,9 @@ diff -Naur llvm/llvm/include/llvm/Support/CRC.h LLVM_BLD/llvm/include/llvm/Suppo
  
  // Class for computing the JamCRC.
  //
-diff -Naur llvm/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp LLVM_BLD/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp
---- llvm/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp	2023-09-14 14:51:48.862699317 -0400
-+++ LLVM_BLD/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp	2023-09-14 15:12:21.894485469 -0400
+diff -Naur llvm-project/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp LLVM_BLD/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp
+--- llvm-project/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp	2023-09-21 13:48:31.652868690 -0400
++++ LLVM_BLD/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp	2023-09-21 12:28:58.611652293 -0400
 @@ -263,7 +263,7 @@
        MemoryBuffer::getFileOrSTDIN(Path);
    if (!MB)
@@ -307,9 +307,9 @@ diff -Naur llvm/llvm/lib/DebugInfo/Symbolize/Symbolize.cpp LLVM_BLD/llvm/lib/Deb
  }
  
  bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
-diff -Naur llvm/llvm/lib/MC/ELFObjectWriter.cpp LLVM_BLD/llvm/lib/MC/ELFObjectWriter.cpp
---- llvm/llvm/lib/MC/ELFObjectWriter.cpp	2023-09-14 14:51:48.870699185 -0400
-+++ LLVM_BLD/llvm/lib/MC/ELFObjectWriter.cpp	2023-09-14 15:01:35.469036591 -0400
+diff -Naur llvm-project/llvm/lib/MC/ELFObjectWriter.cpp LLVM_BLD/llvm/lib/MC/ELFObjectWriter.cpp
+--- llvm-project/llvm/lib/MC/ELFObjectWriter.cpp	2023-09-21 13:48:31.704867668 -0400
++++ LLVM_BLD/llvm/lib/MC/ELFObjectWriter.cpp	2023-09-21 12:28:58.611652293 -0400
 @@ -864,7 +864,7 @@
  
    SmallVector<uint8_t, 128> Compressed;
@@ -319,9 +319,9 @@ diff -Naur llvm/llvm/lib/MC/ELFObjectWriter.cpp LLVM_BLD/llvm/lib/MC/ELFObjectWr
        makeArrayRef(reinterpret_cast<uint8_t *>(UncompressedData.data()),
                     UncompressedData.size()),
        Compressed);
-diff -Naur llvm/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp LLVM_BLD/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp
---- llvm/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp	2023-09-14 14:51:48.874699120 -0400
-+++ LLVM_BLD/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp	2023-09-14 15:12:34.218311305 -0400
+diff -Naur llvm-project/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp LLVM_BLD/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp
+--- llvm-project/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp	2023-09-21 13:48:31.728867197 -0400
++++ LLVM_BLD/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp	2023-09-21 12:28:58.611652293 -0400
 @@ -46,7 +46,7 @@
    if (!LinkTargetOrErr)
      return createFileError(File, LinkTargetOrErr.getError());
@@ -331,9 +331,9 @@ diff -Naur llvm/llvm/lib/ObjCopy/COFF/COFFObjcopy.cpp LLVM_BLD/llvm/lib/ObjCopy/
  
    StringRef FileName = sys::path::filename(File);
    size_t CRCPos = alignTo(FileName.size() + 1, 4);
-diff -Naur llvm/llvm/lib/ObjCopy/ELF/ELFObject.cpp LLVM_BLD/llvm/lib/ObjCopy/ELF/ELFObject.cpp
---- llvm/llvm/lib/ObjCopy/ELF/ELFObject.cpp	2023-09-14 14:51:48.874699120 -0400
-+++ LLVM_BLD/llvm/lib/ObjCopy/ELF/ELFObject.cpp	2023-09-14 15:01:11.125438501 -0400
+diff -Naur llvm-project/llvm/lib/ObjCopy/ELF/ELFObject.cpp LLVM_BLD/llvm/lib/ObjCopy/ELF/ELFObject.cpp
+--- llvm-project/llvm/lib/ObjCopy/ELF/ELFObject.cpp	2023-09-21 13:48:31.728867197 -0400
++++ LLVM_BLD/llvm/lib/ObjCopy/ELF/ELFObject.cpp	2023-09-21 12:28:58.619652156 -0400
 @@ -439,7 +439,7 @@
    ArrayRef<uint8_t> Compressed =
        Sec.OriginalData.slice(sizeof(Elf_Chdr_Impl<ELFT>));
@@ -352,9 +352,9 @@ diff -Naur llvm/llvm/lib/ObjCopy/ELF/ELFObject.cpp LLVM_BLD/llvm/lib/ObjCopy/ELF
  
    assert(CompressionType != DebugCompressionType::None);
    Flags |= ELF::SHF_COMPRESSED;
-diff -Naur llvm/llvm/lib/Object/Decompressor.cpp LLVM_BLD/llvm/lib/Object/Decompressor.cpp
---- llvm/llvm/lib/Object/Decompressor.cpp	2023-09-14 14:51:48.874699120 -0400
-+++ LLVM_BLD/llvm/lib/Object/Decompressor.cpp	2023-09-14 14:58:43.523874239 -0400
+diff -Naur llvm-project/llvm/lib/Object/Decompressor.cpp LLVM_BLD/llvm/lib/Object/Decompressor.cpp
+--- llvm-project/llvm/lib/Object/Decompressor.cpp	2023-09-21 13:48:31.736867040 -0400
++++ LLVM_BLD/llvm/lib/Object/Decompressor.cpp	2023-09-21 12:28:58.619652156 -0400
 @@ -57,6 +57,6 @@
  
  Error Decompressor::decompress(MutableArrayRef<uint8_t> Buffer) {
@@ -363,9 +363,9 @@ diff -Naur llvm/llvm/lib/Object/Decompressor.cpp LLVM_BLD/llvm/lib/Object/Decomp
 +  return compression::zlib::brl_uncompress(arrayRefFromStringRef(SectionData),
                                         Buffer.data(), Size);
  }
-diff -Naur llvm/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp
---- llvm/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp	2023-09-14 14:51:48.878699057 -0400
-+++ LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp	2023-09-14 14:58:41.411909075 -0400
+diff -Naur llvm-project/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp
+--- llvm-project/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp	2023-09-21 13:48:31.752866725 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp	2023-09-21 12:28:58.623652089 -0400
 @@ -129,7 +129,7 @@
      // Read compressed filenames.
      StringRef CompressedFilenames = Data.substr(0, CompressedLen);
@@ -375,9 +375,9 @@ diff -Naur llvm/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp LLVM_BLD
          arrayRefFromStringRef(CompressedFilenames), StorageBuf,
          UncompressedLen);
      if (Err) {
-diff -Naur llvm/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp
---- llvm/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp	2023-09-14 14:51:48.878699057 -0400
-+++ LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp	2023-09-14 15:00:39.173965961 -0400
+diff -Naur llvm-project/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp
+--- llvm-project/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp	2023-09-21 13:48:31.752866725 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp	2023-09-21 12:28:58.623652089 -0400
 @@ -50,7 +50,7 @@
    bool doCompression = Compress && compression::zlib::isAvailable() &&
                         DoInstrProfNameCompression;
@@ -387,9 +387,9 @@ diff -Naur llvm/llvm/lib/ProfileData/Coverage/CoverageMappingWriter.cpp LLVM_BLD
                                  CompressedStr,
                                  compression::zlib::BestSizeCompression);
  
-diff -Naur llvm/llvm/lib/ProfileData/InstrProf.cpp LLVM_BLD/llvm/lib/ProfileData/InstrProf.cpp
---- llvm/llvm/lib/ProfileData/InstrProf.cpp	2023-09-14 14:51:48.878699057 -0400
-+++ LLVM_BLD/llvm/lib/ProfileData/InstrProf.cpp	2023-09-14 15:00:52.569744834 -0400
+diff -Naur llvm-project/llvm/lib/ProfileData/InstrProf.cpp LLVM_BLD/llvm/lib/ProfileData/InstrProf.cpp
+--- llvm-project/llvm/lib/ProfileData/InstrProf.cpp	2023-09-21 13:48:31.752866725 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/InstrProf.cpp	2023-09-21 12:28:58.623652089 -0400
 @@ -465,7 +465,7 @@
    }
  
@@ -408,9 +408,9 @@ diff -Naur llvm/llvm/lib/ProfileData/InstrProf.cpp LLVM_BLD/llvm/lib/ProfileData
                makeArrayRef(P, CompressedSize), UncompressedNameStrings,
                UncompressedSize)) {
          consumeError(std::move(E));
-diff -Naur llvm/llvm/lib/ProfileData/SampleProfReader.cpp LLVM_BLD/llvm/lib/ProfileData/SampleProfReader.cpp
---- llvm/llvm/lib/ProfileData/SampleProfReader.cpp	2023-09-14 14:51:48.878699057 -0400
-+++ LLVM_BLD/llvm/lib/ProfileData/SampleProfReader.cpp	2023-09-14 14:58:41.411909075 -0400
+diff -Naur llvm-project/llvm/lib/ProfileData/SampleProfReader.cpp LLVM_BLD/llvm/lib/ProfileData/SampleProfReader.cpp
+--- llvm-project/llvm/lib/ProfileData/SampleProfReader.cpp	2023-09-21 13:48:31.752866725 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/SampleProfReader.cpp	2023-09-21 12:28:58.631651948 -0400
 @@ -882,7 +882,7 @@
  
    uint8_t *Buffer = Allocator.Allocate<uint8_t>(DecompressBufSize);
@@ -420,9 +420,9 @@ diff -Naur llvm/llvm/lib/ProfileData/SampleProfReader.cpp LLVM_BLD/llvm/lib/Prof
        makeArrayRef(Data, *CompressSize), Buffer, UCSize);
    if (E)
      return sampleprof_error::uncompress_failed;
-diff -Naur llvm/llvm/lib/ProfileData/SampleProfWriter.cpp LLVM_BLD/llvm/lib/ProfileData/SampleProfWriter.cpp
---- llvm/llvm/lib/ProfileData/SampleProfWriter.cpp	2023-09-14 14:51:48.878699057 -0400
-+++ LLVM_BLD/llvm/lib/ProfileData/SampleProfWriter.cpp	2023-09-14 15:01:02.165586420 -0400
+diff -Naur llvm-project/llvm/lib/ProfileData/SampleProfWriter.cpp LLVM_BLD/llvm/lib/ProfileData/SampleProfWriter.cpp
+--- llvm-project/llvm/lib/ProfileData/SampleProfWriter.cpp	2023-09-21 13:48:31.752866725 -0400
++++ LLVM_BLD/llvm/lib/ProfileData/SampleProfWriter.cpp	2023-09-21 12:28:58.631651948 -0400
 @@ -86,7 +86,7 @@
      return sampleprof_error::success;
    auto &OS = *OutputStream;
@@ -432,10 +432,21 @@ diff -Naur llvm/llvm/lib/ProfileData/SampleProfWriter.cpp LLVM_BLD/llvm/lib/Prof
                                CompressedStrings,
                                compression::zlib::BestSizeCompression);
    encodeULEB128(UncompressedStrings.size(), OS);
-diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compression.cpp
---- llvm/llvm/lib/Support/Compression.cpp	2023-09-14 14:51:48.878699057 -0400
-+++ LLVM_BLD/llvm/lib/Support/Compression.cpp	2023-09-14 15:01:35.469036591 -0400
-@@ -47,7 +47,7 @@
+diff -Naur llvm-project/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compression.cpp
+--- llvm-project/llvm/lib/Support/Compression.cpp	2023-09-21 13:48:31.768866410 -0400
++++ LLVM_BLD/llvm/lib/Support/Compression.cpp	2023-09-21 13:47:02.454644841 -0400
+@@ -18,7 +18,9 @@
+ #include "llvm/Support/Error.h"
+ #include "llvm/Support/ErrorHandling.h"
+ #if LLVM_ENABLE_ZLIB
+-#include <zlib.h>
++#define Z_PREFIX
++#define Z_PREFIX_STR "brl_"
++#include "zlib.h"
+ #endif
+ #if LLVM_ENABLE_ZSTD
+ #include <zstd.h>
+@@ -47,7 +49,7 @@
  
  bool zlib::isAvailable() { return true; }
  
@@ -444,7 +455,7 @@ diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compr
                      SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
    unsigned long CompressedSize = ::compressBound(Input.size());
    CompressedBuffer.resize_for_overwrite(CompressedSize);
-@@ -63,10 +63,10 @@
+@@ -63,7 +65,7 @@
      CompressedBuffer.truncate(CompressedSize);
  }
  
@@ -452,12 +463,8 @@ diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compr
 +Error zlib::brl_uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
                         size_t &UncompressedSize) {
    int Res =
--      ::uncompress((Bytef *)UncompressedBuffer, (uLongf *)&UncompressedSize,
-+      ::brl_uncompress((Bytef *)UncompressedBuffer, (uLongf *)&UncompressedSize,
-                    (const Bytef *)Input.data(), Input.size());
-   // Tell MemorySanitizer that zlib output buffer is fully initialized.
-   // This avoids a false report when running LLVM with uninstrumented ZLib.
-@@ -76,12 +76,12 @@
+       ::uncompress((Bytef *)UncompressedBuffer, (uLongf *)&UncompressedSize,
+@@ -76,12 +78,12 @@
               : Error::success();
  }
  
@@ -472,7 +479,7 @@ diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compr
    if (UncompressedSize < UncompressedBuffer.size())
      UncompressedBuffer.truncate(UncompressedSize);
    return E;
-@@ -89,18 +89,18 @@
+@@ -89,18 +91,18 @@
  
  #else
  bool zlib::isAvailable() { return false; }
@@ -497,7 +504,7 @@ diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compr
  }
  #endif
  
-@@ -108,7 +108,7 @@
+@@ -108,7 +110,7 @@
  
  bool zstd::isAvailable() { return true; }
  
@@ -506,7 +513,7 @@ diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compr
                      SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
    unsigned long CompressedBufferSize = ::ZSTD_compressBound(Input.size());
    CompressedBuffer.resize_for_overwrite(CompressedBufferSize);
-@@ -124,7 +124,7 @@
+@@ -124,7 +126,7 @@
      CompressedBuffer.truncate(CompressedSize);
  }
  
@@ -515,7 +522,7 @@ diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compr
                         size_t &UncompressedSize) {
    const size_t Res =
        ::ZSTD_decompress(UncompressedBuffer, UncompressedSize,
-@@ -138,12 +138,12 @@
+@@ -138,12 +140,12 @@
                             : Error::success();
  }
  
@@ -530,7 +537,7 @@ diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compr
    if (UncompressedSize < UncompressedBuffer.size())
      UncompressedBuffer.truncate(UncompressedSize);
    return E;
-@@ -151,17 +151,17 @@
+@@ -151,17 +153,17 @@
  
  #else
  bool zstd::isAvailable() { return false; }
@@ -554,9 +561,9 @@ diff -Naur llvm/llvm/lib/Support/Compression.cpp LLVM_BLD/llvm/lib/Support/Compr
 +  llvm_unreachable("zstd::brl_uncompress is unavailable");
  }
  #endif
-diff -Naur llvm/llvm/lib/Support/CRC.cpp LLVM_BLD/llvm/lib/Support/CRC.cpp
---- llvm/llvm/lib/Support/CRC.cpp	2023-09-14 14:51:48.882698988 -0400
-+++ LLVM_BLD/llvm/lib/Support/CRC.cpp	2023-09-14 15:01:35.469036591 -0400
+diff -Naur llvm-project/llvm/lib/Support/CRC.cpp LLVM_BLD/llvm/lib/Support/CRC.cpp
+--- llvm-project/llvm/lib/Support/CRC.cpp	2023-09-21 13:48:31.768866410 -0400
++++ LLVM_BLD/llvm/lib/Support/CRC.cpp	2023-09-21 13:46:16.755572998 -0400
 @@ -72,7 +72,7 @@
      0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
      0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d};
@@ -566,23 +573,20 @@ diff -Naur llvm/llvm/lib/Support/CRC.cpp LLVM_BLD/llvm/lib/Support/CRC.cpp
    CRC ^= 0xFFFFFFFFU;
    for (uint8_t Byte : Data) {
      int TableIdx = (CRC ^ Byte) & 0xff;
-@@ -84,13 +84,13 @@
+@@ -83,8 +83,10 @@
+ 
  #else
  
- #include <zlib.h>
+-#include <zlib.h>
 -uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
++#define Z_PREFIX
++#define Z_PREFIX_STR "brl_"
++#include "zlib.h"
 +uint32_t llvm::brl_crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
    // Zlib's crc32() only takes a 32-bit length, so we have to iterate for larger
    // sizes. One could use crc32_z() instead, but that's a recent (2017) addition
    // and may not be available on all systems.
-   do {
-     ArrayRef<uint8_t> Slice = Data.take_front(UINT32_MAX);
--    CRC = ::crc32(CRC, (const Bytef *)Slice.data(), (uInt)Slice.size());
-+    CRC = ::brl_crc32(CRC, (const Bytef *)Slice.data(), (uInt)Slice.size());
-     Data = Data.drop_front(Slice.size());
-   } while (Data.size() > 0);
-   return CRC;
-@@ -98,10 +98,10 @@
+@@ -98,10 +100,10 @@
  
  #endif
  
@@ -595,9 +599,9 @@ diff -Naur llvm/llvm/lib/Support/CRC.cpp LLVM_BLD/llvm/lib/Support/CRC.cpp
 +  CRC = brl_crc32(CRC, Data);
    CRC ^= 0xFFFFFFFFU; // Undo CRC-32 XorOut.
  }
-diff -Naur llvm/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp LLVM_BLD/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp
---- llvm/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp	2023-09-14 14:51:50.434673513 -0400
-+++ LLVM_BLD/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp	2023-09-14 15:47:39.180649538 -0400
+diff -Naur llvm-project/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp LLVM_BLD/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp
+--- llvm-project/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp	2023-09-21 13:48:40.380697188 -0400
++++ LLVM_BLD/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp	2023-09-21 12:28:58.635651880 -0400
 @@ -216,7 +216,7 @@
  
    /// See raw_ostream::write_impl.
@@ -607,9 +611,9 @@ diff -Naur llvm/llvm/tools/llvm-dwarfutil/llvm-dwarfutil.cpp LLVM_BLD/llvm/tools
          CRC32, ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Ptr), Size));
      OS.write(Ptr, Size);
    }
-diff -Naur llvm/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp LLVM_BLD/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp
---- llvm/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp	2023-09-14 14:51:50.438673448 -0400
-+++ LLVM_BLD/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp	2023-09-14 15:12:44.158170403 -0400
+diff -Naur llvm-project/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp LLVM_BLD/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp
+--- llvm-project/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp	2023-09-21 13:48:40.412696559 -0400
++++ LLVM_BLD/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp	2023-09-21 12:28:58.639651811 -0400
 @@ -745,7 +745,7 @@
        return createFileError(Config.AddGnuDebugLink, DebugOrErr.getError());
      auto Debug = std::move(*DebugOrErr);
@@ -619,9 +623,9 @@ diff -Naur llvm/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp LLVM_BLD/llvm/tools/l
    }
    Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
    Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
-diff -Naur llvm/llvm/unittests/Support/CompressionTest.cpp LLVM_BLD/llvm/unittests/Support/CompressionTest.cpp
---- llvm/llvm/unittests/Support/CompressionTest.cpp	2023-09-14 14:51:50.466672991 -0400
-+++ LLVM_BLD/llvm/unittests/Support/CompressionTest.cpp	2023-09-14 15:00:15.570355545 -0400
+diff -Naur llvm-project/llvm/unittests/Support/CompressionTest.cpp LLVM_BLD/llvm/unittests/Support/CompressionTest.cpp
+--- llvm-project/llvm/unittests/Support/CompressionTest.cpp	2023-09-21 13:48:40.552693812 -0400
++++ LLVM_BLD/llvm/unittests/Support/CompressionTest.cpp	2023-09-21 12:28:58.643651744 -0400
 @@ -26,16 +26,16 @@
  static void testZlibCompression(StringRef Input, int Level) {
    SmallVector<uint8_t, 0> Compressed;
@@ -642,9 +646,9 @@ diff -Naur llvm/llvm/unittests/Support/CompressionTest.cpp LLVM_BLD/llvm/unittes
      EXPECT_EQ("zlib error: Z_BUF_ERROR", llvm::toString(std::move(E)));
    }
  }
-diff -Naur llvm/llvm/unittests/Support/CRCTest.cpp LLVM_BLD/llvm/unittests/Support/CRCTest.cpp
---- llvm/llvm/unittests/Support/CRCTest.cpp	2023-09-14 14:51:50.466672991 -0400
-+++ LLVM_BLD/llvm/unittests/Support/CRCTest.cpp	2023-09-14 15:11:39.635077596 -0400
+diff -Naur llvm-project/llvm/unittests/Support/CRCTest.cpp LLVM_BLD/llvm/unittests/Support/CRCTest.cpp
+--- llvm-project/llvm/unittests/Support/CRCTest.cpp	2023-09-21 13:48:40.552693812 -0400
++++ LLVM_BLD/llvm/unittests/Support/CRCTest.cpp	2023-09-21 12:28:58.643651744 -0400
 @@ -20,12 +20,12 @@
  namespace {
  
