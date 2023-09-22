@@ -34,16 +34,23 @@ if (ENABLE_LLVM)
   # shows up when trying to compile ispc
   set(LLVM_DEPENDS ZLIB)
   TargetVars(LLVM_DEPENDS)
+  set(PATCH_CMD "PATCH_COMMAND")
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
-    set(Z_BRL_PATCH_CMD "PATCH_COMMAND;${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/llvm_z_brl.patch")
+    set(Z_BRL_PATCH_CMD "${PATCH_CMD};${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/llvm_z_brl.patch")
+    set(PATCH_CMD "COMMAND")
   endif (TARGET ZLIB_BLD)
+  if (MSVC)
+    set(Z_NO_AST_INTRO_PATCH_CMD "${PATCH_CMD};${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch")
+    set(PATCH_CMD "COMMAND")
+  endif (MSVC)
 
   ExternalProject_Add(LLVM_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/llvm-project"
     SOURCE_SUBDIR llvm
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     ${Z_BRL_PATCH_CMD}
+    ${Z_NO_AST_INTRO_PATCH_CMD}
     CMAKE_ARGS
     -C ${CMAKE_CURRENT_SOURCE_DIR}/llvm_targets.cmake
     ${BUILD_TYPE_SPECIFIER}
