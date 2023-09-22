@@ -186,6 +186,9 @@ add_custom_target(BuildStamp ALL COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_NOBUN
 ###############################################################################
 macro(TargetVars roots)
   foreach(root ${${roots}})
+    if (NOT ${root}_ADDED)
+      message(FATAL_ERROR "${root} is listed as a dependency but is not yet added - fix project ordering in top level CMakeLists.txt file")
+    endif (NOT ${root}_ADDED)
     if (TARGET ${root}_BLD)
       set(${root}_TARGET 1)
     endif (TARGET ${root}_BLD)
@@ -236,6 +239,9 @@ option(USE_TCL       "Tcl/Tk support"               ON)
 
 function(add_project pname)
   cmake_parse_arguments(A "" "" "GROUPS" ${ARGN})
+  string(TOUPPER "${pname}" UPNAME)
+  string(REPLACE "-" "_" UPNAME "${UPNAME}")
+  set(${UPNAME}_ADDED 1 PARENT_SCOPE)
   if (NOT A_GROUPS)
     add_subdirectory(${pname})
     return()
@@ -274,6 +280,38 @@ if (USE_OSPRAY)
   find_program(M4_EXECUTABLE m4 REQUIRED)
 endif (USE_OSPRAY)
 
+###############################################################################
+# Although we have bundled flex and bison programs, they can be problematic to
+# build - they require working Autotools tool chains (except on Windows where
+# we have winflexbison).  We therefore attempt these builds only if we need to.
+###############################################################################
+if (USE_APPLESEED OR USE_OSPRAY)
+
+  find_package(FLEX)
+
+  if (NOT FLEX_FOUND)
+    set(ENABLE_FLEX ON)
+  endif (NOT FLEX_FOUND)
+  find_package(BISON)
+
+  if (NOT BISON_FOUND)
+    set(ENABLE_BISON ON)
+  endif (NOT BISON_FOUND)
+
+  if (ENABLE_FLEX OR ENABLE_BISON)
+    add_project(flexbison GROUPS "APPLESEED;OSPRAY")
+  endif (ENABLE_FLEX OR ENABLE_BISON)
+
+  # Whether or not we actually added the subdirectories, let subsequent targets
+  # know we have handled the FLEX and BISON dependencies.  Some will list these
+  # as potential build targets, since we may try to compile them, but as the
+  # default orientation for these is "build only if we have to" the find
+  # process itself needs to satisfy the check.
+  set(FLEX_ADDED 1)
+  set(BISON_ADDED 1)
+
+endif (USE_APPLESEED OR USE_OSPRAY)
+
 
 ###############################################################################
 # Applying patch files cross platform is a challenging problem due to the
@@ -291,7 +329,6 @@ add_subdirectory(patch)
 # targeted to the extnoinstall subdirectory.
 ###############################################################################
 add_project(astyle GROUPS "BRLCAD")
-add_project(flexbison GROUPS "APPLESEED;OSPRAY")
 add_project(lemon GROUPS "BRLCAD")
 add_project(re2c GROUPS "BRLCAD")
 add_project(perplex GROUPS "BRLCAD")
@@ -501,8 +538,8 @@ add_project(embree GROUPS "APPLESEED;OSPRAY")
 set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
 add_project(tcl GROUPS "TCL")
 add_project(tk GROUPS "TCL")
-add_project(itcl3 GROUPS "TCL")
-add_project(itk3 GROUPS "TCL")
+add_project(itcl GROUPS "TCL")
+add_project(itk GROUPS "TCL")
 add_project(iwidgets GROUPS "TCL")
 add_project(tkhtml GROUPS "TCL")
 add_project(tktable GROUPS "TCL")

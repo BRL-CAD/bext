@@ -25,7 +25,9 @@ if (ENABLE_ISPC)
 
   git_submodule_init(ispc CMakeLists.txt)
 
-  set(ISPC_DEPENDS BISON FLEX LLVM NCURSES ZLIB)
+  # TODO - add ncurses back in
+  #set(ISPC_DEPENDS BISON FLEX LLVM NCURSES ZLIB)
+  set(ISPC_DEPENDS BISON FLEX LLVM ZLIB)
   TargetVars(ISPC_DEPENDS)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")

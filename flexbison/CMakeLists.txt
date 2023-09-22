@@ -1,12 +1,3 @@
-# Unless we have ENABLE_ALL set, base the building of the tools on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_FLEX)
-  set(ENABLE_FLEX ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_FLEX)
-if (ENABLE_ALL AND NOT DEFINED ENABLE_BISON)
-  set(ENABLE_BISON ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_BISON)
-
 if (WIN32)
   # With winflexbison do all or nothing
   if (ENABLE_FLEX OR ENABLE_BISON)
@@ -14,27 +5,6 @@ if (WIN32)
     set(ENABLE_BISON ON)
   endif (ENABLE_FLEX OR ENABLE_BISON)
 endif (WIN32)
-
-
-if (NOT ENABLE_FLEX)
-
-  find_package(FLEX)
-
-  if (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
-    set(ENABLE_FLEX ON)
-  endif (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
-
-endif (NOT ENABLE_FLEX)
-
-if (NOT ENABLE_BISON)
-
-  find_package(BISON)
-
-  if (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
-    set(ENABLE_BISON ON)
-  endif (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
-
-endif (NOT ENABLE_BISON)
 
 set(ENABLE_FLEX "${ENABLE_FLEX}" CACHE BOOL "Enable flex build")
 set(ENABLE_BISON "${ENABLE_BISON}" CACHE BOOL "Enable GNU Bison build")

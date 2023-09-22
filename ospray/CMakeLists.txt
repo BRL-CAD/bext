@@ -19,7 +19,7 @@ if (ENABLE_OSPRAY)
 
   git_submodule_init(ospray CMakeLists.txt)
 
-  set(OSPRAY_DEPENDS EMBREE ISPC RKCOMMON TBB)
+  set(OSPRAY_DEPENDS EMBREE ISPC RKCOMMON ONETBB)
   TargetVars(OSPRAY_DEPENDS)
 
   ExternalProject_Add(OSPRAY_BLD
