@@ -32,7 +32,7 @@ if (ENABLE_LLVM)
 
   # llvm needs zlib - need to do the magic to get it using ours.
   # shows up when trying to compile ispc
-  set(LLVM_DEPENDS ZLIB ZSTD)
+  set(LLVM_DEPENDS ZLIB)
   TargetVars(LLVM_DEPENDS)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
@@ -50,11 +50,11 @@ if (ENABLE_LLVM)
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
-    -Dzstd_ROOT=$<$<BOOL:${ZSTD_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DLLVM_BUILD_DOCS=OFF
     -DLLVM_BUILD_EXAMPLES=OFF
     -DLLVM_ENABLE_LIBEDIT=OFF
     -DLLVM_ENABLE_PROJECTS=clang
+    -DLLVM_ENABLE_ZSTD=OFF
     -DLLVM_PARALLEL_LINK_JOBS=1 # llvm/clang linking is memory hungry
     -DLLVM_OPTIMIZED_TABLEGEN=ON
     -DBIN_DIR=${BIN_DIR}
