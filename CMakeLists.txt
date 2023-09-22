@@ -449,7 +449,7 @@ add_project(openimageio GROUPS "APPLESEED")
 
 # ncurses - text-based user interfaces library
 # https://invisible-island.net/ncurses/
-#add_project(ncurses GROUPS "OSPRAY")
+add_project(ncurses GROUPS "OSPRAY")
 
 # Linenoise - line editing library
 # https://github.com/msteveb/linenoise

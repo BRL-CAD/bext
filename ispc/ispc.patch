@@ -1,6 +1,6 @@
 diff -Naur ispc/cmake/FindZLIB.cmake ISPC_BLD/cmake/FindZLIB.cmake
 --- ispc/cmake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ ISPC_BLD/cmake/FindZLIB.cmake	2023-09-14 15:51:28.668228034 -0400
++++ ISPC_BLD/cmake/FindZLIB.cmake	2023-09-22 14:59:45.337997941 -0400
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -126,8 +126,8 @@ diff -Naur ispc/cmake/FindZLIB.cmake ISPC_BLD/cmake/FindZLIB.cmake
 +    endif()
 +endif()
 diff -Naur ispc/CMakeLists.txt ISPC_BLD/CMakeLists.txt
---- ispc/CMakeLists.txt	2023-09-14 15:57:28.121691752 -0400
-+++ ISPC_BLD/CMakeLists.txt	2023-09-14 15:57:00.718178634 -0400
+--- ispc/CMakeLists.txt	2023-09-22 11:01:32.093719196 -0400
++++ ISPC_BLD/CMakeLists.txt	2023-09-22 14:58:30.774428438 -0400
 @@ -234,6 +234,7 @@
      message(STATUS "Build type not specified: Use Release by default.")
  endif(CMAKE_BUILD_TYPE)
@@ -147,3 +147,16 @@ diff -Naur ispc/CMakeLists.txt ISPC_BLD/CMakeLists.txt
  # Link against Clang libraries
  foreach(clangLib ${CLANG_LIBRARY_LIST})
      # Preferred way to build ISPC is to link it with individual clang static
+@@ -642,7 +647,11 @@
+             # this contains the tinfo library, if found
+             target_link_libraries(${PROJECT_NAME} ${CURSES_EXTRA_LIBRARY})
+         endif()
+-        target_link_libraries(${PROJECT_NAME} pthread ${CURSES_CURSES_LIBRARY})
++	if (CURSES_NCURSES_LIBRARY)
++	    target_link_libraries(${PROJECT_NAME} pthread ${CURSES_NCURSES_LIBRARY})
++	elseif (CURSES_CURSES_LIBRARY)
++	    target_link_libraries(${PROJECT_NAME} pthread ${CURSES_CURSES_LIBRARY})
++        endif (CURSES_NCURSES_LIBRARY)
+     endif()
+ endif()
+ 

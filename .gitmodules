@@ -353,3 +353,8 @@
 	branch = RELEASE
 	shallow = true
 	ignore = dirty
+[submodule "ncurses/ncurses"]
+	path = ncurses/ncurses
+	url = https://github.com/BRL-CAD/ncurses
+	shallow = true
+	ignore = dirty
