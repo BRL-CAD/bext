@@ -295,14 +295,14 @@ add_project(flexbison GROUPS "APPLESEED;OSPRAY")
 add_project(lemon GROUPS "BRLCAD")
 add_project(re2c GROUPS "BRLCAD")
 add_project(perplex GROUPS "BRLCAD")
-add_project(patchelf GROUPS "BRLCAD")
+#add_project(patchelf GROUPS "BRLCAD")
 add_project(strclear GROUPS "BRLCAD")
 add_project(xmltools GROUPS "BRLCAD")  # Used for Docbook building
 
-# This is intended to replace patchelf, but doesn't currently handle ICV
-# correctly - once it works for all our use cases, remove patchelf
-#add_project(lief GROUPS "BRLCAD")
-#add_project(plief GROUPS "BRLCAD")
+# This is intended to replace patchelf, but we are currently still
+# testing it out
+add_project(lief GROUPS "BRLCAD")
+add_project(plief GROUPS "BRLCAD")
 
 ###############################################################################
 # Build logic is broken out per-library, but the ordering is important.  Some
