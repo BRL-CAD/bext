@@ -19,6 +19,9 @@ if (ENABLE_FMT)
 
   git_submodule_init(fmt CMakeLists.txt)
 
+  set(FMT_DEPENDS PATCH)
+  TargetVars(FMT_DEPENDS)
+
   ExternalProject_Add(FMT_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/fmt"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -41,9 +44,7 @@ if (ENABLE_FMT)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(FMT_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(FMT FMT_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

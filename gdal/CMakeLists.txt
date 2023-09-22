@@ -19,7 +19,7 @@ if (ENABLE_GDAL)
 
   git_submodule_init(gdal CMakeLists.txt)
 
-  set(GDAL_DEPENDS PNG PROJ SQLITE3 ZLIB)
+  set(GDAL_DEPENDS PATCH PNG PROJ SQLITE3 ZLIB)
   TargetVars(GDAL_DEPENDS)
 
   if (TARGET ZLIB_BLD)
@@ -176,10 +176,6 @@ if (ENABLE_GDAL)
     )
 
   TargetInstallDeps(GDAL GDAL_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(GDAL_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

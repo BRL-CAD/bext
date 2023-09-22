@@ -34,7 +34,7 @@ if (ENABLE_TKTABLE)
 
   git_submodule_init(tktable CMakeLists.txt)
 
-  set(TKTABLE_DEPENDS TCL TK)
+  set(TKTABLE_DEPENDS PATCH TCL TK)
   TargetVars(TKTABLE_DEPENDS)
 
   ExternalProject_Add(TKTABLE_BLD
@@ -60,10 +60,6 @@ if (ENABLE_TKTABLE)
     )
 
   TargetInstallDeps(TKTABLE TKTABLE_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(TKTABLE_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

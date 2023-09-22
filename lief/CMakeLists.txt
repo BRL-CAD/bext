@@ -25,6 +25,9 @@ if (NOT MSVC AND NOT APPLE)
 
     git_submodule_init(LIEF CMakeLists.txt)
 
+    set(LIEF_DEPENDS PATCH)
+    TargetVars(LIEF_DEPENDS)
+
     ExternalProject_Add(LIEF_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/LIEF"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -47,9 +50,7 @@ if (NOT MSVC AND NOT APPLE)
       STEP_TARGETS install
       )
 
-    if (TARGET PATCH_BLD)
-      ExternalProject_Add_StepDependencies(LIEF_BLD configure PATCH_BLD-install)
-    endif (TARGET PATCH_BLD)
+    TargetInstallDeps(LIEF LIEF_DEPENDS)
 
   endif (ENABLE_LIEF)
 endif (NOT MSVC AND NOT APPLE)

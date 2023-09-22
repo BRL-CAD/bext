@@ -19,6 +19,9 @@ if (ENABLE_ONETBB)
 
   git_submodule_init(oneTBB CMakeLists.txt)
 
+  set(ONETBB_DEPENDS PATCH)
+  TargetVars(ONETBB_DEPENDS)
+
   ExternalProject_Add(ONETBB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oneTBB"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -40,9 +43,7 @@ if (ENABLE_ONETBB)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(ONETBB_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(ONETBB ONETBB_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

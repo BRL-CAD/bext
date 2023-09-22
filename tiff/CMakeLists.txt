@@ -19,7 +19,7 @@ if (ENABLE_TIFF)
 
   git_submodule_init(libtiff CMakeLists.txt)
 
-  set(TIFF_DEPENDS JPEG ZLIB)
+  set(TIFF_DEPENDS JPEG PATCH ZLIB)
   TargetVars(TIFF_DEPENDS)
 
   if (TARGET ZLIB_BLD)
@@ -66,10 +66,6 @@ if (ENABLE_TIFF)
     )
 
   TargetInstallDeps(TIFF TIFF_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(TIFF_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

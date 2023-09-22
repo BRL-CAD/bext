@@ -25,7 +25,7 @@ if (ENABLE_ISPC)
 
   git_submodule_init(ispc CMakeLists.txt)
 
-  set(ISPC_DEPENDS BISON FLEX LLVM NCURSES ZLIB)
+  set(ISPC_DEPENDS BISON FLEX PATCH LLVM NCURSES ZLIB)
   TargetVars(ISPC_DEPENDS)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
@@ -69,10 +69,6 @@ if (ENABLE_ISPC)
     )
 
   TargetInstallDeps(ISPC ISPC_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(ISPC_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

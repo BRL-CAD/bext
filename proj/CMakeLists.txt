@@ -19,7 +19,7 @@ if (ENABLE_PROJ)
 
   git_submodule_init(PROJ CMakeLists.txt)
 
-  set(PROJ_DEPENDS SQLITE3)
+  set(PROJ_DEPENDS PATCH SQLITE3)
   TargetVars(PROJ_DEPENDS)
 
   ExternalProject_Add(PROJ_BLD
@@ -52,10 +52,6 @@ if (ENABLE_PROJ)
     )
 
   TargetInstallDeps(PROJ PROJ_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(PROJ_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

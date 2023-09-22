@@ -19,6 +19,9 @@ if (ENABLE_LEMON)
 
   git_submodule_init(lemon lemon.c)
 
+  set(LEMON_DEPENDS PATCH)
+  TargetVars(LEMON_DEPENDS)
+
   ExternalProject_Add(LEMON_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lemon"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -42,9 +45,7 @@ if (ENABLE_LEMON)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(LEMON_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(LEMON LEMON_DEPENDS)
 
 endif (ENABLE_LEMON)
 

@@ -24,6 +24,9 @@ if (ENABLE_XMLTOOLS)
 
   git_submodule_init(xmltools CMakeLists.txt)
 
+  set(XMLTOOLS_DEPENDS PATCH)
+  TargetVars(XMLTOOLS_DEPENDS)
+
   ExternalProject_Add(XMLTOOLS_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xmltools"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -44,9 +47,7 @@ if (ENABLE_XMLTOOLS)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(XMLTOOLS_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(XMLTOOLS XMLTOOLS_DEPENDS)
 
 endif (ENABLE_XMLTOOLS)
 

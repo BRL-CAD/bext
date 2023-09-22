@@ -19,7 +19,7 @@ if (ENABLE_OSL)
 
   git_submodule_init(OpenShadingLanguage CMakeLists.txt)
 
-  set(OSL_DEPENDS BISON BOOST FLEX LLVM OPENIMAGEIO PUGIXML ZLIB)
+  set(OSL_DEPENDS BISON BOOST FLEX LLVM OPENIMAGEIO PATCH PUGIXML ZLIB)
   TargetVars(OSL_DEPENDS)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
@@ -58,10 +58,6 @@ if (ENABLE_OSL)
     )
 
   TargetInstallDeps(OSL OSL_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(OSL_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

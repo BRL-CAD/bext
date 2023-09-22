@@ -19,6 +19,9 @@ if (ENABLE_SQLite3)
 
   git_submodule_init(sqlite3 sqlite3.c)
 
+  set(SQLITE3_DEPENDS PATCH)
+  TargetVars(SQLITE3_DEPENDS)
+
   ExternalProject_Add(SQLITE3_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -40,9 +43,7 @@ if (ENABLE_SQLite3)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(SQLITE3_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(SQLITE3 SQLITE3_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

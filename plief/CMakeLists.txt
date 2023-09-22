@@ -25,7 +25,7 @@ if (NOT MSVC AND NOT APPLE)
 
     git_submodule_init(plief CMakeLists.txt)
 
-    set(PLIEF_DEPENDS LIEF)
+    set(PLIEF_DEPENDS LIEF PATCH)
     TargetVars(PLIEF_DEPENDS)
 
     ExternalProject_Add(PLIEF_BLD
@@ -51,10 +51,6 @@ if (NOT MSVC AND NOT APPLE)
       )
 
     TargetInstallDeps(PLIEF PLIEF_DEPENDS)
-
-    if (TARGET PATCH_BLD)
-      ExternalProject_Add_StepDependencies(PLIEF_BLD configure PATCH_BLD-install)
-    endif (TARGET PATCH_BLD)
 
   endif (ENABLE_PLIEF)
 

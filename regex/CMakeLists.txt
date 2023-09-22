@@ -19,6 +19,9 @@ if (ENABLE_REGEX)
 
   git_submodule_init(regex regex2.h)
 
+  set(REGEX_DEPENDS PATCH)
+  TargetVars(REGEX_DEPENDS)
+
   set(REGEX_PREFIX_STR "libregex_")
 
   # Platform differences in default linker behavior make it difficult to
@@ -45,9 +48,7 @@ if (ENABLE_REGEX)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(REGEX_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(REGEX REGEX_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

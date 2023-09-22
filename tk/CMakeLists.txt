@@ -11,7 +11,7 @@ if (TK_DO_BUILD)
 
   git_submodule_init(tk unix/configure)
 
-  set(TK_DEPENDS TCL)
+  set(TK_DEPENDS PATCH TCL)
   TargetVars(TK_DEPENDS)
 
   if (TARGET TCL_BLD)
@@ -95,10 +95,6 @@ if (TK_DO_BUILD)
   endif (CHMOD_EXECUTABLE)
 
   TargetInstallDeps(TK TK_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(TK_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

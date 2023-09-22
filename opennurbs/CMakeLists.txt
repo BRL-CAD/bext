@@ -23,7 +23,7 @@ if (ENABLE_OPENNURBS)
 
   git_submodule_init(opennurbs opennurbs.h)
 
-  set(OPENNURBS_DEPENDS ZLIB)
+  set(OPENNURBS_DEPENDS PATCH ZLIB)
   TargetVars(OPENNURBS_DEPENDS)
 
   if (TARGET ZLIB_BLD)
@@ -81,10 +81,6 @@ if (ENABLE_OPENNURBS)
     )
 
   TargetInstallDeps(OPENNURBS OPENNURBS_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(OPENNURBS_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

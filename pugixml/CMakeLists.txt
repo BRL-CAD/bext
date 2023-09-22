@@ -19,6 +19,9 @@ if (ENABLE_PUGIXML)
 
   git_submodule_init(pugixml CMakeLists.txt)
 
+  set(PUGIXML_DEPENDS PATCH)
+  TargetVars(PUGIXML_DEPENDS)
+
   ExternalProject_Add(PUGIXML_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/pugixml"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -40,9 +43,7 @@ if (ENABLE_PUGIXML)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(PUGIXML_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(PUGIXML PUGIXML_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

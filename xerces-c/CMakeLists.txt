@@ -24,7 +24,7 @@ if (ENABLE_XERCES_C)
 
   git_submodule_init(xerces-c CMakeLists.txt)
 
-  set(XERCES_C_DEPENDS ICU)
+  set(XERCES_C_DEPENDS ICU PATCH)
   TargetVars(XERCES_C_DEPENDS)
 
   ExternalProject_Add(XERCES_C_BLD
@@ -52,10 +52,6 @@ if (ENABLE_XERCES_C)
     )
 
   TargetInstallDeps(XERCES_C XERCES_C_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(XERCES_C_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

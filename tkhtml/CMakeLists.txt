@@ -34,7 +34,7 @@ if (ENABLE_TKHTML)
 
   git_submodule_init(tkhtml CMakeLists.txt)
 
-  set(TKHTML_DEPENDS TCL TK)
+  set(TKHTML_DEPENDS PATCH TCL TK)
   TargetVars(TKHTML_DEPENDS)
 
   ExternalProject_Add(TKHTML_BLD
@@ -60,10 +60,6 @@ if (ENABLE_TKHTML)
     )
 
   TargetInstallDeps(TKHTML TKHTML_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(TKHTML_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

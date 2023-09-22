@@ -288,8 +288,7 @@ endif (USE_OSPRAY)
 # this.  We need to address the patch build tool first thing, since any of the
 # other ExternalProject_Add builds that follow may depend on it.
 ###############################################################################
-add_subdirectory(patch)
-
+add_project(patch)
 
 ###############################################################################
 # Although we have bundled flex and bison programs, they can be problematic to
@@ -335,14 +334,19 @@ add_project(astyle GROUPS "BRLCAD")
 add_project(lemon GROUPS "BRLCAD")
 add_project(re2c GROUPS "BRLCAD")
 add_project(perplex GROUPS "BRLCAD")
-#add_project(patchelf GROUPS "BRLCAD")
 add_project(strclear GROUPS "BRLCAD")
 add_project(xmltools GROUPS "BRLCAD")  # Used for Docbook building
 
-# This is intended to replace patchelf, but we are currently still
-# testing it out
+# RPATH editing - LIEF has the core capabilities, and plief exposes them via
+# a command line utility with patchelf compatible options, so we can drop
+# either patchelf or plief into our upstream workflows.
 add_project(lief GROUPS "BRLCAD")
 add_project(plief GROUPS "BRLCAD")
+
+# Keeping this set up for easy turn-on until we're confident plief+LIEF has
+# all of our use cases covered - plief is preferred, but we've already hit
+# one case where a bug in LIEF had to be fixed.
+#add_project(patchelf GROUPS "BRLCAD")
 
 ###############################################################################
 # Build logic is broken out per-library, but the ordering is important.  Some

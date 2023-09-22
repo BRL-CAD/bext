@@ -22,6 +22,9 @@ if (NOT WIN32 AND NOT APPLE)
 
     git_submodule_init(icu icu4c/source/configure)
 
+    set(ICU_DEPENDS PATCH)
+    TargetVars(ICU_DEPENDS)
+
     ExternalProject_Add(ICU_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/icu"
       SOURCE_SUBDIR icu4c/source
@@ -37,9 +40,7 @@ if (NOT WIN32 AND NOT APPLE)
       STEP_TARGETS install
       )
 
-    if (TARGET PATCH_BLD)
-      ExternalProject_Add_StepDependencies(ICU_BLD configure PATCH_BLD-install)
-    endif (TARGET PATCH_BLD)
+    TargetInstallDeps(FMT FMT_DEPENDS)
 
     # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
     file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

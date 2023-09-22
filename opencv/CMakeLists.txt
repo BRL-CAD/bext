@@ -19,7 +19,7 @@ if (ENABLE_OPENCV)
 
   git_submodule_init(opencv CMakeLists.txt)
 
-  set(OPENCV_DEPENDS PNG ZLIB)
+  set(OPENCV_DEPENDS PATCH PNG ZLIB)
   TargetVars(OPENCV_DEPENDS)
 
   if (TARGET ZLIB_BLD)
@@ -156,10 +156,6 @@ if (ENABLE_OPENCV)
     )
 
   TargetInstallDeps(OPENCV OPENCV_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(OPENCV_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

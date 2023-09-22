@@ -19,6 +19,9 @@ if (ENABLE_DEFLATE)
 
   git_submodule_init(libdeflate CMakeLists.txt)
 
+  set(DEFLATE_DEPENDS PATCH)
+  TargetVars(DEFLATE_DEPENDS)
+
   ExternalProject_Add(DEFLATE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libdeflate"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -40,9 +43,7 @@ if (ENABLE_DEFLATE)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(DEFLATE_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(DEFLATE DEFLATE_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

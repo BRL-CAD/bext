@@ -19,6 +19,9 @@ if (ENABLE_LMDB)
 
   git_submodule_init(lmdb libraries/liblmdb/mdb.c)
 
+  set(LMDB_DEPENDS PATCH)
+  TargetVars(LMDB_DEPENDS)
+
   ExternalProject_Add(LMDB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lmdb"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -40,9 +43,7 @@ if (ENABLE_LMDB)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(LMDB_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(LMDB LMDB_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(READ ${CMAKE_CURRENT_SOURCE_DIR}/lmdb/libraries/liblmdb/COPYRIGHT LMDB_COPYRIGHT)

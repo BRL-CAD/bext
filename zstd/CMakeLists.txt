@@ -19,6 +19,9 @@ if (ENABLE_ZSTD)
 
   git_submodule_init(zstd LICENSE)
 
+  set(ZSTD_DEPENDS PATCH)
+  TargetVars(ZSTD_DEPENDS)
+
   ExternalProject_Add(ZSTD_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/zstd"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -42,9 +45,7 @@ if (ENABLE_ZSTD)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(ZSTD_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(ZSTD ZSTD_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

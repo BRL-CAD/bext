@@ -13,6 +13,9 @@ if (WIN32 AND ENABLE_FLEX)
 
   git_submodule_init(winflexbison CMakeLists.txt)
 
+  set(FLEX_DEPENDS PATCH)
+  TargetVars(FLEX_DEPENDS)
+
   ExternalProject_Add(FLEX_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/winflexbison"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -31,12 +34,18 @@ if (WIN32 AND ENABLE_FLEX)
     LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
     STEP_TARGETS install
     )
+
+  TargetInstallDeps(FLEX FLEX_DEPENDS)
+
 endif (WIN32 AND ENABLE_FLEX)
 
 if (NOT WIN32)
   if (ENABLE_FLEX)
 
     git_submodule_init(flex configure)
+
+    set(FLEX_DEPENDS PATCH)
+    TargetVars(FLEX_DEPENDS)
 
     set(FLEX_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/FLEX_BLD-prefix/src/FLEX_BLD")
 
@@ -56,10 +65,16 @@ if (NOT WIN32)
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
       STEP_TARGETS install
       )
+
+    TargetInstallDeps(FLEX FLEX_DEPENDS)
+
   endif (ENABLE_FLEX)
   if (ENABLE_BISON)
 
     git_submodule_init(bison configure)
+
+    set(BISON_DEPENDS PATCH)
+    TargetVars(BISON_DEPENDS)
 
     set(BISON_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/BISON_BLD-prefix/src/BISON_BLD")
 
@@ -80,16 +95,12 @@ if (NOT WIN32)
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
       STEP_TARGETS install
       )
+
+    TargetInstallDeps(BISON BISON_DEPENDS)
+
   endif (ENABLE_BISON)
 
 endif (NOT WIN32)
-
-if (TARGET PATCH_BLD AND TARGET FLEX_BLD)
-  ExternalProject_Add_StepDependencies(FLEX_BLD configure PATCH_BLD-install)
-endif (TARGET PATCH_BLD AND TARGET FLEX_BLD)
-if (TARGET PATCH_BLD AND TARGET BISON_BLD)
-  ExternalProject_Add_StepDependencies(BISON_BLD configure PATCH_BLD-install)
-endif (TARGET PATCH_BLD AND TARGET BISON_BLD)
 
 # Local Variables:
 # tab-width: 8

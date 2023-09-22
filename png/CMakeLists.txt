@@ -22,7 +22,7 @@ if (ENABLE_PNG)
 
   git_submodule_init(libpng CMakeLists.txt)
 
-  set(PNG_DEPENDS ZLIB)
+  set(PNG_DEPENDS PATCH ZLIB)
   TargetVars(PNG_DEPENDS)
 
   if (TARGET ZLIB_BLD)
@@ -61,10 +61,6 @@ if (ENABLE_PNG)
     )
 
   TargetInstallDeps(PNG PNG_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(PNG_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

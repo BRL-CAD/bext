@@ -17,7 +17,7 @@ if (ENABLE_IWIDGETS)
 
   git_submodule_init(iwidgets CMakeLists.txt)
 
-  set(IWIDGETS_DEPENDS TCL TK ITCL ITK)
+  set(IWIDGETS_DEPENDS PATCH TCL TK ITCL ITK)
   TargetVars(IWIDGETS_DEPENDS)
 
   ExternalProject_Add(IWIDGETS_BLD
@@ -36,10 +36,6 @@ if (ENABLE_IWIDGETS)
     )
 
   TargetInstallDeps(IWIDGETS IWIDGETS_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(IWIDGETS_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

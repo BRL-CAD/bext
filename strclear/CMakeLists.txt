@@ -20,6 +20,9 @@ if (ENABLE_STRCLEAR)
 
   git_submodule_init(strclear CMakeLists.txt)
 
+  set(STRCLEAR_DEPENDS PATCH)
+  TargetVars(STRCLEAR_DEPENDS)
+
   ExternalProject_Add(STRCLEAR_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/strclear"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -41,9 +44,7 @@ if (ENABLE_STRCLEAR)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(STRCLEAR_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(STRCLEAR STRCLEAR_DEPENDS)
 
 endif (ENABLE_STRCLEAR)
 

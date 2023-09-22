@@ -43,10 +43,6 @@ if (NOT MSVC AND NOT APPLE)
       STEP_TARGETS install
       )
 
-    if (TARGET PATCH_BLD)
-      ExternalProject_Add_StepDependencies(PATCHELF_BLD configure PATCH_BLD-install)
-    endif (TARGET PATCH_BLD)
-
   endif (ENABLE_PATCHELF)
 
 endif (NOT MSVC AND NOT APPLE)

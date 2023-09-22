@@ -19,6 +19,9 @@ if (ENABLE_EXPAT)
 
   git_submodule_init(libexpat CMakeLists.txt)
 
+  set(EXPAT_DEPENDS PATCH)
+  TargetVars(EXPAT_DEPENDS)
+
   ExternalProject_Add(EXPAT_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libexpat"
     SOURCE_SUBDIR expat
@@ -40,9 +43,7 @@ if (ENABLE_EXPAT)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(EXPAT_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(EXPAT EXPAT_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

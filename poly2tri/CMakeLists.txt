@@ -6,6 +6,9 @@ if (USE_BRLCAD)
 
   git_submodule_init(poly2tri CMakeLists.txt)
 
+  set(POLY2TRI_DEPENDS PATCH)
+  TargetVars(POLY2TRI_DEPENDS)
+
   ExternalProject_Add(POLY2TRI_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/poly2tri"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -27,9 +30,7 @@ if (USE_BRLCAD)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(POLY2TRI_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(POLY2TRI POLY2TRI_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

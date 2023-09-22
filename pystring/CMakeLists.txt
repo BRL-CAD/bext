@@ -19,6 +19,9 @@ if (ENABLE_PYSTRING)
 
   git_submodule_init(pystring CMakeLists.txt)
 
+  set(PYSTRING_DEPENDS PATCH)
+  TargetVars(PYSTRING_DEPENDS)
+
   ExternalProject_Add(PYSTRING_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/pystring"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -40,9 +43,7 @@ if (ENABLE_PYSTRING)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(PYSTRING_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(PYSTRING PYSTRING_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

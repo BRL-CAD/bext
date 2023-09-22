@@ -32,8 +32,13 @@ if (ENABLE_LLVM)
 
   # llvm needs zlib - need to do the magic to get it using ours.
   # shows up when trying to compile ispc
-  set(LLVM_DEPENDS ZLIB)
+  set(LLVM_DEPENDS PATCH ZLIB)
   TargetVars(LLVM_DEPENDS)
+
+  # We may need one or more patches, depending on settings.  ExternalProject_Add
+  # expects the first command to be "PATCH_COMMAND", with subsequent patch commands
+  # starting with COMMAND.  Use a variable initialized to PATCH_COMMAND, with each
+  # activation of a patch flipping the variable to COMMAND for subsequent uses.
   set(PATCH_CMD "PATCH_COMMAND")
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
@@ -79,10 +84,6 @@ if (ENABLE_LLVM)
     )
 
   TargetInstallDeps(LLVM LLVM_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(LLVM_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

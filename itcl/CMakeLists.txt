@@ -17,7 +17,7 @@ if (ENABLE_ITCL)
 
   git_submodule_init(itcl CMakeLists.txt)
 
-  set(ITCL_DEPENDS TCL)
+  set(ITCL_DEPENDS PATCH TCL)
   TargetVars(ITCL_DEPENDS)
 
   # If we're building ITCL, it's path setup must take into account the
@@ -49,10 +49,6 @@ if (ENABLE_ITCL)
     )
 
   TargetInstallDeps(ITCL ITCL_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(ITCL_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

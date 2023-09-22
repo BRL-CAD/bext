@@ -19,7 +19,7 @@ if (ENABLE_BOOST)
 
   git_submodule_init(boost CMakeLists.txt)
 
-  set(BOOST_DEPENDS ICU ZLIB ZSTD)
+  set(BOOST_DEPENDS ICU PATCH ZLIB ZSTD)
   TargetVars(BOOST_DEPENDS)
 
   if (TARGET ZLIB_BLD)
@@ -55,9 +55,7 @@ if (ENABLE_BOOST)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(BOOST_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(BOOST BOOST_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

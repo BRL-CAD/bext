@@ -19,7 +19,7 @@ if (ENABLE_EMBREE)
 
   git_submodule_init(embree CMakeLists.txt)
 
-  set(EMBREE_DEPENDS BOOST ISPC ONETBB ZLIB)
+  set(EMBREE_DEPENDS BOOST ISPC ONETBB PATCH ZLIB)
   TargetVars(EMBREE_DEPENDS)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
@@ -54,10 +54,6 @@ if (ENABLE_EMBREE)
     )
 
   TargetInstallDeps(EMBREE EMBREE_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(EMBREE_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

@@ -20,6 +20,9 @@ if (ENABLE_ASTYLE)
 
   git_submodule_init(astyle CMakeLists.txt)
 
+  set(ASTYLE_DEPENDS PATCH)
+  TargetVars(ASTYLE_DEPENDS)
+
   ExternalProject_Add(ASTYLE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/astyle"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -41,9 +44,7 @@ if (ENABLE_ASTYLE)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(ASTYLE_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(ASTYLE ASTYLE_DEPENDS)
 
 endif (ENABLE_ASTYLE)
 

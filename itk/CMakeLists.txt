@@ -38,7 +38,7 @@ if (ENABLE_ITK)
 
   git_submodule_init(itk CMakeLists.txt)
 
-  set(ITK_DEPENDS TCL TK ITCL)
+  set(ITK_DEPENDS PATCH TCL TK ITCL)
   TargetVars(ITK_DEPENDS)
 
   # If we're building ITK, it's path setup must take into account the
@@ -72,10 +72,6 @@ if (ENABLE_ITK)
     )
 
   TargetInstallDeps(ITK ITK_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(ITK_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

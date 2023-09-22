@@ -20,6 +20,9 @@ if (ENABLE_EIGEN)
 
   git_submodule_init(eigen CMakeLists.txt)
 
+  set(EIGEN_DEPENDS PATCH)
+  TargetVars(EIGEN_DEPENDS)
+
   ExternalProject_Add(EIGEN_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/eigen"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -44,9 +47,7 @@ if (ENABLE_EIGEN)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(EIGEN_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(EIGEN EIGEN_DEPENDS)
 
 endif (ENABLE_EIGEN)
 

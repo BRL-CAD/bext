@@ -22,6 +22,9 @@ if (NOT WIN32)
 
     git_submodule_init(ncurses README)
 
+    set(NCURSES_DEPENDS PATCH)
+    TargetVars(NCURSES_DEPENDS)
+
     set(NCURSES_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/NCURSES_BLD-prefix/src/NCURSES_BLD")
 
     ExternalProject_Add(NCURSES_BLD
@@ -41,9 +44,7 @@ if (NOT WIN32)
       STEP_TARGETS install
       )
 
-    if (TARGET PATCH_BLD AND TARGET NCURSES_BLD)
-      ExternalProject_Add_StepDependencies(NCURSES_BLD configure PATCH_BLD-install)
-    endif (TARGET PATCH_BLD AND TARGET NCURSES_BLD)
+    TargetInstallDeps(NCURSES NCURSES_DEPENDS)
 
     # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
     file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

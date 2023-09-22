@@ -19,7 +19,7 @@ if (ENABLE_STEPCODE)
 
   git_submodule_init(stepcode CMakeLists.txt)
 
-  set(STEPCODE_DEPENDS LEMON PERPLEX RE2C)
+  set(STEPCODE_DEPENDS LEMON PATCH PERPLEX RE2C)
   TargetVars(STEPCODE_DEPENDS)
 
   # For OSX, we need CMAKE_INSTALL_NAME_DIR
@@ -56,10 +56,6 @@ if (ENABLE_STEPCODE)
     )
 
   TargetInstallDeps(STEPCODE STEPCODE_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(STEPCODE_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

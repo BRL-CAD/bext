@@ -19,6 +19,9 @@ if (ENABLE_RE2C)
 
   git_submodule_init(re2c CMakeLists.txt)
 
+  set(RE2C_DEPENDS PATCH)
+  TargetVars(RE2C_DEPENDS)
+
   ExternalProject_Add(RE2C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/re2c"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -44,9 +47,7 @@ if (ENABLE_RE2C)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(RE2C_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(RE2C RE2C_DEPENDS)
 
 endif (ENABLE_RE2C)
 

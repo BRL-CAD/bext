@@ -19,7 +19,7 @@ if (ENABLE_RKCOMMON)
 
   git_submodule_init(rkcommon CMakeLists.txt)
 
-  set(RKCOMMON_DEPENDS ONETBB)
+  set(RKCOMMON_DEPENDS ONETBB PATCH)
   TargetVars(RKCOMMON_DEPENDS)
 
     ExternalProject_Add(RKCOMMON_BLD
@@ -45,10 +45,6 @@ if (ENABLE_RKCOMMON)
     )
 
   TargetInstallDeps(RKCOMMON RKCOMMON_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(RKCOMMON_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

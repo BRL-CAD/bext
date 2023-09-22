@@ -19,6 +19,9 @@ if (ENABLE_ZLIB)
 
   git_submodule_init(zlib zlib.h)
 
+  set(ZLIB_DEPENDS PATCH)
+  TargetVars(ZLIB_DEPENDS)
+
   set(Z_PREFIX_STR "brl_")
   mark_as_advanced(Z_PREFIX_STR)
 
@@ -44,9 +47,7 @@ if (ENABLE_ZLIB)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(ZLIB_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
+  TargetInstallDeps(ZLIB ZLIB_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

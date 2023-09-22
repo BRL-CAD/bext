@@ -25,7 +25,7 @@ if (ENABLE_TCL)
 
   git_submodule_init(tcl unix/configure)
 
-  set(TCL_DEPENDS ZLIB)
+  set(TCL_DEPENDS PATCH ZLIB)
   TargetVars(TCL_DEPENDS)
 
   set(TCL_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD")
@@ -90,10 +90,6 @@ if (ENABLE_TCL)
   endif (NOT MSVC)
 
   TargetInstallDeps(TCL TCL_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(TCL_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Scripts expect a non-versioned tclsh program, but the Tcl build doesn't provide one,
   # we must provide it ourselves

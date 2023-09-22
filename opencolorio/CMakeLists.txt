@@ -19,7 +19,7 @@ if (ENABLE_OPENCOLORIO)
 
   git_submodule_init(OpenColorIO CMakeLists.txt)
 
-  set(OPENCOLORIO_DEPENDS EXPAT MINIZIP_NG PYSTRING YAML_CPP ZLIB)
+  set(OPENCOLORIO_DEPENDS EXPAT MINIZIP_NG PATCH PYSTRING YAML_CPP ZLIB)
   TargetVars(OPENCOLORIO_DEPENDS)
 
   if (TARGET ZLIB_BLD)
@@ -61,10 +61,6 @@ if (ENABLE_OPENCOLORIO)
     )
 
   TargetInstallDeps(OPENCOLORIO OPENCOLORIO_DEPENDS)
-
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(OPENCOLORIO_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)

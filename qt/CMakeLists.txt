@@ -20,6 +20,14 @@ if (ENABLE_QT)
 
   git_submodule_init(qt qtbase/configure)
 
+  set(Qt6_DEPENDS PATCH ZLIB)
+  TargetVars(Qt6_DEPENDS)
+
+  if (TARGET ZLIB_BLD)
+    set(Z_PREFIX_STR "brl_")
+  endif (TARGET ZLIB_BLD)
+
+
   if (isMultiConfig)
     set(CBT $<CONFIG>)
   else (isMultiConfig)
@@ -45,15 +53,11 @@ if (ENABLE_QT)
     STEP_TARGETS install
     )
 
+  TargetInstallDeps(Qt6 Qt6_DEPENDS)
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(Qt6_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
 
-  if (TARGET ZLIB_BLD)
-    set(Z_PREFIX_STR "brl_")
-    set(ZLIB_TARGET ZLIB_BLD)
-  endif (TARGET ZLIB_BLD)
+  set(Qt6Svg_DEPENDS PATCH Qt6 ZLIB)
+  TargetVars(Qt6Svg_DEPENDS)
 
   ExternalProject_Add(Qt6Svg_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/qt/qtsvg"
@@ -78,14 +82,7 @@ if (ENABLE_QT)
     STEP_TARGETS install
     )
 
-  if (TARGET PATCH_BLD)
-    ExternalProject_Add_StepDependencies(Qt6_BLD configure PATCH_BLD-install)
-  endif (TARGET PATCH_BLD)
-  if (TARGET ZLIB_BLD)
-    ExternalProject_Add_StepDependencies(Qt6_BLD configure ZLIB_BLD-install)
-  endif (TARGET ZLIB_BLD)
-
-  ExternalProject_Add_StepDependencies(Qt6Svg_BLD configure Qt6_BLD-install)
+  TargetInstallDeps(Qt6Svg Qt6Svg_DEPENDS)
 
   # Copy the license info into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
