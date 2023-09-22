@@ -55,6 +55,8 @@ if (ENABLE_QT)
 
   TargetInstallDeps(Qt6 Qt6_DEPENDS)
 
+  # Normally this is directory based, but Qt6Svg needs it right away
+  set(Qt6_ADDED 1)
 
   set(Qt6Svg_DEPENDS PATCH Qt6 ZLIB)
   TargetVars(Qt6Svg_DEPENDS)
