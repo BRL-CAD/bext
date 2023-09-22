@@ -365,6 +365,11 @@ add_project(icu GROUPS "APPLESEED")
 # https://xerces.apache.org/xerces-c/
 add_project(xerces-c GROUPS "APPLESEED")
 
+# Boost - C++ libraries
+# https://www.boost.org
+# https://github.com/boostorg/boost
+add_project(boost GROUPS "APPLESEED")
+
 # netpbm library - support for pnm,ppm,pbm, etc. image files
 # http://netpbm.sourceforge.net/
 add_project(netpbm GROUPS "BRLCAD")
@@ -437,11 +442,6 @@ add_project(llvm GROUPS "APPLESEED;OSPRAY")
 # https://ispc.github.io
 # https://github.com/ispc/ispc
 add_project(ispc GROUPS "OSPRAY")
-
-# Boost - C++ libraries
-# https://www.boost.org
-# https://github.com/boostorg/boost
-add_project(boost GROUPS "APPLESEED")
 
 # STEPcode - support for reading and writing STEP files
 # https://github.com/stepcode/stepcode
