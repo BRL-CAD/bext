@@ -280,10 +280,23 @@ if (USE_OSPRAY)
   find_program(M4_EXECUTABLE m4 REQUIRED)
 endif (USE_OSPRAY)
 
+
+###############################################################################
+# Applying patch files cross platform is a challenging problem due to the
+# shortage of portable tools and issues with LF vs CRLF files - see
+# https://gitlab.kitware.com/cmake/cmake/-/issues/16854 for more background on
+# this.  We need to address the patch build tool first thing, since any of the
+# other ExternalProject_Add builds that follow may depend on it.
+###############################################################################
+add_subdirectory(patch)
+
+
 ###############################################################################
 # Although we have bundled flex and bison programs, they can be problematic to
 # build - they require working Autotools tool chains (except on Windows where
 # we have winflexbison).  We therefore attempt these builds only if we need to.
+# This check must come after the patch subdirectory, since if we DO add_project
+# the flexbison directory it will need the patch executable.
 ###############################################################################
 if (USE_APPLESEED OR USE_OSPRAY)
 
@@ -311,16 +324,6 @@ if (USE_APPLESEED OR USE_OSPRAY)
   set(BISON_ADDED 1)
 
 endif (USE_APPLESEED OR USE_OSPRAY)
-
-
-###############################################################################
-# Applying patch files cross platform is a challenging problem due to the
-# shortage of portable tools and issues with LF vs CRLF files - see
-# https://gitlab.kitware.com/cmake/cmake/-/issues/16854 for more background on
-# this.  We need to address the patch build tool first thing, since any of the
-# other ExternalProject_Add builds that follow may depend on it.
-###############################################################################
-add_subdirectory(patch)
 
 ###############################################################################
 # Build tools are used during compilation, but are not bundled or distributed
