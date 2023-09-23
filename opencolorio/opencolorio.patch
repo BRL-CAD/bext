@@ -1,6 +1,6 @@
-diff -Naur OpenColorIO-2.3.0/share/cmake/modules/Findminizip-ng.cmake opencolorio/share/cmake/modules/Findminizip-ng.cmake
---- OpenColorIO-2.3.0/share/cmake/modules/Findminizip-ng.cmake	2023-08-31 21:38:17.000000000 -0400
-+++ opencolorio/share/cmake/modules/Findminizip-ng.cmake	2023-09-13 20:30:01.607390291 -0400
+diff -Naur OpenColorIO/share/cmake/modules/Findminizip-ng.cmake OpenColorIO_BLD/share/cmake/modules/Findminizip-ng.cmake
+--- OpenColorIO/share/cmake/modules/Findminizip-ng.cmake	2023-09-20 21:19:44.072141445 -0400
++++ OpenColorIO_BLD/share/cmake/modules/Findminizip-ng.cmake	2023-09-22 21:16:41.527671423 -0400
 @@ -113,6 +113,7 @@
                  ${PC_minizip-ng_INCLUDE_DIRS}
              PATH_SUFFIXES
@@ -16,9 +16,9 @@ diff -Naur OpenColorIO-2.3.0/share/cmake/modules/Findminizip-ng.cmake opencolori
 -endif()
 \ No newline at end of file
 +endif()
-diff -Naur OpenColorIO-2.3.0/share/cmake/modules/Findyaml-cpp.cmake opencolorio/share/cmake/modules/Findyaml-cpp.cmake
---- OpenColorIO-2.3.0/share/cmake/modules/Findyaml-cpp.cmake	2023-08-31 21:38:17.000000000 -0400
-+++ opencolorio/share/cmake/modules/Findyaml-cpp.cmake	2023-09-13 20:06:47.130814785 -0400
+diff -Naur OpenColorIO/share/cmake/modules/Findyaml-cpp.cmake OpenColorIO_BLD/share/cmake/modules/Findyaml-cpp.cmake
+--- OpenColorIO/share/cmake/modules/Findyaml-cpp.cmake	2023-09-20 21:19:44.072141445 -0400
++++ OpenColorIO_BLD/share/cmake/modules/Findyaml-cpp.cmake	2023-09-22 21:16:41.527671423 -0400
 @@ -50,7 +50,7 @@
      endif()
  
@@ -28,9 +28,9 @@ diff -Naur OpenColorIO-2.3.0/share/cmake/modules/Findyaml-cpp.cmake opencolorio/
      else()
  
          # As yaml-cpp-config.cmake search fails, search an installed library
-diff -Naur OpenColorIO-2.3.0/share/cmake/modules/FindZLIB.cmake opencolorio/share/cmake/modules/FindZLIB.cmake
---- OpenColorIO-2.3.0/share/cmake/modules/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ opencolorio/share/cmake/modules/FindZLIB.cmake	2023-09-13 20:33:55.495448658 -0400
+diff -Naur OpenColorIO/share/cmake/modules/FindZLIB.cmake OpenColorIO_BLD/share/cmake/modules/FindZLIB.cmake
+--- OpenColorIO/share/cmake/modules/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
++++ OpenColorIO_BLD/share/cmake/modules/FindZLIB.cmake	2023-09-22 21:16:41.531671356 -0400
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -155,3 +155,22 @@ diff -Naur OpenColorIO-2.3.0/share/cmake/modules/FindZLIB.cmake opencolorio/shar
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
+diff -Naur OpenColorIO/src/OpenColorIO/CMakeLists.txt OpenColorIO_BLD/src/OpenColorIO/CMakeLists.txt
+--- OpenColorIO/src/OpenColorIO/CMakeLists.txt	2023-09-20 21:19:44.076141380 -0400
++++ OpenColorIO_BLD/src/OpenColorIO/CMakeLists.txt	2023-09-22 21:22:11.057960875 -0400
+@@ -283,6 +283,7 @@
+     configure_file(builtinconfigs/${TEMPLATE_HEADER_FULLNAME} ${CONFIGS_HEADER_LOCATION}/${TEMPLATE_HEADER_FULLNAME_H} @ONLY)
+ endforeach()
+ 
++find_package(zstd REQUIRED)
+ 
+ set(BUILD_INCLUDES
+     ${HEADER_LOCATION}/..
+@@ -311,6 +312,7 @@
+         "$<BUILD_INTERFACE:xxHash>"
+         ${YAML_CPP_LIBRARIES}
+         MINIZIP::minizip-ng
++		  zstd::libzstd_shared
+ )
+ 
+ if(OCIO_USE_SIMD AND OCIO_USE_SSE2NEON AND COMPILER_SUPPORTS_SSE_WITH_SSE2NEON)
