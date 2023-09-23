@@ -1,19 +1,23 @@
-diff -Naurw assimp-5.2.5/cmake-modules/FindZLIB.cmake assetimport/cmake-modules/FindZLIB.cmake
---- assimp-5.2.5/cmake-modules/FindZLIB.cmake	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/cmake-modules/FindZLIB.cmake	2023-08-23 14:25:43.874725903 -0400
+diff -Naur assimp/cmake-modules/FindZLIB.cmake assimp_BLD/cmake-modules/FindZLIB.cmake
+--- assimp/cmake-modules/FindZLIB.cmake	2023-09-20 21:22:27.781576452 -0400
++++ assimp_BLD/cmake-modules/FindZLIB.cmake	2023-09-23 11:22:52.826020362 -0400
 @@ -1,48 +1,123 @@
 -#-------------------------------------------------------------------
 -# This file is part of the CMake build system for OGRE
 -#     (Object-oriented Graphics Rendering Engine)
 -# For the latest info, see http://www.ogre3d.org/
--#
++#.rst:
++# FindZLIB
++# --------
+ #
 -# The contents of this file are placed in the public domain. Feel
 -# free to make use of it in any way you like.
 -#-------------------------------------------------------------------
 -
 -# - Try to find ZLIB
 -# Once done, this will define
--#
++# Find the native ZLIB includes and library.
+ #
 -#  ZLIB_FOUND - system has ZLIB
 -#  ZLIB_INCLUDE_DIRS - the ZLIB include directories
 -#  ZLIB_LIBRARIES - link these to use ZLIB
@@ -45,12 +49,10 @@ diff -Naurw assimp-5.2.5/cmake-modules/FindZLIB.cmake assetimport/cmake-modules/
 -find_path(ZLIB_INCLUDE_DIR NAMES zlib.h HINTS ${ZLIB_INC_SEARCH_PATH} ${ZLIB_PKGC_INCLUDE_DIRS})
 -find_library(ZLIB_LIBRARY_REL NAMES ${ZLIB_LIBRARY_NAMES} HINTS ${ZLIB_LIB_SEARCH_PATH} ${ZLIB_PKGC_LIBRARY_DIRS} PATH_SUFFIXES "" release relwithdebinfo minsizerel)
 -find_library(ZLIB_LIBRARY_DBG NAMES ${ZLIB_LIBRARY_NAMES_DBG} HINTS ${ZLIB_LIB_SEARCH_PATH} ${ZLIB_PKGC_LIBRARY_DIRS} PATH_SUFFIXES "" debug)
-+#.rst:
-+# FindZLIB
-+# --------
-+#
-+# Find the native ZLIB includes and library.
-+#
+-
+-make_library_set(ZLIB_LIBRARY)
+-
+-findpkg_finish(ZLIB)
 +# IMPORTED Targets
 +# ^^^^^^^^^^^^^^^^
 +#
@@ -93,7 +95,6 @@ diff -Naurw assimp-5.2.5/cmake-modules/FindZLIB.cmake assetimport/cmake-modules/
 +# A user may set ``ZLIB_ROOT`` to a zlib installation root to tell this
 +# module where to look.
  
--make_library_set(ZLIB_LIBRARY)
 +#=============================================================================
 +# Copyright 2001-2011 Kitware, Inc.
 +#
@@ -121,10 +122,9 @@ diff -Naurw assimp-5.2.5/cmake-modules/FindZLIB.cmake assetimport/cmake-modules/
 +        "$ENV{PROGRAMFILES}/zlib"
 +  )
 +list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_NORMAL)
- 
--findpkg_finish(ZLIB)
++
 +set(ZLIB_NAMES z_brl z zlib zdll zlib1 zlibd zlibd1)
- 
++
 +# Try each search configuration.
 +foreach(search ${_ZLIB_SEARCHES})
 +  find_path(ZLIB_INCLUDE_DIR NAMES zlib.h        ${${search}} PATH_SUFFIXES include)
@@ -170,9 +170,9 @@ diff -Naurw assimp-5.2.5/cmake-modules/FindZLIB.cmake assetimport/cmake-modules/
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naurw assimp-5.2.5/code/AssetLib/Collada/ColladaParser.cpp assetimport/code/AssetLib/Collada/ColladaParser.cpp
---- assimp-5.2.5/code/AssetLib/Collada/ColladaParser.cpp	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/code/AssetLib/Collada/ColladaParser.cpp	2023-08-23 14:25:43.878725829 -0400
+diff -Naur assimp/code/AssetLib/Collada/ColladaParser.cpp assimp_BLD/code/AssetLib/Collada/ColladaParser.cpp
+--- assimp/code/AssetLib/Collada/ColladaParser.cpp	2023-09-20 21:22:27.789576325 -0400
++++ assimp_BLD/code/AssetLib/Collada/ColladaParser.cpp	2023-09-23 11:22:52.826020362 -0400
 @@ -67,7 +67,7 @@
      va_start(args, msg);
  
@@ -182,9 +182,9 @@ diff -Naurw assimp-5.2.5/code/AssetLib/Collada/ColladaParser.cpp assetimport/cod
      ai_assert(iLen > 0);
  
      va_end(args);
-diff -Naurw assimp-5.2.5/code/AssetLib/FBX/FBXExporter.cpp assetimport/code/AssetLib/FBX/FBXExporter.cpp
---- assimp-5.2.5/code/AssetLib/FBX/FBXExporter.cpp	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/code/AssetLib/FBX/FBXExporter.cpp	2023-08-23 14:25:43.878725829 -0400
+diff -Naur assimp/code/AssetLib/FBX/FBXExporter.cpp assimp_BLD/code/AssetLib/FBX/FBXExporter.cpp
+--- assimp/code/AssetLib/FBX/FBXExporter.cpp	2023-09-20 21:22:27.789576325 -0400
++++ assimp_BLD/code/AssetLib/FBX/FBXExporter.cpp	2023-09-23 11:22:52.830020296 -0400
 @@ -1228,7 +1228,7 @@
                  "Version", int32_t(101), outstream, binary, indent
              );
@@ -194,9 +194,9 @@ diff -Naurw assimp-5.2.5/code/AssetLib/FBX/FBXExporter.cpp assetimport/code/Asse
              FBX::Node::WritePropertyNode(
                  "Name", (const char*)layerName, outstream, binary, indent
              );
-diff -Naurw assimp-5.2.5/code/AssetLib/MD5/MD5Parser.cpp assetimport/code/AssetLib/MD5/MD5Parser.cpp
---- assimp-5.2.5/code/AssetLib/MD5/MD5Parser.cpp	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/code/AssetLib/MD5/MD5Parser.cpp	2023-08-23 14:25:43.882725753 -0400
+diff -Naur assimp/code/AssetLib/MD5/MD5Parser.cpp assimp_BLD/code/AssetLib/MD5/MD5Parser.cpp
+--- assimp/code/AssetLib/MD5/MD5Parser.cpp	2023-09-20 21:22:27.801576137 -0400
++++ assimp_BLD/code/AssetLib/MD5/MD5Parser.cpp	2023-09-23 11:22:52.830020296 -0400
 @@ -102,7 +102,7 @@
  // Report warning to the log stream
  /*static*/ void MD5Parser::ReportWarning(const char *warn, unsigned int line) {
@@ -206,9 +206,9 @@ diff -Naurw assimp-5.2.5/code/AssetLib/MD5/MD5Parser.cpp assetimport/code/AssetL
      ASSIMP_LOG_WARN(szBuffer);
  }
  
-diff -Naurw assimp-5.2.5/code/AssetLib/MDL/MDLFileData.h assetimport/code/AssetLib/MDL/MDLFileData.h
---- assimp-5.2.5/code/AssetLib/MDL/MDLFileData.h	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/code/AssetLib/MDL/MDLFileData.h	2023-08-23 14:25:43.882725753 -0400
+diff -Naur assimp/code/AssetLib/MDL/MDLFileData.h assimp_BLD/code/AssetLib/MDL/MDLFileData.h
+--- assimp/code/AssetLib/MDL/MDLFileData.h	2023-09-20 21:22:27.801576137 -0400
++++ assimp_BLD/code/AssetLib/MDL/MDLFileData.h	2023-09-23 11:22:52.830020296 -0400
 @@ -876,7 +876,7 @@
          : apcOutBones(),
          iNum()
@@ -218,9 +218,9 @@ diff -Naurw assimp-5.2.5/code/AssetLib/MDL/MDLFileData.h assetimport/code/AssetL
      }
  
      //! Destruction: properly delete all allocated resources
-diff -Naurw assimp-5.2.5/code/AssetLib/MDL/MDLLoader.cpp assetimport/code/AssetLib/MDL/MDLLoader.cpp
---- assimp-5.2.5/code/AssetLib/MDL/MDLLoader.cpp	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/code/AssetLib/MDL/MDLLoader.cpp	2023-08-23 14:25:43.882725753 -0400
+diff -Naur assimp/code/AssetLib/MDL/MDLLoader.cpp assimp_BLD/code/AssetLib/MDL/MDLLoader.cpp
+--- assimp/code/AssetLib/MDL/MDLLoader.cpp	2023-09-20 21:22:27.801576137 -0400
++++ assimp_BLD/code/AssetLib/MDL/MDLLoader.cpp	2023-09-23 11:22:52.830020296 -0400
 @@ -298,7 +298,7 @@
          }
  
@@ -230,10 +230,49 @@ diff -Naurw assimp-5.2.5/code/AssetLib/MDL/MDLLoader.cpp assetimport/code/AssetL
                              "or contains invalid data (File: %s Line: %u)",
                  szFilePtr, iLine);
  
-diff -Naurw assimp-5.2.5/code/CMakeLists.txt assetimport/code/CMakeLists.txt
---- assimp-5.2.5/code/CMakeLists.txt	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/code/CMakeLists.txt	2023-08-23 14:25:43.886725678 -0400
-@@ -1242,6 +1242,7 @@
+diff -Naur assimp/code/CMakeLists.txt assimp_BLD/code/CMakeLists.txt
+--- assimp/code/CMakeLists.txt	2023-09-20 21:22:27.813575948 -0400
++++ assimp_BLD/code/CMakeLists.txt	2023-09-23 11:28:29.116406490 -0400
+@@ -898,17 +898,18 @@
+ SOURCE_GROUP( Extra FILES ${Extra_SRCS})
+ 
+ # pugixml
+-IF(ASSIMP_HUNTER_ENABLED)
+-  hunter_add_package(pugixml)
+-  find_package(pugixml CONFIG REQUIRED)
+-ELSE()
+-  SET( Pugixml_SRCS
+-    ../contrib/pugixml/src/pugiconfig.hpp
+-    ../contrib/pugixml/src/pugixml.hpp
+-  )
+-  INCLUDE_DIRECTORIES("../contrib/pugixml/src")
+-  SOURCE_GROUP( Contrib\\Pugixml FILES ${Pugixml_SRCS})
+-ENDIF()
++#IF(ASSIMP_HUNTER_ENABLED)
++#  hunter_add_package(pugixml)
++#  find_package(pugixml CONFIG REQUIRED)
++#ELSE()
++#  SET( Pugixml_SRCS
++#    ../contrib/pugixml/src/pugiconfig.hpp
++#    ../contrib/pugixml/src/pugixml.hpp
++#  )
++#  INCLUDE_DIRECTORIES("../contrib/pugixml/src")
++#  SOURCE_GROUP( Contrib\\Pugixml FILES ${Pugixml_SRCS})
++#ENDIF()
++find_package(pugixml REQUIRED)
+ 
+ # utf8
+ IF(ASSIMP_HUNTER_ENABLED)
+@@ -1224,7 +1225,7 @@
+     target_link_libraries(assimp PUBLIC ${draco_LIBRARIES})
+   endif()
+ ELSE()
+-  TARGET_LINK_LIBRARIES(assimp ${ZLIB_LIBRARIES} ${OPENDDL_PARSER_LIBRARIES})
++  TARGET_LINK_LIBRARIES(assimp pugixml ${ZLIB_LIBRARIES} ${OPENDDL_PARSER_LIBRARIES})
+   if (ASSIMP_BUILD_DRACO)
+     target_link_libraries(assimp ${draco_LIBRARIES})
+   endif()
+@@ -1242,6 +1243,7 @@
    TARGET_LINK_LIBRARIES(assimp ${C4D_EXTRA_LIBRARIES})
  ENDIF ()
  
@@ -241,7 +280,7 @@ diff -Naurw assimp-5.2.5/code/CMakeLists.txt assetimport/code/CMakeLists.txt
  if( MSVC )
    # in order to prevent DLL hell, each of the DLLs have to be suffixed with the major version and msvc prefix
    # CMake 3.12 added a variable for this
-@@ -1288,11 +1289,12 @@
+@@ -1288,11 +1290,12 @@
      target_compile_definitions(assimp PUBLIC WindowsStore)
      TARGET_LINK_LIBRARIES(assimp advapi32)
  endif()
@@ -255,9 +294,9 @@ diff -Naurw assimp-5.2.5/code/CMakeLists.txt assetimport/code/CMakeLists.txt
  )
  
  if (APPLE)
-diff -Naurw assimp-5.2.5/code/PostProcessing/ValidateDataStructure.cpp assetimport/code/PostProcessing/ValidateDataStructure.cpp
---- assimp-5.2.5/code/PostProcessing/ValidateDataStructure.cpp	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/code/PostProcessing/ValidateDataStructure.cpp	2023-08-23 14:25:43.890725602 -0400
+diff -Naur assimp/code/PostProcessing/ValidateDataStructure.cpp assimp_BLD/code/PostProcessing/ValidateDataStructure.cpp
+--- assimp/code/PostProcessing/ValidateDataStructure.cpp	2023-09-20 21:22:27.821575821 -0400
++++ assimp_BLD/code/PostProcessing/ValidateDataStructure.cpp	2023-09-23 11:22:52.830020296 -0400
 @@ -80,7 +80,7 @@
      va_start(args, msg);
  
@@ -276,9 +315,9 @@ diff -Naurw assimp-5.2.5/code/PostProcessing/ValidateDataStructure.cpp assetimpo
      ai_assert(iLen > 0);
  
      va_end(args);
-diff -Naurw assimp-5.2.5/contrib/openddlparser/code/OpenDDLExport.cpp assetimport/contrib/openddlparser/code/OpenDDLExport.cpp
---- assimp-5.2.5/contrib/openddlparser/code/OpenDDLExport.cpp	2022-09-08 14:13:43.000000000 -0400
-+++ assetimport/contrib/openddlparser/code/OpenDDLExport.cpp	2023-08-23 14:25:43.910725227 -0400
+diff -Naur assimp/contrib/openddlparser/code/OpenDDLExport.cpp assimp_BLD/contrib/openddlparser/code/OpenDDLExport.cpp
+--- assimp/contrib/openddlparser/code/OpenDDLExport.cpp	2023-09-20 21:22:27.849575380 -0400
++++ assimp_BLD/contrib/openddlparser/code/OpenDDLExport.cpp	2023-09-23 11:22:52.830020296 -0400
 @@ -224,7 +224,7 @@
          statement += "[";
          char buffer[256];
