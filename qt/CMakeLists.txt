@@ -55,12 +55,6 @@ if (ENABLE_QT)
 
   TargetInstallDeps(Qt6 Qt6_DEPENDS)
 
-  # Normally this is directory based, but Qt6Svg needs it right away
-  set(Qt6_ADDED 1)
-
-  set(Qt6Svg_DEPENDS PATCH Qt6 ZLIB)
-  TargetVars(Qt6Svg_DEPENDS)
-
   ExternalProject_Add(Qt6Svg_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/qt/qtsvg"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -84,7 +78,7 @@ if (ENABLE_QT)
     STEP_TARGETS install
     )
 
-  TargetInstallDeps(Qt6Svg Qt6Svg_DEPENDS)
+  ExternalProject_Add_StepDependencies(Qt6Svg_BLD configure Qt6_BLD-install)
 
   # Copy the license info into position in CMAKE_BUNDLE_INSTALL_PREFIX
   file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
