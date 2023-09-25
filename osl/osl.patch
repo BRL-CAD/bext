@@ -21,10 +21,22 @@ diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OpenShadingLanguage_BLD
  endif()
  
 +if (MSVC)
-+    find_program(BISON_EXECUTABLE NAMES win_bison DOC "path to the bison executable")
-+    find_program(FLEX_EXECUTABLE NAMES win_flex DOC "path to the flex executable")
++    find_program(BISON_EXECUTABLE NAMES win_bison HINTS ${BISON_ROOT} DOC "path to the bison executable")
++    find_program(FLEX_EXECUTABLE NAMES win_flex HINTS ${BISON_ROOT} DOC "path to the flex executable")
 +endif (MSVC)
 +
  checked_find_package (BISON 2.7 REQUIRED
                        PRINT BISON_EXECUTABLE)
  checked_find_package (FLEX 2.3.35 REQUIRED
+diff -Naur OpenShadingLanguage/src/liboslcomp/ast.cpp OpenShadingLanguage_BLD/src/liboslcomp/ast.cpp
+--- OpenShadingLanguage/src/liboslcomp/ast.cpp	2023-09-20 21:22:54.897148354 -0400
++++ OpenShadingLanguage_BLD/src/liboslcomp/ast.cpp	2023-09-25 13:30:48.565914345 -0400
+@@ -46,7 +46,7 @@
+     for (int i = 0; i < ASTNode::_last_node; ++i)
+         if (node_counts[i] > 0)
+             Strutil::print("ASTNode type {:2}: {:5}   (peak {:5})\n", i,
+-                           node_counts[i], node_counts_peak[i]);
++                           (int)node_counts[i], (int)node_counts_peak[i]);
+ });
+ }  // namespace
+ #endif
