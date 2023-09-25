@@ -1,7 +1,7 @@
-diff -Naur pystring.orig/CMakeLists.txt PYSTRING_BLD/CMakeLists.txt
---- pystring.orig/CMakeLists.txt	2023-09-21 08:54:36.117249456 -0400
-+++ PYSTRING_BLD/CMakeLists.txt	2023-09-21 09:02:35.430203313 -0400
-@@ -1,22 +1,55 @@
+diff -Naur pystring/CMakeLists.txt pystring_BLD/CMakeLists.txt
+--- pystring/CMakeLists.txt	2023-09-20 21:19:05.476740464 -0400
++++ pystring_BLD/CMakeLists.txt	2023-09-25 10:59:09.162100129 -0400
+@@ -1,22 +1,57 @@
  cmake_minimum_required(VERSION 3.2)
  project(pystring CXX)
  
@@ -61,6 +61,8 @@ diff -Naur pystring.orig/CMakeLists.txt PYSTRING_BLD/CMakeLists.txt
 +    LIBRARY DESTINATION ${LIB_DIR}
 +    ARCHIVE DESTINATION ${LIB_DIR})
 +endif (BUILD_STATIC_LIBS)
++
++install(FILES pystring.h DESTINATION ${INCLUDE_DIR}/pystring)
 +
 +if (ENABLE_TESTING)
 +  add_executable (pystring_test test.cpp)
