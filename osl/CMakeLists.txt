@@ -25,6 +25,11 @@ if (ENABLE_OSL)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
 
+  # On Windows it's both or nothing...
+  if (MSVC AND FLEX_TARGET)
+    set(BISON_TARGET 1)
+  endif (MSVC AND FLEX_TARGET)
+
   ExternalProject_Add(OSL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/OpenShadingLanguage"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
