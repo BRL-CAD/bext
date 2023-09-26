@@ -1,6 +1,18 @@
+diff -Naur OpenShadingLanguage/src/cmake/Config.cmake.in OpenShadingLanguage_BLD/src/cmake/Config.cmake.in
+--- OpenShadingLanguage/src/cmake/Config.cmake.in	2023-09-20 21:22:54.885148544 -0400
++++ OpenShadingLanguage_BLD/src/cmake/Config.cmake.in	2023-09-25 21:05:34.672936351 -0400
+@@ -8,7 +8,7 @@
+ 
+ # add here all the find_dependency() whenever switching to config based dependencies
+ if (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 3.0)
+-    find_dependency(Imath @Imath_VERSION@)
++    find_dependency(OpenEXR @OpenEXR_VERSION@)
+ elseif (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 2.4 AND @FOUND_OPENEXR_WITH_CONFIG@)
+     find_dependency(IlmBase @OpenEXR_VERSION@)
+     find_dependency(OpenEXR @OpenEXR_VERSION@)
 diff -Naur OpenShadingLanguage/src/cmake/externalpackages.cmake OpenShadingLanguage_BLD/src/cmake/externalpackages.cmake
 --- OpenShadingLanguage/src/cmake/externalpackages.cmake	2023-09-20 21:22:54.889148481 -0400
-+++ OpenShadingLanguage_BLD/src/cmake/externalpackages.cmake	2023-09-25 11:54:05.547350964 -0400
++++ OpenShadingLanguage_BLD/src/cmake/externalpackages.cmake	2023-09-25 21:05:14.829265011 -0400
 @@ -49,11 +49,6 @@
      # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
  else ()
@@ -15,7 +27,7 @@ diff -Naur OpenShadingLanguage/src/cmake/externalpackages.cmake OpenShadingLangu
                         COMPONENTS ${Boost_COMPONENTS}
 diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OpenShadingLanguage_BLD/src/cmake/flexbison.cmake
 --- OpenShadingLanguage/src/cmake/flexbison.cmake	2023-09-20 21:22:54.889148481 -0400
-+++ OpenShadingLanguage_BLD/src/cmake/flexbison.cmake	2023-09-25 12:01:52.995418346 -0400
++++ OpenShadingLanguage_BLD/src/cmake/flexbison.cmake	2023-09-25 21:05:14.829265011 -0400
 @@ -27,6 +27,11 @@
                   DOC "path to the bison executable")
  endif()
@@ -30,7 +42,7 @@ diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OpenShadingLanguage_BLD
  checked_find_package (FLEX 2.3.35 REQUIRED
 diff -Naur OpenShadingLanguage/src/liboslcomp/ast.cpp OpenShadingLanguage_BLD/src/liboslcomp/ast.cpp
 --- OpenShadingLanguage/src/liboslcomp/ast.cpp	2023-09-20 21:22:54.897148354 -0400
-+++ OpenShadingLanguage_BLD/src/liboslcomp/ast.cpp	2023-09-25 13:30:48.565914345 -0400
++++ OpenShadingLanguage_BLD/src/liboslcomp/ast.cpp	2023-09-25 21:05:14.829265011 -0400
 @@ -46,7 +46,7 @@
      for (int i = 0; i < ASTNode::_last_node; ++i)
          if (node_counts[i] > 0)
