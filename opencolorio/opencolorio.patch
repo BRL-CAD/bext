@@ -20,8 +20,17 @@ diff -Naur OpenColorIO/CMakeLists.txt OpenColorIO_BLD/CMakeLists.txt
      )
  endif()
 diff -Naur OpenColorIO/share/cmake/modules/FindExtPackages.cmake OpenColorIO_BLD/share/cmake/modules/FindExtPackages.cmake
---- OpenColorIO/share/cmake/modules/FindExtPackages.cmake	2023-09-20 21:19:44.072141445 -0400
-+++ OpenColorIO_BLD/share/cmake/modules/FindExtPackages.cmake	2023-09-25 10:54:11.966557593 -0400
+--- OpenColorIO/share/cmake/modules/FindExtPackages.cmake	2023-09-22 10:23:08.426870949 -0400
++++ OpenColorIO_BLD/share/cmake/modules/FindExtPackages.cmake	2023-09-26 09:48:41.316829818 -0400
+@@ -75,7 +75,7 @@
+ 
+ # Imath (>=3.1)
+ # https://github.com/AcademySoftwareFoundation/Imath
+-ocio_handle_dependency(  Imath REQUIRED ALLOW_INSTALL
++ocio_handle_dependency(  OpenEXR REQUIRED ALLOW_INSTALL
+                          MIN_VERSION 3.1.1
+                          RECOMMENDED_VERSION 3.1.6
+                          RECOMMENDED_VERSION_REASON "Latest version tested with OCIO")
 @@ -110,10 +110,11 @@
  
  # minizip-ng
