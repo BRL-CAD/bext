@@ -179,3 +179,90 @@ diff -Naur OpenShadingLanguage/src/liboslcomp/ast.cpp OpenShadingLanguage_BLD/sr
  });
  }  // namespace
  #endif
+diff -Naur OpenShadingLanguage/src/liboslexec/CMakeLists.txt OSL_BLD/src/liboslexec/CMakeLists.txt
+--- OpenShadingLanguage/src/liboslexec/CMakeLists.txt	2023-09-27 10:07:27.042600776 -0400
++++ OSL_BLD/src/liboslexec/CMakeLists.txt	2023-09-27 09:57:04.218992278 -0400
+@@ -553,6 +553,7 @@
+         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+         ${CLANG_LIBRARIES}
+         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
++	${ZLIB_LIBRARIES}
+     )
+ 
+ target_compile_features (${local_lib}
+@@ -583,17 +584,17 @@
+ # Unit tests
+ if (OSL_BUILD_TESTS)
+     add_executable (accum_test accum_test.cpp)
+-    target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
++    target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} LLVMSupport ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
+     set_target_properties (accum_test PROPERTIES FOLDER "Unit Tests")
+     add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
+ 
+     add_executable (dual_test dual_test.cpp)
+-    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
++    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} LLVMSupport ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
+     set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
+     add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
+ 
+     add_executable (llvmutil_test llvmutil_test.cpp)
+-    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
++    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} LLVMSupport ${ZLIB_LIBRARIES})
+     set_target_properties (llvmutil_test PROPERTIES FOLDER "Unit Tests")
+     add_test (unit_llvmutil ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvmutil_test)
+ endif ()
+diff -Naur OpenShadingLanguage/src/oslc/CMakeLists.txt OSL_BLD/src/oslc/CMakeLists.txt
+--- OpenShadingLanguage/src/oslc/CMakeLists.txt	2023-09-27 10:07:27.023600875 -0400
++++ OSL_BLD/src/oslc/CMakeLists.txt	2023-09-27 09:57:46.671744918 -0400
+@@ -12,5 +12,5 @@
+ endif ()
+ 
+ add_executable ( oslc ${oslc_srcs} )
+-target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
++target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} LLVMSupport ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
+ install_targets (oslc)
+diff -Naur OpenShadingLanguage/src/testrender/CMakeLists.txt OSL_BLD/src/testrender/CMakeLists.txt
+--- OpenShadingLanguage/src/testrender/CMakeLists.txt	2023-09-27 10:07:27.074600609 -0400
++++ OSL_BLD/src/testrender/CMakeLists.txt	2023-09-27 10:06:52.103783118 -0400
+@@ -61,7 +61,10 @@
+ target_link_libraries (testrender
+     PRIVATE
+         oslexec oslquery
+-        pugixml::pugixml)
++        pugixml::pugixml
++	LLVMSupport
++	${ZLIB_LIBRARIES}
++	)
+ 
+ osl_optix_target (testrender)
+ 
+diff -Naur OpenShadingLanguage/src/testshade/CMakeLists.txt OSL_BLD/src/testshade/CMakeLists.txt
+--- OpenShadingLanguage/src/testshade/CMakeLists.txt	2023-09-27 10:07:27.101600468 -0400
++++ OSL_BLD/src/testshade/CMakeLists.txt	2023-09-27 10:04:10.260627826 -0400
+@@ -68,7 +68,7 @@
+ 
+ target_link_libraries (testshade
+                        PRIVATE
+-                           oslexec oslquery)
++		       oslexec oslquery LLVMSupport ${ZLIB_LIBRARIES})
+ 
+ 
+ install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+@@ -85,7 +85,7 @@
+ 
+ target_link_libraries (libtestshade
+                        PRIVATE
+-                           oslexec oslquery)
++                           oslexec oslquery LLVMSupport ${ZLIB_LIBRARIES})
+ set_target_properties (libtestshade PROPERTIES PREFIX "")
+ 
+ install_targets ( libtestshade )
+@@ -95,7 +95,7 @@
+ target_link_libraries (testshade_dso
+                        PRIVATE
+                            OpenImageIO::OpenImageIO
+-                           ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
++                           ${Boost_LIBRARIES} LLVMSupport ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS} )
+ install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+ 
+ osl_optix_target(testshade)
