@@ -397,10 +397,6 @@ add_project(regex GROUPS "BRLCAD")
 # https://github.com/libexpat/libexpat
 add_project(expat GROUPS "APPLESEED")
 
-# pugixml - a light-weight C++ XML processing library
-# https://pugixml.org/
-add_project(pugixml GROUPS "APPLESEED")
-
 # International Components for Unicode
 # https://github.com/unicode-org/icu
 add_project(icu GROUPS "APPLESEED")
@@ -502,6 +498,10 @@ add_project(proj GROUPS "GDAL")
 # GDAL -  translator library for raster and vector geospatial data formats
 # https://gdal.org
 add_project(gdal GROUPS "GDAL")
+
+# pugixml - a light-weight C++ XML processing library
+# https://pugixml.org/
+add_project(pugixml GROUPS "BRLCAD;APPLESEED")
 
 # Open Asset Import Library - library for supporting I/O for a number of
 # Geometry file formats
