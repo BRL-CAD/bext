@@ -22,6 +22,8 @@ if (QT_RET)
   message(FATAL_ERROR "Qt build failed: ${MSG}\n")
 endif (QT_RET)
 
+message("Qt build succeeded: ${MSG}\n")
+
 # Local Variables:
 # tab-width: 8
 # mode: cmake

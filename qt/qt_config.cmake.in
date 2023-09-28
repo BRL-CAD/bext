@@ -44,6 +44,7 @@ if (QT_RET)
   message(FATAL_ERROR "Qt configure failed: ${MSG}\n")
 endif (QT_RET)
 
+message("Qt configure succeeded: ${MSG}\n")
 
 # Local Variables:
 # tab-width: 8
