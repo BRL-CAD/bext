@@ -14,11 +14,10 @@ if (NOT WIN32)
   set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
 endif (NOT WIN32)
 
-# We want Qt to use our bundled zlib and png if possible.  If this proves
-# too difficult we can go with the Qt bundled copies, but first let's see
-# if this can work.
+# Qt has its own solution for zlib and png - rather than trying to
+# coax it into using ours, just go with their solution:
 # https://doc.qt.io/qt-6/configure-options.html
-set(CONFIG_EXTRA_OPTS ${CONFIG_EXTRA_OPTS} -system-zlib -system-libpng)
+set(CONFIG_EXTRA_OPTS ${CONFIG_EXTRA_OPTS} -qt-zlib -qt-libpng)
 
 # If we can't compile Qt with XCB on X11 platforms, we want a fatal error -
 # a non-GUI Qt build isn't helpful
