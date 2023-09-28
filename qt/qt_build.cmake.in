@@ -1,3 +1,9 @@
+# This is less elegant than setting the RPATH, but if it works it's
+# simpler than trying to inject the former into Qt's build logic
+if (NOT WIN32)
+  set(ENV{LD_LIBRARY_PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+endif (NOT WIN32)
+
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   set(QT_CMAKE_OPTS "--config Debug --parallel 8")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
