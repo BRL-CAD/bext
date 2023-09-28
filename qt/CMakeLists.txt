@@ -34,13 +34,15 @@ if (ENABLE_QT)
     set(CBT ${CMAKE_BUILD_TYPE})
   endif (isMultiConfig)
 
+  set(QT_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/qtbase")
   set(QT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/qt6-build")
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qt_config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/qt_config.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qt_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/qt_build.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qt_install.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/qt_install.cmake @ONLY)
 
   ExternalProject_Add(Qt6_BLD
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/qt/qtbase"
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/qt/qtbase"
+    SOURCE_DIR "${QT_SOURCE_DIR}"
     BINARY_DIR "${QT_BUILD_DIR}"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/qt.patch
