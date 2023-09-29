@@ -66,9 +66,9 @@ if(NOT DEFINED DATA_DIR)
   set(DATA_DIR share)
 endif(NOT DEFINED DATA_DIR)
 
-# extinstall is the target for projects that will be incorporated into parent
+# install is the target for projects that will be incorporated into parent
 # software binary distributions.  For tools like astyle and plief that are
-# build tools only, we instead place them in extnoinstall.  We need a parent
+# build tools only, we instead place them in noinstall.  We need a parent
 # directory to hold both of these outputs, and we want it to be in a standard
 # location that other projects will know to look for.
 
@@ -93,8 +93,8 @@ endif (NOT CMAKE_INSTALL_PREFIX)
 set(CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Calculated or specified install prefix" FORCE)
 
 set(BEXT_ROOT bext_install)
-set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/extinstall" CACHE PATH "Outputs for bundling" FORCE)
-set(CMAKE_NOBUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/extnoinstall" CACHE PATH "Build tools NOT intended for bundling" FORCE)
+set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/install" CACHE PATH "Outputs for bundling" FORCE)
+set(CMAKE_NOBUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/noinstall" CACHE PATH "Build tools NOT intended for bundling" FORCE)
 file(MAKE_DIRECTORY "${CMAKE_BUNDLE_INSTALL_PREFIX}")
 file(MAKE_DIRECTORY "${CMAKE_NOBUNDLE_INSTALL_PREFIX}")
 
@@ -171,10 +171,10 @@ if(MSVC)
 endif(MSVC)
 
 # Add a target that will run every time we build and touch a file in
-# extnoinstall to allow interested parent CMake builds to be aware of potential
+# noinstall to allow interested parent CMake builds to be aware of potential
 # changes, even if all that happens is to add files - otherwise, add-only
 # operations won't trigger a CMake reconfigure even if the client build is
-# watching the extinstall files.
+# watching the install files.
 file(MAKE_DIRECTORY ${CMAKE_NOBUNDLE_INSTALL_PREFIX})
 add_custom_target(BuildStamp ALL COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_NOBUNDLE_INSTALL_PREFIX}/build-stamp)
 
@@ -328,7 +328,7 @@ endif (USE_APPLESEED OR USE_OSPRAY)
 # Build tools are used during compilation, but are not bundled or distributed
 # with binary packages.  We group these tools here for convenience.  Unlike the
 # build targets intended for distribution, these outputs are all
-# targeted to the extnoinstall subdirectory.
+# targeted to the noinstall subdirectory.
 ###############################################################################
 add_project(astyle GROUPS "BRLCAD")
 add_project(lemon GROUPS "BRLCAD")
