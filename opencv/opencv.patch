@@ -1,8 +1,3 @@
-diff -Naur opencv-4.8.0/.cache/.gitignore opencv/.cache/.gitignore
---- opencv-4.8.0/.cache/.gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ opencv/.cache/.gitignore	2023-09-15 10:21:11.015224413 -0400
-@@ -0,0 +1 @@
-+*
 diff -Naur opencv-4.8.0/cmake/FindPNG.cmake opencv/cmake/FindPNG.cmake
 --- opencv-4.8.0/cmake/FindPNG.cmake	1969-12-31 19:00:00.000000000 -0500
 +++ opencv/cmake/FindPNG.cmake	2023-09-15 10:45:04.898760249 -0400
