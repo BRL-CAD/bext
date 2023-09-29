@@ -92,7 +92,7 @@ endif (NOT CMAKE_INSTALL_PREFIX)
 # Having decided on the path, make sure subsequent configures stick with it
 set(CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Calculated or specified install prefix" FORCE)
 
-set(BEXT_ROOT bext_install)
+set(BEXT_ROOT bext_output)
 set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/install" CACHE PATH "Outputs for bundling" FORCE)
 set(CMAKE_NOBUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/noinstall" CACHE PATH "Build tools NOT intended for bundling" FORCE)
 file(MAKE_DIRECTORY "${CMAKE_BUNDLE_INSTALL_PREFIX}")
