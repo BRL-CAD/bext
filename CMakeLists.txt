@@ -230,12 +230,13 @@ endfunction(git_submodule_init path)
 # as "tags" that control adding packages.  If at least one of the tags for a
 # given package is set, that package will be built.
 ###############################################################################
-option(USE_APPLESEED "Appleseed rendering system"   OFF)
-option(USE_BRLCAD    "BRL-CAD required dependency"  ON)
-option(USE_GDAL      "GDAL terrain support"         ON)
-option(USE_OSPRAY    "OSPRay rendering system"      OFF)
-option(USE_QT        "Qt graphical toolkit support" ON)
-option(USE_TCL       "Tcl/Tk support"               ON)
+option(USE_APPLESEED    "Appleseed rendering system"                 OFF)
+option(USE_BRLCAD       "BRL-CAD core dependencies"                  ON)
+option(USE_BRLCAD_EXTRA "BRL-CAD dependencies that can be disabled"  ON)
+option(USE_GDAL         "GDAL terrain support"                       ON)
+option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
+option(USE_QT           "Qt graphical toolkit support"               ON)
+option(USE_TCL          "Tcl/Tk support"                             ON)
 
 function(add_project pname)
   cmake_parse_arguments(A "" "" "GROUPS" ${ARGN})
@@ -335,7 +336,7 @@ add_project(lemon GROUPS "BRLCAD")
 add_project(re2c GROUPS "BRLCAD")
 add_project(perplex GROUPS "BRLCAD")
 add_project(strclear GROUPS "BRLCAD")
-add_project(xmltools GROUPS "BRLCAD")  # Used for Docbook building
+add_project(xmltools GROUPS "BRLCAD_EXTRA")  # Used for Docbook building
 
 # RPATH editing - LIEF has the core capabilities, and plief exposes them via
 # a command line utility with patchelf compatible options, so we can drop
@@ -485,7 +486,7 @@ add_project(ispc GROUPS "OSPRAY")
 
 # STEPcode - support for reading and writing STEP files
 # https://github.com/stepcode/stepcode
-add_project(stepcode GROUPS "BRLCAD")
+add_project(stepcode GROUPS "BRLCAD_EXTRA")
 
 # SQLITE3 - embeddable database
 # https://www.sqlite.org
@@ -501,20 +502,20 @@ add_project(gdal GROUPS "GDAL")
 
 # pugixml - a light-weight C++ XML processing library
 # https://pugixml.org/
-add_project(pugixml GROUPS "BRLCAD;APPLESEED")
+add_project(pugixml GROUPS "BRLCAD_EXTRA;APPLESEED")
 
 # Open Asset Import Library - library for supporting I/O for a number of
 # Geometry file formats
 # https://github.com/assimp/assimp
-add_project(assetimport GROUPS "BRLCAD")
+add_project(assetimport GROUPS "BRLCAD_EXTRA")
 
 # OpenCV - Open Source Computer Vision Library
 # http://opencv.org
-add_project(opencv GROUPS "BRLCAD")
+add_project(opencv GROUPS "BRLCAD_EXTRA")
 
 # OpenMesh Library - library for representing and manipulating polygonal meshes
 # https://www.graphics.rwth-aachen.de/software/openmesh/
-add_project(openmesh GROUPS "BRLCAD")
+add_project(openmesh GROUPS "BRLCAD_EXTRA")
 
 # openNURBS - Non-Uniform Rational BSpline library
 # https://github.com/mcneel/opennurbs
