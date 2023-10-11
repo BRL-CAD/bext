@@ -19,7 +19,7 @@ if (ENABLE_LMDB)
 
   git_submodule_init(lmdb libraries/liblmdb/mdb.c)
 
-  TargetVars(LMDB)
+  TargetDeps(LMDB)
 
   ExternalProject_Add(LMDB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lmdb"
