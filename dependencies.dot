@@ -34,6 +34,18 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS DOCUMENTATION, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * To generate a PDF from this input, use dot:
+ *
+ * dot -Tpdf -o bext.pdf bext.dot
+ *
+ * The checked-in dependencies.dot file is a prefix - most of the relationships
+ * between components come from the dependency information in the bext CMake
+ * build system.  The build directory should hold a bext.dot file with that
+ * information populated.
+ *
+ * To generated the most complete DOT file, enable all build options in CMake -
+ * for example: -DENABLE_ALL=ON -DUSE_APPLESEED=ON -DUSE_OSPRAY=ON
  */
 
 digraph Deps{
@@ -65,7 +77,7 @@ digraph Deps{
 	lief [color = "orange", style = bold, shape = box, URL="https://github.com/lief-project/LIEF", label = "LIEF"];
 	linenoise [color = "black", style = bold, shape = box, URL="https://github.com/msteveb/linenoise", label = "Linenoise"];
 	llvm [color = "blue", style = bold, shape = box, URL="https://llvm.org", label = "LLVM"];
-	lmdb [color = "blue", style = bold, shape = box, URL="https://github.com/LMDB/lmdb", label = "LMDB"];
+	lmdb [color = "black", style = bold, shape = box, URL="https://github.com/LMDB/lmdb", label = "LMDB"];
 	lz4 [color = "blue", style = bold, shape = box, URL="https://github.com/lz4/lz4", label = "LZ4"];
 	minizip_ng [color = "blue", style = bold, shape = box, URL="https://github.com/zlib-ng/minizip-ng", label = "minizip-ng"];
 	ncurses [color = "blue", style = bold, shape = box, URL="https://invisible-island.net/ncurses", label = "ncurses"];
@@ -93,7 +105,7 @@ digraph Deps{
 	re2c [color = "orange", style = bold, shape = box, URL="https://github.com/skvadrik/re2c", label = "re2c"];
 	regex [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/regex", label = "regex"];
 	rkcommon [color = "blue", style = bold, shape = box, URL="https://github.com/ospray/rkcommon", label = "rkcommon"];
-	sqlite3 [color = "blue", style = bold, shape = box, URL="https://www.sqlite.org", label = "SQLite3"];
+	sqlite3 [color = "black", style = bold, shape = box, URL="https://www.sqlite.org", label = "SQLite3"];
 	stepcode [color = "black", style = bold, shape = box, URL="https://github.com/stepcode/stepcode", label = "STEPcode"];
 	strclear [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/strclear", label = "strclear"];
 	tcl [color = "black", style = bold, shape = box, URL="https://www.tcl.tk", label = "Tcl"];

@@ -184,7 +184,7 @@ add_custom_target(BuildStamp ALL COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_NOBUN
 # whether or not their dependencies are being built locally.  These macros are
 # used to cut down on boilerplate code
 ###############################################################################
-configure_file("${CMAKE_SOURCE_DIR}/dependencies.dot" "${CMAKE_BINARY_DIR}/dependencies.dot" COPYONLY)
+configure_file("${CMAKE_SOURCE_DIR}/dependencies.dot" "${CMAKE_BINARY_DIR}/bext.dot" COPYONLY)
 
 macro(TargetVars roots)
   foreach(root ${${roots}})
@@ -209,7 +209,7 @@ macro(TargetDeps proot)
     string(TOLOWER "${dl}" ldl)
     # Add the dependency to the dot file
     if (NOT "${ldl}" STREQUAL "patch")
-      file(APPEND "${CMAKE_BINARY_DIR}/dependencies.dot" "\t${lr} -> ${ldl};\n")
+      file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\t${lr} -> ${ldl};\n")
     endif (NOT "${ldl}" STREQUAL "patch")
   endforeach(dl ${DEP_LINES})
 
@@ -592,7 +592,7 @@ add_project(appleseed GROUPS "APPLESEED")
 add_project(ospray GROUPS "OSPRAY")
 
 # Close out dependencies DOT file
-file(APPEND "${CMAKE_BINARY_DIR}/dependencies.dot" "\n}\n")
+file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\n}\n")
 
 # Local Variables:
 # tab-width: 8
