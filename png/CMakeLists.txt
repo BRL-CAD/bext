@@ -22,8 +22,7 @@ if (ENABLE_PNG)
 
   git_submodule_init(libpng CMakeLists.txt)
 
-  set(PNG_DEPENDS PATCH ZLIB)
-  TargetVars(PNG_DEPENDS)
+  TargetDeps(PNG)
 
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")

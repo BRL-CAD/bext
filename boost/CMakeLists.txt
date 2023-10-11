@@ -19,8 +19,7 @@ if (ENABLE_BOOST)
 
   git_submodule_init(boost CMakeLists.txt)
 
-  set(BOOST_DEPENDS ICU PATCH ZLIB ZSTD)
-  TargetVars(BOOST_DEPENDS)
+  TargetDeps(BOOST)
 
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")

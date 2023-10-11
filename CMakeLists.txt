@@ -184,6 +184,42 @@ add_custom_target(BuildStamp ALL COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_NOBUN
 # whether or not their dependencies are being built locally.  These macros are
 # used to cut down on boilerplate code
 ###############################################################################
+configure_file("${CMAKE_SOURCE_DIR}/dependencies.dot" "${CMAKE_BINARY_DIR}/dependencies.dot" COPYONLY)
+
+macro(TargetDeps proot)
+  get_filename_component(dirname ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+  if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${dirname}.deps")
+    message(FATAL_ERROR "No ${dirname}.deps file found in ${CMAKE_CURRENT_SOURCE_DIR}/")
+  endif (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${dirname}.deps")
+  file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/${dirname}.deps" DEP_LINES)
+  string(TOLOWER "${proot}" lr)
+  foreach(dl ${DEP_LINES})
+    set(${proot}_DEPENDS ${${proot}_DEPENDS} ${dl})
+    string(TOLOWER "${dl}" ldl)
+    # Add the dependency to the dot file
+    if (NOT "${ldl}" STREQUAL "patch")
+      file(APPEND "${CMAKE_BINARY_DIR}/dependencies.dot" "\t${lr} -> ${ldl};\n")
+    endif (NOT "${ldl}" STREQUAL "patch")
+  endforeach(dl ${DEP_LINES})
+
+  # Add these dependencies to the global list
+  get_property(ALL_DEPS GLOBAL PROPERTY ALL_DEPENDENCIES)
+  set(ALL_DEPS ${ALL_DEPS} ${${proot}_DEPENDS})
+  list(SORT ALL_DEPS)
+  list(REMOVE_DUPLICATES ALL_DEPS)
+  set_property(GLOBAL PROPERTY ALL_DEPENDENCIES ${ALL_DEPS})
+
+  # Set the TARGET variables for CMake generator expression "if" tests
+  foreach(root ${${proot}_DEPENDS})
+    if (NOT ${root}_ADDED)
+      message(FATAL_ERROR "${root} is listed as a dependency but is not yet added - fix project ordering in top level CMakeLists.txt file")
+    endif (NOT ${root}_ADDED)
+    if (TARGET ${root}_BLD)
+      set(${root}_TARGET 1)
+    endif (TARGET ${root}_BLD)
+  endforeach(root ${${proot}_DEPENDS})
+endmacro(TargetDeps)
+
 macro(TargetVars roots)
   foreach(root ${${roots}})
     if (NOT ${root}_ADDED)
@@ -563,6 +599,9 @@ add_project(appleseed GROUPS "APPLESEED")
 # OSPRay - ray tracing engine
 # https://github.com/ospray/OSPRay
 add_project(ospray GROUPS "OSPRAY")
+
+# Close out dependencies DOT file
+file(APPEND "${CMAKE_BINARY_DIR}/dependencies.dot" "\n}\n")
 
 # Local Variables:
 # tab-width: 8

@@ -19,9 +19,7 @@ if (ENABLE_ASSETIMPORT)
 
   git_submodule_init(assimp CMakeLists.txt)
 
-  set(ASSETIMPORT_DEPENDS PATCH PUGIXML ZLIB)
-  TargetVars(ASSETIMPORT_DEPENDS)
-
+  TargetDeps(ASSETIMPORT)
   if (TARGET ZLIB_BLD)
     set(ZLIB_TARGET ZLIB_BLD)
   endif (TARGET ZLIB_BLD)

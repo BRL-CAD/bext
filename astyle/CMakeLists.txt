@@ -20,8 +20,7 @@ if (ENABLE_ASTYLE)
 
   git_submodule_init(astyle CMakeLists.txt)
 
-  set(ASTYLE_DEPENDS PATCH)
-  TargetVars(ASTYLE_DEPENDS)
+  TargetDeps(ASTYLE)
 
   ExternalProject_Add(ASTYLE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/astyle"

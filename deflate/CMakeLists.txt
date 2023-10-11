@@ -19,8 +19,7 @@ if (ENABLE_DEFLATE)
 
   git_submodule_init(libdeflate CMakeLists.txt)
 
-  set(DEFLATE_DEPENDS PATCH)
-  TargetVars(DEFLATE_DEPENDS)
+  TargetDeps(DEFLATE)
 
   ExternalProject_Add(DEFLATE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libdeflate"

@@ -38,7 +38,10 @@
 
 digraph Deps{
 
-	// Nodes
+	// Top level BRL-CAD node
+	brlcad [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/brlcad", label = "BRL-CAD"];
+
+	// Dependency Nodes
 	appleseed [color = "blue", style = bold, shape = box, URL="https://github.com/appleseedhq/appleseed", label = "Appleseed"];
 	assetimport [color = "black", style = bold, shape = box, URL="https://github.com/assimp/assimp", label = "ASSIMP"];
 	astyle [color = "orange", style = bold, shape = box, URL="https://astyle.sourceforge.net/", label = "AStyle"];
@@ -75,7 +78,7 @@ digraph Deps{
 	osl [color = "blue", style = bold, shape = box, URL="https://github.com/AcademySoftwareFoundation/OpenShadingLanguage", label = "OSL"];
 	osmesa [color = "black", style = bold, shape = box, URL="https://github.com/starseeker/osmesa", label = "OSMesa"];
 	ospray [color = "blue", style = bold, shape = box, URL="https://github.com/ospray/OSPRay", label = "OSPRay"];
-	patch [color = "orange", style = bold, shape = box, URL="https://github.com/shannonbooth/patch", label = "Patch"];
+	//patch [color = "orange", style = bold, shape = box, URL="https://github.com/shannonbooth/patch", label = "Patch"];
 	patchelf [color = "orange", style = bold, shape = box, URL="https://github.com/NixOS/patchelf", label = "patchelf"];
 	perplex [color = "orange", style = bold, shape = box, URL="https://github.com/BRL-CAD/perplex", label = "perplex"];
 	plief [color = "orange", style = bold, shape = box, URL="https://github.com/BRL-CAD/plief", label = "plief"];
@@ -103,4 +106,44 @@ digraph Deps{
 	zlib [color = "black", style = bold, shape = box, URL="https://zlib.net", label = "Zlib"];
 	zstd [color = "blue", style = bold, shape = box, URL="https://github.com/facebook/zstd", label = "Zstd"];
 
-}
+	iwidgets -> itk;
+	itk -> itcl;
+	itk -> tk;
+	tk -> tcl;
+	tkhtml -> tk;
+	tktable -> tk;
+
+	brlcad -> assetimport;
+	brlcad -> astyle;
+	brlcad -> eigen;
+	brlcad -> gdal;
+	brlcad -> itcl;
+	brlcad -> itk;
+	brlcad -> tcl;
+	brlcad -> tk;
+	brlcad -> iwidgets;
+	brlcad -> lemon;
+	brlcad -> linenoise;
+	brlcad -> lmdb;
+	brlcad -> netpbm;
+	brlcad -> opencv;
+	brlcad -> openmesh;
+	brlcad -> opennurbs;
+	brlcad -> perplex;
+	brlcad -> perplex;
+	brlcad -> plief;
+	brlcad -> png;
+	brlcad -> poly2tri;
+	brlcad -> qt;
+	brlcad -> re2c;
+	brlcad -> regex;
+	brlcad -> stepcode;
+	brlcad -> strclear;
+	brlcad -> tkhtml;
+	brlcad -> tktable;
+	brlcad -> utahrle;
+	brlcad -> xmltools;
+	brlcad -> zlib;
+	brlcad -> appleseed;
+	brlcad -> ospray;
+

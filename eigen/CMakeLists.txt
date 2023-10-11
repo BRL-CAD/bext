@@ -20,8 +20,7 @@ if (ENABLE_EIGEN)
 
   git_submodule_init(eigen CMakeLists.txt)
 
-  set(EIGEN_DEPENDS PATCH)
-  TargetVars(EIGEN_DEPENDS)
+  TargetDeps(EIGEN)
 
   ExternalProject_Add(EIGEN_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/eigen"

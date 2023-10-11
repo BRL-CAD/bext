@@ -19,8 +19,7 @@ if (ENABLE_OSPRAY)
 
   git_submodule_init(ospray CMakeLists.txt)
 
-  set(OSPRAY_DEPENDS EMBREE ISPC PATCH RKCOMMON ONETBB)
-  TargetVars(OSPRAY_DEPENDS)
+  TargetDeps(OSPRAY)
 
   ExternalProject_Add(OSPRAY_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/ospray"

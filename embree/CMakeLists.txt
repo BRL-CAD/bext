@@ -19,8 +19,7 @@ if (ENABLE_EMBREE)
 
   git_submodule_init(embree CMakeLists.txt)
 
-  set(EMBREE_DEPENDS BOOST ISPC ONETBB PATCH ZLIB)
-  TargetVars(EMBREE_DEPENDS)
+  TargetDeps(EMBREE)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

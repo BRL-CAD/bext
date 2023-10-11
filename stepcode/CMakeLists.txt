@@ -19,8 +19,7 @@ if (ENABLE_STEPCODE)
 
   git_submodule_init(stepcode CMakeLists.txt)
 
-  set(STEPCODE_DEPENDS LEMON PATCH PERPLEX RE2C)
-  TargetVars(STEPCODE_DEPENDS)
+  TargetDeps(STEPCODE)
 
   # For OSX, we need CMAKE_INSTALL_NAME_DIR
   set(CMAKE_INSTALL_NAME_DIR "@rpath")

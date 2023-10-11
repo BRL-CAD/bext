@@ -19,8 +19,7 @@ if (ENABLE_FMT)
 
   git_submodule_init(fmt CMakeLists.txt)
 
-  set(FMT_DEPENDS PATCH)
-  TargetVars(FMT_DEPENDS)
+  TargetDeps(FMT)
 
   ExternalProject_Add(FMT_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/fmt"
