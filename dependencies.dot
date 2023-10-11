@@ -69,11 +69,11 @@ digraph Deps{
 	gdal [color = "black", style = bold, shape = box, URL="https://gdal.org", label = "GDAL"];
 	icu [color = "blue", style = bold, shape = box, URL="https://github.com/unicode-org/icu", label = "ICU"];
 	ispc [color = "blue", style = bold, shape = box, URL="https://github.com/ispc/ispc", label = "ISPC"];
-	itcl [color = "black", style = bold, shape = box, URL="https://incrtcl.sourceforge.net/itcl", label = "ITcl"];
-	itk [color = "black", style = bold, shape = box, URL="https://incrtcl.sourceforge.net/itk", label = "ITk"];
+	itcl [color = "black", style = bold, shape = box, URL="https://core.tcl-lang.org/itcl", label = "ITcl"];
+	itk [color = "black", style = bold, shape = box, URL="https://core.tcl-lang.org/itk", label = "ITk"];
 	iwidgets [color = "black", style = bold, shape = box, URL="https://incrtcl.sourceforge.net/iwidgets/iwidgets.html", label = "Iwidgets"];
 	jpeg [color = "blue", style = bold, shape = box, URL="https://github.com/libjpeg-turbo/libjpeg-turbo", label = "libjpeg"];
-	lemon [color = "orange", style = bold, shape = box, URL="https://sqlite.org/src/doc/trunk/doc/lemon.html", label = "Lemon"];
+	lemon [color = "orange", style = bold, shape = box, URL="https://www.sqlite.org/src/file/tool", label = "Lemon"];
 	lief [color = "orange", style = bold, shape = box, URL="https://github.com/lief-project/LIEF", label = "LIEF"];
 	linenoise [color = "black", style = bold, shape = box, URL="https://github.com/msteveb/linenoise", label = "Linenoise"];
 	llvm [color = "blue", style = bold, shape = box, URL="https://llvm.org", label = "LLVM"];
@@ -101,7 +101,7 @@ digraph Deps{
 	proj [color = "black", style = bold, shape = box, URL="https://proj.org", label = "PROJ"];
 	pugixml [color = "black", style = bold, shape = box, URL="https://pugixml.org", label = "pugixml"];
 	pystring [color = "blue", style = bold, shape = box, URL="https://github.com/imageworks/pystring", label = "pystring"];
-	qt [color = "black", style = bold, shape = box, URL="https://www.qt.io", label = "Qt"];
+	qt [color = "black", style = bold, shape = box, URL="https://download.qt.io/archive/qt", label = "Qt"];
 	re2c [color = "orange", style = bold, shape = box, URL="https://github.com/skvadrik/re2c", label = "re2c"];
 	regex [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/regex", label = "regex"];
 	rkcommon [color = "blue", style = bold, shape = box, URL="https://github.com/ospray/rkcommon", label = "rkcommon"];
