@@ -457,9 +457,7 @@ add_project(jpeg GROUPS "APPLESEED")
 
 # libpng - Portable Network Graphics image file support
 # http://www.libpng.org/pub/png/libpng.html
-#
-# TODO - see if it makes sense for Qt to use our PNG
-add_project(png GROUPS "APPLESEED;BRLCAD;QT")
+add_project(png GROUPS "APPLESEED;BRLCAD")
 
 # libtiff - Tag Image File Format (TIFF) support
 # https://libtiff.gitlab.io/libtiff/

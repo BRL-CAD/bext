@@ -19,8 +19,10 @@ if (ENABLE_MINIZIP_NG)
 
   git_submodule_init(minizip-ng CMakeLists.txt)
 
-  set(MINIZIP_NG_DEPENDS PATCH ZLIB ZSTD)
-  TargetVars(MINIZIP_NG_DEPENDS)
+  TargetDeps(MINIZIP_NG)
+  if (TARGET ZLIB_BLD)
+    set(Z_PREFIX_STR "brl_")
+  endif (TARGET ZLIB_BLD)
 
   ExternalProject_Add(MINIZIP_NG_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/minizip-ng"

@@ -45,11 +45,13 @@ digraph Deps{
 	appleseed [color = "blue", style = bold, shape = box, URL="https://github.com/appleseedhq/appleseed", label = "Appleseed"];
 	assetimport [color = "black", style = bold, shape = box, URL="https://github.com/assimp/assimp", label = "ASSIMP"];
 	astyle [color = "orange", style = bold, shape = box, URL="https://astyle.sourceforge.net/", label = "AStyle"];
+	bison [color = "orange", style = bold, shape = box, URL="https://www.gnu.org/software/bison", label = "Bison"];
 	boost [color = "blue", style = bold, shape = box, URL="https://github.com/boostorg/boost", label = "Boost"];
 	deflate [color = "blue", style = bold, shape = box, URL="https://github.com/ebiggers/libdeflate", label = "libdeflate"];
 	eigen [color = "black", style = bold, shape = box, URL="https://eigen.tuxfamily.org", label = "Eigen"];
 	embree [color = "blue", style = bold, shape = box, URL="https://github.com/embree/embree", label = "Embree"];
 	expat [color = "blue", style = bold, shape = box, URL="https://github.com/libexpat/libexpat", label = "expat"];
+	flex [color = "orange", style = bold, shape = box, URL="https://github.com/westes/flex", label = "Flex"];
 	flexbison [color = "orange", style = bold, shape = box, URL="https://github.com/lexxmark/winflexbison", label = "winflexbison"];
 	fmt [color = "blue", style = bold, shape = box, URL="https://github.com/fmtlib/fmt", label = "fmt"];
 	gdal [color = "black", style = bold, shape = box, URL="https://gdal.org", label = "GDAL"];
@@ -113,6 +115,9 @@ digraph Deps{
 	tkhtml -> tk;
 	tktable -> tk;
 
+	ispc -> flexbison;
+	osl -> flexbison;
+
 	brlcad -> assetimport;
 	brlcad -> astyle;
 	brlcad -> eigen;
@@ -129,7 +134,8 @@ digraph Deps{
 	brlcad -> opencv;
 	brlcad -> openmesh;
 	brlcad -> opennurbs;
-	brlcad -> perplex;
+	brlcad -> osmesa;
+	brlcad -> patchelf;
 	brlcad -> perplex;
 	brlcad -> plief;
 	brlcad -> png;

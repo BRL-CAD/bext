@@ -19,8 +19,7 @@ if (ENABLE_OPENEXR)
 
   git_submodule_init(openexr CMakeLists.txt)
 
-  set(OPENEXR_DEPENDS DEFLATE PATCH)
-  TargetVars(OPENEXR_DEPENDS)
+  TargetDeps(OPENEXR)
 
   ExternalProject_Add(OPENEXR_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/openexr"
