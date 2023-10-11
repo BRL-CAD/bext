@@ -107,7 +107,7 @@ digraph Deps{
 	rkcommon [color = "blue", style = bold, shape = box, URL="https://github.com/ospray/rkcommon", label = "rkcommon"];
 	sqlite3 [color = "black", style = bold, shape = box, URL="https://www.sqlite.org", label = "SQLite3"];
 	stepcode [color = "black", style = bold, shape = box, URL="https://github.com/stepcode/stepcode", label = "STEPcode"];
-	strclear [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/strclear", label = "strclear"];
+	strclear [color = "orange", style = bold, shape = box, URL="https://github.com/BRL-CAD/strclear", label = "strclear"];
 	tcl [color = "black", style = bold, shape = box, URL="https://www.tcl.tk", label = "Tcl"];
 	tiff [color = "blue", style = bold, shape = box, URL="https://gitlab.com/libtiff/libtiff", label = "libtiff"];
 	tk [color = "black", style = bold, shape = box, URL="https://www.tcl.tk", label = "Tk"];
