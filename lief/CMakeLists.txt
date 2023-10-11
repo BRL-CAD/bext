@@ -25,8 +25,7 @@ if (NOT MSVC AND NOT APPLE)
 
     git_submodule_init(LIEF CMakeLists.txt)
 
-    set(LIEF_DEPENDS PATCH)
-    TargetVars(LIEF_DEPENDS)
+    TargetDeps(LIEF)
 
     ExternalProject_Add(LIEF_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/LIEF"

@@ -19,8 +19,7 @@ if (ENABLE_OSL)
 
   git_submodule_init(OpenShadingLanguage CMakeLists.txt)
 
-  set(OSL_DEPENDS BISON BOOST FLEX LLVM OPENIMAGEIO PATCH PUGIXML ZLIB)
-  TargetVars(OSL_DEPENDS)
+  TargetDeps(OSL)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

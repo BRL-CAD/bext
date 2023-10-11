@@ -19,8 +19,7 @@ if (ENABLE_OSMESA)
 
   git_submodule_init(osmesa CMakeLists.txt)
 
-  set(OSMESA_DEPENDS PATCH)
-  TargetVars(OSMESA_DEPENDS)
+  TargetDeps(OSMESA)
 
   ExternalProject_Add(OSMESA_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/osmesa"

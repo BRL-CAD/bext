@@ -19,8 +19,7 @@ if (ENABLE_PERPLEX)
 
   git_submodule_init(perplex CMakeLists.txt)
 
-  set(PERPLEX_DEPENDS PATCH LEMON RE2C)
-  TargetVars(PERPLEX_DEPENDS)
+  TargetDeps(PERPLEX)
 
   ExternalProject_Add(PERPLEX_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/perplex"

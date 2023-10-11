@@ -38,8 +38,7 @@ if (ENABLE_ITK)
 
   git_submodule_init(itk CMakeLists.txt)
 
-  set(ITK_DEPENDS PATCH TCL TK ITCL)
-  TargetVars(ITK_DEPENDS)
+  TargetDeps(ITK)
 
   # If we're building ITK, it's path setup must take into account the
   # subdirectory in which we are storing the library.

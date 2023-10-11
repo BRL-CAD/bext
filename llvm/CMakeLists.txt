@@ -30,10 +30,7 @@ if (ENABLE_LLVM)
     endif (NOT CMAKE_BUILD_TYPE)
   endif (NOT isMultiConfig)
 
-  # llvm needs zlib - need to do the magic to get it using ours.
-  # shows up when trying to compile ispc
-  set(LLVM_DEPENDS PATCH ZLIB)
-  TargetVars(LLVM_DEPENDS)
+  TargetDeps(LLVM)
 
   # We may need one or more patches, depending on settings.  ExternalProject_Add
   # expects the first command to be "PATCH_COMMAND", with subsequent patch commands

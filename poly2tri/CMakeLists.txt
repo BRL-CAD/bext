@@ -6,8 +6,7 @@ if (USE_BRLCAD)
 
   git_submodule_init(poly2tri CMakeLists.txt)
 
-  set(POLY2TRI_DEPENDS PATCH)
-  TargetVars(POLY2TRI_DEPENDS)
+  TargetDeps(POLY2TRI)
 
   ExternalProject_Add(POLY2TRI_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/poly2tri"

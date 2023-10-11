@@ -23,9 +23,7 @@ if (ENABLE_OPENNURBS)
 
   git_submodule_init(opennurbs opennurbs.h)
 
-  set(OPENNURBS_DEPENDS PATCH ZLIB)
-  TargetVars(OPENNURBS_DEPENDS)
-
+  TargetDeps(OPENNURBS)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

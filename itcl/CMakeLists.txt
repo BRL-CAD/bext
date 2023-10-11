@@ -17,8 +17,7 @@ if (ENABLE_ITCL)
 
   git_submodule_init(itcl CMakeLists.txt)
 
-  set(ITCL_DEPENDS PATCH TCL)
-  TargetVars(ITCL_DEPENDS)
+  TargetDeps(ITCL)
 
   # If we're building ITCL, it's path setup must take into account the
   # subdirectory in which we are storing the library.

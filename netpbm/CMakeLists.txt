@@ -19,8 +19,7 @@ if (ENABLE_NETPBM)
 
   git_submodule_init(netpbm CMakeLists.txt)
 
-  set(NETPBM_DEPENDS PATCH)
-  TargetVars(NETPBM_DEPENDS)
+  TargetDeps(NETPBM)
 
   ExternalProject_Add(NETPBM_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/netpbm"

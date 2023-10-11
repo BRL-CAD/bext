@@ -19,8 +19,7 @@ if (ENABLE_OPENMESH)
 
   git_submodule_init(OpenMesh CMakeLists.txt)
 
-  set(OPENMESH_DEPENDS PATCH)
-  TargetVars(OPENMESH_DEPENDS)
+  TargetDeps(OPENMESH)
 
   ExternalProject_Add(OPENMESH_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/OpenMesh"

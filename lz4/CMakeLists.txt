@@ -19,8 +19,7 @@ if (ENABLE_LZ4)
 
   git_submodule_init(lz4 CMakeLists.txt)
 
-  set(LZ4_DEPENDS PATCH)
-  TargetVars(LZ4_DEPENDS)
+  TargetDeps(LZ4)
 
   ExternalProject_Add(LZ4_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lz4"

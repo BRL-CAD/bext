@@ -19,8 +19,7 @@ if (ENABLE_ONETBB)
 
   git_submodule_init(oneTBB CMakeLists.txt)
 
-  set(ONETBB_DEPENDS PATCH)
-  TargetVars(ONETBB_DEPENDS)
+  TargetDeps(ONETBB)
 
   ExternalProject_Add(ONETBB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oneTBB"

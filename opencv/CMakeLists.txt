@@ -19,9 +19,7 @@ if (ENABLE_OPENCV)
 
   git_submodule_init(opencv CMakeLists.txt)
 
-  set(OPENCV_DEPENDS PATCH PNG ZLIB)
-  TargetVars(OPENCV_DEPENDS)
-
+  TargetDeps(OPENCV)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
