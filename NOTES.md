@@ -12,7 +12,7 @@ Edit the new .gitmodules entry to add the "shallow = true" and "ignore = dirty" 
 
 # Finding the currently referenced submodule SHA1
 
-Git stores a SHA1 to the upstream commit it will target, but this SHA1 isn't readily visible in the working git clone's files.  To see it, use git ls-tree - for example, this prints the current Tcl SHA1:
+Git stores a SHA1 to the upstream commit it will target, but this SHA1 isn't readily visible in the working git clone's files.  To see it, per https://stackoverflow.com/a/5033973/2037687) use git ls-tree - for example, this prints the current Tcl SHA1:
 ```
 user@linux:~/bext (main) $ git ls-tree main tcl/tcl
 160000 commit 338c6692672696a76b6cb4073820426406c6f3f9	tcl/tcl
@@ -21,6 +21,10 @@ user@linux:~/bext (main) $ git ls-tree main tcl/tcl
 # Updating a submodule to a newer upstream
 
 TODO
+
+# Changing the branch of a submodule
+
+https://stackoverflow.com/questions/29882960/changing-an-existing-submodules-branch
 
 # Removing a submodule
 
