@@ -1,0 +1,106 @@
+/*               D E P E N D E N C I E S . D O T
+ *
+ * Copyright (c) 2023 United States Government as represented by
+ * the U.S. Army Research Laboratory.
+ *
+ * Redistribution and use in source (Graphviz format) and 'compiled'
+ * forms (PDF, PostScript, HTML, RTF, etc.), with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code (DOT format) must retain the
+ * above copyright notice, this list of conditions and the following
+ * disclaimer.
+ *
+ * 2. Redistributions in compiled form (transformed to other DTDs,
+ * converted to PDF, PostScript, HTML, RTF, and other formats) must
+ * reproduce the above copyright notice, this list of conditions and
+ * the following disclaimer in the documentation and/or other
+ * materials provided with the distribution.
+ *
+ * 3. The name of the author may not be used to endorse or promote
+ * products derived from this documentation without specific prior
+ * written permission.
+ *
+ * THIS DOCUMENTATION IS PROVIDED BY THE AUTHOR AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+ * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+ * USE OF THIS DOCUMENTATION, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
+digraph Deps{
+
+	// Nodes
+	appleseed [color = "blue", style = bold, shape = box, URL="https://github.com/appleseedhq/appleseed", label = "Appleseed"];
+	assetimport [color = "black", style = bold, shape = box, URL="https://github.com/assimp/assimp", label = "ASSIMP"];
+	astyle [color = "orange", style = bold, shape = box, URL="https://astyle.sourceforge.net/", label = "AStyle"];
+	boost [color = "blue", style = bold, shape = box, URL="https://github.com/boostorg/boost", label = "Boost"];
+	deflate [color = "blue", style = bold, shape = box, URL="https://github.com/ebiggers/libdeflate", label = "libdeflate"];
+	eigen [color = "black", style = bold, shape = box, URL="https://eigen.tuxfamily.org", label = "Eigen"];
+	embree [color = "blue", style = bold, shape = box, URL="https://github.com/embree/embree", label = "Embree"];
+	expat [color = "blue", style = bold, shape = box, URL="https://github.com/libexpat/libexpat", label = "expat"];
+	flexbison [color = "orange", style = bold, shape = box, URL="https://github.com/lexxmark/winflexbison", label = "winflexbison"];
+	fmt [color = "blue", style = bold, shape = box, URL="https://github.com/fmtlib/fmt", label = "fmt"];
+	gdal [color = "black", style = bold, shape = box, URL="https://gdal.org", label = "GDAL"];
+	icu [color = "blue", style = bold, shape = box, URL="https://github.com/unicode-org/icu", label = "ICU"];
+	ispc [color = "blue", style = bold, shape = box, URL="https://github.com/ispc/ispc", label = "ISPC"];
+	itcl [color = "black", style = bold, shape = box, URL="https://incrtcl.sourceforge.net/itcl", label = "ITcl"];
+	itk [color = "black", style = bold, shape = box, URL="https://incrtcl.sourceforge.net/itk", label = "ITk"];
+	iwidgets [color = "black", style = bold, shape = box, URL="https://incrtcl.sourceforge.net/iwidgets/iwidgets.html", label = "Iwidgets"];
+	jpeg [color = "blue", style = bold, shape = box, URL="https://github.com/libjpeg-turbo/libjpeg-turbo", label = "libjpeg"];
+	lemon [color = "orange", style = bold, shape = box, URL="https://sqlite.org/src/doc/trunk/doc/lemon.html", label = "Lemon"];
+	lief [color = "orange", style = bold, shape = box, URL="https://github.com/lief-project/LIEF", label = "LIEF"];
+	linenoise [color = "black", style = bold, shape = box, URL="https://github.com/msteveb/linenoise", label = "Linenoise"];
+	llvm [color = "blue", style = bold, shape = box, URL="https://llvm.org", label = "LLVM"];
+	lmdb [color = "blue", style = bold, shape = box, URL="https://github.com/LMDB/lmdb", label = "LMDB"];
+	lz4 [color = "blue", style = bold, shape = box, URL="https://github.com/lz4/lz4", label = "LZ4"];
+	minizip_ng [color = "blue", style = bold, shape = box, URL="https://github.com/zlib-ng/minizip-ng", label = "minizip-ng"];
+	ncurses [color = "blue", style = bold, shape = box, URL="https://invisible-island.net/ncurses", label = "ncurses"];
+	netpbm [color = "black", style = bold, shape = box, URL="http://netpbm.sourceforge.net", label = "netpbm"];
+	onetbb [color = "blue", style = bold, shape = box, URL="https://github.com/oneapi-src/oneTBB", label = "oneTBB"];
+	opencolorio [color = "blue", style = bold, shape = box, URL="https://github.com/AcademySoftwareFoundation/OpenColorIO", label = "OpenColorIO"];
+	opencv [color = "black", style = bold, shape = box, URL="http://opencv.org", label = "OpenCV"];
+	openexr [color = "blue", style = bold, shape = box, URL="https://github.com/AcademySoftwareFoundation/openexr", label = "OpenEXR"];
+	openimageio [color = "blue", style = bold, shape = box, URL="https://github.com/OpenImageIO/oiio", label = "OpenImageIO"];
+	openmesh [color = "black", style = bold, shape = box, URL="https://www.graphics.rwth-aachen.de/software/openmesh", label = "OpenMesh"];
+	opennurbs [color = "black", style = bold, shape = box, URL="https://github.com/mcneel/opennurbs", label = "openNURBS"];
+	osl [color = "blue", style = bold, shape = box, URL="https://github.com/AcademySoftwareFoundation/OpenShadingLanguage", label = "OSL"];
+	osmesa [color = "black", style = bold, shape = box, URL="https://github.com/starseeker/osmesa", label = "OSMesa"];
+	ospray [color = "blue", style = bold, shape = box, URL="https://github.com/ospray/OSPRay", label = "OSPRay"];
+	patch [color = "orange", style = bold, shape = box, URL="https://github.com/shannonbooth/patch", label = "Patch"];
+	patchelf [color = "orange", style = bold, shape = box, URL="https://github.com/NixOS/patchelf", label = "patchelf"];
+	perplex [color = "orange", style = bold, shape = box, URL="https://github.com/BRL-CAD/perplex", label = "perplex"];
+	plief [color = "orange", style = bold, shape = box, URL="https://github.com/BRL-CAD/plief", label = "plief"];
+	png [color = "black", style = bold, shape = box, URL="http://www.libpng.org/pub/png/libpng.html", label = "libpng"];
+	poly2tri [color = "black", style = bold, shape = box, URL="https://github.com/jhasse/poly2tri", label = "Poly2Tri"];
+	proj [color = "black", style = bold, shape = box, URL="https://proj.org", label = "PROJ"];
+	pugixml [color = "black", style = bold, shape = box, URL="https://pugixml.org", label = "pugixml"];
+	pystring [color = "blue", style = bold, shape = box, URL="https://github.com/imageworks/pystring", label = "pystring"];
+	qt [color = "black", style = bold, shape = box, URL="https://www.qt.io", label = "Qt"];
+	re2c [color = "orange", style = bold, shape = box, URL="https://github.com/skvadrik/re2c", label = "re2c"];
+	regex [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/regex", label = "regex"];
+	rkcommon [color = "blue", style = bold, shape = box, URL="https://github.com/ospray/rkcommon", label = "rkcommon"];
+	sqlite3 [color = "blue", style = bold, shape = box, URL="https://www.sqlite.org", label = "SQLite3"];
+	stepcode [color = "black", style = bold, shape = box, URL="https://github.com/stepcode/stepcode", label = "STEPcode"];
+	strclear [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/strclear", label = "strclear"];
+	tcl [color = "black", style = bold, shape = box, URL="https://www.tcl.tk", label = "Tcl"];
+	tiff [color = "blue", style = bold, shape = box, URL="https://gitlab.com/libtiff/libtiff", label = "libtiff"];
+	tk [color = "black", style = bold, shape = box, URL="https://www.tcl.tk", label = "Tk"];
+	tkhtml [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/tkhtml", label = "Tkhtml"];
+	tktable [color = "black", style = bold, shape = box, URL="https://tktable.sourceforge.net", label = "Tktable"];
+	utahrle [color = "black", style = bold, shape = box, URL="https://github.com/BRL-CAD/utahrle", label = "UtahRLE"];
+	xerces_c [color = "blue", style = bold, shape = box, URL="https://xerces.apache.org/xerces-c", label = "Xerces-C++"];
+	xmltools [color = "orange", style = bold, shape = box, URL="https://github.com/GNOME/libxml2", label = "xmltools"];
+	yaml_cpp [color = "blue", style = bold, shape = box, URL="https://github.com/jbeder/yaml-cpp", label = "yaml-cpp"];
+	zlib [color = "black", style = bold, shape = box, URL="https://zlib.net", label = "Zlib"];
+	zstd [color = "blue", style = bold, shape = box, URL="https://github.com/facebook/zstd", label = "Zstd"];
+
+}
