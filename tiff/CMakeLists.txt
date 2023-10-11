@@ -19,9 +19,7 @@ if (ENABLE_TIFF)
 
   git_submodule_init(libtiff CMakeLists.txt)
 
-  set(TIFF_DEPENDS JPEG PATCH ZLIB)
-  TargetVars(TIFF_DEPENDS)
-
+  TargetDeps(TIFF)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

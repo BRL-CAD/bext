@@ -19,8 +19,7 @@ if (ENABLE_REGEX)
 
   git_submodule_init(regex regex2.h)
 
-  set(REGEX_DEPENDS PATCH)
-  TargetVars(REGEX_DEPENDS)
+  TargetDeps(REGEX)
 
   set(REGEX_PREFIX_STR "libregex_")
 

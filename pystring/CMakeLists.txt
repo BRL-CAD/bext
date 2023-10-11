@@ -19,8 +19,7 @@ if (ENABLE_PYSTRING)
 
   git_submodule_init(pystring CMakeLists.txt)
 
-  set(PYSTRING_DEPENDS PATCH)
-  TargetVars(PYSTRING_DEPENDS)
+  TargetDeps(PYSTRING)
 
   ExternalProject_Add(PYSTRING_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/pystring"

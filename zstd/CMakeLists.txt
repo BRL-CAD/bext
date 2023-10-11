@@ -19,8 +19,7 @@ if (ENABLE_ZSTD)
 
   git_submodule_init(zstd LICENSE)
 
-  set(ZSTD_DEPENDS PATCH)
-  TargetVars(ZSTD_DEPENDS)
+  TargetDeps(ZSTD)
 
   ExternalProject_Add(ZSTD_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/zstd"

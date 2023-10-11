@@ -19,8 +19,7 @@ if (ENABLE_RE2C)
 
   git_submodule_init(re2c CMakeLists.txt)
 
-  set(RE2C_DEPENDS PATCH)
-  TargetVars(RE2C_DEPENDS)
+  TargetDeps(RE2C)
 
   ExternalProject_Add(RE2C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/re2c"

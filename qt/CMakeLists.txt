@@ -20,13 +20,7 @@ if (ENABLE_QT)
 
   git_submodule_init(qt qtbase/configure)
 
-  set(Qt6_DEPENDS PATCH ZLIB)
-  TargetVars(Qt6_DEPENDS)
-
-  if (TARGET ZLIB_BLD)
-    set(Z_PREFIX_STR "brl_")
-  endif (TARGET ZLIB_BLD)
-
+  TargetDeps(Qt6)
 
   if (isMultiConfig)
     set(CBT $<CONFIG>)

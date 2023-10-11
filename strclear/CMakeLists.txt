@@ -20,8 +20,7 @@ if (ENABLE_STRCLEAR)
 
   git_submodule_init(strclear CMakeLists.txt)
 
-  set(STRCLEAR_DEPENDS PATCH)
-  TargetVars(STRCLEAR_DEPENDS)
+  TargetDeps(STRCLEAR)
 
   ExternalProject_Add(STRCLEAR_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/strclear"

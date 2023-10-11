@@ -25,8 +25,7 @@ if (ENABLE_TCL)
 
   git_submodule_init(tcl unix/configure)
 
-  set(TCL_DEPENDS PATCH ZLIB)
-  TargetVars(TCL_DEPENDS)
+  TargetDeps(TCL)
 
   set(TCL_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD")
 

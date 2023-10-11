@@ -19,8 +19,7 @@ if (ENABLE_UTAHRLE)
 
   git_submodule_init(utahrle CMakeLists.txt)
 
-  set(UTAHRLE_DEPENDS PATCH)
-  TargetVars(UTAHRLE_DEPENDS)
+  TargetDeps(UTAHRLE)
 
   ExternalProject_Add(UTAHRLE_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/utahrle"

@@ -24,8 +24,7 @@ if (ENABLE_XERCES_C)
 
   git_submodule_init(xerces-c CMakeLists.txt)
 
-  set(XERCES_C_DEPENDS ICU PATCH)
-  TargetVars(XERCES_C_DEPENDS)
+  TargetDeps(XERCES_C)
 
   ExternalProject_Add(XERCES_C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/xerces-c"

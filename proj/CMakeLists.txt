@@ -19,8 +19,7 @@ if (ENABLE_PROJ)
 
   git_submodule_init(PROJ CMakeLists.txt)
 
-  set(PROJ_DEPENDS PATCH SQLITE3)
-  TargetVars(PROJ_DEPENDS)
+  TargetDeps(PROJ)
 
   ExternalProject_Add(PROJ_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/PROJ"
