@@ -148,12 +148,6 @@
 	branch = RELEASE
 	shallow = true
 	ignore = dirty
-[submodule "tcl/tcl"]
-	path = tcl/tcl
-	url = https://github.com/BRL-CAD/tcl
-	branch = RELEASE
-	shallow = true
-	ignore = dirty
 [submodule "tk/tk"]
 	path = tk/tk
 	url = https://github.com/BRL-CAD/tk
