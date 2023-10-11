@@ -352,9 +352,4 @@
 	url = https://github.com/BRL-CAD/ncurses
 	shallow = true
 	ignore = dirty
-[submodule "tcl/tcl"]
-	path = tcl/tcl
-	url = https://github.com/BRL-CAD/tcl.git
-	branch = RELEASE
-	shallow = true
-	ignore = dirty
+
