@@ -1,6 +1,5 @@
 # Unless we have ENABLE_ALL set, based the building of appleseed on
 # the system detection results
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/appleseed)
 if (ENABLE_ALL AND NOT DEFINED ENABLE_APPLESEED)
   set(ENABLE_APPLESEED ON)
 endif (ENABLE_ALL AND NOT DEFINED ENABLE_APPLESEED)
@@ -88,7 +87,6 @@ if (ENABLE_APPLESEED)
     )
 
 endif (ENABLE_APPLESEED)
-endif (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/appleseed)
 
 # Local Variables:
 # tab-width: 8

@@ -364,3 +364,8 @@
 	branch = RELEASE
 	shallow = true
 	ignore = dirty
+[submodule "appleseed/appleseed"]
+	path = appleseed/appleseed
+	url = https://github.com/starseeker/appleseed
+	shallow = true
+	ignore = dirty
