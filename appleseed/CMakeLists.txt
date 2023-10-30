@@ -17,7 +17,7 @@ set(ENABLE_APPLESEED "${ENABLE_APPLESEED}" CACHE BOOL "Enable appleseed build")
 
 if (ENABLE_APPLESEED)
 
-  # git_submodule_init(appleseed CMakeLists.txt)
+  git_submodule_init(appleseed CMakeLists.txt)
 
   TargetDeps(APPLESEED)
   if (TARGET ZLIB_BLD)
