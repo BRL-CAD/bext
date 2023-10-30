@@ -358,3 +358,9 @@
 	branch = RELEASE
 	shallow = true
 	ignore = dirty
+[submodule "manifold/manifold"]
+	path = manifold/manifold
+	url = https://github.com/BRL-CAD/manifold.git
+	branch = RELEASE
+	shallow = true
+	ignore = dirty

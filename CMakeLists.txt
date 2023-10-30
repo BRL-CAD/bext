@@ -544,6 +544,10 @@ add_project(opencv GROUPS "BRLCAD_EXTRA")
 # https://www.graphics.rwth-aachen.de/software/openmesh/
 add_project(openmesh GROUPS "BRLCAD_EXTRA")
 
+# Manifold Library - used for performing boolean ops on meshes
+# https://github.com/elalish/manifold
+add_project(manifold GROUPS "BRLCAD")
+
 # openNURBS - Non-Uniform Rational BSpline library
 # https://github.com/mcneel/opennurbs
 add_project(opennurbs GROUPS "BRLCAD")
