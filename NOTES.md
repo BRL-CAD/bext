@@ -134,5 +134,50 @@ To github.com:BRL-CAD/gdal.git
    f74cd41441..6133cf34a7  RELEASE -> RELEASE
 
 After this process, the bext repo should be updated with the procedure documented
-earlier to update its reference to the gdal RELEASE HEAD.
+earlier to update its reference to the gdal RELEASE HEAD:
+
+user@linux:~/bext (main) $ git submodule update --remote
+remote: Enumerating objects: 1619, done.
+remote: Counting objects: 100% (990/990), done.
+remote: Compressing objects: 100% (238/238), done.
+remote: Total 398 (delta 322), reused 229 (delta 158), pack-reused 0
+Receiving objects: 100% (398/398), 156.17 KiB | 4.34 MiB/s, done.
+Resolving deltas: 100% (322/322), completed with 127 local objects.
+From https://github.com/BRL-CAD/gdal
+ + f74cd4144...6133cf34a RELEASE    -> origin/RELEASE  (forced update)
+ * [new tag]             v3.7.3     -> v3.7.3
+ * [new tag]             v3.7.3RC1  -> v3.7.3RC1
+Submodule path 'gdal/gdal': checked out '6133cf34a78077998406c0c4045bf51f06e3f49d'
+user@linux:~/bext (main) $ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   gdal/gdal (new commits)
+
+no changes added to commit (use "git add" and/or "git commit -a")
+user@linux:~/bext (main) $ git add gdal/gdal
+user@linux:~/bext (main) $ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   gdal/gdal
+
+user@linux:~/bext (main) $ git commit -m "Update GDAL submodule reference"
+[main 00ffbf0] Update GDAL submodule reference
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+user@linux:~/bext (main) $ git push
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 12 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 352 bytes | 352.00 KiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To github.com:starseeker/bext.git
+   23bb902..00ffbf0  main -> main
 
