@@ -29,4 +29,15 @@
 +  enum TYPE: unsigned int
    {
      invalid_type       =   0,
- 
+--- opennurbs/opennurbs_defines.cpp	2023-11-03 13:46:03.243020373 -0400
++++ openNURBS/opennurbs_defines.cpp	2023-11-06 15:05:08.769478363 -0500
+@@ -502,7 +502,7 @@
+   //#error TODO - call clang fcloseall()
+   //fcloseall is not supported on OS X
+   return EOF;
+-#elif defined(ON_COMPILER_GNU)
++#elif defined(ON_COMPILER_GNU) && defined(__GLIBC__)
+   fcloseall();
+ #else
+   // I can't find an fcloseall() or _fcloseall() in
+
