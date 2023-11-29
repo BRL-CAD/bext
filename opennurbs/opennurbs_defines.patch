@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_defines.h	2023-09-09 13:52:46.157646417 -0400
-+++ openNURBS/opennurbs_defines.h	2023-09-09 13:43:33.712976340 -0400
+--- opennurbs/opennurbs_defines.h	2023-11-28 19:23:49.946781764 -0500
++++ openNURBS/opennurbs_defines.h	2023-11-29 08:24:43.823790334 -0500
 @@ -102,6 +102,11 @@
  #define ON_DECL __attribute__ ((visibility ("default")))
  #define ON_EXTERN_DECL __attribute__ ((visibility ("default")))
@@ -29,8 +29,9 @@
 +  enum TYPE: unsigned int
    {
      invalid_type       =   0,
---- opennurbs/opennurbs_defines.cpp	2023-11-03 13:46:03.243020373 -0400
-+++ openNURBS/opennurbs_defines.cpp	2023-11-06 15:05:08.769478363 -0500
+ 
+--- opennurbs/opennurbs_defines.cpp	2023-11-28 19:23:49.946781764 -0500
++++ openNURBS/opennurbs_defines.cpp	2023-11-29 08:25:09.111366198 -0500
 @@ -502,7 +502,7 @@
    //#error TODO - call clang fcloseall()
    //fcloseall is not supported on OS X
@@ -40,4 +41,3 @@
    fcloseall();
  #else
    // I can't find an fcloseall() or _fcloseall() in
-
