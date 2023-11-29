@@ -133,10 +133,10 @@ user@linux:~/gdal (RELEASE) $ git push
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0
 To github.com:BRL-CAD/gdal.git
    f74cd41441..6133cf34a7  RELEASE -> RELEASE
-
+```
 After this process, the bext repo should be updated with the procedure documented
 earlier to update its reference to the gdal RELEASE HEAD:
-
+```
 user@linux:~/bext (main) $ git submodule update --remote
 remote: Enumerating objects: 1619, done.
 remote: Counting objects: 100% (990/990), done.
