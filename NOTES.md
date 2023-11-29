@@ -1,6 +1,6 @@
 # bext - Notes
 
-When using submodules, there are some fairnly non-intuitive aspects of managing them that need to be taken into consideration:
+When using submodules, there are some fairly non-intuitive aspects of managing them that need to be taken into consideration:
 
 # Adding a submodule (using Tcl as an example)
 ```
@@ -22,7 +22,7 @@ user@linux:~/bext (main) $ git ls-tree main tcl/tcl
 
 The operation of updating submodules requires a full git clone, rather than the shallow
 checkouts used in normal operation:
-
+```
 user@linux:~ $ git clone --recurse-submodules git@github.com:starseeker/bext.git
 user@linux:~ $ cd bext
 user@linux:~/bext (main) $ git submodule update --remote
@@ -53,6 +53,7 @@ Changes to be committed:
 	modified:   qt/qt
 user@linux:~/bext (main) $ git commit -m "Update submodule references for AssetImport, LIEF and Qt"
 user@linux:~/bext (main) $ git push
+```
 
 # Changing the branch of a submodule
 
@@ -79,7 +80,7 @@ opportunity to keep the BRL-CAD copy in sync with upstream sources using the git
 tools intended for those use cases.
 
 To update (for example) BRL-CAD's copy of GDAL to reference the latest release:
-
+```
 user@linux:~ $ git clone git@github.com:BRL-CAD/gdal.git
 user@linux:~ $ cd gdal
 user@linux:~/gdal (master) $ git remote add upstream https://github.com/OSGeo/gdal
@@ -180,4 +181,5 @@ Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
 remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
 To github.com:starseeker/bext.git
    23bb902..00ffbf0  main -> main
+```
 
