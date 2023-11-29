@@ -94,7 +94,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake --build build --config Release -j1 --target ALL
+          cmake --build build --config Release -j1
 
   linux:
     name: Ubuntu Latest GCC
