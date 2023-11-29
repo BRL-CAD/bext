@@ -446,7 +446,7 @@ add_project(netpbm GROUPS "BRLCAD")
 
 # libjpeg-turbo - JPEG image codec
 # https://github.com/libjpeg-turbo/libjpeg-turbo
-add_project(jpeg GROUPS "APPLESEED")
+add_project(jpeg GROUPS "APPLESEED;GDAL")
 
 # libpng - Portable Network Graphics image file support
 # http://www.libpng.org/pub/png/libpng.html
