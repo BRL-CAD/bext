@@ -1,0 +1,144 @@
+# This file defines Continuous Integration (CI) tests for bext using the
+# Github Actions framework.  Currently it defines configurations for Windows,
+# Linux and OSX.
+#
+# For more information about available platforms for testing, see:
+#
+# https://docs.github.com/en/free-pro-team@latest/actions/reference/specifications-for-github-hosted-runners
+#
+# The general rule when building in CI is to go more verbose in output settings
+# rather than less, since iterative debugging isn't practical.  We also want to
+# avoid parallel building - while that will sometimes catch dependency issues,
+# it also makes the outputs far harder to interpret when there is a problem.
+# Better to do parallel build debugging in an environment were more interactive
+# and iterative debugging is available while preserving the readability of the
+# CI outputs for other issues.
+#
+# Note that there is another reason not to do parallel runs; we have had some
+# trouble with issues that appear to be related to files not being fully
+# written out to disk. To try and help mitigate this, we don't want to stress
+# the I/O subsystem any more than necessary:
+#
+# https://github.com/actions/runner/issues/718
+#
+
+name: BRL-CAD
+
+on: [push]
+
+jobs:
+  windows:
+    name: Windows Latest MSVC - Ninja
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Add github workspace to path
+        # https://github.community/t/deprecated-add-path/136621
+        run: echo "$ENV{GITHUB_WORKSPACE}" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1.3
+
+      - name: Add cl.exe to PATH
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE=Release -DENABLE_ALL=ON
+          # We do the following in order to help ensure files are "flushed"
+          # to disk before compilation is attempted
+          # https://superuser.com/a/1553374/1286142
+          powershell Write-VolumeCache C
+          powershell Write-VolumeCache D
+
+      - name: Build
+        run: cd build && ninja -j1 -v
+
+        # TODO - if the loading isn't too extreme, it would be good to do a BRL-CAD
+        # build against the output of this...
+#     - name: Build - BRL-CAD
+#       run: |
+#         # TODO - figure out how to do this...
+
+  windows_std_tools:
+    name: Windows Latest MSVC - Standard Tools
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Add github workspace to path
+        # https://github.community/t/deprecated-add-path/136621
+        run: echo "$ENV{GITHUB_WORKSPACE}" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
+          # We do the following in order to help ensure files are "flushed"
+          # to disk before compilation is attempted
+          # https://superuser.com/a/1553374/1286142
+          powershell Write-VolumeCache C
+          powershell Write-VolumeCache D
+
+      - name: Build
+        run: |
+          cmake --build build --config Release -j1 --target ALL
+
+  linux:
+    name: Ubuntu Latest GCC
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure
+        run: |
+          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
+          cd build && ninja -j1 -v
+
+  osx:
+    name: macOS Latest Clang
+    runs-on: macos-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure
+        run: |
+          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
+          export CC=clang
+          export CXX=clang++
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
+          cd build && ninja -j1 -v
+
