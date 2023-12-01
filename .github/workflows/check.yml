@@ -7,28 +7,21 @@
 # https://docs.github.com/en/free-pro-team@latest/actions/reference/specifications-for-github-hosted-runners
 #
 # The general rule when building in CI is to go more verbose in output settings
-# rather than less, since iterative debugging isn't practical.  We also want to
-# avoid parallel building - while that will sometimes catch dependency issues,
-# it also makes the outputs far harder to interpret when there is a problem.
-# Better to do parallel build debugging in an environment were more interactive
-# and iterative debugging is available while preserving the readability of the
-# CI outputs for other issues.
+# rather than less, since iterative debugging isn't practical.
 #
-# Note that there is another reason not to do parallel runs; we have had some
-# trouble with issues that appear to be related to files not being fully
-# written out to disk. To try and help mitigate this, we don't want to stress
-# the I/O subsystem any more than necessary:
-#
-# https://github.com/actions/runner/issues/718
-#
+# We generally want to avoid parallel building - while that will sometimes
+# catch dependency issues, it also makes the outputs far harder to interpret
+# when there is a problem.  However, the full BRL-CAD dependency stack is quite
+# a long build, so in this case we are experimenting with it to see if it can
+# help our build times on the runners.
 
 name: BRL-CAD
 
 on: [push]
 
 jobs:
-  windows:
-    name: Windows Latest MSVC - Ninja
+  windows_ninja_release:
+    name: Windows Latest MSVC - Ninja Release build
     runs-on: windows-latest
     strategy:
       fail-fast: true
@@ -59,7 +52,7 @@ jobs:
           powershell Write-VolumeCache D
 
       - name: Build
-        run: cd build && ninja -j1 -v
+        run: cd build && ninja -j2 -v
 
         # TODO - if the loading isn't too extreme, it would be good to do a BRL-CAD
         # build against the output of this...
@@ -67,8 +60,49 @@ jobs:
 #       run: |
 #         # TODO - figure out how to do this...
 
-  windows_std_tools:
-    name: Windows Latest MSVC - Standard Tools
+  windows_ninja_debug:
+    name: Windows Latest MSVC - Ninja Debug build
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add github workspace to path
+        # https://github.community/t/deprecated-add-path/136621
+        run: echo "$ENV{GITHUB_WORKSPACE}" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1.3
+
+      - name: Add cl.exe to PATH
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE=Debug -DENABLE_ALL=ON
+          # We do the following in order to help ensure files are "flushed"
+          # to disk before compilation is attempted
+          # https://superuser.com/a/1553374/1286142
+          powershell Write-VolumeCache C
+          powershell Write-VolumeCache D
+
+      - name: Build
+        run: cd build && ninja -j2 -v
+
+        # TODO - if the loading isn't too extreme, it would be good to do a BRL-CAD
+        # build against the output of this...
+#     - name: Build - BRL-CAD
+#       run: |
+#         # TODO - figure out how to do this...
+
+
+  windows_std_tools_release:
+    name: Windows Latest MSVC - Standard Tools Release Build
     runs-on: windows-latest
     strategy:
       fail-fast: true
@@ -85,7 +119,7 @@ jobs:
 
       - name: Configure
         run: |
-          cmake -S . -B build -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DENABLE_ALL=ON
           # We do the following in order to help ensure files are "flushed"
           # to disk before compilation is attempted
           # https://superuser.com/a/1553374/1286142
@@ -94,10 +128,40 @@ jobs:
 
       - name: Build
         run: |
-          cmake --build build --config Release -j1
+          cmake --build build --config Release -j2
 
-  linux:
-    name: Ubuntu Latest GCC
+  windows_std_tools_debug:
+    name: Windows Latest MSVC - Standard Tools Debug Build
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add github workspace to path
+        # https://github.community/t/deprecated-add-path/136621
+        run: echo "$ENV{GITHUB_WORKSPACE}" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -DENABLE_ALL=ON
+          # We do the following in order to help ensure files are "flushed"
+          # to disk before compilation is attempted
+          # https://superuser.com/a/1553374/1286142
+          powershell Write-VolumeCache C
+          powershell Write-VolumeCache D
+
+      - name: Build
+        run: |
+          cmake --build build --config Debug -j2
+
+
+  linux_release:
+    name: Ubuntu Latest GCC Release Build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -129,10 +193,46 @@ jobs:
       - name: Build
         run: |
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
-          cd build && ninja -j1 -v
+          cd build && ninja -j2 -v
 
-  osx:
-    name: macOS Latest Clang
+  linux_debug:
+    name: Ubuntu Latest GCC Debug Build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup - System
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          # Install XCB/OpenGL dev pkgs for Qt - see:
+          # https://wiki.qt.io/Building_Qt_6_from_Git
+          # https://doc.qt.io/qt-6/linux-requirements.html
+          sudo apt-get install libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-cursor-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev
+          sudo apt-get install libgl-dev
+          sudo apt-get install libinput-dev
+          sudo apt-get clean
+
+      - name: Configure
+        run: |
+          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: |
+          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
+          cd build && ninja -j2 -v
+
+
+  osx_release:
+    name: macOS Latest Clang Release Build
     runs-on: macos-latest
     strategy:
       fail-fast: true
@@ -153,5 +253,29 @@ jobs:
       - name: Build
         run: |
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
-          cd build && ninja -j1 -v
+          cd build && ninja -j2 -v
+
+  osx_debug:
+    name: macOS Latest Clang Debug Build
+    runs-on: macos-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
+          export CC=clang
+          export CXX=clang++
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: |
+          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
+          cd build && ninja -j2 -v
 
