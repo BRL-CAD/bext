@@ -366,6 +366,6 @@
 	ignore = dirty
 [submodule "appleseed/appleseed"]
 	path = appleseed/appleseed
-	url = https://github.com/starseeker/appleseed
+	url = https://github.com/BRL-CAD/appleseed
 	shallow = true
 	ignore = dirty
