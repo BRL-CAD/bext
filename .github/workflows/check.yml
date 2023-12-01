@@ -21,7 +21,7 @@ on: [push]
 
 jobs:
   windows_ninja_release:
-    name: Windows Latest MSVC - Ninja Release build
+    name: MSVC - Ninja Release build
     runs-on: windows-latest
     strategy:
       fail-fast: true
@@ -61,7 +61,7 @@ jobs:
 #         # TODO - figure out how to do this...
 
   windows_ninja_debug:
-    name: Windows Latest MSVC - Ninja Debug build
+    name: MSVC - Ninja Debug build
     runs-on: windows-latest
     strategy:
       fail-fast: true
@@ -102,7 +102,7 @@ jobs:
 
 
   windows_std_tools_release:
-    name: Windows Latest MSVC - Standard Tools Release Build
+    name: MSVC - Standard Tools Release Build
     runs-on: windows-latest
     strategy:
       fail-fast: true
@@ -131,7 +131,7 @@ jobs:
           cmake --build build --config Release -j2
 
   windows_std_tools_debug:
-    name: Windows Latest MSVC - Standard Tools Debug Build
+    name: MSVC - Standard Tools Debug Build
     runs-on: windows-latest
     strategy:
       fail-fast: true
@@ -161,7 +161,7 @@ jobs:
 
 
   linux_release:
-    name: Ubuntu Latest GCC Release Build
+    name: Ubuntu GCC Release Build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -196,7 +196,7 @@ jobs:
           cd build && ninja -j2 -v
 
   linux_debug:
-    name: Ubuntu Latest GCC Debug Build
+    name: Ubuntu GCC Debug Build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -232,7 +232,7 @@ jobs:
 
 
   osx_release:
-    name: macOS Latest Clang Release Build
+    name: macOS Clang Release Build
     runs-on: macos-latest
     strategy:
       fail-fast: true
@@ -256,7 +256,7 @@ jobs:
           cd build && ninja -j2 -v
 
   osx_debug:
-    name: macOS Latest Clang Debug Build
+    name: macOS Clang Debug Build
     runs-on: macos-latest
     strategy:
       fail-fast: true
