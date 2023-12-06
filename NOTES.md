@@ -23,7 +23,7 @@ user@linux:~/bext (main) $ git ls-tree main tcl/tcl
 The operation of updating submodules requires a full git clone, rather than the shallow
 checkouts used in normal operation:
 ```
-user@linux:~ $ git clone --recurse-submodules git@github.com:starseeker/bext.git
+user@linux:~ $ git clone --recurse-submodules git@github.com:BRL-CAD/bext.git
 user@linux:~ $ cd bext
 user@linux:~/bext (main) $ git submodule update --remote
 Submodule path 'assetimport/assimp': checked out '6a08c39e3a91ef385e76515cfad86aca4bfd57ff'
@@ -179,7 +179,7 @@ Compressing objects: 100% (3/3), done.
 Writing objects: 100% (3/3), 352 bytes | 352.00 KiB/s, done.
 Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
 remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
-To github.com:starseeker/bext.git
+To github.com:BRL-CAD/bext.git
    23bb902..00ffbf0  main -> main
 ```
 
