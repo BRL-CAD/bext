@@ -492,7 +492,7 @@ add_project(lmdb GROUPS "BRLCAD")
 
 # Eigen - linear algebra library
 # https://eigen.tuxfamily.org
-add_project(eigen GROUPS "BRLCAD")
+add_project(eigen GROUPS "BRLCAD;APPLESEED")
 
 # oneTBB - Threading Building Blocks
 # https://github.com/oneapi-src/oneTBB
