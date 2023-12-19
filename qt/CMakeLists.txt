@@ -34,6 +34,8 @@ if (ENABLE_QT)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qt_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/qt_build.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qt_install.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/qt_install.cmake @ONLY)
 
+  execute_process(COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_CURRENT_BINARY_DIR}/qt_build.cmake)
+
   ExternalProject_Add(Qt6_BLD
     SOURCE_DIR "${QT_SOURCE_DIR}"
     BINARY_DIR "${QT_BUILD_DIR}"
