@@ -1,6 +1,6 @@
-diff -Naur libpng-1.6.39/CMake/FindZLIB.cmake png/CMake/FindZLIB.cmake
---- libpng-1.6.39/CMake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ png/CMake/FindZLIB.cmake	2023-08-23 14:18:24.042461377 -0400
+diff -Naur libpng/CMake/FindZLIB.cmake PNG_BLD/CMake/FindZLIB.cmake
+--- libpng/CMake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
++++ PNG_BLD/CMake/FindZLIB.cmake	2023-12-19 20:56:32.999510527 -0500
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -125,10 +125,10 @@ diff -Naur libpng-1.6.39/CMake/FindZLIB.cmake png/CMake/FindZLIB.cmake
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naur libpng-1.6.39/CMakeLists.txt png/CMakeLists.txt
---- libpng-1.6.39/CMakeLists.txt	2022-11-20 16:53:23.000000000 -0500
-+++ png/CMakeLists.txt	2023-08-23 14:18:24.042461377 -0400
-@@ -27,8 +27,15 @@
+diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
+--- libpng/CMakeLists.txt	2023-12-19 21:03:15.963777872 -0500
++++ PNG_BLD/CMakeLists.txt	2023-12-19 21:01:15.637230638 -0500
+@@ -32,8 +32,15 @@
  
  cmake_minimum_required(VERSION 3.1)
  cmake_policy(VERSION 3.1)
@@ -143,60 +143,56 @@ diff -Naur libpng-1.6.39/CMakeLists.txt png/CMakeLists.txt
 +
  enable_testing()
  
- set(PNGLIB_MAJOR 1)
-@@ -36,7 +43,7 @@
- set(PNGLIB_REVISION 39)
- set(PNGLIB_SUBREVISION 0)
- #set(PNGLIB_SUBREVISION "git")
--set(PNGLIB_NAME libpng${PNGLIB_MAJOR}${PNGLIB_MINOR})
-+set(PNGLIB_NAME libpng_brl${PNGLIB_MAJOR}${PNGLIB_MINOR})
- set(PNGLIB_VERSION ${PNGLIB_MAJOR}.${PNGLIB_MINOR}.${PNGLIB_REVISION})
- set(PNGLIB_SHARED_SOVERSION ${PNGLIB_MAJOR}${PNGLIB_MINOR})
- set(PNGLIB_SHARED_VERSION ${PNGLIB_SHARED_SOVERSION}.${PNGLIB_REVISION}.${PNGLIB_SUBREVISION})
-@@ -221,10 +228,12 @@
- endif(PNG_HARDWARE_OPTIMIZATIONS)
- 
- # Set PNG_LIB_NAME.
--set(PNG_LIB_NAME png${PNGLIB_MAJOR}${PNGLIB_MINOR})
-+set(PNG_LIB_NAME png_brl${PNGLIB_MAJOR}${PNGLIB_MINOR})
- 
- # Distinguish between debug and release builds.
--set(CMAKE_DEBUG_POSTFIX "d")
-+if(NOT PNG_NO_DEBUG_POSTFIX)
-+	set(CMAKE_DEBUG_POSTFIX "d")
-+endif(NOT PNG_NO_DEBUG_POSTFIX)
- 
- include(CheckCSourceCompiles)
- option(ld-version-script "Enable linker version script" ON)
-@@ -414,10 +423,9 @@
+ include(CMakeParseArguments)
+@@ -437,10 +444,9 @@
  
    if(PNG_PREFIX)
      set(PNGLIBCONF_H_EXTRA_DEPENDS
 -        "${CMAKE_CURRENT_BINARY_DIR}/scripts/prefix.out"
 -        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/macro.lst")
-+        scripts_prefix_out)
++        png_scripts_prefix_out)
      set(PNGPREFIX_H_EXTRA_DEPENDS
 -        "${CMAKE_CURRENT_BINARY_DIR}/scripts/intprefix.out")
-+        scripts_intprefix_out)
++        png_scripts_intprefix_out)
    endif()
  
    generate_out(INPUT "${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.c"
-@@ -969,22 +977,22 @@
+@@ -624,15 +630,15 @@
+   # We are on a Unix or Unix-like toolchain like the GNU toolchain on Windows.
+   # Library file names are expected to have an implicit prefix such as "lib".
+   # Let CMake prepend and append its usual prefixes and suffixes by default.
+-  set(PNG_SHARED_OUTPUT_NAME "png${PNGLIB_ABI_VERSION}")
+-  set(PNG_STATIC_OUTPUT_NAME "png${PNGLIB_ABI_VERSION}")
++  set(PNG_SHARED_OUTPUT_NAME "png_brl${PNGLIB_ABI_VERSION}")
++  set(PNG_STATIC_OUTPUT_NAME "png_brl${PNGLIB_ABI_VERSION}")
+ else()
+   # We are, most likely, on a Windows toolchain like MSVC, Clang on Windows,
+   # Borland/Embarcadero, etc. We need to specify the "libpng" name explicitly.
+   # We also need to use a custom suffix, in order to distinguish between the
+   # shared import library name and the static library name.
+-  set(PNG_SHARED_OUTPUT_NAME "libpng${PNGLIB_ABI_VERSION}")
+-  set(PNG_STATIC_OUTPUT_NAME "libpng${PNGLIB_ABI_VERSION}_static")
++  set(PNG_SHARED_OUTPUT_NAME "libpng_brl${PNGLIB_ABI_VERSION}")
++  set(PNG_STATIC_OUTPUT_NAME "libpng_brl${PNGLIB_ABI_VERSION}_static")
+ endif()
+ 
+ if(PNG_SHARED)
+@@ -988,22 +994,22 @@
    if(PNG_SHARED)
      # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
      if(CYGWIN OR MINGW)
--      create_symlink(libpng${CMAKE_IMPORT_LIBRARY_SUFFIX} TARGET png)
--      install(FILES $<TARGET_LINKER_FILE_DIR:png>/libpng${CMAKE_IMPORT_LIBRARY_SUFFIX}
-+      create_symlink(libpng_brl${CMAKE_IMPORT_LIBRARY_SUFFIX} TARGET png)
-+      install(FILES $<TARGET_LINKER_FILE_DIR:png>/libpng_brl${CMAKE_IMPORT_LIBRARY_SUFFIX}
+-      create_symlink(libpng${CMAKE_IMPORT_LIBRARY_SUFFIX} TARGET png_shared)
+-      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_IMPORT_LIBRARY_SUFFIX}
++      create_symlink(libpng_brl${CMAKE_IMPORT_LIBRARY_SUFFIX} TARGET png_shared)
++      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_IMPORT_LIBRARY_SUFFIX}
                DESTINATION ${CMAKE_INSTALL_LIBDIR})
      endif()
  
      if(NOT WIN32)
--      create_symlink(libpng${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png)
--      install(FILES $<TARGET_LINKER_FILE_DIR:png>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}
-+      create_symlink(libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png)
-+      install(FILES $<TARGET_LINKER_FILE_DIR:png>/libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX}
+-      create_symlink(libpng${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
+-      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}
++      create_symlink(libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
++      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX}
                DESTINATION ${CMAKE_INSTALL_LIBDIR})
      endif()
    endif()
