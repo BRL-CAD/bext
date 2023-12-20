@@ -253,9 +253,9 @@ diff -Naur PROJ.orig/src/lib_proj.cmake PROJ_BLD/src/lib_proj.cmake
  
  if(NLOHMANN_JSON STREQUAL "external")
    target_compile_definitions(proj PRIVATE EXTERNAL_NLOHMANN_JSON)
-diff -Naur PROJ.orig/test/unit/CMakeLists.txt PROJ_BLD/test/unit/CMakeLists.txt
---- PROJ.orig/test/unit/CMakeLists.txt	2023-09-18 15:04:48.462993957 -0400
-+++ PROJ_BLD/test/unit/CMakeLists.txt	2023-09-18 15:08:21.783927671 -0400
+diff -Naur PROJ/test/unit/CMakeLists.txt PROJ_BLD/test/unit/CMakeLists.txt
+--- PROJ/test/unit/CMakeLists.txt	2023-12-20 14:33:24.917125792 -0500
++++ PROJ_BLD/test/unit/CMakeLists.txt	2023-12-20 14:34:26.456060136 -0500
 @@ -76,7 +76,7 @@
  #
  
@@ -280,6 +280,6 @@ diff -Naur PROJ.orig/test/unit/CMakeLists.txt PROJ_BLD/test/unit/CMakeLists.txt
    PRIVATE ${PROJ_LIBRARIES}
 -  PRIVATE ${SQLITE3_LIBRARY})
 +  PRIVATE ${SQLite3_LIBRARY})
+ if(TIFF_ENABLED)
  add_test(NAME test_network COMMAND test_network)
  set_property(TEST test_network
-   PROPERTY ENVIRONMENT ${PROJ_TEST_ENVIRONMENT})
