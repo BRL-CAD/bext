@@ -1,6 +1,6 @@
-diff -Naur qtsvg-everywhere-src-6.5.2/CMake/FindZLIB.cmake qtsvg/CMake/FindZLIB.cmake
---- qtsvg-everywhere-src-6.5.2/CMake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ qtsvg/CMake/FindZLIB.cmake	2023-08-22 22:05:16.737374850 -0400
+diff -Naur qtsvg/CMake/FindZLIB.cmake Qt6Svg_BLD/CMake/FindZLIB.cmake
+--- qtsvg/CMake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
++++ Qt6Svg_BLD/CMake/FindZLIB.cmake	2023-12-20 10:19:52.104033439 -0500
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -125,9 +125,9 @@ diff -Naur qtsvg-everywhere-src-6.5.2/CMake/FindZLIB.cmake qtsvg/CMake/FindZLIB.
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naur qtsvg-everywhere-src-6.5.2/CMakeLists.txt qtsvg/CMakeLists.txt
---- qtsvg-everywhere-src-6.5.2/CMakeLists.txt	2023-07-06 23:20:38.000000000 -0400
-+++ qtsvg/CMakeLists.txt	2023-08-22 22:07:45.774793677 -0400
+diff -Naur qtsvg/CMakeLists.txt Qt6Svg_BLD/CMakeLists.txt
+--- qtsvg/CMakeLists.txt	2023-12-19 20:56:21.873344047 -0500
++++ Qt6Svg_BLD/CMakeLists.txt	2023-12-20 10:28:48.591993474 -0500
 @@ -11,6 +11,8 @@
      LANGUAGES CXX C
  )
@@ -137,9 +137,29 @@ diff -Naur qtsvg-everywhere-src-6.5.2/CMakeLists.txt qtsvg/CMakeLists.txt
  find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS BuildInternals Core)
  find_package(Qt6 ${PROJECT_VERSION} QUIET CONFIG OPTIONAL_COMPONENTS Gui Widgets Xml)
  qt_internal_project_setup()
-diff -Naur qtsvg-everywhere-src-6.5.2/src/svg/CMakeLists.txt qtsvg/src/svg/CMakeLists.txt
---- qtsvg-everywhere-src-6.5.2/src/svg/CMakeLists.txt	2023-07-06 23:20:38.000000000 -0400
-+++ qtsvg/src/svg/CMakeLists.txt	2023-08-23 15:06:18.643807613 -0400
+@@ -23,4 +25,19 @@
+     find_package(Qt6 ${PROJECT_VERSION} QUIET CONFIG OPTIONAL_COMPONENTS ZlibPrivate)
+ endif()
+ 
++# Convenience function
++function(flag_strip flag_var_name flag_value)
++	string(REPLACE "${flag_value}" " " ${flag_var_name} "${${flag_var_name}}")
++	get_property(help_text CACHE ${flag_var_name} PROPERTY HELPSTRING)
++	set(${flag_var_name} "${${flag_var_name}}" CACHE STRING "${help_text}" FORCE)
++endfunction(flag_strip flag_var_name)
++
++# The /RTC1 flag is present in the default DEBUG flags list and contradicts -O2
++set(flag_value "/RTC1")
++set(configs RELWITHDEBINFO DEBUG)
++foreach(config ${configs})
++	set(flag_var_name "CMAKE_CXX_FLAGS_${config}")
++	flag_strip(${flag_var_name} ${flag_value})
++endforeach(config ${configs})
++
+ qt_build_repo()
+diff -Naur qtsvg/src/svg/CMakeLists.txt Qt6Svg_BLD/src/svg/CMakeLists.txt
+--- qtsvg/src/svg/CMakeLists.txt	2023-12-19 20:56:21.877344964 -0500
++++ Qt6Svg_BLD/src/svg/CMakeLists.txt	2023-12-20 10:19:52.104033439 -0500
 @@ -12,6 +12,8 @@
      qt_find_package(WrapZLIB PROVIDED_TARGETS WrapZLIB::WrapZLIB)
  endif()
