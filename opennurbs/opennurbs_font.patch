@@ -1,6 +1,6 @@
---- opennurbs/opennurbs_font.cpp	2023-09-09 13:52:46.157646417 -0400
-+++ openNURBS/opennurbs_font.cpp	2023-09-09 13:43:33.716976293 -0400
-@@ -8852,7 +8852,7 @@
+--- opennurbs/opennurbs_font.cpp	2023-12-20 11:23:16.153987006 -0500
++++ OPENNURBS_BLD/opennurbs_font.cpp	2023-12-20 11:22:15.347051556 -0500
+@@ -8936,7 +8936,7 @@
      const wchar_t* prev_clean_family_name = nullptr;
      for (size_t i = 0; i < installed_count; i++)
      {
@@ -9,7 +9,7 @@
        const ON_Font* font = installed_fonts[(int)i];
  #else
        const ON_Font* font = installed_fonts[i];
-@@ -8915,7 +8915,7 @@
+@@ -8999,7 +8999,7 @@
        InternalHashToName candidate;
        for (size_t i = 0; i < count0; i++)
        {
@@ -18,12 +18,3 @@
          InternalHashToName e = a[(int)i];
  #else
          InternalHashToName e = a[i];
-@@ -9642,7 +9642,7 @@
- 
- void ON_Font::Dump(ON_TextLog& dump) const
- {
--  const bool bTextHash = dump.IsTextHash();;
-+  const bool bTextHash = dump.IsTextHash();
- 
-   ON_wString s;
- 

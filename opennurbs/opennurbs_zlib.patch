@@ -1,109 +1,3 @@
---- opennurbs/opennurbs_zlib.cpp	2023-09-09 13:52:46.173646192 -0400
-+++ openNURBS/opennurbs_zlib.cpp	2023-09-09 13:43:33.716976293 -0400
-@@ -26,6 +26,7 @@
- 
- #include "opennurbs_zlib.h"
- 
-+#if 0
- #if defined(ON_COMPILER_MSC)
- 
- #if !defined(OPENNURBS_ZLIB_LIB_DIR)
-@@ -42,7 +43,6 @@
- 
- #endif
- 
--
- #if defined(_LIB) && defined(_MT) && !defined(_DLL)
- // using Microsoft statically linked C-runtime
- #pragma message ( "Linking with zlib_mt.lib in " OPENNURBS_PP2STR(OPENNURBS_ZLIB_LIB_DIR) )
-@@ -55,6 +55,8 @@
- 
- #endif
- 
-+#endif
-+
- // compressed buffer I/O uses zlib 1.1.3 inflate()/deflate()
- class ON_CompressorImplementation
- {
-@@ -313,11 +315,11 @@
-       // no uncompressed input is left - switch to finish mode
-       flush = Z_FINISH;
-     }
--    zrc = z_deflate(&m_zlib.m_strm, flush);
-+    zrc = deflate(&m_zlib.m_strm, flush);
-     if ( zrc < 0 ) 
-     {
-       // Something went haywire - bail out.
--      ON_ERROR("ON_BinaryArchive::WriteDeflate - z_deflate failure");
-+      ON_ERROR("ON_BinaryArchive::WriteDeflate - deflate failure");
-       rc = false;
-       break;
-     }
-@@ -513,11 +515,11 @@
-       // no compressed input is left - switch to finish mode
-       flush = Z_FINISH;
-     }
--    zrc = z_inflate( &m_zlib.m_strm, flush );
-+    zrc = inflate( &m_zlib.m_strm, flush );
-     if ( zrc < 0 ) 
-     {
-       // Something went haywire - bail out.
--      ON_ERROR("ON_BinaryArchive::ReadInflate - z_inflate failure");
-+      ON_ERROR("ON_BinaryArchive::ReadInflate - inflate failure");
-       rc = false;
-       break;
-     }
-@@ -1183,11 +1185,11 @@
-       // no uncompressed input is left - switch to finish mode
-       flush = Z_FINISH;
-     }
--    zrc = z_deflate( &m_zlib.m_strm, flush ); 
-+    zrc = deflate( &m_zlib.m_strm, flush );
-     if ( zrc < 0 ) 
-     {
-       // Something went haywire - bail out.
--      ON_ERROR("ON_CompressedBuffer::DeflateHelper - z_deflate failure");
-+      ON_ERROR("ON_CompressedBuffer::DeflateHelper - deflate failure");
-       rc = false;
-       break;
-     }
-@@ -1316,11 +1318,11 @@
-       // no compressed input is left - switch to finish mode
-       flush = Z_FINISH;
-     }
--    zrc = z_inflate( &m_zlib.m_strm, flush );
-+    zrc = inflate( &m_zlib.m_strm, flush );
-     if ( zrc < 0 ) 
-     {
-       // Something went haywire - bail out.
--      ON_ERROR("ON_CompressedBuffer::InflateHelper - z_inflate failure");
-+      ON_ERROR("ON_CompressedBuffer::InflateHelper - inflate failure");
-       rc = false;
-       break;
-     }
---- opennurbs/opennurbs_zlib.h	2023-09-09 13:52:46.173646192 -0400
-+++ openNURBS/opennurbs_zlib.h	2023-09-09 13:43:33.716976293 -0400
-@@ -28,19 +28,13 @@
- // and statically link with the zlib library. All the necessary
- // header files are included by opennurbs.h.
- 
--
--#if !defined(Z_PREFIX)
--/* decorates zlib functions with a "z_" prefix to prevent symbol collision. */
--#define Z_PREFIX
--#endif
--
- #if !defined(MY_ZCALLOC)
- /* have zlib use oncalloc() and onfree() for memory managment*/
- #define MY_ZCALLOC
- #endif
- 
- #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
--#include "./zlib/zlib.h"
-+#include "zlib.h"
- #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
- 
- ON_BEGIN_EXTERNC
 --- opennurbs/opennurbs_compress.cpp	2023-09-09 13:52:46.157646417 -0400
 +++ openNURBS/opennurbs_compress.cpp	2023-09-09 13:43:33.712976340 -0400
 @@ -131,7 +131,7 @@
@@ -188,3 +82,97 @@
      if ( zrc < 0 ) 
      {
        // Something went haywire - bail out.
+--- opennurbs/opennurbs_zlib.cpp	2023-12-20 11:23:16.233985604 -0500
++++ OPENNURBS_BLD/opennurbs_zlib.cpp	2023-12-20 11:22:15.431050084 -0500
+@@ -23,6 +23,7 @@
+ 
+ #include "opennurbs_zlib.h"
+ 
++#if 0
+ #if defined(ON_COMPILER_MSC) && !defined(ON_CMAKE_BUILD)
+ 
+ #if !defined(OPENNURBS_ZLIB_LIB_DIR)
+@@ -39,7 +40,6 @@
+ 
+ #endif
+ 
+-
+ #if defined(_LIB) && defined(_MT) && !defined(_DLL)
+ // using Microsoft statically linked C-runtime
+ #pragma message ( "Linking with zlib_mt.lib in " OPENNURBS_PP2STR(OPENNURBS_ZLIB_LIB_DIR) )
+@@ -52,6 +52,8 @@
+ 
+ #endif
+ 
++#endif
++
+ // compressed buffer I/O uses zlib 1.1.3 inflate()/deflate()
+ class ON_CompressorImplementation
+ {
+@@ -319,11 +321,11 @@
+       // no uncompressed input is left - switch to finish mode
+       flush = Z_FINISH;
+     }
+-    zrc = z_deflate(&m_zlib.m_strm, flush);
++    zrc = deflate(&m_zlib.m_strm, flush);
+     if ( zrc < 0 ) 
+     {
+       // Something went haywire - bail out.
+-      ON_ERROR("ON_BinaryArchive::WriteDeflate - z_deflate failure");
++      ON_ERROR("ON_BinaryArchive::WriteDeflate - deflate failure");
+       rc = false;
+       break;
+     }
+@@ -519,11 +521,11 @@
+       // no compressed input is left - switch to finish mode
+       flush = Z_FINISH;
+     }
+-    zrc = z_inflate( &m_zlib.m_strm, flush );
++    zrc = inflate( &m_zlib.m_strm, flush );
+     if ( zrc < 0 ) 
+     {
+       // Something went haywire - bail out.
+-      ON_ERROR("ON_BinaryArchive::ReadInflate - z_inflate failure");
++      ON_ERROR("ON_BinaryArchive::ReadInflate - inflate failure");
+       rc = false;
+       break;
+     }
+@@ -1200,11 +1202,11 @@
+       // no uncompressed input is left - switch to finish mode
+       flush = Z_FINISH;
+     }
+-    zrc = z_deflate( &m_zlib.m_strm, flush ); 
++    zrc = deflate( &m_zlib.m_strm, flush );
+     if ( zrc < 0 ) 
+     {
+       // Something went haywire - bail out.
+-      ON_ERROR("ON_CompressedBuffer::DeflateHelper - z_deflate failure");
++      ON_ERROR("ON_CompressedBuffer::DeflateHelper - deflate failure");
+       rc = false;
+       break;
+     }
+@@ -1333,11 +1335,11 @@
+       // no compressed input is left - switch to finish mode
+       flush = Z_FINISH;
+     }
+-    zrc = z_inflate( &m_zlib.m_strm, flush );
++    zrc = inflate( &m_zlib.m_strm, flush );
+     if ( zrc < 0 ) 
+     {
+       // Something went haywire - bail out.
+-      ON_ERROR("ON_CompressedBuffer::InflateHelper - z_inflate failure");
++      ON_ERROR("ON_CompressedBuffer::InflateHelper - inflate failure");
+       rc = false;
+       break;
+     }
+--- opennurbs/opennurbs_zlib.h	2023-12-20 11:23:14.434017100 -0500
++++ OPENNURBS_BLD/opennurbs_zlib.h	2023-12-20 11:22:19.146985000 -0500
+@@ -37,7 +37,7 @@
+ #endif
+ 
+ #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
+-#include "./zlib/zlib.h"
++#include "zlib.h"
+ #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
+ 
+ ON_BEGIN_EXTERNC

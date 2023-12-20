@@ -1,0 +1,18 @@
+--- opennurbs/opennurbs_brep.h	2023-12-20 11:23:14.382018010 -0500
++++ OPENNURBS_BLD/opennurbs_brep.h	2023-12-20 11:22:19.090985982 -0500
+@@ -4141,6 +4141,7 @@
+         );
+ 
+   // helpers for validation checking
++public:
+   bool IsValidTrim(int trim_index,ON_TextLog* text_log) const;
+   bool IsValidTrimTopology(int trim_index,ON_TextLog* text_log) const;
+   bool IsValidTrimGeometry(int trim_index,ON_TextLog* text_log) const;
+@@ -4166,6 +4167,7 @@
+   bool IsValidVertexGeometry(int vertex_index,ON_TextLog* text_log) const;
+   bool IsValidVertexTolerancesAndFlags(int vertex_index,ON_TextLog* text_log) const;
+ 
++protected:
+   void SetTolsFromLegacyValues();
+ 
+   // read helpers to support various versions
