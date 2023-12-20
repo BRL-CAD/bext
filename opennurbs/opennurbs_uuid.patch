@@ -1,0 +1,20 @@
+--- opennurbs/opennurbs_uuid.cpp	2023-12-20 13:17:04.306927494 -0500
++++ OPENNURBS_BLD/opennurbs_uuid.cpp	2023-12-20 13:19:39.156176271 -0500
+@@ -12,7 +12,7 @@
+ ////////////////////////////////////////////////////////////////
+ 
+ #include "opennurbs.h"
+-#if defined(ON_RUNTIME_LINUX)
++#if defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+ #include "android_uuid/uuid.h"
+ #endif
+ #if !defined(ON_COMPILING_OPENNURBS)
+@@ -221,7 +221,7 @@
+   return true;
+ #else
+ 
+-#if defined(ON_RUNTIME_LINUX)
++#if defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+   uuid_generate((unsigned char*)&new_uuid);
+   return true;
+ #else

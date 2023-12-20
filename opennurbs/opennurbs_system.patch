@@ -1,0 +1,11 @@
+--- opennurbs/opennurbs_system.h	2023-12-20 13:17:04.282927924 -0500
++++ OPENNURBS_BLD/opennurbs_system.h	2023-12-20 13:17:00.994986900 -0500
+@@ -494,7 +494,7 @@
+ #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
+ 
+ #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
+-#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
++#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+ #include "android_uuid/uuid.h"
+ #else
+ #include <uuid/uuid.h>

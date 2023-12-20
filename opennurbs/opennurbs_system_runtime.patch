@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_system_runtime.h	2023-12-20 11:23:14.426017242 -0500
-+++ OPENNURBS_BLD/opennurbs_system_runtime.h	2023-12-20 11:22:19.138985139 -0500
+--- opennurbs/opennurbs_system_runtime.h	2023-12-20 13:17:04.282927924 -0500
++++ OPENNURBS_BLD/opennurbs_system_runtime.h	2023-12-20 13:17:00.994986900 -0500
 @@ -56,6 +56,11 @@
  #define ON_RUNTIME_LINUX
  #endif
@@ -39,3 +39,13 @@
  
  #if !defined(ON_SIZEOF_WCHAR_T)
  #define ON_SIZEOF_WCHAR_T 4
+@@ -159,7 +164,9 @@
+ #define ON_32BIT_RUNTIME
+ #endif
+ 
++#if !defined(ON_RUNTIME_BSD)
+ #include <endian.h>
++#endif
+ #if __BYTE_ORDER == __LITTLE_ENDIAN
+ #define ON_LITTLE_ENDIAN
+ #else
