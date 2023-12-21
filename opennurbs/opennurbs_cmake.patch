@@ -126,17 +126,50 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 +    endif()
 +endif()
 
---- opennurbs/CMakeLists.txt	2023-12-20 13:17:04.150930291 -0500
-+++ OPENNURBS_BLD/CMakeLists.txt	2023-12-20 13:22:40.221011876 -0500
-@@ -1,609 +1,625 @@
+--- opennurbs/CMakeLists.txt	2023-12-21 10:51:10.911124934 -0500
++++ OPENNURBS_BLD/CMakeLists.txt	2023-12-21 10:49:36.636736030 -0500
+@@ -1,609 +1,633 @@
 -cmake_minimum_required (VERSION 3.16)
 -#set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
 -project(opennurbs CXX)
--
++# Note: License below is for CMake build logic of openNURBS.  For license of
++# primary openNURBS source code, see license.txt file
++#
++# Copyright (c) 2010-2016 United States Government as represented by the U.S.
++# Army Research Laboratory.
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are met:
++#
++# 1. Redistributions of source code must retain the above copyright notice,
++# this list of conditions and the following disclaimer.
++#
++# 2. Redistributions in binary form must reproduce the above copyright notice,
++# this list of conditions and the following disclaimer in the documentation
++# and/or other materials provided with the distribution.
++#
++# 3. The name of the author may not be used to endorse or promote products
++# derived from this software without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
++# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
++# EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
++# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
++# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
++# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
++# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++# Minimum required version of CMake
++cmake_minimum_required(VERSION 3.16)
+ 
 -# specify the C++ standard
 -set(CMAKE_CXX_STANDARD 17)
 -set(CMAKE_CXX_STANDARD_REQUIRED True)
--
++project(OPENNURBS)
+ 
 -if (UNIX AND NOT APPLE)
 -    set(LINUX TRUE)
 -endif()
@@ -312,7 +345,9 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -    opennurbs_xml.h
 -    opennurbs_zlib.h
 -    )
--
++# Where to look for CMake modules
++list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
+ 
 -set( OPENNURBS_PUBLIC_SOURCES
 -    opennurbs_3dm_attributes.cpp
 -    opennurbs_3dm_properties.cpp
@@ -508,7 +543,11 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -    opennurbs_zlib.cpp
 -    opennurbs_zlib_memory.cpp
 -    )
--
++# Latest OpenNURBS requires C++17
++set(CMAKE_CXX_EXTENSIONS OFF)
++set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
 -if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_plus.h)
 -set( OPENNURBS_PLUS_HEADERS
 -    opennurbsRhino.pch
@@ -535,7 +574,9 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -    opennurbs_plus_validate.h
 -    opennurbs_plus_x.h
 -    )
--
++# Generate position independent code by default (i.e. -fPIC)
++set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+ 
 -set( OPENNURBS_PLUS_SOURCES
 -    opennurbs_plus_bezier.cpp
 -    opennurbs_plus_brep.cpp
@@ -618,52 +659,6 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -    ${OPENNURBS_PLUS_HEADERS}
 -    ${OPENNURBS_PLUS_SOURCES}
 -    opennurbs_dll.cpp
-+# Note: License below is for CMake build logic of openNURBS.  For license of
-+# primary openNURBS source code, see license.txt file
-+#
-+# Copyright (c) 2010-2016 United States Government as represented by the U.S.
-+# Army Research Laboratory.
-+#
-+# Redistribution and use in source and binary forms, with or without
-+# modification, are permitted provided that the following conditions are met:
-+#
-+# 1. Redistributions of source code must retain the above copyright notice,
-+# this list of conditions and the following disclaimer.
-+#
-+# 2. Redistributions in binary form must reproduce the above copyright notice,
-+# this list of conditions and the following disclaimer in the documentation
-+# and/or other materials provided with the distribution.
-+#
-+# 3. The name of the author may not be used to endorse or promote products
-+# derived from this software without specific prior written permission.
-+#
-+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
-+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
-+# EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+
-+# Minimum required version of CMake
-+cmake_minimum_required(VERSION 3.18)
-+
-+project(OPENNURBS)
-+
-+# Where to look for CMake modules
-+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
-+
-+# Latest OpenNURBS requires C++14
-+set(CMAKE_CXX_EXTENSIONS OFF)
-+set(CMAKE_CXX_STANDARD 14)
-+set(CMAKE_CXX_STANDARD_REQUIRED ON)
-+
-+# Generate position independent code by default (i.e. -fPIC)
-+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-+
 +# If we can, use OBJECT libraries to build both shared and static
 +# libraries from the same .o files, saving double compilation
 +include(CMakeDependentOption)
@@ -1152,103 +1147,17 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 +  )
  
 +add_definitions(-DON_COMPILING_OPENNURBS)
++add_definitions(-DON_CMAKE_BUILD)
  if (MSVC)
 -  # opennurbs_brep.cpp requires this flag when compiling with Visual C++
 -  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 -  #add_compile_options(\bigobj)
    add_definitions(-DUNICODE)
--  add_definitions(-D_UNICODE)
+   add_definitions(-D_UNICODE)
 -endif()
-+  set(OPENNURBS_LINKLIBRARIES ${OPENNURBS_LINKLIBRARIES} Rpcrt4 Shlwapi)
-+endif(MSVC)
- 
+-
 -add_definitions(-DON_CMAKE_BUILD)
-+if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-+  include(CheckCXXCompilerFlag)
-+  check_cxx_compiler_flag(-O3 HAVE_O3)
-+  if(HAVE_O3)
-+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-+  endif(HAVE_O3)
-+endif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-+
-+# Based on the options, define libraries as either stand-alone builds
-+# or dependencies on OBJECT library builds
-+if(NOT USE_OBJECT_LIBS)
-+ 
-+  if(BUILD_SHARED_LIBS)
-+    add_library(openNURBS SHARED ${OPENNURBS_SOURCES})
-+    if(MSVC)
-+      set_property(TARGET openNURBS APPEND PROPERTY COMPILE_DEFINITIONS "OPENNURBS_EXPORTS")
-+    endif(MSVC)
-+  endif(BUILD_SHARED_LIBS)
-+
-+  if(BUILD_STATIC_LIBS)
-+    add_library(openNURBS-static STATIC ${OPENNURBS_SOURCES})
-+    if(TARGET zlib_stage)
-+      add_dependencies(openNURBS-static zlib_stage)
-+    endif(TARGET zlib_stage)
-+  endif(BUILD_STATIC_LIBS)
-+
-+else(NOT USE_OBJECT_LIBS)
-+
-+  add_library(openNURBS-obj OBJECT ${OPENNURBS_SOURCES})
-+
-+  # For build ordering, if we are linking to another build target make sure
-+  # the object build depends on that target
-+  foreach(DEP ${OPENNURBS_LINKLIBRARIES})
-+    if(TARGET ${DEP})
-+      add_dependencies(openNURBS-obj ${DEP})
-+    endif(TARGET ${DEP})
-+  endforeach(DEP ${OPENNURBS_LINKLIBRARIES})
-+
-+  if(BUILD_SHARED_LIBS)
-+    add_library(openNURBS SHARED $<TARGET_OBJECTS:openNURBS-obj>)
-+    if(MSVC)
-+      set_property(TARGET openNURBS APPEND PROPERTY COMPILE_DEFINITIONS "OPENNURBS_EXPORTS")
-+    endif(MSVC)
-+  endif(BUILD_SHARED_LIBS)
-+  if(BUILD_STATIC_LIBS)
-+    add_library(openNURBS-static STATIC $<TARGET_OBJECTS:openNURBS-obj>)
-+    if(TARGET zlib_stage)
-+      add_dependencies(openNURBS-static zlib_stage)
-+    endif(TARGET zlib_stage)
-+  endif(BUILD_STATIC_LIBS)
-+endif(NOT USE_OBJECT_LIBS)
-+
-+
-+if(BUILD_SHARED_LIBS)
-+  if(OPENNURBS_LINKLIBRARIES)
-+    target_link_libraries(openNURBS ${OPENNURBS_LINKLIBRARIES})
-+  endif(OPENNURBS_LINKLIBRARIES)
-+  set_target_properties(openNURBS PROPERTIES VERSION "2022.07.15")
-+  install(TARGETS openNURBS
-+    RUNTIME DESTINATION ${BIN_DIR}
-+    LIBRARY DESTINATION ${LIB_DIR}
-+    ARCHIVE DESTINATION ${LIB_DIR})
-+endif(BUILD_SHARED_LIBS)
-+
-+if(BUILD_STATIC_LIBS)
-+  if(MSVC)
-+    # msvc does not append 'lib' - do it here to have consistent name
-+    set_target_properties(openNURBS-static PROPERTIES PREFIX "lib")
-+  else(MSVC)
-+    set_target_properties(openNURBS-static PROPERTIES OUTPUT_NAME "openNURBS")
-+  endif(MSVC)
-+  install(TARGETS openNURBS-static
-+    RUNTIME DESTINATION ${BIN_DIR}
-+    LIBRARY DESTINATION ${LIB_DIR}
-+    ARCHIVE DESTINATION ${LIB_DIR})
-+endif(BUILD_STATIC_LIBS)
-+
-+install(FILES ${OPENNURBS_HEADERS} DESTINATION include/openNURBS)
-+
-+# Local Variables:
-+# tab-width: 8
-+# mode: cmake
-+# indent-tabs-mode: t
-+# End:
-+# ex: shiftwidth=2 tabstop=8
- 
+-
 -if( APPLE)
 -   find_library( CORE_GRAPHICS_LIBRARY CoreGraphics)
 -   message( STATUS "CORE_GRAPHICS_LIBRARY is ${CORE_GRAPHICS_LIBRARY}")
@@ -1333,7 +1242,11 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -target_link_libraries( OpenNURBS zlib opennurbs_public_freetype android_uuid)
 -target_link_libraries( opennurbsStatic zlib opennurbs_public_freetype android_uuid)
 -endif()
--if (APPLE)
++  set(OPENNURBS_LINKLIBRARIES ${OPENNURBS_LINKLIBRARIES} Rpcrt4 Shlwapi Usp10)
++  # opennurbs_brep.cpp requires this flag when compiling with Visual C++
++  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
++endif(MSVC)
+ if (APPLE)
 -target_link_libraries( OpenNURBS ${OPENNURBS_APPLE_DEPENDENCIES} zlib)
 -target_link_libraries( opennurbsStatic ${OPENNURBS_APPLE_DEPENDENCIES} zlib)
 -endif()
@@ -1341,7 +1254,96 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -target_link_libraries( OpenNURBS Shlwapi Usp10 zlib)
 -target_link_libraries( opennurbsStatic Shlwapi Usp10 zlib)
 -endif()
--
++  add_definitions(-DON_COMPILER_CLANG)
++  add_definitions(-D_GNU_SOURCE)
++endif (APPLE)
++
++if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
++  include(CheckCXXCompilerFlag)
++  check_cxx_compiler_flag(-O3 HAVE_O3)
++  if(HAVE_O3)
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
++  endif(HAVE_O3)
++endif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
++
++# Based on the options, define libraries as either stand-alone builds
++# or dependencies on OBJECT library builds
++if(NOT USE_OBJECT_LIBS)
++
++  if(BUILD_SHARED_LIBS)
++    add_library(openNURBS SHARED ${OPENNURBS_SOURCES})
++    if(MSVC)
++      set_property(TARGET openNURBS APPEND PROPERTY COMPILE_DEFINITIONS "OPENNURBS_EXPORTS")
++    endif(MSVC)
++  endif(BUILD_SHARED_LIBS)
++
++  if(BUILD_STATIC_LIBS)
++    add_library(openNURBS-static STATIC ${OPENNURBS_SOURCES})
++    if(TARGET zlib_stage)
++      add_dependencies(openNURBS-static zlib_stage)
++    endif(TARGET zlib_stage)
++  endif(BUILD_STATIC_LIBS)
++
++else(NOT USE_OBJECT_LIBS)
++
++  add_library(openNURBS-obj OBJECT ${OPENNURBS_SOURCES})
++
++  # For build ordering, if we are linking to another build target make sure
++  # the object build depends on that target
++  foreach(DEP ${OPENNURBS_LINKLIBRARIES})
++    if(TARGET ${DEP})
++      add_dependencies(openNURBS-obj ${DEP})
++    endif(TARGET ${DEP})
++  endforeach(DEP ${OPENNURBS_LINKLIBRARIES})
++
++  if(BUILD_SHARED_LIBS)
++    add_library(openNURBS SHARED $<TARGET_OBJECTS:openNURBS-obj>)
++    if(MSVC)
++      set_property(TARGET openNURBS APPEND PROPERTY COMPILE_DEFINITIONS "OPENNURBS_EXPORTS")
++    endif(MSVC)
++  endif(BUILD_SHARED_LIBS)
++  if(BUILD_STATIC_LIBS)
++    add_library(openNURBS-static STATIC $<TARGET_OBJECTS:openNURBS-obj>)
++    if(TARGET zlib_stage)
++      add_dependencies(openNURBS-static zlib_stage)
++    endif(TARGET zlib_stage)
++  endif(BUILD_STATIC_LIBS)
++endif(NOT USE_OBJECT_LIBS)
++
++
++if(BUILD_SHARED_LIBS)
++  if(OPENNURBS_LINKLIBRARIES)
++    target_link_libraries(openNURBS ${OPENNURBS_LINKLIBRARIES})
++  endif(OPENNURBS_LINKLIBRARIES)
++  set_target_properties(openNURBS PROPERTIES VERSION "2023.12.13")
++  install(TARGETS openNURBS
++    RUNTIME DESTINATION ${BIN_DIR}
++    LIBRARY DESTINATION ${LIB_DIR}
++    ARCHIVE DESTINATION ${LIB_DIR})
++endif(BUILD_SHARED_LIBS)
++
++if(BUILD_STATIC_LIBS)
++  if(MSVC)
++    # msvc does not append 'lib' - do it here to have consistent name
++    set_target_properties(openNURBS-static PROPERTIES PREFIX "lib")
++  else(MSVC)
++    set_target_properties(openNURBS-static PROPERTIES OUTPUT_NAME "openNURBS")
++  endif(MSVC)
++  install(TARGETS openNURBS-static
++    RUNTIME DESTINATION ${BIN_DIR}
++    LIBRARY DESTINATION ${LIB_DIR}
++    ARCHIVE DESTINATION ${LIB_DIR})
++endif(BUILD_STATIC_LIBS)
++
++install(FILES ${OPENNURBS_HEADERS} DESTINATION include/openNURBS)
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
+ 
 -if (APPLE)
 -   set_target_properties( OpenNURBS PROPERTIES
 -FRAMEWORK TRUE
