@@ -1,6 +1,6 @@
-diff -Naur oiio/src/cmake/externalpackages.cmake oiio_BLD/src/cmake/externalpackages.cmake
---- oiio/src/cmake/externalpackages.cmake	2023-09-20 21:19:49.628055015 -0400
-+++ oiio_BLD/src/cmake/externalpackages.cmake	2023-09-25 11:28:41.485793953 -0400
+diff -Naur oiio/src/cmake/externalpackages.cmake OPENIMAGEIO_BLD/src/cmake/externalpackages.cmake
+--- oiio/src/cmake/externalpackages.cmake	2023-12-21 13:15:55.290128983 -0500
++++ OPENIMAGEIO_BLD/src/cmake/externalpackages.cmake	2023-12-21 13:10:40.199298929 -0500
 @@ -57,13 +57,6 @@
      list (APPEND Boost_COMPONENTS filesystem)
  endif ()
@@ -15,7 +15,7 @@ diff -Naur oiio/src/cmake/externalpackages.cmake oiio_BLD/src/cmake/externalpack
  
  checked_find_package (Boost REQUIRED
                        VERSION_MIN 1.53
-@@ -179,6 +172,7 @@
+@@ -174,6 +167,7 @@
  checked_find_package (Freetype
                     DEFINITIONS  -DUSE_FREETYPE=1 )
  
@@ -23,12 +23,12 @@ diff -Naur oiio/src/cmake/externalpackages.cmake oiio_BLD/src/cmake/externalpack
  checked_find_package (OpenColorIO
                        DEFINITIONS  -DUSE_OCIO=1 -DUSE_OPENCOLORIO=1
                        # PREFER_CONFIG
-@@ -186,8 +187,12 @@
- if (NOT OpenColorIO_FOUND)
+@@ -187,9 +181,12 @@
+ else ()
      set (OpenColorIO_FOUND 0)
  endif ()
 +endif (NOT OIIO_DISABLE_OCIO)
-+
+ 
 +if (NOT OIIO_DISABLE_OPENCV)
  checked_find_package (OpenCV 3.0
                     DEFINITIONS  -DUSE_OPENCV=1)
@@ -36,7 +36,7 @@ diff -Naur oiio/src/cmake/externalpackages.cmake oiio_BLD/src/cmake/externalpack
  
  # Intel TBB
  set (TBB_USE_DEBUG_BUILD OFF)
-@@ -230,10 +235,12 @@
+@@ -231,6 +228,7 @@
  # Note: Recent OpenJPEG versions have exported cmake configs, but we don't
  # find them reliable at all, so we stick to our FindOpenJPEG.cmake module.
  
@@ -44,14 +44,17 @@ diff -Naur oiio/src/cmake/externalpackages.cmake oiio_BLD/src/cmake/externalpack
  checked_find_package (OpenVDB
                        VERSION_MIN 5.0
                        DEPS         TBB
-                       DEFINITIONS  -DUSE_OPENVDB=1)
+@@ -239,6 +237,7 @@
+     message (WARNING "${ColorYellow}OpenVDB >= 10.1 (we found ${OpenVDB_VERSION}) can only be used when we build with C++17 or higher. Disabling OpenVDB support.${ColorReset}")
+     set (OpeVDB_FOUND 0)
+ endif ()
 +endif (NOT OIIO_DISABLE_VDB)
  
  checked_find_package (Ptex PREFER_CONFIG)
  if (NOT Ptex_FOUND OR NOT Ptex_VERSION)
-diff -Naur oiio-2.4.15.0/src/cmake/FindJPEG.cmake openimageio/src/cmake/FindJPEG.cmake
---- oiio-2.4.15.0/src/cmake/FindJPEG.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ openimageio/src/cmake/FindJPEG.cmake	2023-09-13 19:01:03.440145833 -0400
+diff -Naur oiio/src/cmake/FindJPEG.cmake OPENIMAGEIO_BLD/src/cmake/FindJPEG.cmake
+--- oiio/src/cmake/FindJPEG.cmake	1969-12-31 19:00:00.000000000 -0500
++++ OPENIMAGEIO_BLD/src/cmake/FindJPEG.cmake	2023-12-21 13:10:40.199298929 -0500
 @@ -0,0 +1,153 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
@@ -206,9 +209,9 @@ diff -Naur oiio-2.4.15.0/src/cmake/FindJPEG.cmake openimageio/src/cmake/FindJPEG
 +endif()
 +
 +mark_as_advanced(JPEG_LIBRARY JPEG_INCLUDE_DIR)
-diff -Naur oiio-2.4.15.0/src/cmake/FindPNG.cmake openimageio/src/cmake/FindPNG.cmake
---- oiio-2.4.15.0/src/cmake/FindPNG.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ openimageio/src/cmake/FindPNG.cmake	2023-09-13 19:00:55.404281891 -0400
+diff -Naur oiio/src/cmake/FindPNG.cmake OPENIMAGEIO_BLD/src/cmake/FindPNG.cmake
+--- oiio/src/cmake/FindPNG.cmake	1969-12-31 19:00:00.000000000 -0500
++++ OPENIMAGEIO_BLD/src/cmake/FindPNG.cmake	2023-12-21 13:10:40.199298929 -0500
 @@ -0,0 +1,161 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
@@ -371,9 +374,9 @@ diff -Naur oiio-2.4.15.0/src/cmake/FindPNG.cmake openimageio/src/cmake/FindPNG.c
 +find_package_handle_standard_args(PNG
 +                                  REQUIRED_VARS PNG_LIBRARY PNG_PNG_INCLUDE_DIR
 +                                  VERSION_VAR PNG_VERSION_STRING)
-diff -Naur oiio-2.4.15.0/src/cmake/FindZLIB.cmake openimageio/src/cmake/FindZLIB.cmake
---- oiio-2.4.15.0/src/cmake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ openimageio/src/cmake/FindZLIB.cmake	2023-09-13 19:00:58.616227508 -0400
+diff -Naur oiio/src/cmake/FindZLIB.cmake OPENIMAGEIO_BLD/src/cmake/FindZLIB.cmake
+--- oiio/src/cmake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
++++ OPENIMAGEIO_BLD/src/cmake/FindZLIB.cmake	2023-12-21 13:10:40.199298929 -0500
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -498,117 +501,155 @@ diff -Naur oiio-2.4.15.0/src/cmake/FindZLIB.cmake openimageio/src/cmake/FindZLIB
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naur oiio-2.4.15.0/src/dicom.imageio/CMakeLists.txt openimageio/src/dicom.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/dicom.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/dicom.imageio/CMakeLists.txt	2023-09-13 19:12:09.060823647 -0400
+diff -Naur oiio/src/dicom.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/dicom.imageio/CMakeLists.txt
+--- oiio/src/dicom.imageio/CMakeLists.txt	2023-12-21 13:15:55.290128983 -0500
++++ OPENIMAGEIO_BLD/src/dicom.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (DCMTK_FOUND)
 +if (DCMTK_FOUND AND NOT OIIO_DISABLE_DCMTK)
      add_oiio_plugin (dicominput.cpp
                       INCLUDE_DIRS ${DCMTK_INCLUDE_DIR}
                       LINK_LIBRARIES ${DCMTK_LIBRARIES}
-diff -Naur oiio-2.4.15.0/src/ffmpeg.imageio/CMakeLists.txt openimageio/src/ffmpeg.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/ffmpeg.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/ffmpeg.imageio/CMakeLists.txt	2023-09-13 19:12:00.092976643 -0400
+diff -Naur oiio/src/ffmpeg.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/ffmpeg.imageio/CMakeLists.txt
+--- oiio/src/ffmpeg.imageio/CMakeLists.txt	2023-12-21 13:15:55.298128851 -0500
++++ OPENIMAGEIO_BLD/src/ffmpeg.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (FFmpeg_FOUND)
 +if (FFmpeg_FOUND AND NOT OIIO_DISABLE_FFMPEG)
-     add_oiio_plugin (ffmpeginput.cpp
-                      INCLUDE_DIRS ${FFMPEG_INCLUDES}
-                      LINK_LIBRARIES ${FFMPEG_LIBRARIES}
-diff -Naur oiio-2.4.15.0/src/gif.imageio/CMakeLists.txt openimageio/src/gif.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/gif.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/gif.imageio/CMakeLists.txt	2023-09-13 19:11:40.853304859 -0400
+     if (LINKSTATIC)
+         set (_static_suffixes .lib .a)
+         set (_static_libraries_found 0)
+diff -Naur oiio/src/gif.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/gif.imageio/CMakeLists.txt
+--- oiio/src/gif.imageio/CMakeLists.txt	2023-12-21 13:15:55.298128851 -0500
++++ OPENIMAGEIO_BLD/src/gif.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (GIF_FOUND)
 +if (GIF_FOUND AND NOT OIIO_DISABLE_GIF)
      add_oiio_plugin (gifinput.cpp gifoutput.cpp
-                      INCLUDE_DIRS ${GIF_INCLUDE_DIRS}
-                      LINK_LIBRARIES ${GIF_LIBRARIES}
-diff -Naur oiio-2.4.15.0/src/heif.imageio/CMakeLists.txt openimageio/src/heif.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/heif.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/heif.imageio/CMakeLists.txt	2023-09-13 19:11:14.261758445 -0400
+                      LINK_LIBRARIES GIF::GIF
+                      DEFINITIONS "-DUSE_GIF")
+diff -Naur oiio/src/heif.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/heif.imageio/CMakeLists.txt
+--- oiio/src/heif.imageio/CMakeLists.txt	2023-12-21 13:15:55.298128851 -0500
++++ OPENIMAGEIO_BLD/src/heif.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (Libheif_FOUND)
 +if (Libheif_FOUND AND NOT OIIO_DISABLE_HEIF)
-     add_oiio_plugin (heifinput.cpp heifoutput.cpp
-                      INCLUDE_DIRS ${LIBHEIF_INCLUDES}
-                      LINK_LIBRARIES ${LIBHEIF_LIBRARIES}
-diff -Naur oiio-2.4.15.0/src/ico.imageio/CMakeLists.txt openimageio/src/ico.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/ico.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/ico.imageio/CMakeLists.txt	2023-09-13 19:11:07.549872933 -0400
+     if (LINKSTATIC)
+         set (_static_suffixes .lib .a)    
+         set (_static_libraries_found 0)
+diff -Naur oiio/src/ico.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/ico.imageio/CMakeLists.txt
+--- oiio/src/ico.imageio/CMakeLists.txt	2023-12-21 13:15:55.298128851 -0500
++++ OPENIMAGEIO_BLD/src/ico.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (TARGET PNG::PNG)
 +if (TARGET PNG::PNG AND NOT OIIO_DISABLE_PNG)
      add_oiio_plugin (icoinput.cpp icooutput.cpp
                       LINK_LIBRARIES PNG::PNG ZLIB::ZLIB)
  else ()
-diff -Naur oiio-2.4.15.0/src/jpeg2000.imageio/CMakeLists.txt openimageio/src/jpeg2000.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/jpeg2000.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/jpeg2000.imageio/CMakeLists.txt	2023-09-13 19:10:49.766176225 -0400
+diff -Naur oiio/src/include/OpenImageIO/ustring.h OPENIMAGEIO_BLD/src/include/OpenImageIO/ustring.h
+--- oiio/src/include/OpenImageIO/ustring.h	2023-12-21 13:15:55.306128719 -0500
++++ OPENIMAGEIO_BLD/src/include/OpenImageIO/ustring.h	2023-12-21 13:14:08.535885354 -0500
+@@ -853,12 +853,14 @@
+     {
+     }
+ 
++#if 0
+     /// Construct from a raw hash value. Beware: results are undefined if it's
+     /// not the valid hash of a ustring.
+     OIIO_HOSTDEVICE explicit constexpr ustringhash(hash_t hash) noexcept
+         : m_hash(hash)
+     {
+     }
++#endif
+ 
+     /// Construct from a raw hash value. Beware: results are undefined if it's
+     /// not the valid hash of a ustring.
+diff -Naur oiio/src/jpeg2000.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/jpeg2000.imageio/CMakeLists.txt
+--- oiio/src/jpeg2000.imageio/CMakeLists.txt	2023-12-21 13:15:55.306128719 -0500
++++ OPENIMAGEIO_BLD/src/jpeg2000.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (OPENJPEG_FOUND)
 +if (OPENJPEG_FOUND AND NOT OIIO_DISABLE_OPENJPEG)
      add_oiio_plugin (jpeg2000input.cpp jpeg2000output.cpp
                       INCLUDE_DIRS ${OPENJPEG_INCLUDES}
                       LINK_LIBRARIES ${OPENJPEG_LIBRARIES}
-diff -Naur oiio-2.4.15.0/src/openvdb.imageio/CMakeLists.txt openimageio/src/openvdb.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/openvdb.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/openvdb.imageio/CMakeLists.txt	2023-09-13 19:10:18.730705345 -0400
+diff -Naur oiio/src/oiiotool/oiiotool.cpp OPENIMAGEIO_BLD/src/oiiotool/oiiotool.cpp
+--- oiio/src/oiiotool/oiiotool.cpp	2023-12-21 13:15:55.318128522 -0500
++++ OPENIMAGEIO_BLD/src/oiiotool/oiiotool.cpp	2023-12-21 13:16:36.033457612 -0500
+@@ -2660,7 +2660,7 @@
+ }
+ 
+ 
+-
++#if 0
+ // --iccwrite  (output extracted ICC profile)
+ static void
+ icc_write(cspan<const char*> argv)
+@@ -2736,6 +2736,7 @@
+     }
+     A->metadata_modified(true);
+ }
++#endif
+ 
+ 
+ 
+diff -Naur oiio/src/openvdb.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/openvdb.imageio/CMakeLists.txt
+--- oiio/src/openvdb.imageio/CMakeLists.txt	2023-12-21 13:15:55.318128522 -0500
++++ OPENIMAGEIO_BLD/src/openvdb.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (OpenVDB_FOUND)
 +if (OpenVDB_FOUND AND NOT OIIO_DISABLE_VDB)
      add_oiio_plugin (openvdbinput.cpp
                       INCLUDE_DIRS  ${OPENVDB_INCLUDES} ${TBB_INCLUDE_DIRS}
                       LINK_LIBRARIES  ${OPENVDB_LIBRARIES}
-diff -Naur oiio-2.4.15.0/src/png.imageio/CMakeLists.txt openimageio/src/png.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/png.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/png.imageio/CMakeLists.txt	2023-09-13 19:10:10.730841716 -0400
+diff -Naur oiio/src/png.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/png.imageio/CMakeLists.txt
+--- oiio/src/png.imageio/CMakeLists.txt	2023-12-21 13:15:55.318128522 -0500
++++ OPENIMAGEIO_BLD/src/png.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (TARGET PNG::PNG)
 +if (TARGET PNG::PNG AND NOT OIIO_DISABLE_PNG)
      add_oiio_plugin (pnginput.cpp pngoutput.cpp
                       LINK_LIBRARIES PNG::PNG ZLIB::ZLIB)
  else ()
-diff -Naur oiio-2.4.15.0/src/ptex.imageio/CMakeLists.txt openimageio/src/ptex.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/ptex.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/ptex.imageio/CMakeLists.txt	2023-09-13 19:09:58.355052692 -0400
+diff -Naur oiio/src/ptex.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/ptex.imageio/CMakeLists.txt
+--- oiio/src/ptex.imageio/CMakeLists.txt	2023-12-21 13:15:55.318128522 -0500
++++ OPENIMAGEIO_BLD/src/ptex.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (Ptex_FOUND)
 +if (Ptex_FOUND AND NOT OIIO_DISABLE_PTEX)
      add_oiio_plugin (ptexinput.cpp
                       LINK_LIBRARIES Ptex::Ptex_dynamic ZLIB::ZLIB
                       DEFINITIONS "-DUSE_PTEX")
-diff -Naur oiio-2.4.15.0/src/r3d.imageio/CMakeLists.txt openimageio/src/r3d.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/r3d.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/r3d.imageio/CMakeLists.txt	2023-09-13 19:09:16.415767428 -0400
+diff -Naur oiio/src/r3d.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/r3d.imageio/CMakeLists.txt
+--- oiio/src/r3d.imageio/CMakeLists.txt	2023-12-21 13:15:55.318128522 -0500
++++ OPENIMAGEIO_BLD/src/r3d.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -11,7 +11,7 @@
                               )
  endif()
@@ -618,24 +659,24 @@ diff -Naur oiio-2.4.15.0/src/r3d.imageio/CMakeLists.txt openimageio/src/r3d.imag
      add_oiio_plugin (r3dinput.cpp
                       INCLUDE_DIRS ${R3DSDK_INCLUDE_DIR}
                       LINK_LIBRARIES ${R3DSDK_LIBRARIES}
-diff -Naur oiio-2.4.15.0/src/raw.imageio/CMakeLists.txt openimageio/src/raw.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/raw.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/raw.imageio/CMakeLists.txt	2023-09-13 19:08:52.512174703 -0400
+diff -Naur oiio/src/raw.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/raw.imageio/CMakeLists.txt
+--- oiio/src/raw.imageio/CMakeLists.txt	2023-12-21 13:15:55.318128522 -0500
++++ OPENIMAGEIO_BLD/src/raw.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (LIBRAW_FOUND)
 +if (LIBRAW_FOUND AND NOT OIIO_DISABLE_RAW)
      add_oiio_plugin (rawinput.cpp
                       INCLUDE_DIRS ${LibRaw_INCLUDE_DIR}
                       LINK_LIBRARIES ${LibRaw_r_LIBRARIES}
-diff -Naur oiio-2.4.15.0/src/webp.imageio/CMakeLists.txt openimageio/src/webp.imageio/CMakeLists.txt
---- oiio-2.4.15.0/src/webp.imageio/CMakeLists.txt	2023-09-01 12:48:29.000000000 -0400
-+++ openimageio/src/webp.imageio/CMakeLists.txt	2023-09-13 19:08:01.389045558 -0400
+diff -Naur oiio/src/webp.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/webp.imageio/CMakeLists.txt
+--- oiio/src/webp.imageio/CMakeLists.txt	2023-12-21 13:15:55.322128458 -0500
++++ OPENIMAGEIO_BLD/src/webp.imageio/CMakeLists.txt	2023-12-21 13:10:40.199298929 -0500
 @@ -2,7 +2,7 @@
  # SPDX-License-Identifier: Apache-2.0
- # https://github.com/OpenImageIO/oiio
+ # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (WebP_FOUND)
 +if (WebP_FOUND AND NOT OIIO_DISABLE_WEBP)
