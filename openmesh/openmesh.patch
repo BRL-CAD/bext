@@ -1,6 +1,6 @@
-diff -Naur OpenMesh-9.0.0/cmake-library/VCI/VCICommon.cmake openmesh/cmake-library/VCI/VCICommon.cmake
---- OpenMesh-9.0.0/cmake-library/VCI/VCICommon.cmake	2022-01-20 06:53:38.000000000 -0500
-+++ openmesh/cmake-library/VCI/VCICommon.cmake	2023-08-21 22:44:46.894935075 -0400
+diff -Naur OpenMesh/cmake-library/VCI/VCICommon.cmake OPENMESH_BLD/cmake-library/VCI/VCICommon.cmake
+--- OpenMesh/cmake-library/VCI/VCICommon.cmake	2023-12-21 19:31:59.779342577 -0500
++++ OPENMESH_BLD/cmake-library/VCI/VCICommon.cmake	2023-12-21 13:23:27.538654820 -0500
 @@ -41,7 +41,7 @@
  if (CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
    set (VCI_PROJECT_DATADIR ".")
@@ -10,9 +10,20 @@ diff -Naur OpenMesh-9.0.0/cmake-library/VCI/VCICommon.cmake openmesh/cmake-libra
    set (VCI_PROJECT_PLUGINDIR "Plugins")
    if (NOT EXISTS ${CMAKE_BINARY_DIR}/Build/${VCI_PROJECT_LIBDIR})
      file (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Build/${VCI_PROJECT_LIBDIR})
-diff -Naur OpenMesh-9.0.0/CMakeLists.txt openmesh/CMakeLists.txt
---- OpenMesh-9.0.0/CMakeLists.txt	2022-01-20 06:53:44.000000000 -0500
-+++ openmesh/CMakeLists.txt	2023-08-17 10:20:09.990681715 -0400
+diff -Naur OpenMesh/CMakeLists.txt OPENMESH_BLD/CMakeLists.txt
+--- OpenMesh/CMakeLists.txt	2023-12-21 19:31:59.735343328 -0500
++++ OPENMESH_BLD/CMakeLists.txt	2023-12-21 19:32:10.127166493 -0500
+@@ -2,8 +2,8 @@
+ 
+ 
+ # Set and enforce C++-11 flags
+-#set( CMAKE_CXX_STANDARD_REQUIRED TRUE )
+-#set( CMAKE_CXX_STANDARD 11 )
++set( CMAKE_CXX_STANDARD_REQUIRED TRUE )
++set( CMAKE_CXX_STANDARD 11 )
+ 
+ enable_testing()
+ 
 @@ -38,7 +38,6 @@
  
  # add our macro directory to cmake search path
@@ -21,10 +32,10 @@ diff -Naur OpenMesh-9.0.0/CMakeLists.txt openmesh/CMakeLists.txt
  
  # include our cmake files
  include (VCICommon)
-diff -Naur OpenMesh-9.0.0/src/OpenMesh/Core/CMakeLists.txt openmesh/src/OpenMesh/Core/CMakeLists.txt
---- OpenMesh-9.0.0/src/OpenMesh/Core/CMakeLists.txt	2022-01-20 06:53:36.000000000 -0500
-+++ openmesh/src/OpenMesh/Core/CMakeLists.txt	2023-08-21 19:13:44.011277327 -0400
-@@ -73,7 +73,7 @@
+diff -Naur OpenMesh/src/OpenMesh/Core/CMakeLists.txt OPENMESH_BLD/src/OpenMesh/Core/CMakeLists.txt
+--- OpenMesh/src/OpenMesh/Core/CMakeLists.txt	2023-12-21 19:31:59.807342103 -0500
++++ OPENMESH_BLD/src/OpenMesh/Core/CMakeLists.txt	2023-12-21 13:23:27.542654752 -0500
+@@ -184,7 +184,7 @@
      FILE(GLOB files_install_libs "${CMAKE_BINARY_DIR}/Build/lib/*.lib" )
      FILE(GLOB files_install_dlls "${CMAKE_BINARY_DIR}/Build/*.dll" )
      INSTALL(FILES ${files_install_libs} DESTINATION lib )
