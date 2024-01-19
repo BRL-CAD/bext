@@ -20,7 +20,7 @@ diff -Naur OpenMesh/CMakeLists.txt OPENMESH_BLD/CMakeLists.txt
 -#set( CMAKE_CXX_STANDARD_REQUIRED TRUE )
 -#set( CMAKE_CXX_STANDARD 11 )
 +set( CMAKE_CXX_STANDARD_REQUIRED TRUE )
-+set( CMAKE_CXX_STANDARD 11 )
++set( CMAKE_CXX_STANDARD 17 )
  
  enable_testing()
  
