@@ -1,6 +1,6 @@
 diff -Naur libpng/CMake/FindZLIB.cmake PNG_BLD/CMake/FindZLIB.cmake
 --- libpng/CMake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ PNG_BLD/CMake/FindZLIB.cmake	2023-12-19 20:56:32.999510527 -0500
++++ PNG_BLD/CMake/FindZLIB.cmake	2024-01-24 11:16:15.118840255 -0500
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -126,8 +126,8 @@ diff -Naur libpng/CMake/FindZLIB.cmake PNG_BLD/CMake/FindZLIB.cmake
 +    endif()
 +endif()
 diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
---- libpng/CMakeLists.txt	2023-12-19 21:03:15.963777872 -0500
-+++ PNG_BLD/CMakeLists.txt	2023-12-19 21:01:15.637230638 -0500
+--- libpng/CMakeLists.txt	2024-01-24 11:17:14.933844884 -0500
++++ PNG_BLD/CMakeLists.txt	2024-01-24 11:18:44.576351384 -0500
 @@ -32,8 +32,15 @@
  
  cmake_minimum_required(VERSION 3.1)
@@ -144,7 +144,20 @@ diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
  enable_testing()
  
  include(CMakeParseArguments)
-@@ -437,10 +444,9 @@
+@@ -58,8 +65,10 @@
+ # Previously, we used to set CMAKE_DEBUG_POSTFIX globally. That variable should
+ # not be cached, however, because doing so would affect all projects processed
+ # after libpng, in unexpected and undesirable ways.
+-set(PNG_DEBUG_POSTFIX "d"
+-    CACHE STRING "Postfix to append to library file names under the Debug configuration")
++if(NOT PNG_NO_DEBUG_POSTFIX)
++  set(PNG_DEBUG_POSTFIX "d"
++      CACHE STRING "Postfix to append to library file names under the Debug configuration")
++endif(NOT PNG_NO_DEBUG_POSTFIX)
+ 
+ # Allow the users to import their own extra configuration settings.
+ set(DFA_XTRA ""
+@@ -437,10 +446,9 @@
  
    if(PNG_PREFIX)
      set(PNGLIBCONF_H_EXTRA_DEPENDS
@@ -157,7 +170,7 @@ diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
    endif()
  
    generate_out(INPUT "${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.c"
-@@ -624,15 +630,15 @@
+@@ -624,15 +632,15 @@
    # We are on a Unix or Unix-like toolchain like the GNU toolchain on Windows.
    # Library file names are expected to have an implicit prefix such as "lib".
    # Let CMake prepend and append its usual prefixes and suffixes by default.
@@ -177,7 +190,7 @@ diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
  endif()
  
  if(PNG_SHARED)
-@@ -988,22 +994,22 @@
+@@ -988,22 +996,22 @@
    if(PNG_SHARED)
      # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
      if(CYGWIN OR MINGW)
