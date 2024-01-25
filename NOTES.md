@@ -271,11 +271,262 @@ process are:
     suggests the upstream might be receptive to changing how their install
     structure is laid out.
 
-Once you have everything installing into bext_output/install/* correctly and
+Once you have everything installing into bext_output/install/ correctly and
 using the correct dependencies, congratulations - you're now ready to add
 the submodule to bext in lieu of a working source copy.  This will allow
 bext to manage when and how the directory is populated based on build
 settings, as well as providing a convenient(ish) mechanism for updating
 submodule references as needed (see above).
 
-As an example, we document below the steps taken for the geogram library:
+As an example, we document below the steps taken for the geogram library from
+https://github.com/BrunoLevy/geogram  After creating a full fork of the project
+via github and verifying actions were not enabled, we clone the new repository
+recursively to get the source code of all submodules:
+
+```
+$ git clone --recursive git@github.com:BRL-CAD/geogram.git
+```
+
+Once we have the geogram clone, we enter the directory and create our RELEASE
+branch (since the upstream doesn't have such a branch, we don't have to worry
+about a conflict - if that branch name becomes a problem in the future we can
+adjust.)
+
+```
+$ cd geogram
+geogram (main)$ git branch -c RELEASE
+geogram (main)$ git checkout RELEASE
+```
+
+We can see geogram has a number of submodules:
+
+```
+geogram (RELEASE)$ git submodule
+57a8140c8e9cb71d5f01824aa0e934bf71f34e9d src/lib/geogram/third_party/amgcl (1.4.3-13-g57a8140)
+b4a91513317119ff71a1186906a052da0e535913 src/lib/geogram/third_party/libMeshb (RELEASE7.5-64-gb4a9151)
+4296cc91b5c8c26d4e7d7aac0cee2b194ffc5800 src/lib/geogram/third_party/rply (v1.1.4-1-g4296cc9)
+f8f805f04631323c8a75accc009eb9701f5ca027 src/lib/geogram_gfx/third_party/imgui (v1.89.7-docking-35-gf8f805f0)
+3eaf1255b29fdf5c2895856c7be7d7185ef2b241 src/lib/third_party/glfw (3.3-781-g3eaf1255)
+```
+
+The first order of business is to convert those into committed source trees in
+this repository.  Removing a submodule from git isn't as simple as removing the
+directory itself - there are a couple specific commands that must be run.  Before
+we do so, however, we want to make local copies of the contents of the submodules
+we are going to clear so we can re-add them as standard file check-ins (see
+https://stackoverflow.com/a/16162000):
+
+```
+geogram (RELEASE)$ mkdir ~/geogram_submodules
+geogram (RELEASE)$ mv src/lib/geogram/third_party/amgcl ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/geogram/third_party/libMeshb ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/geogram/third_party/rply ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/geogram_gfx/third_party/imgui ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/third_party/glfw ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/geogram/third_party/amgcl ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/geogram/third_party/libMeshb ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/geogram/third_party/rply ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/geogram_gfx/third_party/imgui ~/geogram_submodules/
+geogram (RELEASE)$ mv src/lib/third_party/glfw ~/geogram_submodules/
+geogram (RELEASE)$ git submodule deinit -f src/lib/geogram/third_party/amgcl
+Submodule 'src/lib/geogram/third_party/amgcl' (https://github.com/ddemidov/amgcl.git) unregistered for path 'src/lib/geogram/third_party/amgcl'
+geogram (RELEASE)$ git submodule deinit -f src/lib/geogram/third_party/libMeshb
+Submodule 'src/lib/geogram/third_party/libMeshb' (https://github.com/LoicMarechal/libMeshb.git) unregistered for path 'src/lib/geogram/third_party/libMeshb'
+geogram (RELEASE)$ git submodule deinit -f src/lib/geogram/third_party/rply
+Submodule 'src/lib/geogram/third_party/rply' (https://github.com/diegonehab/rply.git) unregistered for path 'src/lib/geogram/third_party/rply'
+geogram (RELEASE)$ git submodule deinit -f src/lib/geogram_gfx/third_party/imgui 
+Submodule 'src/lib/geogram_gfx/third_party/imgui' (https://github.com/ocornut/imgui.git) unregistered for path 'src/lib/geogram_gfx/third_party/imgui'
+geogram (RELEASE)$ git submodule deinit -f src/lib/third_party/glfw
+Submodule 'src/lib/third_party/glfw' (https://github.com/glfw/glfw.git) unregistered for path 'src/lib/third_party/glfw'
+geogram (RELEASE)$ rm -rf .git/modules/src/lib/geogram/third_party/amgcl
+geogram (RELEASE)$ rm -rf .git/modules/src/lib/geogram/third_party/libMeshb
+geogram (RELEASE)$ rm -rf .git/modules/src/lib/geogram/third_party/rply
+geogram (RELEASE)$ rm -rf .git/modules/src/lib/geogram_gfx/third_party/imgui
+geogram (RELEASE)$ rm -rf .git/modules/src/lib/third_party/glfw
+geogram (RELEASE)$ git rm --cached src/lib/geogram/third_party/amgcl
+rm 'src/lib/geogram/third_party/amgcl'
+geogram (RELEASE)$ git rm --cached src/lib/geogram/third_party/libMeshb
+rm 'src/lib/geogram/third_party/libMeshb'
+geogram (RELEASE)$ git rm --cached src/lib/geogram/third_party/rply
+rm 'src/lib/geogram/third_party/rply'
+geogram (RELEASE)$ git rm --cached src/lib/geogram_gfx/third_party/imgui
+rm 'src/lib/geogram_gfx/third_party/imgui'
+geogram (RELEASE)$ git rm --cached src/lib/third_party/glfw
+rm 'src/lib/third_party/glfw'
+geogram (RELEASE)$ git status
+On branch RELEASE
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	deleted:    src/lib/geogram/third_party/amgcl
+	deleted:    src/lib/geogram/third_party/libMeshb
+	deleted:    src/lib/geogram/third_party/rply
+	deleted:    src/lib/geogram_gfx/third_party/imgui
+	deleted:    src/lib/third_party/glfw
+geogram (RELEASE)$ git commit -m "Remove git submodules"
+```
+
+If we check, we now see that no submodules are reported:
+
+```
+geogram (RELEASE)$ git submodule
+
+```
+
+Next we restore the copies of the source code made earlier to the working tree:
+
+```
+geogram (RELEASE)$ mv ~/geogram_submodules/amgcl/\* src/lib/geogram/third_party/amgcl/
+geogram (RELEASE)$ mv ~/geogram_submodules/libMeshb/\* src/lib/geogram/third_party/libMeshb/
+geogram (RELEASE)$ mv ~/geogram_submodules/rply/\* src/lib/geogram/third_party/rply/
+geogram (RELEASE)$ mv ~/geogram_submodules/imgui/\* src/lib/geogram_gfx/third_party/imgui/
+geogram (RELEASE)$ mv ~/geogram_submodules/glfw/\* src/lib/third_party/glfw/
+geogram (RELEASE)$ git status
+On branch RELEASE
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	src/lib/geogram/third_party/amgcl/
+	src/lib/geogram/third_party/libMeshb/
+	src/lib/geogram/third_party/rply/
+	src/lib/geogram_gfx/third_party/imgui/
+	src/lib/third_party/glfw/
+geogram (RELEASE)$ git add -A
+geogram (RELEASE)$ git status
+On branch RELEASE
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   src/lib/geogram/third_party/amgcl/CMakeLists.txt
+	new file:   src/lib/geogram/third_party/amgcl/LICENSE.md
+        <snip>
+geogram (RELEASE)$ git commit -m "Commit files from former git submodules"
+[RELEASE 27f3c3ccf] Commit files from former git submodules
+ 1061 files changed, 393698 insertions(+)
+ create mode 100644 src/lib/geogram/third_party/amgcl/CMakeLists.txt
+ <snip>
+```
+
+Once this step is complete, we have a "stand-alone" version of geogram and we push the
+RELEASE branch back to github:
+
+```
+geogram (RELEASE)$ git push origin HEAD
+Enumerating objects: 1231, done.
+Counting objects: 100% (1231/1231), done.
+Delta compression using up to 12 threads
+Compressing objects: 100% (1195/1195), done.
+Writing objects: 100% (1223/1223), 7.12 MiB | 8.99 MiB/s, done.
+Total 1223 (delta 254), reused 23 (delta 1), pack-reused 0
+remote: Resolving deltas: 100% (254/254), completed with 6 local objects.
+remote: 
+remote: Create a pull request for 'RELEASE' on GitHub by visiting:
+remote:      https://github.com/BRL-CAD/geogram/pull/new/RELEASE
+remote: 
+To https://github.com/BRL-CAD/geogram.git
+ * [new branch]          HEAD -> RELEASE
+```
+
+The RELEASE branch is now visible on the https://github.com/BRL-CAD/geogram project page.
+
+Looking over the project contents, we see there are a number of third party components
+we either don't want to or can't use.  HLBFGS and triangle.c are for noncommercial use
+only, and must be removed.  Tetgen uses the AGPL and is incompatible with BRL-CAD's
+licensing, so it too must be removed.
+
+```
+geogram (RELEASE)$ git rm -r src/lib/geogram/third_party/HLBFGS
+geogram (RELEASE)$ git rm -r src/lib/geogram/third_party/triangle
+geogram (RELEASE)$ git rm -r src/lib/geogram/third_party/tetgen
+geogram (RELEASE)$ git commit -m "Remove sources for optional third party components with incompatible licenses"
+[RELEASE 296fdc244] Remove sources for optional third party components with incompatible licenses
+ 21 files changed, 94593 deletions(-)
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/HLBFGS.cpp
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/HLBFGS.h
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/HLBFGS_BLAS.cpp
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/HLBFGS_BLAS.h
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/ICFS.cpp
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/ICFS.h
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/LineSearch.cpp
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/LineSearch.h
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/Lite_Sparse_Matrix.cpp
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/Lite_Sparse_Matrix.h
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/README.txt
+ delete mode 100644 src/lib/geogram/third_party/HLBFGS/Sparse_Entry.h
+ delete mode 100644 src/lib/geogram/third_party/tetgen/README.txt
+ delete mode 100644 src/lib/geogram/third_party/tetgen/Tetgen1.6/README
+ delete mode 100644 src/lib/geogram/third_party/tetgen/Tetgen1.6/tetgen.cpp
+ delete mode 100644 src/lib/geogram/third_party/tetgen/Tetgen1.6/tetgen.h
+ delete mode 100755 src/lib/geogram/third_party/tetgen/tetgen.cpp
+ delete mode 100755 src/lib/geogram/third_party/tetgen/tetgen.h
+ delete mode 100644 src/lib/geogram/third_party/triangle/README
+ delete mode 100644 src/lib/geogram/third_party/triangle/triangle.c
+ delete mode 100644 src/lib/geogram/third_party/triangle/triangle.h
+geogram (RELEASE)$ git push origin HEAD
+```
+
+Next, we determine how to build the project without the components we either
+don't want to or cannot use.  We will use build system options provided by the
+upstream build if available - if alterations to the build logic are necessary
+we will collect those into a patch file and use that .  This generally involves
+turning off any extra features we don't want to simplify the build and
+dependency requirements as much as possible.  In geogram's case, we tell it to
+turn off graphics and build the library only, as well as disabling all the
+optional third party components:
+
+```
+geogram (RELEASE)$ mkdir build && cd build
+build (RELEASE)$ cmake ..  -DGEOGRAM_LIB_ONLY=ON -DGEOGRAM_WITH_GRAPHICS=OFF -DGEOGRAM_WITH_LUA=OFF -DGEOGRAM_WITH_HLBFGS=OFF -DGEOGRAM_WITH_TETGEN=OFF -DGEOGRAM_WITH_TRIANGLE=OFF
+CMake Deprecation Warning at CMakeLists.txt:5 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- The C compiler identification is GNU 12.2.1
+-- The CXX compiler identification is GNU 12.2.1
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Doxygen >= 1.7.0 not found, cannot generate documentation
+CMake Deprecation Warning at doc/CMakeLists.txt:7 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- Configuring done (0.7s)
+-- Generating done (0.1s)
+-- Build files have been written to: /geogram/build
+build (RELEASE)$ make
+[  0%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/libMeshb/sources/libmeshb7.c.o
+[  0%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/rply/rply.c.o
+[  0%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/zlib/adler32.c.o
+[  0%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/zlib/compress.c.o
+[  1%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/zlib/crc32.c.o
+<snip>
+```
+
+One thing we spot when building starts is that there is a local zlib copy in geogram.  That's not necessarily
+a problem if it does not cause a conflict (for example, we allow Qt to use its own zlib since that is much
+simpler than trying to inject our version into their build and they isoloate their version) but it's something to
+be aware of as a source of potential issues.  If it DOES cause a problem, we may have to alter geogram's build
+to reference our zlib, if we are building a local copy.
+
+
