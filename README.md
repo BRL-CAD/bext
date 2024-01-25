@@ -32,7 +32,7 @@ This is primarily useful if you want to do all the downloading at once up front 
 
 # USE_* Options
 
-A complete ENABLE_ALL build of all components in this repository is a *very* large build, and developers not needing some subset of the components may wish to avoid paying the price of building *all* submodules.  That is why the USE_* options are defined - ENABLE_ALL will only enable those submodules that indicate they are used by at least one active USE_* option.  By default, USE_BRLCAD, USE_GDAL and USE_TCL are enabled as they collectively define the most common set of dependencies used by a standard BRL-CAD build.  However, if a developer is building BRL-CAD without terrain support and without Tcl/Tk support, setting USE_GDAL and USE_TCL to OFF will skip compilation of those submodules.  Available USE_* options are:
+A complete ENABLE_ALL build of all components in this repository is a *very* large build, and developers not needing some subset of the components may wish to avoid paying the price of building *all* submodules.  That is why the USE_* options are defined - ENABLE_ALL will only enable those submodules that indicate they are used by at least one active USE_* option.  By default, USE_BRLCAD, USE_BRLCAD_EXTRA, USE_GDAL and USE_TCL are enabled as they collectively define the most common set of dependencies used by a standard BRL-CAD build.  However, if a developer is building BRL-CAD without terrain support and without Tcl/Tk support, setting USE_GDAL and USE_TCL to OFF will skip compilation of those submodules.  Available USE_* options are:
 
 * USE_BRLCAD - Core BRL-CAD dependencies always needed to build BRL-CAD successfully.
 * USE_BRLCAD_EXTRA - Optional BRL-CAD dependencies.
