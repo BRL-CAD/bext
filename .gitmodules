@@ -369,3 +369,9 @@
 	url = https://github.com/BRL-CAD/appleseed
 	shallow = true
 	ignore = dirty
+[submodule "geogram/geogram"]
+	path = geogram/geogram
+	url = https://github.com/BRL-CAD/geogram.git
+	branch = RELEASE
+        shallow = true
+        ignore = dirty

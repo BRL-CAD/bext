@@ -1,0 +1,69 @@
+# Unless we have ENABLE_ALL set, base the building of geogram on
+# the system detection results
+if (ENABLE_ALL AND NOT DEFINED ENABLE_GEOGRAM)
+  set(ENABLE_GEOGRAM ON)
+endif (ENABLE_ALL AND NOT DEFINED ENABLE_GEOGRAM)
+
+if (NOT ENABLE_GEOGRAM)
+
+  find_package(Geogram)
+
+  if (NOT Geogram_FOUND AND NOT DEFINED ENABLE_GEOGRAM)
+    set(ENABLE_GEOGRAM "ON" CACHE BOOL "Enable Geogram build")
+  endif (NOT Geogram_FOUND AND NOT DEFINED ENABLE_GEOGRAM)
+
+endif (NOT ENABLE_GEOGRAM)
+set(ENABLE_GEOGRAM "${ENABLE_GEOGRAM}" CACHE BOOL "Enable Geogram build")
+
+if (ENABLE_GEOGRAM)
+
+  git_submodule_init(geogram CMakeLists.txt)
+
+  TargetDeps(GEOGRAM)
+
+  ExternalProject_Add(GEOGRAM_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/geogram"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/geogram.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
+    -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
+    -DGEOGRAM_LIB_ONLY=ON
+    -DGEOGRAM_WITH_GRAPHICS=OFF
+    -DGEOGRAM_WITH_LUA=OFF
+    -DGEOGRAM_WITH_HLBFGS=OFF
+    -DGEOGRAM_WITH_TETGEN=OFF
+    -DGEOGRAM_WITH_TRIANGLE=OFF
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(GEOGRAM GEOGRAM_DEPENDS)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/geogram/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/geogram.txt
+    COPYONLY
+    )
+
+endif (ENABLE_GEOGRAM)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+
