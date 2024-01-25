@@ -80,6 +80,7 @@ In broad, the structure of the source tree is two tiered - the top level directo
 
 * A reference (using git submodules) to a copy of the upstream source code
 * Our managing CMakeLists.txt file defining the logic for building that project
+* A <dirname>.deps file identifying a project's dependencies on other bext projects
 * Any patch files or other supporting resources not part of the upstream tree
 
 Sometimes third party libraries will depend on other third party libraries (for example, libpng's use of zlib) - when a bundled component that is a dependency of other bundled projects is enabled, the expectation is that the other bundled
