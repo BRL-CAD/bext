@@ -371,7 +371,6 @@ If we check, we now see that no submodules are reported:
 
 ```
 geogram (RELEASE)$ git submodule
-
 ```
 
 Next we restore the copies of the source code made earlier to the working tree:
@@ -529,4 +528,243 @@ simpler than trying to inject our version into their build and they isoloate the
 be aware of as a source of potential issues.  If it DOES cause a problem, we may have to alter geogram's build
 to reference our zlib, if we are building a local copy.
 
+After the library is complete, we use ldd to check and see if any system
+libraries were linked that either already are or will need to be supplied by
+bext are used:
+
+```
+geogram/build (RELEASE) $ ldd lib/libgeogram.so
+	linux-vdso.so.1 (0x00007fff0db46000)
+	libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007efc63200000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007efc63515000)
+	libgomp.so.1 => /lib/x86_64-linux-gnu/libgomp.so.1 (0x00007efc63ef3000)
+	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007efc63ecf000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007efc62e00000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007efc63f6a000)
+```
+
+At least for Linux, all the linked libraries appear to be system libs and not dependencies we may need
+to supply ourselves, which is good.  If geogram was going to require us to add more dependencies to avoid
+the requirement to install system packages, we would have to repeat the above process for each of the
+proposed dependencies as well before we would be ready to move on to bext.
+
+Since we appear to have what we need, the next step takes place in the bext repository.
+We create a new top level directory - in this case "geogram" - and add it to the toplevel
+CMakeLists.txt file.
+
+```
+bext (main) $ mkdir geogram
+bext (main) $ <manually edit CMakeLists.txt to add the following>
+# Geogram - a programming library with geometric algorithms
+# https://github.com/BrunoLevy/geogram
+add_project(geogram GROUPS "BRLCAD_EXTRA")
+```
+
+We create a default "geogram.deps" file to list build dependencies for the bext superbuild.
+By default everything depends on at least PATCH - if geogram ultimately needs other bext
+components as well, they will be added later
+
+```
+bext (main) $ echo -e "PATCH\\n" > geogram/geogram.deps
+```
+
+Based on the above compilation, we know we will need to pass some geogram specific arguments
+to configure.  Using one of the other CMakeLists.txt files as a template, we create the following
+geogram/CMakeLists.txt file:
+
+```
+set(ENABLE_GEOGRAM "${ENABLE_GEOGRAM}" CACHE BOOL "Enable Geogram build")
+
+if (ENABLE_GEOGRAM)
+
+  git_submodule_init(geogram CMakeLists.txt)
+
+  TargetDeps(GEOGRAM)
+
+  ExternalProject_Add(GEOGRAM_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/geogram"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/geogram.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
+    -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
+    -DGEOGRAM_LIB_ONLY=ON
+    -DGEOGRAM_WITH_GRAPHICS=OFF
+    -DGEOGRAM_WITH_LUA=OFF
+    -DGEOGRAM_WITH_HLBFGS=OFF
+    -DGEOGRAM_WITH_TETGEN=OFF
+    -DGEOGRAM_WITH_TRIANGLE=OFF
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(GEOGRAM GEOGRAM_DEPENDS)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/geogram/LICENSE
+    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/geogram.txt
+    COPYONLY
+    )
+
+endif (ENABLE_GEOGRAM)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+```
+
+By default the PATCH\_COMMAND line is commented out - at this stage we don't know if we need to
+apply any patches or not.  We will definitely need to copy at least the LICENSE file.  In this
+case we will probably also want to append some of the other third party licenses used by geogram
+into it for completeness, so we may end up either scripting that or making our own custom file
+to store in geogram/.   The latter is less ideal as it will have to be manually updated each time
+we update geogram, but that might be simpler than a complex and fragile scripting solution - it
+will require investigation.
+
+The other item of note here is that we need find\_package to locate geogram.  By default CMake
+does not bundle a module for this, and geogram is not one of the projects that uses the newer
+project-provided CMake information convention for find\_package, so we will have to supply a
+FindGeogram.cmake file.  In this case geogram itself has such a file in geogram/cmake/FindGeogram.cmake
+so that is our starting point - we add it to the bext collection of CMake find\_package files:
+
+```
+bext (main) $ cp ~/geogram/cmake/FindGeogram.cmake CMake/
+```
+
+Although it is not immediately necessary for this stage of the setup, there is something we
+should verify and correct about the FindGeogram.cmake file.  The bext setup requires that
+find\_package respect \*\_ROOT variables to allow us to point search paths to our local copies
+of libs rather than system versions, and it is common for more obscure cmake files to not
+be set up to search in this fashion.  Accordingly, we alter FindGeogram.cmake
+to add GEOGRAM\_ROOT to the set of search paths.  This will eventually be necessary for the
+copy added to the main BRL-CAD build, as well as for any new dependencies that need to link
+against the local copy of geogram in the future.
+
+For the initial test, we comment out the git\_submodule\_init line and manually position a copy
+of the geogram source tree in geogram/geogram to simulate a submodule clone.  For this test
+we only are interested in building geogram and its requirements, rather than all of bext,
+so we run make with the GEOGRAM_BLD target.
+
+```
+bext (main) $ cp -r ~/geogram geogram/
+bext (main) $ mkdir build && cd build
+build (main) $ cmake .. -DENABLE_ALL=ON
+build (main) $ make GEOGRAM_BLD
+[  0%] Creating directories for 'PATCH_BLD'
+[  0%] No download step for 'PATCH_BLD'
+[ 20%] No update step for 'PATCH_BLD'
+[ 20%] No patch step for 'PATCH_BLD'
+[ 20%] Performing configure step for 'PATCH_BLD'
+-- PATCH_BLD configure command succeeded.  See also bext/build/patch/PATCH_BLD-prefix/src/PATCH_BLD-stamp/PATCH_BLD-configure-*.log
+[ 40%] Performing build step for 'PATCH_BLD'
+-- PATCH_BLD build command succeeded.  See also bext/build/patch/PATCH_BLD-prefix/src/PATCH_BLD-stamp/PATCH_BLD-build-*.log
+[ 40%] Performing install step for 'PATCH_BLD'
+-- PATCH_BLD install command succeeded.  See also bext/build/patch/PATCH_BLD-prefix/src/PATCH_BLD-stamp/PATCH_BLD-install-*.log
+[ 40%] Built target PATCH_BLD-install
+[ 60%] Creating directories for 'GEOGRAM_BLD'
+[ 60%] Performing download step (DIR copy) for 'GEOGRAM_BLD'
+[ 60%] No update step for 'GEOGRAM_BLD'
+[ 80%] No patch step for 'GEOGRAM_BLD'
+[ 80%] Performing configure step for 'GEOGRAM_BLD'
+-- GEOGRAM_BLD configure command succeeded.  See also bext/build/geogram/GEOGRAM_BLD-prefix/src/GEOGRAM_BLD-stamp/GEOGRAM_BLD-configure-*.log
+[ 80%] Performing build step for 'GEOGRAM_BLD'
+-- GEOGRAM_BLD build command succeeded.  See also bext/build/geogram/GEOGRAM_BLD-prefix/src/GEOGRAM_BLD-stamp/GEOGRAM_BLD-build-*.log
+[ 80%] Performing install step for 'GEOGRAM_BLD'
+-- GEOGRAM_BLD install command succeeded.  See also bext/build/geogram/GEOGRAM_BLD-prefix/src/GEOGRAM_BLD-stamp/GEOGRAM_BLD-install-*.log
+[ 80%] Built target GEOGRAM_BLD-install
+[100%] Completed 'GEOGRAM_BLD'
+[100%] Built target GEOGRAM_BLD
+```
+
+Once we have a successful completion, we inspect the contents of bext_output/install:
+
+```
+bext/build (main) $ ls -R ~/bext_output/install/
+```
+
+One thing to note is that a lot of the third party headers have been installed,
+including lua (although we disabled it) and zlib.  It might be possible to trim
+the installed set of headers down if the subset of geogram we are interested in
+doesn't require all of them, but it would also require patching the build logic
+so it's not a step to take without some motivation.  The zlib headers are concerning
+if there's a risk of them getting incorporated into other builds instead of our
+bundled zlib, but their location in include/geogram1/geogram/third_party/zlib should
+help avoid accidental incorporation so for the moment we can wait and see. The
+total file size for all the geogram headers is about 5M, which isn't enough to
+justify a cleanup attempt without more pressing functional concerns.
+
+Once everything looks like it should, we are ready to remove the working geogram
+copy and add it properly as a submodule per the instructions at the top of this
+file:
+
+```
+bext (main) $ rm -rf geogram/geogram && cd geogram
+bext/geogram (main) $ git submodule add -b RELEASE https://github.com/BRL-CAD/geogram.git
+bext/geogram (main) $ cd ..
+bext (main) $ echo "        shallow = true" >> .gitmodules
+bext (main) $ echo "        ignore = dirty" >> .gitmodules
+```
+
+Then add all the new and updated files to git for committing, and make the
+commit - geogram will now be present as a dependency in bext.
+
+```
+bext (main) $ git add .gitmodules CMakeLists.txt CMake/ geogram/
+bext (main) $ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   .gitmodules
+	new file:   CMake/FindGeogram.cmake
+	modified:   CMakeLists.txt
+	new file:   geogram/CMakeLists.txt
+	new file:   geogram/geogram
+	new file:   geogram/geogram.deps
+bext (main) $ git commit -m "Add geogram geometry library to bext"
+[main 07d979f] Add geogram geometry library to bext
+ 6 files changed, 227 insertions(+)
+ create mode 100644 CMake/FindGeogram.cmake
+ create mode 100644 geogram/CMakeLists.txt
+ create mode 160000 geogram/geogram
+ create mode 100644 geogram/geogram.deps
+bext (main) $ git push
+```
+
+The final "git push" step publishes the new addition to the public github bext
+repository, and will also kick off a continuous integration test build on
+Windows, Mac and Linux.  Because we tested only on Linux above, it is very
+common to see build issues on one or both of Windows and Mac - any issues
+should be immediately fixed, to keep bext building on all three platforms.
+In the case of severe issues, comment out the add\_project line in the toplevel
+bext CMakeLists.txt file corresponding to the new addition until the problems
+can be resolved.
+
+Having added the dependency successfully to bext, the next step is to set up
+the main BRL-CAD build to make use of it and test out its incorporation into
+a BRL-CAD bundle.  The bext build takes responsibility for making third party
+dependencies relocatable by leveraging LIEF, but if the upstream project ends
+up encoding fixed install paths rather than using relative lookups it may happen
+that a working bext_output/install copy fails to work when copied into the main
+BRL-CAD build.  If and when that happens, the original sources must be patched
+to allow for relocatable execution (we have to do this for Tcl, for example.)
+This should be done via patch file, and if the upstream project will take them
+push the necessary changes upstream to simplify incorporating new versions down
+the road.
 
