@@ -768,3 +768,21 @@ This should be done via patch file, and if the upstream project will take them
 push the necessary changes upstream to simplify incorporating new versions down
 the road.
 
+Once the dependency is looking stable and useful, it's time to circle back and
+test the build logic for various configurations - system verisons of
+dependencies (if any), bundled versions of dependencies (if any), installing a
+system version of geogram and verifying that the FindGeogram.cmake file
+successfully detects it and our build logic disables the local build, and
+checking that the BRL-CAD FindGeogram.cmake and build logic also work in both
+configurations.  Unfortunately, especially given the huge number of projects
+bext manages when everything is enabled, it's not practical to test all
+combinations of system and local for all projects.  Generally speaking, the
+most important configurations are ENABLE_ALL=ON, system detection on a
+"vanilla" Linux box with just the minimal system development headers for X11
+et. al., and system detection on a Linux box with a lot of system versions of
+libraries present.  (For projects like geogram that have minimal entanglement
+with other elements of bext it's more practical to check all configurations
+using the GEOGRAM_BLD build target, but that won't always be possible -
+build logic for projects like OSPray and Appleseed has the potential to
+encounter a vast set of possible mixes of system and bundled libs.)
+
