@@ -757,16 +757,28 @@ bext CMakeLists.txt file corresponding to the new addition until the problems
 can be resolved.
 
 Having added the dependency successfully to bext, the next step is to set up
-the main BRL-CAD build to make use of it and test out its incorporation into
-a BRL-CAD bundle.  The bext build takes responsibility for making third party
+the main BRL-CAD build to make use of it.  The FindGeogram.cmake file needs
+to be added to BRL-CAD's misc/CMake folder, and the following code needs to be
+added to misc/CMake/BRLCAD_ExternalDeps.cmake in order for the main BRL-CAD
+build to be able to find a bundled Geogram:
+
+```
+# Geogram - a programming library with geometric algorithms
+# https://github.com/BrunoLevy/geogram
+find_package_reset(GEOGRAM RESET_TP)
+set(GEOGRAM_ROOT "${CMAKE_BINARY_DIR}")
+find_package(Geogram)
+```
+
+Note that the bext build takes responsibility for making third party
 dependencies relocatable by leveraging LIEF, but if the upstream project ends
-up encoding fixed install paths rather than using relative lookups it may happen
-that a working bext_output/install copy fails to work when copied into the main
-BRL-CAD build.  If and when that happens, the original sources must be patched
-to allow for relocatable execution (we have to do this for Tcl, for example.)
-This should be done via patch file, and if the upstream project will take them
-push the necessary changes upstream to simplify incorporating new versions down
-the road.
+up encoding fixed install paths rather than using relative lookups it may
+happen that a working bext_output/install copy fails to work when copied into
+the main BRL-CAD build.  If and when that happens, the original sources must be
+patched to allow for relocatable execution (we have to do this for Tcl, for
+example.) This should be done via patch file, and if the upstream project will
+take them push the necessary changes upstream to simplify incorporating new
+versions down the road.
 
 Once the dependency is looking stable and useful, it's time to circle back and
 test the build logic for various configurations - system verisons of
