@@ -1,0 +1,12 @@
+diff -Naur geogram/src/lib/geogram/CMakeLists.txt GEOGRAM_BLD/src/lib/geogram/CMakeLists.txt
+--- geogram/src/lib/geogram/CMakeLists.txt	2024-01-27 01:03:38.771848391 -0500
++++ GEOGRAM_BLD/src/lib/geogram/CMakeLists.txt	2024-01-27 01:04:09.835359301 -0500
+@@ -45,7 +45,7 @@
+ 
+ include_directories(${PROJECT_BINARY_DIR}/src/lib)
+ 
+-add_library(geogram ${SOURCES} $<TARGET_OBJECTS:geogram_third_party>)
++add_library(geogram SHARED ${SOURCES} $<TARGET_OBJECTS:geogram_third_party>)
+ 
+ target_include_directories(geogram PRIVATE
+     ${PROJECT_SOURCE_DIR}/src/lib/geogram/third_party/amgcl
