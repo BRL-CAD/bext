@@ -770,6 +770,16 @@ set(GEOGRAM_ROOT "${CMAKE_BINARY_DIR}")
 find_package(Geogram)
 ```
 
+Because the Geogram headers will trigger compiler warnings for a BRL-CAD build,
+we also need to identify "geogram" as a pattern on which to use the SYSTEM
+keyword when it is used in include_directories calls:
+
+```
+set(SYS_INCLUDE_PATTERNS ${SYS_INCLUDE_PATTERNS} geogram)
+list(REMOVE_DUPLICATES SYS_INCLUDE_PATTERNS)
+set(SYS_INCLUDE_PATTERNS ${SYS_INCLUDE_PATTERNS} geogram CACHE STRING "Bundled system include dirs" FORCE)
+```
+
 We also need to add "Geogram" to the BUNDLED_LABELS list and GEOGRAM_LIBRARY to
 the BUNDLED_VARS list in misc/CMake/BRLCAD_Summary.cmake - they both need to be
 in the same relative positions in their respective lists.  This will allow the
