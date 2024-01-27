@@ -770,6 +770,12 @@ set(GEOGRAM_ROOT "${CMAKE_BINARY_DIR}")
 find_package(Geogram)
 ```
 
+We also need to add "Geogram" to the BUNDLED_LABELS list and GEOGRAM_LIBRARY to
+the BUNDLED_VARS list in misc/CMake/BRLCAD_Summary.cmake - they both need to be
+in the same relative positions in their respective lists.  This will allow the
+BRL-CAD configure summary to report on the status of the dependency automatically.
+By convention we keep the labels alphabetized.
+
 Note that the bext build takes responsibility for making third party
 dependencies relocatable by leveraging LIEF, but if the upstream project ends
 up encoding fixed install paths rather than using relative lookups it may
