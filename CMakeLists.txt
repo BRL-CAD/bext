@@ -105,7 +105,7 @@ file(MAKE_DIRECTORY "${CMAKE_NOBUNDLE_INSTALL_PREFIX}")
 # nothing to update in the project, but it will be slower than skipping the
 # step completely.
 if (NOT DEFINED EXT_BUILD_ALWAYS)
-  set(EXT_BUILD_ALWAYS 0)
+  set(EXT_BUILD_ALWAYS 1)
 endif (NOT DEFINED EXT_BUILD_ALWAYS)
 
 # The verbosity of the ExtProject stages is controlled by log options - they
