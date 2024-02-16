@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_lookup.cpp	2023-12-21 11:57:27.113240837 -0500
-+++ OPENNURBS_BLD/opennurbs_lookup.cpp	2023-12-21 11:58:28.000088916 -0500
+--- opennurbs/opennurbs_lookup.cpp	2024-02-16 13:44:43.184776025 -0500
++++ OPENNURBS_BLD/opennurbs_lookup.cpp	2024-02-16 14:25:11.759861768 -0500
 @@ -696,6 +696,9 @@
    return m_active_id_count;
  }

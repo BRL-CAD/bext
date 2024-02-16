@@ -1,6 +1,6 @@
---- opennurbs/opennurbs_file_utilities.cpp	2023-09-09 13:52:46.157646417 -0400
-+++ openNURBS/opennurbs_file_utilities.cpp	2023-09-09 13:43:33.716976293 -0400
-@@ -37,7 +37,7 @@
+--- opennurbs/opennurbs_file_utilities.cpp	2024-02-16 13:44:43.180776089 -0500
++++ OPENNURBS_BLD/opennurbs_file_utilities.cpp	2024-02-16 14:18:32.470563431 -0500
+@@ -35,7 +35,7 @@
  #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
  #include <Shlobj.h>
  #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
@@ -9,7 +9,7 @@
  // Shlwapi.h, Shlobj.h and perhaps others, unconditionally define WIN32
  #undef WIN32
  #endif
-@@ -3302,13 +3302,13 @@
+@@ -3300,13 +3300,13 @@
  
      const ON_wString content_time
        = ( m_content_time <= 0 )

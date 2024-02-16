@@ -1,5 +1,5 @@
---- opennurbs/example_gl/example_gl.cpp	2023-09-09 13:52:46.137646700 -0400
-+++ openNURBS/example_gl/example_gl.cpp	2023-09-09 13:43:33.728976149 -0400
+--- opennurbs/example_gl/example_gl.cpp	2024-02-16 13:44:43.268774649 -0500
++++ OPENNURBS_BLD/example_gl/example_gl.cpp	2024-02-16 14:16:30.964583700 -0500
 @@ -184,7 +184,7 @@
  //
  //////////////////////////////////////////////////////////////////////

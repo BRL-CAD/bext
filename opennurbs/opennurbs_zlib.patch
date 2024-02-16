@@ -1,6 +1,6 @@
---- opennurbs/opennurbs_compress.cpp	2023-09-09 13:52:46.157646417 -0400
-+++ openNURBS/opennurbs_compress.cpp	2023-09-09 13:43:33.712976340 -0400
-@@ -131,7 +131,7 @@
+--- opennurbs/opennurbs_compress.cpp	2024-02-16 13:44:43.180776089 -0500
++++ OPENNURBS_BLD/opennurbs_compress.cpp	2024-02-16 14:45:58.122707316 -0500
+@@ -128,7 +128,7 @@
      // compressed output in m_zlib.strm.next_out[], or do both.
  
      // provide storage for compressed stream output
@@ -9,7 +9,7 @@
      strm.avail_out = sizeof_out_buffer;
  
      if ( strm.avail_in <= 0 )
-@@ -145,7 +145,7 @@
+@@ -142,7 +142,7 @@
        ON__UINT64 sz = (size > max_sz) ? max_sz : size;
        m_in_size += sz;
        m_in_crc = ON_CRC32(m_in_crc,(size_t)sz,uncompressed_buffer); // (size_t) cast is safe because sz <= max_sz = 0x7FFFFFF0
@@ -18,16 +18,16 @@
        strm.avail_in = (ON__UINT32)sz;
        uncompressed_buffer = ((const unsigned char*)uncompressed_buffer) + sz;
        size -= sz;
-@@ -155,7 +155,7 @@
+@@ -152,7 +152,7 @@
      // calculate compression
      ON__UINT32 avail_in0 = strm.avail_in;
      ON__UINT32 avail_out0 = strm.avail_out;
 -    zrc = z_deflate( &strm, Z_NO_FLUSH ); 
-+    zrc = deflate( &strm, Z_NO_FLUSH );
++    zrc = deflate( &strm, Z_NO_FLUSH ); 
      if ( zrc < 0 ) 
      {
        // Something went haywire - bail out.
-@@ -238,11 +238,11 @@
+@@ -235,11 +235,11 @@
      // provide storage for compressed stream output
      strm.avail_in = 0;
      strm.next_in = 0;
@@ -37,11 +37,11 @@
  
      // finish compression calculation
 -    zrc = z_deflate( &strm, Z_FINISH ); 
-+    zrc = deflate( &strm, Z_FINISH );
++    zrc = deflate( &strm, Z_FINISH ); 
      if ( zrc < 0 ) 
      {
        // Something went haywire - bail out.
-@@ -449,7 +449,7 @@
+@@ -446,7 +446,7 @@
      // uncompressed output in strm.next_out[], or do both.
  
      // provide storage for uncompressed stream output
@@ -50,7 +50,7 @@
      strm.avail_out = sizeof_out_buffer;
  
      if ( strm.avail_in <= 0 )
-@@ -463,7 +463,7 @@
+@@ -460,7 +460,7 @@
        ON__UINT64 sz = (size > max_sz) ? max_sz : size;
        m_in_size += sz;
        m_in_crc = ON_CRC32(m_in_crc,(size_t)sz,compressed_buffer); // (size_t) cast is safe because sz <= max_sz = 0x7FFFFFF0
@@ -59,16 +59,16 @@
        strm.avail_in = (ON__UINT32)sz;
        compressed_buffer = ((const unsigned char*)compressed_buffer) + sz;
        size -= sz;
-@@ -473,7 +473,7 @@
+@@ -470,7 +470,7 @@
      // calculate compression
      ON__UINT32 avail_in0 = strm.avail_in;
      ON__UINT32 avail_out0 = strm.avail_out;
 -    zrc = z_inflate( &strm, Z_NO_FLUSH ); 
-+    zrc = inflate( &strm, Z_NO_FLUSH );
++    zrc = inflate( &strm, Z_NO_FLUSH ); 
      if ( zrc < 0 ) 
      {
        // Something went haywire - bail out.
-@@ -556,11 +556,11 @@
+@@ -553,11 +553,11 @@
      // provide storage for compressed stream output
      strm.avail_in = 0;
      strm.next_in = 0;
@@ -78,29 +78,21 @@
  
      // finish compression calculation
 -    zrc = z_inflate( &strm, Z_FINISH ); 
-+    zrc = inflate( &strm, Z_FINISH );
++    zrc = inflate( &strm, Z_FINISH ); 
      if ( zrc < 0 ) 
      {
        // Something went haywire - bail out.
---- opennurbs/opennurbs_zlib.cpp	2023-12-20 11:23:16.233985604 -0500
-+++ OPENNURBS_BLD/opennurbs_zlib.cpp	2023-12-20 11:22:15.431050084 -0500
-@@ -23,6 +23,7 @@
- 
- #include "opennurbs_zlib.h"
- 
-+#if 0
- #if defined(ON_COMPILER_MSC) && !defined(ON_CMAKE_BUILD)
- 
- #if !defined(OPENNURBS_ZLIB_LIB_DIR)
-@@ -39,7 +40,6 @@
- 
+--- opennurbs/opennurbs_zlib.cpp	2024-02-16 13:44:43.196775827 -0500
++++ OPENNURBS_BLD/opennurbs_zlib.cpp	2024-02-16 14:47:11.701454969 -0500
+@@ -21,6 +21,7 @@
+ #error ON_COMPILING_OPENNURBS must be defined when compiling opennurbs
  #endif
  
--
- #if defined(_LIB) && defined(_MT) && !defined(_DLL)
- // using Microsoft statically linked C-runtime
- #pragma message ( "Linking with zlib_mt.lib in " OPENNURBS_PP2STR(OPENNURBS_ZLIB_LIB_DIR) )
-@@ -52,6 +52,8 @@
++#if 0
+ #include "opennurbs_zlib.h"
+ 
+ #if defined(ON_COMPILER_MSC) && !defined(ON_CMAKE_BUILD)
+@@ -52,6 +53,8 @@
  
  #endif
  
@@ -109,7 +101,7 @@
  // compressed buffer I/O uses zlib 1.1.3 inflate()/deflate()
  class ON_CompressorImplementation
  {
-@@ -319,11 +321,11 @@
+@@ -319,11 +322,11 @@
        // no uncompressed input is left - switch to finish mode
        flush = Z_FINISH;
      }
@@ -123,7 +115,7 @@
        rc = false;
        break;
      }
-@@ -519,11 +521,11 @@
+@@ -519,11 +522,11 @@
        // no compressed input is left - switch to finish mode
        flush = Z_FINISH;
      }
@@ -137,12 +129,12 @@
        rc = false;
        break;
      }
-@@ -1200,11 +1202,11 @@
+@@ -1200,11 +1203,11 @@
        // no uncompressed input is left - switch to finish mode
        flush = Z_FINISH;
      }
 -    zrc = z_deflate( &m_zlib.m_strm, flush ); 
-+    zrc = deflate( &m_zlib.m_strm, flush );
++    zrc = deflate( &m_zlib.m_strm, flush ); 
      if ( zrc < 0 ) 
      {
        // Something went haywire - bail out.
@@ -151,7 +143,7 @@
        rc = false;
        break;
      }
-@@ -1333,11 +1335,11 @@
+@@ -1333,11 +1336,11 @@
        // no compressed input is left - switch to finish mode
        flush = Z_FINISH;
      }
@@ -165,8 +157,8 @@
        rc = false;
        break;
      }
---- opennurbs/opennurbs_zlib.h	2023-12-20 11:23:14.434017100 -0500
-+++ OPENNURBS_BLD/opennurbs_zlib.h	2023-12-20 11:22:19.146985000 -0500
+--- opennurbs/opennurbs_zlib.h	2024-02-16 13:44:43.196775827 -0500
++++ OPENNURBS_BLD/opennurbs_zlib.h	2024-02-16 14:47:52.060767871 -0500
 @@ -37,7 +37,7 @@
  #endif
  

@@ -126,8 +126,8 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 +    endif()
 +endif()
 
---- opennurbs/CMakeLists.txt	2023-12-21 10:51:10.911124934 -0500
-+++ OPENNURBS_BLD/CMakeLists.txt	2023-12-21 10:49:36.636736030 -0500
+--- opennurbs/CMakeLists.txt	2024-02-16 13:44:43.176776155 -0500
++++ OPENNURBS_BLD/CMakeLists.txt	2024-02-16 14:04:34.272730640 -0500
 @@ -1,609 +1,633 @@
 -cmake_minimum_required (VERSION 3.16)
 -#set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")

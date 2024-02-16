@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_system_runtime.h	2023-12-20 13:17:04.282927924 -0500
-+++ OPENNURBS_BLD/opennurbs_system_runtime.h	2023-12-20 13:17:00.994986900 -0500
+--- opennurbs/opennurbs_system_runtime.h	2024-02-16 13:44:43.192775892 -0500
++++ OPENNURBS_BLD/opennurbs_system_runtime.h	2024-02-16 14:41:07.375654473 -0500
 @@ -56,6 +56,11 @@
  #define ON_RUNTIME_LINUX
  #endif

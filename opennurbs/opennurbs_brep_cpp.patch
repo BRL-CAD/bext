@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_brep.cpp	2023-12-20 11:23:16.137987286 -0500
-+++ OPENNURBS_BLD/opennurbs_brep.cpp	2023-12-20 11:22:15.331051837 -0500
+--- opennurbs/opennurbs_brep.cpp	2024-02-16 13:44:43.176776155 -0500
++++ OPENNURBS_BLD/opennurbs_brep.cpp	2024-02-16 13:49:38.419887610 -0500
 @@ -3578,6 +3578,10 @@
      }   
    }

@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_precompiledheader.cpp	2023-09-09 13:52:46.165646304 -0400
-+++ openNURBS/opennurbs_precompiledheader.cpp	2023-09-09 13:43:33.720976246 -0400
+--- opennurbs/opennurbs_precompiledheader.cpp	2024-02-16 13:44:43.188775957 -0500
++++ OPENNURBS_BLD/opennurbs_precompiledheader.cpp	2024-02-16 14:32:40.056274471 -0500
 @@ -32,9 +32,9 @@
  #error Incorrect _M_... setting for x64 build
  #endif
@@ -66,3 +66,10 @@
  #error Incorrect _M_... setting for 32 bit Windows build.
  #endif
  
+@@ -144,4 +144,4 @@
+ 
+ #endif
+ 
+-#endif
+\ No newline at end of file
++#endif
