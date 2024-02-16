@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_compress.cpp	2024-02-16 15:09:48.559498749 -0500
-+++ OPENNURBS_BLD/opennurbs_compress.cpp	2024-02-16 15:09:21.551948687 -0500
+--- opennurbs/opennurbs_compress.cpp	2024-02-16 15:39:23.491884645 -0500
++++ OPENNURBS_BLD/opennurbs_compress.cpp	2024-02-16 15:23:15.326224509 -0500
 @@ -128,7 +128,7 @@
      // compressed output in m_zlib.strm.next_out[], or do both.
  
@@ -82,8 +82,8 @@
      if ( zrc < 0 ) 
      {
        // Something went haywire - bail out.
---- opennurbs/opennurbs_zlib.cpp	2024-02-16 15:09:48.575498483 -0500
-+++ OPENNURBS_BLD/opennurbs_zlib.cpp	2024-02-16 15:10:11.099123079 -0500
+--- opennurbs/opennurbs_zlib.cpp	2024-02-16 15:39:23.535883954 -0500
++++ OPENNURBS_BLD/opennurbs_zlib.cpp	2024-02-16 15:23:15.326224509 -0500
 @@ -23,6 +23,7 @@
  
  #include "opennurbs_zlib.h"
@@ -157,9 +157,23 @@
        rc = false;
        break;
      }
---- opennurbs/opennurbs_zlib.h	2024-02-16 15:09:48.575498483 -0500
-+++ OPENNURBS_BLD/opennurbs_zlib.h	2024-02-16 15:09:21.551948687 -0500
-@@ -37,7 +37,7 @@
+--- opennurbs/opennurbs_zlib.h	2024-02-16 15:39:23.535883954 -0500
++++ OPENNURBS_BLD/opennurbs_zlib.h	2024-02-16 15:38:23.556824827 -0500
+@@ -25,19 +25,19 @@
+ // and statically link with the zlib library. All the necessary
+ // header files are included by opennurbs.h.
+ 
+-
++#if 0
+ #if !defined(Z_PREFIX)
+ /* decorates zlib functions with a "z_" prefix to prevent symbol collision. */
+ #define Z_PREFIX
+ #endif
+-
++#endif
+ #if !defined(MY_ZCALLOC)
+ /* have zlib use oncalloc() and onfree() for memory management*/
+ #define MY_ZCALLOC
  #endif
  
  #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
