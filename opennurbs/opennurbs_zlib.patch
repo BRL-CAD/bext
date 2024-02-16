@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_compress.cpp	2024-02-16 13:44:43.180776089 -0500
-+++ OPENNURBS_BLD/opennurbs_compress.cpp	2024-02-16 14:45:58.122707316 -0500
+--- opennurbs/opennurbs_compress.cpp	2024-02-16 15:09:48.559498749 -0500
++++ OPENNURBS_BLD/opennurbs_compress.cpp	2024-02-16 15:09:21.551948687 -0500
 @@ -128,7 +128,7 @@
      // compressed output in m_zlib.strm.next_out[], or do both.
  
@@ -82,16 +82,16 @@
      if ( zrc < 0 ) 
      {
        // Something went haywire - bail out.
---- opennurbs/opennurbs_zlib.cpp	2024-02-16 13:44:43.196775827 -0500
-+++ OPENNURBS_BLD/opennurbs_zlib.cpp	2024-02-16 14:47:11.701454969 -0500
-@@ -21,6 +21,7 @@
- #error ON_COMPILING_OPENNURBS must be defined when compiling opennurbs
- #endif
+--- opennurbs/opennurbs_zlib.cpp	2024-02-16 15:09:48.575498483 -0500
++++ OPENNURBS_BLD/opennurbs_zlib.cpp	2024-02-16 15:10:11.099123079 -0500
+@@ -23,6 +23,7 @@
  
-+#if 0
  #include "opennurbs_zlib.h"
  
++#if 0
  #if defined(ON_COMPILER_MSC) && !defined(ON_CMAKE_BUILD)
+ 
+ #if !defined(OPENNURBS_ZLIB_LIB_DIR)
 @@ -52,6 +53,8 @@
  
  #endif
@@ -157,8 +157,8 @@
        rc = false;
        break;
      }
---- opennurbs/opennurbs_zlib.h	2024-02-16 13:44:43.196775827 -0500
-+++ OPENNURBS_BLD/opennurbs_zlib.h	2024-02-16 14:47:52.060767871 -0500
+--- opennurbs/opennurbs_zlib.h	2024-02-16 15:09:48.575498483 -0500
++++ OPENNURBS_BLD/opennurbs_zlib.h	2024-02-16 15:09:21.551948687 -0500
 @@ -37,7 +37,7 @@
  #endif
  
