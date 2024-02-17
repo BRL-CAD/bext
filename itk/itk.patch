@@ -1,6 +1,6 @@
-diff -Naur itk.orig/CMake/FindITCL.cmake ITK_BLD/CMake/FindITCL.cmake
---- itk.orig/CMake/FindITCL.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ ITK_BLD/CMake/FindITCL.cmake	2023-09-17 20:23:29.905361281 -0400
+diff -Naur itk/CMake/FindITCL.cmake ITK_BLD/CMake/FindITCL.cmake
+--- itk/CMake/FindITCL.cmake	1969-12-31 19:00:00.000000000 -0500
++++ ITK_BLD/CMake/FindITCL.cmake	2024-02-16 19:10:33.623363134 -0500
 @@ -0,0 +1,118 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
@@ -120,9 +120,9 @@ diff -Naur itk.orig/CMake/FindITCL.cmake ITK_BLD/CMake/FindITCL.cmake
 +# indent-tabs-mode: t
 +# End:
 +# ex: shiftwidth=2 tabstop=8
-diff -Naur itk.orig/CMake/FindTCL.cmake ITK_BLD/CMake/FindTCL.cmake
---- itk.orig/CMake/FindTCL.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ ITK_BLD/CMake/FindTCL.cmake	2023-09-17 20:23:29.905361281 -0400
+diff -Naur itk/CMake/FindTCL.cmake ITK_BLD/CMake/FindTCL.cmake
+--- itk/CMake/FindTCL.cmake	1969-12-31 19:00:00.000000000 -0500
++++ ITK_BLD/CMake/FindTCL.cmake	2024-02-16 19:10:33.623363134 -0500
 @@ -0,0 +1,496 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
@@ -620,10 +620,10 @@ diff -Naur itk.orig/CMake/FindTCL.cmake ITK_BLD/CMake/FindTCL.cmake
 +# indent-tabs-mode: t
 +# End:
 +# ex: shiftwidth=2 tabstop=8
-diff -Naur itk.orig/CMakeLists.txt ITK_BLD/CMakeLists.txt
---- itk.orig/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
-+++ ITK_BLD/CMakeLists.txt	2023-09-17 20:23:29.905361281 -0400
-@@ -0,0 +1,258 @@
+diff -Naur itk/CMakeLists.txt ITK_BLD/CMakeLists.txt
+--- itk/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
++++ ITK_BLD/CMakeLists.txt	2024-02-16 19:10:21.567570239 -0500
+@@ -0,0 +1,280 @@
 +#                     C M A K E L I S T S . T X T
 +# ITK
 +#
@@ -799,26 +799,48 @@ diff -Naur itk.orig/CMakeLists.txt ITK_BLD/CMakeLists.txt
 +set(ITK_INCLUDE_DIRS ${ITK_SOURCE_DIR}/generic ${ITK_BINARY_DIR}/include)
 +mark_as_advanced(ITK_INCLUDE_DIRS)
 +
-+# Like ITcl, Itk requires private Tcl headers, which we can't assume from a system
-+# install of Tcl.  The workaround is to use our local copies and hope they
-+# are workable. (Ugh.)
-+if (NOT DEFINED TCL_SOURCE_DIR)
-+  message(FATAL_ERROR "Itk3 needs to know where to find the Tcl source directory")
-+endif (NOT DEFINED TCL_SOURCE_DIR)
-+set(TCL_PRIVATE_HDRS ${TCL_SOURCE_DIR}/generic)
-+if(NOT WIN32)
-+  set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/unix)
-+else(NOT WIN32)
-+  set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/win)
-+endif(NOT WIN32)
 +
++# Like ITcl, Itk requires private Tcl headers
++# At least one Linux distro puts what we need here
++set(HDRS_CANDIDATE_DIR ${TCL_INCLUDE_PATH}8.6/tcl-private)
++if (EXISTS ${HDRS_CANDIDATE_DIR})
++  set(TCL_PRIVATE_HDRS ${HDRS_CANDIDATE_DIR}/generic)
++  if(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${HDRS_CANDIDATE_DIR}/unix)
++  else(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${HDRS_CANDIDATE_DIR}/win)
++  endif(NOT WIN32)
++endif ()
 +# Itk also requires private Tk headers
-+if (NOT DEFINED TK_SOURCE_DIR)
-+  message(FATAL_ERROR "Itk3 needs to know where to find the Tk source directory")
-+endif (NOT DEFINED TK_SOURCE_DIR)
-+if(WIN32)
-+  set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TK_SOURCE_DIR}/xlib)
-+endif(NOT WIN32)
++set(HDRS_CANDIDATE_DIR ${TCL_INCLUDE_PATH}8.6/tk-private)
++if (EXISTS ${HDRS_CANDIDATE_DIR})
++  set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${HDRS_CANDIDATE_DIR}/generic)
++  if(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${HDRS_CANDIDATE_DIR}/unix)
++  else(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${HDRS_CANDIDATE_DIR}/win)
++  endif(NOT WIN32)
++endif ()
++
++# If we don't have what we need, see if we know where to find
++# a source directory
++if (NOT TCL_PRIVATE_HDRS)
++  if (NOT DEFINED TCL_SOURCE_DIR)
++    message(FATAL_ERROR "Itk3 needs to know where to find the Tcl source directory")
++  endif (NOT DEFINED TCL_SOURCE_DIR)
++  set(TCL_PRIVATE_HDRS ${TCL_SOURCE_DIR}/generic)
++  if(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/unix)
++  else(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/win)
++  endif(NOT WIN32)
++  if (NOT DEFINED TK_SOURCE_DIR)
++    message(FATAL_ERROR "Itk3 needs to know where to find the Tk source directory")
++  endif (NOT DEFINED TK_SOURCE_DIR)
++  if(WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TK_SOURCE_DIR}/xlib)
++  endif(NOT WIN32)
++endif (NOT TCL_PRIVATE_HDRS)
 +
 +include_directories(
 +  ${TCL_INCLUDE_PATH}
@@ -882,9 +904,9 @@ diff -Naur itk.orig/CMakeLists.txt ITK_BLD/CMakeLists.txt
 +# End:
 +# ex: shiftwidth=2 tabstop=8
 +
-diff -Naur itk.orig/generic/itk_cmds.c ITK_BLD/generic/itk_cmds.c
---- itk.orig/generic/itk_cmds.c	2023-09-17 20:23:04.625842791 -0400
-+++ ITK_BLD/generic/itk_cmds.c	2023-09-17 20:23:29.909361205 -0400
+diff -Naur itk/generic/itk_cmds.c ITK_BLD/generic/itk_cmds.c
+--- itk/generic/itk_cmds.c	2024-02-16 19:10:50.507073124 -0500
++++ ITK_BLD/generic/itk_cmds.c	2024-02-16 19:10:33.623363134 -0500
 @@ -111,8 +111,7 @@
   * ------------------------------------------------------------------------
   */
@@ -928,9 +950,9 @@ diff -Naur itk.orig/generic/itk_cmds.c ITK_BLD/generic/itk_cmds.c
  {
      int result = TCL_OK;
  
-diff -Naur itk.orig/win/rc/itk.rc ITK_BLD/win/rc/itk.rc
---- itk.orig/win/rc/itk.rc	2023-09-17 20:23:04.625842791 -0400
-+++ ITK_BLD/win/rc/itk.rc	2023-09-17 20:23:29.913361130 -0400
+diff -Naur itk/win/rc/itk.rc ITK_BLD/win/rc/itk.rc
+--- itk/win/rc/itk.rc	2024-02-16 19:10:50.507073124 -0500
++++ ITK_BLD/win/rc/itk.rc	2024-02-16 19:10:33.623363134 -0500
 @@ -1,59 +1,59 @@
 -//
 -// Version resource script.
