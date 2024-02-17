@@ -1,6 +1,6 @@
-diff -Naur itcl.orig/CMake/FindTCL.cmake ITCL_BLD/CMake/FindTCL.cmake
---- itcl.orig/CMake/FindTCL.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ ITCL_BLD/CMake/FindTCL.cmake	2023-09-17 20:17:00.344656194 -0400
+diff -Naur itcl/CMake/FindTCL.cmake ITCL_BLD/CMake/FindTCL.cmake
+--- itcl/CMake/FindTCL.cmake	1969-12-31 19:00:00.000000000 -0500
++++ ITCL_BLD/CMake/FindTCL.cmake	2024-02-16 18:52:59.757617957 -0500
 @@ -0,0 +1,496 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
@@ -498,10 +498,10 @@ diff -Naur itcl.orig/CMake/FindTCL.cmake ITCL_BLD/CMake/FindTCL.cmake
 +# indent-tabs-mode: t
 +# End:
 +# ex: shiftwidth=2 tabstop=8
-diff -Naur itcl.orig/CMakeLists.txt ITCL_BLD/CMakeLists.txt
---- itcl.orig/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
-+++ ITCL_BLD/CMakeLists.txt	2023-09-17 20:17:00.344656194 -0400
-@@ -0,0 +1,230 @@
+diff -Naur itcl/CMakeLists.txt ITCL_BLD/CMakeLists.txt
+--- itcl/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
++++ ITCL_BLD/CMakeLists.txt	2024-02-16 19:04:42.805398844 -0500
+@@ -0,0 +1,243 @@
 +#                     C M A K E L I S T S . T X T
 +# ITCL
 +#
@@ -672,18 +672,31 @@ diff -Naur itcl.orig/CMakeLists.txt ITCL_BLD/CMakeLists.txt
 +set(ITCL_INCLUDE_PATH ${ITCL_SOURCE_DIR}/generic ${ITCL_BINARY_DIR}/include)
 +mark_as_advanced(ITCL_INCLUDE_PATH)
 +
++# At least one Linux distro puts what we need here
++set(HDRS_CANDIDATE_DIR ${TCL_INCLUDE_PATH}8.6/tcl-private)
++if (EXISTS ${HDRS_CANDIDATE_DIR})
++  set(TCL_PRIVATE_HDRS ${HDRS_CANDIDATE_DIR}/generic)
++  if(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${HDRS_CANDIDATE_DIR}/unix)
++  else(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${HDRS_CANDIDATE_DIR}/win)
++  endif(NOT WIN32)
++endif ()
++
 +# ITcl requires private Tcl headers, which we can't assume from a system
 +# install of Tcl.  The fallback is to use our local copies and hope they
 +# work. (Ugh.)
-+if (NOT DEFINED TCL_SOURCE_DIR)
-+  message(FATAL_ERROR "Itcl3 needs to know where to find the Tcl source directory")
-+endif (NOT DEFINED TCL_SOURCE_DIR)
-+set(TCL_PRIVATE_HDRS ${TCL_SOURCE_DIR}/generic)
-+if(NOT WIN32)
-+  set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/unix)
-+else(NOT WIN32)
-+  set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/win)
-+endif(NOT WIN32)
++if (NOT TCL_PRIVATE_HDRS)
++  if (NOT DEFINED TCL_SOURCE_DIR)
++    message(FATAL_ERROR "Itcl3 needs to know where to find the Tcl source directory")
++  endif (NOT DEFINED TCL_SOURCE_DIR)
++  set(TCL_PRIVATE_HDRS ${TCL_SOURCE_DIR}/generic)
++  if(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/unix)
++  else(NOT WIN32)
++    set(TCL_PRIVATE_HDRS ${TCL_PRIVATE_HDRS} ${TCL_SOURCE_DIR}/win)
++  endif(NOT WIN32)
++endif (NOT TCL_PRIVATE_HDRS)
 +
 +include_directories(
 +  ${TCL_INCLUDE_PATH}
@@ -732,9 +745,9 @@ diff -Naur itcl.orig/CMakeLists.txt ITCL_BLD/CMakeLists.txt
 +# End:
 +# ex: shiftwidth=2 tabstop=8
 +
-diff -Naur itcl.orig/generic/itcl_cmds.c ITCL_BLD/generic/itcl_cmds.c
---- itcl.orig/generic/itcl_cmds.c	2023-09-17 20:16:39.177011583 -0400
-+++ ITCL_BLD/generic/itcl_cmds.c	2023-09-17 20:17:00.348656127 -0400
+diff -Naur itcl/generic/itcl_cmds.c ITCL_BLD/generic/itcl_cmds.c
+--- itcl/generic/itcl_cmds.c	2024-02-16 19:03:13.054947128 -0500
++++ ITCL_BLD/generic/itcl_cmds.c	2024-02-16 18:47:06.635909397 -0500
 @@ -53,9 +53,6 @@
          if {[info exists library]} {\n\
              lappend dirs $library\n\
@@ -763,9 +776,9 @@ diff -Naur itcl.orig/generic/itcl_cmds.c ITCL_BLD/generic/itcl_cmds.c
                  (char*)NULL);
              result = TCL_ERROR;
              goto scopeCmdDone;
-diff -Naur itcl.orig/generic/itclInt.decls ITCL_BLD/generic/itclInt.decls
---- itcl.orig/generic/itclInt.decls	2023-09-17 20:16:39.177011583 -0400
-+++ ITCL_BLD/generic/itclInt.decls	2023-09-17 20:17:00.344656194 -0400
+diff -Naur itcl/generic/itclInt.decls ITCL_BLD/generic/itclInt.decls
+--- itcl/generic/itclInt.decls	2024-02-16 19:03:13.050947197 -0500
++++ ITCL_BLD/generic/itclInt.decls	2024-02-16 18:47:06.635909397 -0500
 @@ -252,7 +252,7 @@
          CONST char* arglist, CONST char* body, ItclMemberCode** mcodePtr)
  }
@@ -775,9 +788,9 @@ diff -Naur itcl.orig/generic/itclInt.decls ITCL_BLD/generic/itclInt.decls
  }
  declare 59 generic {
      int Itcl_GetMemberCode (Tcl_Interp* interp, ItclMember* member)
-diff -Naur itcl.orig/generic/itclIntDecls.h ITCL_BLD/generic/itclIntDecls.h
---- itcl.orig/generic/itclIntDecls.h	2023-09-17 20:16:39.177011583 -0400
-+++ ITCL_BLD/generic/itclIntDecls.h	2023-09-17 20:17:00.344656194 -0400
+diff -Naur itcl/generic/itclIntDecls.h ITCL_BLD/generic/itclIntDecls.h
+--- itcl/generic/itclIntDecls.h	2024-02-16 19:03:13.054947128 -0500
++++ ITCL_BLD/generic/itclIntDecls.h	2024-02-16 18:47:06.635909397 -0500
 @@ -410,7 +410,7 @@
  #ifndef Itcl_DeleteMemberCode_TCL_DECLARED
  #define Itcl_DeleteMemberCode_TCL_DECLARED
@@ -796,9 +809,9 @@ diff -Naur itcl.orig/generic/itclIntDecls.h ITCL_BLD/generic/itclIntDecls.h
      int (*itcl_GetMemberCode) _ANSI_ARGS_((Tcl_Interp* interp, ItclMember* member)); /* 59 */
      void *reserved60;
      int (*itcl_EvalMemberCode) _ANSI_ARGS_((Tcl_Interp * interp, ItclMemberFunc * mfunc, ItclMember * member, ItclObject * contextObj, int objc, Tcl_Obj *CONST objv[])); /* 61 */
-diff -Naur itcl.orig/generic/itcl_methods.c ITCL_BLD/generic/itcl_methods.c
---- itcl.orig/generic/itcl_methods.c	2023-09-17 20:16:39.177011583 -0400
-+++ ITCL_BLD/generic/itcl_methods.c	2023-09-17 20:17:00.352656061 -0400
+diff -Naur itcl/generic/itcl_methods.c ITCL_BLD/generic/itcl_methods.c
+--- itcl/generic/itcl_methods.c	2024-02-16 19:03:13.054947128 -0500
++++ ITCL_BLD/generic/itcl_methods.c	2024-02-16 18:47:06.635909397 -0500
 @@ -731,8 +731,7 @@
   * ------------------------------------------------------------------------
   */
@@ -818,9 +831,9 @@ diff -Naur itcl.orig/generic/itcl_methods.c ITCL_BLD/generic/itcl_methods.c
      );
  
      localPtr->nextPtr = NULL;
-diff -Naur itcl.orig/win/itcl.rc ITCL_BLD/win/itcl.rc
---- itcl.orig/win/itcl.rc	1969-12-31 19:00:00.000000000 -0500
-+++ ITCL_BLD/win/itcl.rc	2023-09-17 20:17:00.356655994 -0400
+diff -Naur itcl/win/itcl.rc ITCL_BLD/win/itcl.rc
+--- itcl/win/itcl.rc	1969-12-31 19:00:00.000000000 -0500
++++ ITCL_BLD/win/itcl.rc	2024-02-16 18:47:06.635909397 -0500
 @@ -0,0 +1,55 @@
 +//
 +// Version resource script.
