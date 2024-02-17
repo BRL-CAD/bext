@@ -59,9 +59,9 @@ cd brlcad && rm -rf misc/tools/ext src/other
 ```sh
 cd .. && mkdir brlcad_exttest_build && cd brlcad_exttest_build
 ```
-* Configure with CMake.  If no custom CMAKE_INSTALL_PREFIX was supplied to the bext build, BRL-CAD will know to look for the folder it needs in the user's home directory. If a custom location was used, specify the path holding the bext output directory using -DBRLCAD_EXT_DIR=<your_bext_output_dir> (bext_output should in turn contain install and noinstall folders.)  If you also wish to test with Qt, you must currently enable that support in BRL-CAD as well.  (Note that the BRL-CAD configure process is responsible for staging the BRLCAD_EXT_DIR contents into the build directory, so it can take some time to complete...)
+* Configure with CMake, specifying the path holding the bext output directory the BRLCAD_EXT_DIR variable to locate bext_output. Unless you have overridden the CMAKE_INSTALL_PREFIX of the bext build, it will be located in your home directory.  The bext_output directory should in turn contain install and noinstall folders.  If you also wish to test with Qt, you must currently enable that support in BRL-CAD as well.  (Note that the BRL-CAD configure process is responsible for staging the BRLCAD_EXT_DIR contents into the build directory, so it can take some time to complete...)
 ```sh
-cmake ../brlcad -DBRLCAD_ENABLE_QT=ON
+cmake ../brlcad -DBRLCAD_EXT_DIR=<your_bext_output_dir> -DBRLCAD_ENABLE_QT=ON
 ```
 * Run the build process.
 ```sh
