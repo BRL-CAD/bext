@@ -1,6 +1,11 @@
+diff -Naur opencv/.cache/.gitignore OPENCV_BLD/.cache/.gitignore
+--- opencv/.cache/.gitignore	1969-12-31 19:00:00.000000000 -0500
++++ OPENCV_BLD/.cache/.gitignore	2024-03-06 11:14:00.970668988 -0500
+@@ -0,0 +1 @@
++*
 diff -Naur opencv/cmake/FindPNG.cmake OPENCV_BLD/cmake/FindPNG.cmake
 --- opencv/cmake/FindPNG.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ OPENCV_BLD/cmake/FindPNG.cmake	2024-01-24 11:22:41.584210390 -0500
++++ OPENCV_BLD/cmake/FindPNG.cmake	2024-03-06 11:14:00.642674496 -0500
 @@ -0,0 +1,190 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
@@ -194,7 +199,7 @@ diff -Naur opencv/cmake/FindPNG.cmake OPENCV_BLD/cmake/FindPNG.cmake
 +# ex: shiftwidth=2 tabstop=8
 diff -Naur opencv/cmake/FindZLIB.cmake OPENCV_BLD/cmake/FindZLIB.cmake
 --- opencv/cmake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ OPENCV_BLD/cmake/FindZLIB.cmake	2024-01-24 11:22:41.584210390 -0500
++++ OPENCV_BLD/cmake/FindZLIB.cmake	2024-03-06 11:14:00.642674496 -0500
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -320,8 +325,8 @@ diff -Naur opencv/cmake/FindZLIB.cmake OPENCV_BLD/cmake/FindZLIB.cmake
 +    endif()
 +endif()
 diff -Naur opencv/cmake/OpenCVInstallLayout.cmake OPENCV_BLD/cmake/OpenCVInstallLayout.cmake
---- opencv/cmake/OpenCVInstallLayout.cmake	2024-01-24 11:26:57.523479289 -0500
-+++ OPENCV_BLD/cmake/OpenCVInstallLayout.cmake	2024-01-24 11:26:23.392100252 -0500
+--- opencv/cmake/OpenCVInstallLayout.cmake	2024-03-06 11:15:18.249391428 -0500
++++ OPENCV_BLD/cmake/OpenCVInstallLayout.cmake	2024-03-06 11:14:00.642674496 -0500
 @@ -22,12 +22,12 @@
  
  elseif(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
@@ -341,9 +346,9 @@ diff -Naur opencv/cmake/OpenCVInstallLayout.cmake OPENCV_BLD/cmake/OpenCVInstall
      ocv_update(OPENCV_INSTALL_BINARIES_SUFFIX "staticlib")
    else()
 diff -Naur opencv/CMakeLists.txt OPENCV_BLD/CMakeLists.txt
---- opencv/CMakeLists.txt	2024-01-24 11:26:57.231484592 -0500
-+++ OPENCV_BLD/CMakeLists.txt	2024-01-24 11:22:41.584210390 -0500
-@@ -14,6 +14,7 @@
+--- opencv/CMakeLists.txt	2024-03-06 11:15:17.977395348 -0500
++++ OPENCV_BLD/CMakeLists.txt	2024-03-06 11:14:00.646674429 -0500
+@@ -13,6 +13,7 @@
  ")
  endif()
  
@@ -351,7 +356,7 @@ diff -Naur opencv/CMakeLists.txt OPENCV_BLD/CMakeLists.txt
  
  include(cmake/OpenCVMinDepVersions.cmake)
  
-@@ -66,6 +67,10 @@
+@@ -65,6 +66,10 @@
    cmake_policy(SET CMP0068 NEW)  # CMake 3.9+: `RPATH` settings on macOS do not affect `install_name`.
  endif()
  
@@ -362,7 +367,7 @@ diff -Naur opencv/CMakeLists.txt OPENCV_BLD/CMakeLists.txt
  if(POLICY CMP0075)
    cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
  endif()
-@@ -1049,7 +1054,7 @@
+@@ -1110,7 +1115,7 @@
  if(ANDROID OR NOT UNIX)
    install(FILES ${OPENCV_LICENSE_FILE}
          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
