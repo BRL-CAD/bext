@@ -1,6 +1,6 @@
-diff -Naur tcl8.6.13/macosx/configure tcl/macosx/configure
---- tcl8.6.13/macosx/configure	2023-08-24 14:40:07.796214804 -0400
-+++ tcl/macosx/configure	2023-08-24 14:34:46.073659818 -0400
+diff -Naur tcl/macosx/configure TCL_BLD/macosx/configure
+--- tcl/macosx/configure	2024-03-06 17:04:34.432781121 -0500
++++ TCL_BLD/macosx/configure	2024-03-06 17:04:47.952579423 -0500
 @@ -4625,9 +4625,9 @@
  
  if test $zlib_ok = yes; then :
@@ -67,9 +67,9 @@ diff -Naur tcl8.6.13/macosx/configure tcl/macosx/configure
  if test "$ac_res" != no; then :
    test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
  
-diff -Naur tcl8.6.13/pkgs/itcl4.2.3/tclconfig/tcl.m4 tcl/pkgs/itcl4.2.3/tclconfig/tcl.m4
---- tcl8.6.13/pkgs/itcl4.2.3/tclconfig/tcl.m4	2023-08-24 14:30:16.634258638 -0400
-+++ tcl/pkgs/itcl4.2.3/tclconfig/tcl.m4	2023-08-24 14:43:59.068281488 -0400
+diff -Naur tcl/pkgs/itcl4.2.3/tclconfig/tcl.m4 TCL_BLD/pkgs/itcl4.2.3/tclconfig/tcl.m4
+--- tcl/pkgs/itcl4.2.3/tclconfig/tcl.m4	2024-03-06 17:02:06.062956716 -0500
++++ TCL_BLD/pkgs/itcl4.2.3/tclconfig/tcl.m4	2024-03-06 17:04:47.956579363 -0500
 @@ -2516,8 +2516,8 @@
  	    [LIBS="$LIBS -lnsl"])])
      AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
@@ -88,9 +88,9 @@ diff -Naur tcl8.6.13/pkgs/itcl4.2.3/tclconfig/tcl.m4 tcl/pkgs/itcl4.2.3/tclconfi
 -# End:
 \ No newline at end of file
 +# End:
-diff -Naur tcl8.6.13/pkgs/sqlite3.40.0/tclconfig/tcl.m4 tcl/pkgs/sqlite3.40.0/tclconfig/tcl.m4
---- tcl8.6.13/pkgs/sqlite3.40.0/tclconfig/tcl.m4	2023-08-24 14:30:16.634258638 -0400
-+++ tcl/pkgs/sqlite3.40.0/tclconfig/tcl.m4	2023-08-24 14:44:39.531592238 -0400
+diff -Naur tcl/pkgs/sqlite3.40.0/tclconfig/tcl.m4 TCL_BLD/pkgs/sqlite3.40.0/tclconfig/tcl.m4
+--- tcl/pkgs/sqlite3.40.0/tclconfig/tcl.m4	2024-03-06 17:02:06.070956600 -0500
++++ TCL_BLD/pkgs/sqlite3.40.0/tclconfig/tcl.m4	2024-03-06 17:04:47.956579363 -0500
 @@ -2516,8 +2516,8 @@
  	    [LIBS="$LIBS -lnsl"])])
      AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
@@ -109,9 +109,9 @@ diff -Naur tcl8.6.13/pkgs/sqlite3.40.0/tclconfig/tcl.m4 tcl/pkgs/sqlite3.40.0/tc
 -# End:
 \ No newline at end of file
 +# End:
-diff -Naur tcl8.6.13/pkgs/tdbc1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbc1.1.5/tclconfig/tcl.m4
---- tcl8.6.13/pkgs/tdbc1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.626258775 -0400
-+++ tcl/pkgs/tdbc1.1.5/tclconfig/tcl.m4	2023-08-24 14:45:01.079225054 -0400
+diff -Naur tcl/pkgs/tdbc1.1.5/tclconfig/tcl.m4 TCL_BLD/pkgs/tdbc1.1.5/tclconfig/tcl.m4
+--- tcl/pkgs/tdbc1.1.5/tclconfig/tcl.m4	2024-03-06 17:02:06.070956600 -0500
++++ TCL_BLD/pkgs/tdbc1.1.5/tclconfig/tcl.m4	2024-03-06 17:04:47.956579363 -0500
 @@ -2516,8 +2516,8 @@
  	    [LIBS="$LIBS -lnsl"])])
      AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
@@ -130,9 +130,9 @@ diff -Naur tcl8.6.13/pkgs/tdbc1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbc1.1.5/tclconfi
 -# End:
 \ No newline at end of file
 +# End:
-diff -Naur tcl8.6.13/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4
---- tcl8.6.13/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.622258844 -0400
-+++ tcl/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4	2023-08-24 14:43:27.268822961 -0400
+diff -Naur tcl/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4 TCL_BLD/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4
+--- tcl/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4	2024-03-06 17:02:06.070956600 -0500
++++ TCL_BLD/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4	2024-03-06 17:04:47.956579363 -0500
 @@ -2516,8 +2516,8 @@
  	    [LIBS="$LIBS -lnsl"])])
      AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
@@ -151,9 +151,9 @@ diff -Naur tcl8.6.13/pkgs/tdbcmysql1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcmysql1.1.
 -# End:
 \ No newline at end of file
 +# End:
-diff -Naur tcl8.6.13/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4
---- tcl8.6.13/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.622258844 -0400
-+++ tcl/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4	2023-08-24 14:42:52.601413057 -0400
+diff -Naur tcl/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4 TCL_BLD/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4
+--- tcl/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4	2024-03-06 17:02:06.074956540 -0500
++++ TCL_BLD/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4	2024-03-06 17:04:47.960579304 -0500
 @@ -2516,8 +2516,8 @@
  	    [LIBS="$LIBS -lnsl"])])
      AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
@@ -172,9 +172,9 @@ diff -Naur tcl8.6.13/pkgs/tdbcodbc1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcodbc1.1.5/
 -# End:
 \ No newline at end of file
 +# End:
-diff -Naur tcl8.6.13/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4
---- tcl8.6.13/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.622258844 -0400
-+++ tcl/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4	2023-08-24 14:44:21.667896585 -0400
+diff -Naur tcl/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4 TCL_BLD/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4
+--- tcl/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4	2024-03-06 17:02:06.074956540 -0500
++++ TCL_BLD/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4	2024-03-06 17:04:47.960579304 -0500
 @@ -2516,8 +2516,8 @@
  	    [LIBS="$LIBS -lnsl"])])
      AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
@@ -193,9 +193,9 @@ diff -Naur tcl8.6.13/pkgs/tdbcpostgres1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcpostgr
 -# End:
 \ No newline at end of file
 +# End:
-diff -Naur tcl8.6.13/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4
---- tcl8.6.13/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4	2023-08-24 14:30:16.622258844 -0400
-+++ tcl/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4	2023-08-24 14:45:31.974698409 -0400
+diff -Naur tcl/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4 TCL_BLD/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4
+--- tcl/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4	2024-03-06 17:02:06.078956486 -0500
++++ TCL_BLD/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4	2024-03-06 17:04:47.960579304 -0500
 @@ -2516,8 +2516,8 @@
  	    [LIBS="$LIBS -lnsl"])])
      AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
@@ -214,9 +214,9 @@ diff -Naur tcl8.6.13/pkgs/tdbcsqlite3-1.1.5/tclconfig/tcl.m4 tcl/pkgs/tdbcsqlite
 -# End:
 \ No newline at end of file
 +# End:
-diff -Naur tcl8.6.13/pkgs/thread2.8.8/tclconfig/tcl.m4 tcl/pkgs/thread2.8.8/tclconfig/tcl.m4
---- tcl8.6.13/pkgs/thread2.8.8/tclconfig/tcl.m4	2023-08-24 14:30:16.618258913 -0400
-+++ tcl/pkgs/thread2.8.8/tclconfig/tcl.m4	2023-08-24 14:45:15.846973332 -0400
+diff -Naur tcl/pkgs/thread2.8.8/tclconfig/tcl.m4 TCL_BLD/pkgs/thread2.8.8/tclconfig/tcl.m4
+--- tcl/pkgs/thread2.8.8/tclconfig/tcl.m4	2024-03-06 17:02:06.078956486 -0500
++++ TCL_BLD/pkgs/thread2.8.8/tclconfig/tcl.m4	2024-03-06 17:04:47.964579244 -0500
 @@ -2516,8 +2516,8 @@
  	    [LIBS="$LIBS -lnsl"])])
      AC_CHECK_FUNC(mp_log_u32, , [AC_CHECK_LIB(tommath, mp_log_u32,
@@ -235,10 +235,10 @@ diff -Naur tcl8.6.13/pkgs/thread2.8.8/tclconfig/tcl.m4 tcl/pkgs/thread2.8.8/tclc
 -# End:
 \ No newline at end of file
 +# End:
-diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
---- tcl8.6.13/unix/configure	2023-08-24 14:40:07.800214739 -0400
-+++ tcl/unix/configure	2023-08-24 14:34:58.781445569 -0400
-@@ -5991,13 +5991,13 @@
+diff -Naur tcl/unix/configure TCL_BLD/unix/configure
+--- tcl/unix/configure	2024-03-06 17:04:34.440781001 -0500
++++ TCL_BLD/unix/configure	2024-03-06 17:04:47.968579184 -0500
+@@ -5992,13 +5992,13 @@
  
  if test $zlib_ok = yes; then
  
@@ -256,7 +256,7 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
  cat >conftest.$ac_ext <<_ACEOF
  /* confdefs.h.  */
  _ACEOF
-@@ -6011,11 +6011,11 @@
+@@ -6012,11 +6012,11 @@
  #endif
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
@@ -270,7 +270,7 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
    ;
    return 0;
  }
-@@ -6042,7 +6042,7 @@
+@@ -6043,7 +6043,7 @@
    ac_status=$?
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); }; }; then
@@ -279,7 +279,7 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
  else
    echo "$as_me: failed program was:" >&5
  sed 's/^/| /' conftest.$ac_ext >&5
-@@ -6050,8 +6050,8 @@
+@@ -6051,8 +6051,8 @@
  fi
  rm -f conftest.err conftest.$ac_objext \
        conftest$ac_exeext conftest.$ac_ext
@@ -290,7 +290,7 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
      LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
      cat >conftest.$ac_ext <<_ACEOF
  /* confdefs.h.  */
-@@ -6066,11 +6066,11 @@
+@@ -6067,11 +6067,11 @@
  #endif
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
@@ -304,7 +304,7 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
    ;
    return 0;
  }
-@@ -6097,7 +6097,7 @@
+@@ -6098,7 +6098,7 @@
    ac_status=$?
    echo "$as_me:$LINENO: \$? = $ac_status" >&5
    (exit $ac_status); }; }; then
@@ -313,7 +313,7 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
  break
  else
    echo "$as_me: failed program was:" >&5
-@@ -6110,10 +6110,10 @@
+@@ -6111,10 +6111,10 @@
  fi
  LIBS=$ac_func_search_save_LIBS
  fi
@@ -328,9 +328,9 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
  
  else
  
-diff -Naur tcl8.6.13/unix/configure.in tcl/unix/configure.in
---- tcl8.6.13/unix/configure.in	2023-08-24 14:40:07.800214739 -0400
-+++ tcl/unix/configure.in	2023-08-24 14:41:46.294541096 -0400
+diff -Naur tcl/unix/configure.in TCL_BLD/unix/configure.in
+--- tcl/unix/configure.in	2024-03-06 17:04:34.444780941 -0500
++++ TCL_BLD/unix/configure.in	2024-03-06 17:04:47.968579184 -0500
 @@ -163,7 +163,7 @@
    AC_CHECK_TYPE([gz_header],[],[zlib_ok=no],[#include <zlib.h>])],[
    zlib_ok=no])

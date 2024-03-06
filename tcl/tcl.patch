@@ -1,7 +1,7 @@
-diff -Naur tcl8.6.13/generic/tclConfig.c tcl/generic/tclConfig.c
---- tcl8.6.13/generic/tclConfig.c	2023-08-24 16:44:06.600914558 -0400
-+++ tcl/generic/tclConfig.c	2023-08-24 16:45:59.130997625 -0400
-@@ -261,6 +261,37 @@
+diff -Naur tcl/generic/tclConfig.c TCL_BLD/generic/tclConfig.c
+--- tcl/generic/tclConfig.c	2024-03-06 17:07:53.393766385 -0500
++++ TCL_BLD/generic/tclConfig.c	2024-03-06 17:04:34.432781121 -0500
+@@ -259,6 +259,37 @@
  	 * Value is stored as-is in a byte array, see Bug [9b2e636361],
  	 * so we have to decode it first.
  	 */
@@ -39,9 +39,9 @@ diff -Naur tcl8.6.13/generic/tclConfig.c tcl/generic/tclConfig.c
  	value = (const char *) Tcl_GetByteArrayFromObj(val, &n);
  	value = Tcl_ExternalToUtfDString(venc, value, n, &conv);
  	Tcl_SetObjResult(interp, Tcl_NewStringObj(value,
-diff -Naur tcl8.6.13/macosx/configure tcl/macosx/configure
---- tcl8.6.13/macosx/configure	2023-08-24 16:44:06.248920559 -0400
-+++ tcl/macosx/configure	2023-08-24 16:45:59.134997556 -0400
+diff -Naur tcl/macosx/configure TCL_BLD/macosx/configure
+--- tcl/macosx/configure	2024-03-06 17:07:53.429765833 -0500
++++ TCL_BLD/macosx/configure	2024-03-06 17:04:34.432781121 -0500
 @@ -10268,7 +10268,7 @@
  
  eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
@@ -63,9 +63,9 @@ diff -Naur tcl8.6.13/macosx/configure tcl/macosx/configure
  fi
  
  #--------------------------------------------------------------------
-diff -Naur tcl8.6.13/macosx/Tcl-Common.xcconfig tcl/macosx/Tcl-Common.xcconfig
---- tcl8.6.13/macosx/Tcl-Common.xcconfig	2023-08-24 16:44:06.252920493 -0400
-+++ tcl/macosx/Tcl-Common.xcconfig	2023-08-24 16:45:59.134997556 -0400
+diff -Naur tcl/macosx/Tcl-Common.xcconfig TCL_BLD/macosx/Tcl-Common.xcconfig
+--- tcl/macosx/Tcl-Common.xcconfig	2024-03-06 17:07:53.429765833 -0500
++++ TCL_BLD/macosx/Tcl-Common.xcconfig	2024-03-06 17:04:34.432781121 -0500
 @@ -25,8 +25,8 @@
  CPPFLAGS = -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET) $(CPPFLAGS)
  FRAMEWORK_INSTALL_PATH = /Library/Frameworks
@@ -77,9 +77,9 @@ diff -Naur tcl8.6.13/macosx/Tcl-Common.xcconfig tcl/macosx/Tcl-Common.xcconfig
  PER_ARCH_CFLAGS_ppc = -mcpu=G3 -mtune=G4 $(PER_ARCH_CFLAGS_ppc)
  PER_ARCH_CFLAGS_ppc64 = -mcpu=G5 -mpowerpc64 $(PER_ARCH_CFLAGS_ppc64)
  PREFIX = /usr/local
-diff -Naur tcl8.6.13/macosx/Tcl.xcode/project.pbxproj tcl/macosx/Tcl.xcode/project.pbxproj
---- tcl8.6.13/macosx/Tcl.xcode/project.pbxproj	2023-08-24 16:44:06.248920559 -0400
-+++ tcl/macosx/Tcl.xcode/project.pbxproj	2023-08-24 16:45:59.134997556 -0400
+diff -Naur tcl/macosx/Tcl.xcode/project.pbxproj TCL_BLD/macosx/Tcl.xcode/project.pbxproj
+--- tcl/macosx/Tcl.xcode/project.pbxproj	2024-03-06 17:07:53.429765833 -0500
++++ TCL_BLD/macosx/Tcl.xcode/project.pbxproj	2024-03-06 17:04:34.436781061 -0500
 @@ -69,7 +69,7 @@
  		F96D45B008F272BC004A47F5 /* tclPathObj.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1108F272A7004A47F5 /* tclPathObj.c */; };
  		F96D45B108F272BC004A47F5 /* tclPipe.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1208F272A7004A47F5 /* tclPipe.c */; };
@@ -89,9 +89,9 @@ diff -Naur tcl8.6.13/macosx/Tcl.xcode/project.pbxproj tcl/macosx/Tcl.xcode/proje
  		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
  		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
  		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
-diff -Naur tcl8.6.13/macosx/Tcl.xcodeproj/project.pbxproj tcl/macosx/Tcl.xcodeproj/project.pbxproj
---- tcl8.6.13/macosx/Tcl.xcodeproj/project.pbxproj	2023-08-24 16:44:06.248920559 -0400
-+++ tcl/macosx/Tcl.xcodeproj/project.pbxproj	2023-08-24 16:45:59.134997556 -0400
+diff -Naur tcl/macosx/Tcl.xcodeproj/project.pbxproj TCL_BLD/macosx/Tcl.xcodeproj/project.pbxproj
+--- tcl/macosx/Tcl.xcodeproj/project.pbxproj	2024-03-06 17:07:53.429765833 -0500
++++ TCL_BLD/macosx/Tcl.xcodeproj/project.pbxproj	2024-03-06 17:04:34.436781061 -0500
 @@ -69,7 +69,7 @@
  		F96D45B008F272BC004A47F5 /* tclPathObj.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1108F272A7004A47F5 /* tclPathObj.c */; };
  		F96D45B108F272BC004A47F5 /* tclPipe.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1208F272A7004A47F5 /* tclPipe.c */; };
@@ -101,10 +101,10 @@ diff -Naur tcl8.6.13/macosx/Tcl.xcodeproj/project.pbxproj tcl/macosx/Tcl.xcodepr
  		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
  		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
  		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
-diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
---- tcl8.6.13/unix/configure	2023-08-24 16:44:06.624914151 -0400
-+++ tcl/unix/configure	2023-08-24 16:45:59.138997487 -0400
-@@ -18821,7 +18821,7 @@
+diff -Naur tcl/unix/configure TCL_BLD/unix/configure
+--- tcl/unix/configure	2024-03-06 17:07:53.465765278 -0500
++++ TCL_BLD/unix/configure	2024-03-06 17:04:34.440781001 -0500
+@@ -19116,7 +19116,7 @@
  
  eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
  
@@ -113,7 +113,7 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
  PRIVATE_INCLUDE_DIR='$(includedir)'
  HTML_DIR='$(DISTDIR)/html'
  
-@@ -18952,9 +18952,9 @@
+@@ -19247,9 +19247,9 @@
      test -z "$TCL_MODULE_PATH"  && \
  	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
  elif test "$prefix/lib" != "$libdir"; then
@@ -125,10 +125,10 @@ diff -Naur tcl8.6.13/unix/configure tcl/unix/configure
  fi
  
  #--------------------------------------------------------------------
-diff -Naur tcl8.6.13/unix/configure.in tcl/unix/configure.in
---- tcl8.6.13/unix/configure.in	2023-08-24 16:44:06.620914220 -0400
-+++ tcl/unix/configure.in	2023-08-24 16:45:59.138997487 -0400
-@@ -773,7 +773,7 @@
+diff -Naur tcl/unix/configure.in TCL_BLD/unix/configure.in
+--- tcl/unix/configure.in	2024-03-06 17:07:53.465765278 -0500
++++ TCL_BLD/unix/configure.in	2024-03-06 17:04:34.444780941 -0500
+@@ -775,7 +775,7 @@
  
  eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
  
@@ -137,7 +137,7 @@ diff -Naur tcl8.6.13/unix/configure.in tcl/unix/configure.in
  PRIVATE_INCLUDE_DIR='$(includedir)'
  HTML_DIR='$(DISTDIR)/html'
  
-@@ -866,9 +866,9 @@
+@@ -868,9 +868,9 @@
      test -z "$TCL_MODULE_PATH"  && \
  	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
  elif test "$prefix/lib" != "$libdir"; then
@@ -149,9 +149,9 @@ diff -Naur tcl8.6.13/unix/configure.in tcl/unix/configure.in
  fi
  
  #--------------------------------------------------------------------
-diff -Naur tcl8.6.13/unix/Makefile.in tcl/unix/Makefile.in
---- tcl8.6.13/unix/Makefile.in	2023-08-24 16:44:06.624914151 -0400
-+++ tcl/unix/Makefile.in	2023-08-24 16:46:27.630512462 -0400
+diff -Naur tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
+--- tcl/unix/Makefile.in	2024-03-06 17:07:53.465765278 -0500
++++ TCL_BLD/unix/Makefile.in	2024-03-06 17:04:34.452780824 -0500
 @@ -51,7 +51,7 @@
  DLL_INSTALL_DIR		= @DLL_INSTALL_DIR@
  
@@ -170,7 +170,7 @@ diff -Naur tcl8.6.13/unix/Makefile.in tcl/unix/Makefile.in
  
  #--------------------------------------------------------------------------
  # The information below is modified by the configure script when Makefile is
-@@ -1365,16 +1365,16 @@
+@@ -1369,16 +1369,16 @@
  
  tclPkgConfig.o: $(GENERIC_DIR)/tclPkgConfig.c
  	$(CC) -c $(CC_SWITCHES) \
@@ -197,10 +197,10 @@ diff -Naur tcl8.6.13/unix/Makefile.in tcl/unix/Makefile.in
  		-DCFG_RUNTIME_DLLFILE="\"$(TCL_LIB_FILE)\"" \
  		$(GENERIC_DIR)/tclPkgConfig.c
  
-diff -Naur tcl8.6.13/win/configure tcl/win/configure
---- tcl8.6.13/win/configure	2023-08-24 16:44:06.268920220 -0400
-+++ tcl/win/configure	2023-08-24 16:45:59.138997487 -0400
-@@ -5288,9 +5288,9 @@
+diff -Naur tcl/win/configure TCL_BLD/win/configure
+--- tcl/win/configure	2024-03-06 17:07:53.469765217 -0500
++++ TCL_BLD/win/configure	2024-03-06 17:04:34.452780824 -0500
+@@ -5296,9 +5296,9 @@
  #--------------------------------------------------------------------
  
  if test "$prefix/lib" != "$libdir"; then
@@ -212,10 +212,10 @@ diff -Naur tcl8.6.13/win/configure tcl/win/configure
  fi
  
  # The tclsh.exe.manifest requires these
-diff -Naur tcl8.6.13/win/configure.in tcl/win/configure.in
---- tcl8.6.13/win/configure.in	2023-08-24 16:44:06.268920220 -0400
-+++ tcl/win/configure.in	2023-08-24 16:45:59.138997487 -0400
-@@ -368,9 +368,9 @@
+diff -Naur tcl/win/configure.in TCL_BLD/win/configure.in
+--- tcl/win/configure.in	2024-03-06 17:07:53.469765217 -0500
++++ TCL_BLD/win/configure.in	2024-03-06 17:04:34.452780824 -0500
+@@ -372,9 +372,9 @@
  #--------------------------------------------------------------------
  
  if test "$prefix/lib" != "$libdir"; then
@@ -227,9 +227,9 @@ diff -Naur tcl8.6.13/win/configure.in tcl/win/configure.in
  fi
  
  # The tclsh.exe.manifest requires these
-diff -Naur tcl8.6.13/win/Makefile.in tcl/win/Makefile.in
---- tcl8.6.13/win/Makefile.in	2023-08-24 16:44:06.268920220 -0400
-+++ tcl/win/Makefile.in	2023-08-24 16:45:59.138997487 -0400
+diff -Naur tcl/win/Makefile.in TCL_BLD/win/Makefile.in
+--- tcl/win/Makefile.in	2024-03-06 17:07:53.469765217 -0500
++++ TCL_BLD/win/Makefile.in	2024-03-06 17:04:34.456780764 -0500
 @@ -35,7 +35,7 @@
  # Directory from which applications will reference the library of Tcl scripts
  # (note: you can set the TCL_LIBRARY environment variable at run-time to
@@ -239,7 +239,7 @@ diff -Naur tcl8.6.13/win/Makefile.in tcl/win/Makefile.in
  
  # Path to use at runtime to refer to LIB_INSTALL_DIR:
  LIB_RUNTIME_DIR		= $(libdir)
-@@ -567,17 +567,17 @@
+@@ -570,17 +570,17 @@
  
  tclPkgConfig.${OBJEXT}: tclPkgConfig.c
  	$(CC)	-c $(CC_SWITCHES)			\
@@ -267,9 +267,9 @@ diff -Naur tcl8.6.13/win/Makefile.in tcl/win/Makefile.in
  		-DBUILD_tcl \
  		@DEPARG@ $(CC_OBJNAME)
  
-diff -Naur tcl8.6.13/win/makefile.vc tcl/win/makefile.vc
---- tcl8.6.13/win/makefile.vc	2023-08-24 16:44:06.252920493 -0400
-+++ tcl/win/makefile.vc	2023-08-24 16:45:59.138997487 -0400
+diff -Naur tcl/win/makefile.vc TCL_BLD/win/makefile.vc
+--- tcl/win/makefile.vc	2024-03-06 17:07:53.469765217 -0500
++++ TCL_BLD/win/makefile.vc	2024-03-06 17:04:34.456780764 -0500
 @@ -303,7 +303,6 @@
  	$(TMP_DIR)\tclVar.obj \
  	$(TMP_DIR)\tclZlib.obj
@@ -288,7 +288,7 @@ diff -Naur tcl8.6.13/win/makefile.vc tcl/win/makefile.vc
  
  TOMMATHOBJS = \
  	$(TMP_DIR)\bn_mp_add.obj \
-@@ -442,7 +438,7 @@
+@@ -445,7 +441,7 @@
  release:    setup $(TCLSH) $(TCLSTUBLIB) dlls pkgs
  core:	    setup $(TCLLIB) $(TCLSTUBLIB)
  shell:	    setup $(TCLSH)
@@ -297,7 +297,7 @@ diff -Naur tcl8.6.13/win/makefile.vc tcl/win/makefile.vc
  all:	    setup $(TCLSH) $(TCLSTUBLIB) dlls $(CAT32) pkgs
  tcltest:    setup $(TCLTEST) dlls $(CAT32)
  install:    install-binaries install-libraries install-docs install-pkgs
-@@ -515,23 +511,6 @@
+@@ -520,23 +516,6 @@
  	$(_VC_MANIFEST_EMBED_DLL)
  !endif
  
@@ -321,7 +321,7 @@ diff -Naur tcl8.6.13/win/makefile.vc tcl/win/makefile.vc
  pkgs:
  	@for /d %d in ($(PKGSDIR)\*) do \
  	  @if exist "%~fd\win\makefile.vc" ( \
-@@ -784,16 +763,16 @@
+@@ -787,16 +766,16 @@
  
  $(TMP_DIR)\tclPkgConfig.obj: $(GENERICDIR)\tclPkgConfig.c
  	$(cc32) $(pkgcflags) \
@@ -348,7 +348,7 @@ diff -Naur tcl8.6.13/win/makefile.vc tcl/win/makefile.vc
  	-Fo$@ $?
  
  $(TMP_DIR)\tclAppInit.obj: $(WIN_DIR)\tclAppInit.c
-@@ -896,7 +875,6 @@
+@@ -900,7 +879,6 @@
  	@$(CPY) "$(TCLLIB)" "$(BIN_INSTALL_DIR)\"
  !endif
  	@$(CPY) "$(TCLIMPLIB)" "$(LIB_INSTALL_DIR)\"
@@ -356,7 +356,7 @@ diff -Naur tcl8.6.13/win/makefile.vc tcl/win/makefile.vc
  !if exist($(TCLSH))
  	@echo Installing $(TCLSHNAME)
  	@$(CPY) "$(TCLSH)" "$(BIN_INSTALL_DIR)\"
-@@ -945,7 +923,6 @@
+@@ -949,7 +927,6 @@
  	@$(CPY) "$(WIN_DIR)\rules.vc"              "$(LIB_INSTALL_DIR)\nmake\"
  	@$(CPY) "$(WIN_DIR)\targets.vc"              "$(LIB_INSTALL_DIR)\nmake\"
  	@$(CPY) "$(WIN_DIR)\nmakehlp.c"            "$(LIB_INSTALL_DIR)\nmake\"
