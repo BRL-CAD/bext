@@ -1,6 +1,6 @@
 diff -Naur libpng/CMake/FindZLIB.cmake PNG_BLD/CMake/FindZLIB.cmake
 --- libpng/CMake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ PNG_BLD/CMake/FindZLIB.cmake	2024-01-24 11:16:15.118840255 -0500
++++ PNG_BLD/CMake/FindZLIB.cmake	2024-03-06 10:42:37.366757148 -0500
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -126,25 +126,19 @@ diff -Naur libpng/CMake/FindZLIB.cmake PNG_BLD/CMake/FindZLIB.cmake
 +    endif()
 +endif()
 diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
---- libpng/CMakeLists.txt	2024-01-24 11:17:14.933844884 -0500
-+++ PNG_BLD/CMakeLists.txt	2024-01-24 11:18:44.576351384 -0500
-@@ -32,8 +32,15 @@
+--- libpng/CMakeLists.txt	2024-03-06 10:43:33.593760600 -0500
++++ PNG_BLD/CMakeLists.txt	2024-03-06 10:51:59.356989438 -0500
+@@ -30,6 +30,9 @@
+         VERSION ${PNGLIB_VERSION}
+         LANGUAGES C ASM)
  
- cmake_minimum_required(VERSION 3.1)
- cmake_policy(VERSION 3.1)
-+if (POLICY CMP0074)
-+	cmake_policy(SET CMP0074 NEW)
-+endif (POLICY CMP0074)
- 
- project(libpng C ASM)
-+
 +# Location of CMake modules
 +list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 +
- enable_testing()
- 
- include(CMakeParseArguments)
-@@ -58,8 +65,10 @@
+ if(POLICY CMP0074)
+   # Allow find_package() to use the ZLIB_ROOT variable, if available.
+   cmake_policy(SET CMP0074 NEW)
+@@ -47,8 +50,10 @@
  # Previously, we used to set CMAKE_DEBUG_POSTFIX globally. That variable should
  # not be cached, however, because doing so would affect all projects processed
  # after libpng, in unexpected and undesirable ways.
@@ -157,7 +151,15 @@ diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
  
  # Allow the users to import their own extra configuration settings.
  set(DFA_XTRA ""
-@@ -437,10 +446,9 @@
+@@ -97,6 +102,7 @@
+ option(PNG_BUILD_ZLIB "Custom zlib location, else find_package is used" OFF)
+ if(NOT PNG_BUILD_ZLIB)
+   find_package(ZLIB REQUIRED)
++  include_directories(${ZLIB_INCLUDE_DIRS})
+ elseif(POLICY CMP0074)
+   if("x${ZLIB_ROOT}" STREQUAL "x")
+     message(DEPRECATION
+@@ -489,10 +495,9 @@
  
    if(PNG_PREFIX)
      set(PNGLIBCONF_H_EXTRA_DEPENDS
@@ -170,7 +172,7 @@ diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
    endif()
  
    generate_out(INPUT "${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.c"
-@@ -624,15 +632,15 @@
+@@ -676,15 +681,15 @@
    # We are on a Unix or Unix-like toolchain like the GNU toolchain on Windows.
    # Library file names are expected to have an implicit prefix such as "lib".
    # Let CMake prepend and append its usual prefixes and suffixes by default.
@@ -190,18 +192,10 @@ diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
  endif()
  
  if(PNG_SHARED)
-@@ -988,22 +996,22 @@
+@@ -1067,16 +1072,16 @@
    if(PNG_SHARED)
      # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
-     if(CYGWIN OR MINGW)
--      create_symlink(libpng${CMAKE_IMPORT_LIBRARY_SUFFIX} TARGET png_shared)
--      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_IMPORT_LIBRARY_SUFFIX}
-+      create_symlink(libpng_brl${CMAKE_IMPORT_LIBRARY_SUFFIX} TARGET png_shared)
-+      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_IMPORT_LIBRARY_SUFFIX}
-               DESTINATION ${CMAKE_INSTALL_LIBDIR})
-     endif()
- 
-     if(NOT WIN32)
+     if(NOT WIN32 OR CYGWIN OR MINGW)
 -      create_symlink(libpng${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
 -      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}
 +      create_symlink(libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
