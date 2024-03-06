@@ -1,10 +1,7 @@
 diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
---- zlib/CMakeLists.txt	2024-03-06 10:40:23.317104725 -0500
-+++ ZLIB_BLD/CMakeLists.txt	2024-03-06 10:40:37.764865252 -0500
-@@ -1,17 +1,28 @@
--cmake_minimum_required(VERSION 2.4.4...3.15.0)
-+cmake_minimum_required(VERSION 3.12)
- set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS ON)
+--- zlib/CMakeLists.txt	2024-03-06 17:27:21.587097505 -0500
++++ ZLIB_BLD/CMakeLists.txt	2024-03-06 17:27:09.643291842 -0500
+@@ -3,6 +3,13 @@
  
  project(zlib C)
  
@@ -18,25 +15,7 @@ diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
  set(VERSION "1.3.1")
  
  option(ZLIB_BUILD_EXAMPLES "Enable Zlib Examples" ON)
- 
--set(INSTALL_BIN_DIR "${CMAKE_INSTALL_PREFIX}/bin" CACHE PATH "Installation directory for executables")
--set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "Installation directory for libraries")
--set(INSTALL_INC_DIR "${CMAKE_INSTALL_PREFIX}/include" CACHE PATH "Installation directory for headers")
--set(INSTALL_MAN_DIR "${CMAKE_INSTALL_PREFIX}/share/man" CACHE PATH "Installation directory for manual pages")
--set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_PREFIX}/share/pkgconfig" CACHE PATH "Installation directory for pkgconfig (.pc) files")
-+if(NOT DEFINED BIN_DIR)
-+  set(BIN_DIR bin)
-+endif(NOT DEFINED BIN_DIR)
-+if(NOT DEFINED LIB_DIR)
-+  set(LIB_DIR lib)
-+endif(NOT DEFINED LIB_DIR)
-+if(NOT DEFINED INCLUDE_DIR)
-+  set(INCLUDE_DIR include)
-+endif(NOT DEFINED INCLUDE_DIR)
- 
- include(CheckTypeSize)
- include(CheckFunctionExists)
-@@ -59,39 +70,22 @@
+@@ -59,39 +66,23 @@
  check_include_file(unistd.h Z_HAVE_UNISTD_H)
  
  if(MSVC)
@@ -44,7 +23,7 @@ diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
 +    #set(CMAKE_DEBUG_POSTFIX "d")
      add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
      add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
--    include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+     include_directories(${CMAKE_CURRENT_SOURCE_DIR})
  endif()
  
 -if(NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
@@ -82,7 +61,7 @@ diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
  )
  set(ZLIB_PRIVATE_HDRS
      crc32.h
-@@ -122,14 +116,8 @@
+@@ -122,14 +113,8 @@
      zutil.c
  )
  
@@ -98,7 +77,7 @@ diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
  string(REGEX REPLACE ".*#define[ \t]+ZLIB_VERSION[ \t]+\"([-0-9A-Za-z.]+)\".*"
      "\\1" ZLIB_FULL_VERSION ${_zlib_h_contents})
  
-@@ -147,16 +135,39 @@
+@@ -147,16 +132,35 @@
                              -o ${CMAKE_CURRENT_BINARY_DIR}/zlib1rc.obj
                              -i ${CMAKE_CURRENT_SOURCE_DIR}/win32/zlib1.rc)
      set(ZLIB_DLL_SRCS ${CMAKE_CURRENT_BINARY_DIR}/zlib1rc.obj)
@@ -109,24 +88,18 @@ diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
  add_library(zlib SHARED ${ZLIB_SRCS} ${ZLIB_DLL_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
 +set_target_properties(zlib PROPERTIES OUTPUT_NAME z_brl)
  target_include_directories(zlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
--add_library(zlibstatic STATIC ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
--target_include_directories(zlibstatic PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-+
-+if(BUILD_STATIC_LIBS)
-+  add_library(zlib-static STATIC ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
-+  if (NOT MSVC)
-+    set_target_properties(zlib-static PROPERTIES OUTPUT_NAME z_brl)
-+  else (NOT MSVC)
-+    set_target_properties(zlib-static PROPERTIES OUTPUT_NAME z_brl-static)
-+  endif (NOT MSVC)
-+  if(CMAKE_CL_64)
-+    set_target_properties(zlib-static PROPERTIES STATIC_LIBRARY_FLAGS "/machine:x64")
-+  elseif(MSVC)
-+    set_target_properties(zlib-static PROPERTIES STATIC_LIBRARY_FLAGS "/machine:x86")
-+  endif(CMAKE_CL_64)
-+  target_include_directories(zlibstatic PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-+endif(BUILD_STATIC_LIBS)
-+
+ add_library(zlibstatic STATIC ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
++if (NOT MSVC)
++  set_target_properties(zlibstatic PROPERTIES OUTPUT_NAME z_brl)
++else (NOT MSVC)
++  set_target_properties(zlibstatic PROPERTIES OUTPUT_NAME z_brl-static)
++endif (NOT MSVC)
++if(CMAKE_CL_64)
++  set_target_properties(zlibstatic PROPERTIES STATIC_LIBRARY_FLAGS "/machine:x64")
++elseif(MSVC)
++  set_target_properties(zlibstatic PROPERTIES STATIC_LIBRARY_FLAGS "/machine:x86")
++endif(CMAKE_CL_64)
+ target_include_directories(zlibstatic PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
  set_target_properties(zlib PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
  set_target_properties(zlib PROPERTIES SOVERSION 1)
  
@@ -141,7 +114,7 @@ diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
      # This property causes shared libraries on Linux to have the full version
      # encoded into their final filename.  We disable this on Cygwin because
      # it causes cygz-${ZLIB_FULL_VERSION}.dll to be created when cygz.dll
-@@ -165,54 +176,28 @@
+@@ -165,18 +169,12 @@
      # This has no effect with MSVC, on that platform the version info for
      # the DLL comes from the resource file win32/zlib1.rc
      set_target_properties(zlib PROPERTIES VERSION ${ZLIB_FULL_VERSION})
@@ -159,60 +132,25 @@ diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
 -    set_target_properties(zlib PROPERTIES SUFFIX "1.dll")
 -endif()
 +if (OPENBSD)
-+  set_target_properties(zlib PROPERTIES VERSION 1.2)
++  set_target_properties(zlib PROPERTIES VERSION 1.3)
 +endif (OPENBSD)
  
  if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL )
--    install(TARGETS zlib zlibstatic
--        RUNTIME DESTINATION "${INSTALL_BIN_DIR}"
--        ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
--        LIBRARY DESTINATION "${INSTALL_LIB_DIR}" )
-+  if(BUILD_SHARED_LIBS)
-+    install(TARGETS zlib
-+      RUNTIME DESTINATION "${BIN_DIR}"
-+      ARCHIVE DESTINATION "${LIB_DIR}"
-+      LIBRARY DESTINATION "${LIB_DIR}" )
-+  endif(BUILD_SHARED_LIBS)
-+  if(BUILD_STATIC_LIBS)
-+    install(TARGETS zlib-static
-+      RUNTIME DESTINATION "${BIN_DIR}"
-+      ARCHIVE DESTINATION "${LIB_DIR}"
-+      LIBRARY DESTINATION "${LIB_DIR}" )
-+  endif(BUILD_STATIC_LIBS)
- endif()
+     install(TARGETS zlib zlibstatic
+@@ -187,12 +185,7 @@
  if(NOT SKIP_INSTALL_HEADERS AND NOT SKIP_INSTALL_ALL )
--    install(FILES ${ZLIB_PUBLIC_HDRS} DESTINATION "${INSTALL_INC_DIR}")
--endif()
+     install(FILES ${ZLIB_PUBLIC_HDRS} DESTINATION "${INSTALL_INC_DIR}")
+ endif()
 -if(NOT SKIP_INSTALL_FILES AND NOT SKIP_INSTALL_ALL )
 -    install(FILES zlib.3 DESTINATION "${INSTALL_MAN_DIR}/man3")
 -endif()
 -if(NOT SKIP_INSTALL_FILES AND NOT SKIP_INSTALL_ALL )
 -    install(FILES ${ZLIB_PC} DESTINATION "${INSTALL_PKGCONFIG_DIR}")
-+    install(FILES ${ZLIB_PUBLIC_HDRS} DESTINATION "${INCLUDE_DIR}")
- endif()
- 
--#============================================================================
--# Example binaries
--#============================================================================
--if(ZLIB_BUILD_EXAMPLES)
--    add_executable(example test/example.c)
--    target_link_libraries(example zlib)
--    add_test(example example)
--
--    add_executable(minigzip test/minigzip.c)
--    target_link_libraries(minigzip zlib)
--
--    if(HAVE_OFF64_T)
--        add_executable(example64 test/example.c)
--        target_link_libraries(example64 zlib)
--        set_target_properties(example64 PROPERTIES COMPILE_FLAGS "-D_FILE_OFFSET_BITS=64")
--        add_test(example64 example64)
--
--        add_executable(minigzip64 test/minigzip.c)
--        target_link_libraries(minigzip64 zlib)
--        set_target_properties(minigzip64 PROPERTIES COMPILE_FLAGS "-D_FILE_OFFSET_BITS=64")
--    endif()
 -endif()
++
+ 
+ #============================================================================
+ # Example binaries
 diff -Naur zlib/deflate.c ZLIB_BLD/deflate.c
 --- zlib/deflate.c	2024-03-06 10:40:23.317104725 -0500
 +++ ZLIB_BLD/deflate.c	2024-03-06 10:28:32.672849320 -0500
