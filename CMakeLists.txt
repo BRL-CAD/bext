@@ -271,17 +271,27 @@ function(add_project pname)
   cmake_parse_arguments(A "" "" "GROUPS" ${ARGN})
   string(TOUPPER "${pname}" UPNAME)
   string(REPLACE "-" "_" UPNAME "${UPNAME}")
-  set(${UPNAME}_ADDED 1 PARENT_SCOPE)
   if (NOT A_GROUPS)
     add_subdirectory(${pname})
+    set(${UPNAME}_ADDED 1 PARENT_SCOPE)
     return()
   endif (NOT A_GROUPS)
+  set(is_added FALSE)
   foreach(grp ${A_GROUPS})
     if (USE_${grp})
       add_subdirectory(${pname})
-      return()
+      set(is_added TRUE)
+      set(${UPNAME}_ADDED 1 PARENT_SCOPE)
+      break()
     endif (USE_${grp})
   endforeach(grp ${A_GROUPS})
+  if (NOT is_added)
+    if (ENABLE_${UPNAME})
+      message("Disabling ${pname} due to disabled USE flags")
+    endif (ENABLE_${UPNAME})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/${pname})
+    unset(ENABLE_${UPNAME} CACHE)
+  endif (NOT is_added)
 endfunction(add_project pname)
 
 ###############################################################################
@@ -529,12 +539,12 @@ add_project(gdal GROUPS "GDAL")
 
 # pugixml - a light-weight C++ XML processing library
 # https://pugixml.org/
-add_project(pugixml GROUPS "BRLCAD_EXTRA;APPLESEED")
+add_project(pugixml GROUPS "BRLCAD;APPLESEED")
 
 # Open Asset Import Library - library for supporting I/O for a number of
 # Geometry file formats
 # https://github.com/assimp/assimp
-add_project(assetimport GROUPS "BRLCAD_EXTRA")
+add_project(assetimport GROUPS "BRLCAD")
 
 # OpenCV - Open Source Computer Vision Library
 # http://opencv.org
