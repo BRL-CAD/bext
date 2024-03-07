@@ -200,6 +200,16 @@ diff -Naur zlib/inftrees.c ZLIB_BLD/inftrees.c
  /*
    If you use the zlib library in a product, an acknowledgment is welcome
    in the documentation of your product. If for some reason you cannot
+diff -Naur zlib/win32/zlib1.rc ZLIB_BLD/win32/zlib1.rc
+--- zlib/win32/zlib1.rc	2024-03-06 19:12:16.939923796 -0500
++++ ZLIB_BLD/win32/zlib1.rc	2024-03-06 19:12:32.387672768 -0500
+@@ -1,5 +1,5 @@
+ #include <winver.h>
+-#include "../zlib.h"
++#include "zlib.h"
+ 
+ #ifdef GCC_WINDRES
+ VS_VERSION_INFO		VERSIONINFO
 diff -Naur zlib/zconf.h ZLIB_BLD/zconf.h
 --- zlib/zconf.h	2024-03-06 10:40:23.317104725 -0500
 +++ ZLIB_BLD/zconf.h	1969-12-31 19:00:00.000000000 -0500
