@@ -5,3 +5,26 @@ Sources are from:  https://download.qt.io/official_releases/qt/
 
 Current version present:  6.6.2
 
+
+Building on Redhat 8 and derivatives (tested with Rocky Linux 8)
+
+The default gcc version isn't new enough to build Qt, so the first
+step is to set up scl gcc-toolset-11 if it is not already active:
+
+dnf install scl-utils
+dnf install gcc-toolset-11
+
+To run in an environment with this toolset active:
+scl enable gcc-toolset-11 bash
+
+Out of the box, we won't be able to to install all the devel libraries
+necessary per https://doc.qt.io/qt-6/linux-requirements.html - we need to
+enable some additional package sources:
+
+dnf install epel-release # needed for xcb cursor package
+dnf update
+/usr/bin/crb enable      # for PowerTools, extra xcb packages
+dnf update
+
+dnf install libXrender-devel libX11-devel libXext-devel libXfixes-devel libXi-devel freetype-devel fontconfig-devel mesa-libGL-devel libxcb-devel xcb-util-cursor-devel xcb-util-devel xcb-util-image-devel xcb-util-keysyms-devel xcb-util-renderutil-devel xcb-util-wm-devel libxkbcommon-devel libxkbcommon-x11-devel
+
