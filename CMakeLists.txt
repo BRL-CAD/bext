@@ -267,6 +267,12 @@ option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
 option(USE_QT           "Qt graphical toolkit support"               ON)
 option(USE_TCL          "Tcl/Tk support"                             ON)
 
+# If configurations change after a build has been performed,
+# we don't automatically scrub a pre-existing output directory
+# to remove the files from the newly disabled components.
+# Warn the user of this
+set(STALE_INSTALL_WARN FALSE)
+
 function(add_project pname)
   cmake_parse_arguments(A "" "" "GROUPS" ${ARGN})
   string(TOUPPER "${pname}" UPNAME)
@@ -288,6 +294,7 @@ function(add_project pname)
   if (NOT is_added)
     if (ENABLE_${UPNAME})
       message("Disabling ${pname} due to disabled USE flags")
+      set(STALE_INSTALL_WARN TRUE PARENT_SCOPE)
     endif (ENABLE_${UPNAME})
     execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/${pname})
     unset(ENABLE_${UPNAME} CACHE)
@@ -608,6 +615,17 @@ add_project(appleseed GROUPS "APPLESEED")
 # OSPRay - ray tracing engine
 # https://github.com/ospray/OSPRay
 add_project(ospray GROUPS "OSPRAY")
+
+
+# Warn the user if the settings changed in a way the indicate there is
+# a risk of now-disabled build products in the output directory
+if (EXISTS "${CMAKE_BUNDLE_INSTALL_PREFIX}" AND STALE_INSTALL_WARN)
+  file(GLOB OFILES_BIN LIST_DIRECTORIES TRUE ${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/* )
+  file(GLOB OFILES_LIB LIST_DIRECTORIES TRUE ${CMAKE_BUNDLE_INSTALL_PREFIX}/lib/* )
+  if (OFILES_BIN OR OFILES_LIB)
+    message(WARNING "\nBuild settings have changed, but build outputs are already present in ${CMAKE_BUNDLE_INSTALL_PREFIX}.  Recommend clearing the directory to avoid unexpected files being present when using the build outputs to support compilation.\n")
+  endif (OFILES_BIN OR OFILES_LIB)
+endif (EXISTS "${CMAKE_BUNDLE_INSTALL_PREFIX}" AND STALE_INSTALL_WARN)
 
 # Close out dependencies DOT file
 file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\n}\n")
