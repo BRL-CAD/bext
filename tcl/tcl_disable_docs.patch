@@ -1,0 +1,1081 @@
+diff -Naur TCL_BLD/macosx/GNUmakefile tcl/macosx/GNUmakefile
+--- TCL_BLD/macosx/GNUmakefile	2024-03-14 10:22:49.630447143 -0400
++++ tcl/macosx/GNUmakefile	2024-03-14 10:32:32.560380019 -0400
+@@ -118,9 +118,9 @@
+ endif
+ ifeq (${INSTALL_BUILD}_${EMBEDDED_BUILD}_${BUILD_STYLE},1__Deployment)
+ INSTALL_TARGETS		+= install-packages html-tcl
+-ifneq (${INSTALL_MANPAGES},)
+-INSTALL_TARGETS		+= install-doc
+-endif
++#ifneq (${INSTALL_MANPAGES},)
++#INSTALL_TARGETS		+= install-doc
++#endif
+ endif
+ 
+ MAKE_VARS		:= INSTALL_ROOT INSTALL_TARGETS VERSION GENERIC_FLAGS
+diff -Naur TCL_BLD/pkgs/itcl4.2.3/Makefile.in tcl/pkgs/itcl4.2.3/Makefile.in
+--- TCL_BLD/pkgs/itcl4.2.3/Makefile.in	2024-03-14 10:22:49.654447004 -0400
++++ tcl/pkgs/itcl4.2.3/Makefile.in	2024-03-14 10:34:16.702844708 -0400
+@@ -218,7 +218,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+@@ -240,17 +240,17 @@
+ # directory.
+ #========================================================================
+ 
+-install-doc: doc
+-	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
+-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+-	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+-	    if test X"$$i" = X'$(srcdir)/doc/*.n'; then break; fi; \
+-	    bi=`basename $$i`; \
+-	    echo "Installing $$bi"; \
+-	    sed -e '/man\.macros/r $(srcdir)/doc/man.macros' -e '/man\.macros/d' $$i > $$bi.tmp \
+-	    && $(INSTALL_DATA) $$bi.tmp "$(DESTDIR)$(mandir)/mann/$$bi" \
+-	    && rm -f $$bi.tmp; \
+-	done
++#install-doc: doc
++#	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
++#	@echo "Installing documentation in $(DESTDIR)$(mandir)"
++#	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
++#	    if test X"$$i" = X'$(srcdir)/doc/*.n'; then break; fi; \
++#	    bi=`basename $$i`; \
++#	    echo "Installing $$bi"; \
++#	    sed -e '/man\.macros/r $(srcdir)/doc/man.macros' -e '/man\.macros/d' $$i > $$bi.tmp \
++#	    && $(INSTALL_DATA) $$bi.tmp "$(DESTDIR)$(mandir)/mann/$$bi" \
++#	    && rm -f $$bi.tmp; \
++#	done
+ 
+ test: binaries libraries
+ 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) -load "$(TESTLOADARG)"
+diff -Naur TCL_BLD/pkgs/itcl4.2.3/win/rules.vc tcl/pkgs/itcl4.2.3/win/rules.vc
+--- TCL_BLD/pkgs/itcl4.2.3/win/rules.vc	2024-03-14 10:22:49.880445703 -0400
++++ tcl/pkgs/itcl4.2.3/win/rules.vc	2024-03-14 10:46:13.211174200 -0400
+@@ -189,9 +189,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1334,7 +1334,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1354,7 +1354,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1707,15 +1707,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++
++#default-install-docs-n:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+diff -Naur TCL_BLD/pkgs/sqlite3.40.0/Makefile.in tcl/pkgs/sqlite3.40.0/Makefile.in
+--- TCL_BLD/pkgs/sqlite3.40.0/Makefile.in	2024-03-14 10:22:49.892445634 -0400
++++ tcl/pkgs/sqlite3.40.0/Makefile.in	2024-03-14 10:34:47.871684733 -0400
+@@ -223,7 +223,7 @@
+ 	@echo "        xml2nroff sample.xml > sample.n"
+ 	@echo "        xml2html sample.xml > sample.html"
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+@@ -245,14 +245,14 @@
+ # directory.
+ #========================================================================
+ 
+-install-doc: doc
+-	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
+-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+-	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+-	    echo "Installing $$i"; \
+-	    rm -f "$(DESTDIR)$(mandir)/mann/`basename $$i`"; \
+-	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+-	done
++#install-doc: doc
++#	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
++#	@echo "Installing documentation in $(DESTDIR)$(mandir)"
++#	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
++#	    echo "Installing $$i"; \
++#	    rm -f "$(DESTDIR)$(mandir)/mann/`basename $$i`"; \
++#	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
++#	done
+ 
+ test: binaries libraries
+ 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+diff -Naur TCL_BLD/pkgs/sqlite3.40.0/win/makefile.vc tcl/pkgs/sqlite3.40.0/win/makefile.vc
+--- TCL_BLD/pkgs/sqlite3.40.0/win/makefile.vc	2024-03-14 10:22:49.931445409 -0400
++++ tcl/pkgs/sqlite3.40.0/win/makefile.vc	2024-03-14 10:46:33.803069017 -0400
+@@ -55,5 +55,5 @@
+ 	@echo } >> $(OUT_DIR)\pkgIndex.tcl
+ 
+ # Install the manpage though on Windows, doubt it does much good
+-install:    default-install-docs-n
++#install:    default-install-docs-n
+ 
+diff -Naur TCL_BLD/pkgs/sqlite3.40.0/win/rules.vc tcl/pkgs/sqlite3.40.0/win/rules.vc
+--- TCL_BLD/pkgs/sqlite3.40.0/win/rules.vc	2024-03-14 10:22:49.939445363 -0400
++++ tcl/pkgs/sqlite3.40.0/win/rules.vc	2024-03-14 10:47:27.291795789 -0400
+@@ -189,9 +189,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1334,7 +1334,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1354,7 +1354,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1707,15 +1707,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++
++#default-install-docs-n:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+diff -Naur TCL_BLD/pkgs/tdbc1.1.5/Makefile.in tcl/pkgs/tdbc1.1.5/Makefile.in
+--- TCL_BLD/pkgs/tdbc1.1.5/Makefile.in	2024-03-14 10:22:49.948445311 -0400
++++ tcl/pkgs/tdbc1.1.5/Makefile.in	2024-03-14 10:35:14.511548004 -0400
+@@ -213,7 +213,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+@@ -235,17 +235,17 @@
+ # directory.
+ #========================================================================
+ 
+-install-doc: doc
+-	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/man3" "$(DESTDIR)$(mandir)/mann"
+-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+-	@list='$(srcdir)/doc/*.3'; for i in $$list; do \
+-	    echo "Installing $$i"; \
+-	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/man3" ; \
+-	done
+-	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+-	    echo "Installing $$i"; \
+-	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+-	done
++#install-doc: doc
++#	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/man3" "$(DESTDIR)$(mandir)/mann"
++#	@echo "Installing documentation in $(DESTDIR)$(mandir)"
++#	@list='$(srcdir)/doc/*.3'; for i in $$list; do \
++#	    echo "Installing $$i"; \
++#	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/man3" ; \
++#	done
++#	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
++#	    echo "Installing $$i"; \
++#	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
++#	done
+ 
+ test: binaries libraries
+ 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+diff -Naur TCL_BLD/pkgs/tdbc1.1.5/win/makefile.vc tcl/pkgs/tdbc1.1.5/win/makefile.vc
+--- TCL_BLD/pkgs/tdbc1.1.5/win/makefile.vc	2024-03-14 10:22:50.095444465 -0400
++++ tcl/pkgs/tdbc1.1.5/win/makefile.vc	2024-03-14 10:47:59.092633353 -0400
+@@ -104,7 +104,7 @@
+ 
+ # TDBC has additional installation in addition to that provided by
+ # the default installation targets.
+-install: default-install-docs-n
++#install: default-install-docs-n
+ default-install-libraries: install-tdbc-extras
+ 
+ install-tdbc-extras: $(OUT_DIR)\tdbcConfig.sh
+diff -Naur TCL_BLD/pkgs/tdbc1.1.5/win/rules.vc tcl/pkgs/tdbc1.1.5/win/rules.vc
+--- TCL_BLD/pkgs/tdbc1.1.5/win/rules.vc	2024-03-14 10:22:50.118444332 -0400
++++ tcl/pkgs/tdbc1.1.5/win/rules.vc	2024-03-14 10:48:35.835445671 -0400
+@@ -189,9 +189,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1334,7 +1334,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1354,7 +1354,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1707,15 +1707,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++
++#default-install-docs-n:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+diff -Naur TCL_BLD/pkgs/tdbcmysql1.1.5/Makefile.in tcl/pkgs/tdbcmysql1.1.5/Makefile.in
+--- TCL_BLD/pkgs/tdbcmysql1.1.5/Makefile.in	2024-03-14 10:22:50.137444223 -0400
++++ tcl/pkgs/tdbcmysql1.1.5/Makefile.in	2024-03-14 10:35:40.832412913 -0400
+@@ -221,7 +221,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+@@ -243,13 +243,13 @@
+ # directory.
+ #========================================================================
+ 
+-install-doc: doc
+-	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
+-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+-	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+-	    echo "Installing $$i"; \
+-	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+-	done
++#install-doc: doc
++#	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
++#	@echo "Installing documentation in $(DESTDIR)$(mandir)"
++#	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
++#	    echo "Installing $$i"; \
++#	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
++#	done
+ 
+ test: binaries libraries
+ 	@$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+diff -Naur TCL_BLD/pkgs/tdbcmysql1.1.5/win/makefile.vc tcl/pkgs/tdbcmysql1.1.5/win/makefile.vc
+--- TCL_BLD/pkgs/tdbcmysql1.1.5/win/makefile.vc	2024-03-14 10:22:50.203443843 -0400
++++ tcl/pkgs/tdbcmysql1.1.5/win/makefile.vc	2024-03-14 10:49:54.099045892 -0400
+@@ -82,7 +82,7 @@
+ !include "$(_RULESDIR)\targets.vc"
+ 
+ # Our install has a few more steps than the default install
+-install: default-install-docs-n
++#install: default-install-docs-n
+ 
+ # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
+ # all replacements below so define our own.
+diff -Naur TCL_BLD/pkgs/tdbcmysql1.1.5/win/rules.vc tcl/pkgs/tdbcmysql1.1.5/win/rules.vc
+--- TCL_BLD/pkgs/tdbcmysql1.1.5/win/rules.vc	2024-03-14 10:22:50.211443797 -0400
++++ tcl/pkgs/tdbcmysql1.1.5/win/rules.vc	2024-03-14 10:50:21.967903534 -0400
+@@ -189,9 +189,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1334,7 +1334,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1354,7 +1354,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1707,15 +1707,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++
++#default-install-docs-n:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+diff -Naur TCL_BLD/pkgs/tdbcodbc1.1.5/Makefile.in tcl/pkgs/tdbcodbc1.1.5/Makefile.in
+--- TCL_BLD/pkgs/tdbcodbc1.1.5/Makefile.in	2024-03-14 10:22:50.223443728 -0400
++++ tcl/pkgs/tdbcodbc1.1.5/Makefile.in	2024-03-14 10:36:14.414240549 -0400
+@@ -221,7 +221,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+@@ -243,13 +243,13 @@
+ # directory.
+ #========================================================================
+ 
+-install-doc: doc
+-	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
+-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+-	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+-	    echo "Installing $$i"; \
+-	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+-	done
++#install-doc: doc
++#	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
++#	@echo "Installing documentation in $(DESTDIR)$(mandir)"
++#	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
++#	    echo "Installing $$i"; \
++#	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
++#	done
+ 
+ test: test-jet test-sqlserver test-sqlite
+ 
+diff -Naur TCL_BLD/pkgs/tdbcodbc1.1.5/win/makefile.vc tcl/pkgs/tdbcodbc1.1.5/win/makefile.vc
+--- TCL_BLD/pkgs/tdbcodbc1.1.5/win/makefile.vc	2024-03-14 10:22:50.283443382 -0400
++++ tcl/pkgs/tdbcodbc1.1.5/win/makefile.vc	2024-03-14 10:48:50.347371547 -0400
+@@ -84,7 +84,7 @@
+ !include "$(_RULESDIR)\targets.vc"
+ 
+ # Install needs some extra default actions.
+-install: default-install-docs-n
++#install: default-install-docs-n
+ 
+ # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
+ # all replacements below so define our own it.
+diff -Naur TCL_BLD/pkgs/tdbcodbc1.1.5/win/rules.vc tcl/pkgs/tdbcodbc1.1.5/win/rules.vc
+--- TCL_BLD/pkgs/tdbcodbc1.1.5/win/rules.vc	2024-03-14 10:22:50.294443319 -0400
++++ tcl/pkgs/tdbcodbc1.1.5/win/rules.vc	2024-03-14 10:49:33.898149087 -0400
+@@ -189,9 +189,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1334,7 +1334,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1354,7 +1354,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1707,15 +1707,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++
++#default-install-docs-n:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+diff -Naur TCL_BLD/pkgs/tdbcpostgres1.1.5/Makefile.in tcl/pkgs/tdbcpostgres1.1.5/Makefile.in
+--- TCL_BLD/pkgs/tdbcpostgres1.1.5/Makefile.in	2024-03-14 10:22:50.307443244 -0400
++++ tcl/pkgs/tdbcpostgres1.1.5/Makefile.in	2024-03-14 10:33:17.024151024 -0400
+@@ -221,7 +221,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+@@ -243,13 +243,13 @@
+ # directory.
+ #========================================================================
+ 
+-install-doc: doc
+-	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
+-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+-	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+-	    echo "Installing $$i"; \
+-	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+-	done
++#install-doc: doc
++#	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
++#	@echo "Installing documentation in $(DESTDIR)$(mandir)"
++#	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
++#	    echo "Installing $$i"; \
++#	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
++#	done
+ 
+ test: binaries libraries
+ 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+diff -Naur TCL_BLD/pkgs/tdbcpostgres1.1.5/win/makefile.vc tcl/pkgs/tdbcpostgres1.1.5/win/makefile.vc
+--- TCL_BLD/pkgs/tdbcpostgres1.1.5/win/makefile.vc	2024-03-14 10:22:50.362442927 -0400
++++ tcl/pkgs/tdbcpostgres1.1.5/win/makefile.vc	2024-03-14 10:42:31.308307666 -0400
+@@ -82,7 +82,7 @@
+ !include "$(_RULESDIR)\targets.vc"
+ 
+ # Additional default actions for install
+-install: default-install-docs-n
++#install: default-install-docs-n
+ 
+ # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
+ # all replacements below so define our own target.
+diff -Naur TCL_BLD/pkgs/tdbcpostgres1.1.5/win/rules.vc tcl/pkgs/tdbcpostgres1.1.5/win/rules.vc
+--- TCL_BLD/pkgs/tdbcpostgres1.1.5/win/rules.vc	2024-03-14 10:22:50.368442893 -0400
++++ tcl/pkgs/tdbcpostgres1.1.5/win/rules.vc	2024-03-14 10:43:26.908023660 -0400
+@@ -189,9 +189,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1334,7 +1334,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1354,7 +1354,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1707,15 +1707,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++
++#default-install-docs-n:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+diff -Naur TCL_BLD/pkgs/tdbcsqlite3-1.1.5/Makefile.in tcl/pkgs/tdbcsqlite3-1.1.5/Makefile.in
+--- TCL_BLD/pkgs/tdbcsqlite3-1.1.5/Makefile.in	2024-03-14 10:22:50.376442846 -0400
++++ tcl/pkgs/tdbcsqlite3-1.1.5/Makefile.in	2024-03-14 10:36:55.983027191 -0400
+@@ -220,7 +220,7 @@
+ 
+ doc:
+ 
+-install: all install-tm install-doc
++install: all install-tm
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+@@ -242,13 +242,13 @@
+ # directory.
+ #========================================================================
+ 
+-install-doc: doc
+-	@$(INSTALL_DATA_DIR) $(DESTDIR)$(mandir)/mann
+-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+-	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+-	    echo "Installing $$i"; \
+-	    $(INSTALL_DATA) $$i $(DESTDIR)$(mandir)/mann ; \
+-	done
++#install-doc: doc
++#	@$(INSTALL_DATA_DIR) $(DESTDIR)$(mandir)/mann
++#	@echo "Installing documentation in $(DESTDIR)$(mandir)"
++#	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
++#	    echo "Installing $$i"; \
++#	    $(INSTALL_DATA) $$i $(DESTDIR)$(mandir)/mann ; \
++#	done
+ 
+ test: binaries libraries
+ 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+diff -Naur TCL_BLD/pkgs/tdbcsqlite3-1.1.5/win/makefile.vc tcl/pkgs/tdbcsqlite3-1.1.5/win/makefile.vc
+--- TCL_BLD/pkgs/tdbcsqlite3-1.1.5/win/makefile.vc	2024-03-14 10:22:50.397442725 -0400
++++ tcl/pkgs/tdbcsqlite3-1.1.5/win/makefile.vc	2024-03-14 10:50:40.922806718 -0400
+@@ -26,7 +26,7 @@
+ $(PROJECT):
+ 	@echo "This is a pure Tcl module and does not require a build step. Do a nmake install to install"
+ setup: default-setup
+-install: install-tm default-install-docs-n
++install: install-tm
+ clean: default-clean
+ realclean: hose
+ hose: default-hose
+diff -Naur TCL_BLD/pkgs/tdbcsqlite3-1.1.5/win/rules.vc tcl/pkgs/tdbcsqlite3-1.1.5/win/rules.vc
+--- TCL_BLD/pkgs/tdbcsqlite3-1.1.5/win/rules.vc	2024-03-14 10:22:50.399442714 -0400
++++ tcl/pkgs/tdbcsqlite3-1.1.5/win/rules.vc	2024-03-14 10:51:10.458655855 -0400
+@@ -189,9 +189,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1334,7 +1334,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1354,7 +1354,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1707,15 +1707,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++
++#default-install-docs-n:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+diff -Naur TCL_BLD/pkgs/thread2.8.8/Makefile.in tcl/pkgs/thread2.8.8/Makefile.in
+--- TCL_BLD/pkgs/thread2.8.8/Makefile.in	2024-03-14 10:22:50.403442691 -0400
++++ tcl/pkgs/thread2.8.8/Makefile.in	2024-03-14 10:33:45.519004769 -0400
+@@ -213,7 +213,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+@@ -235,13 +235,13 @@
+ # directory.
+ #========================================================================
+ 
+-install-doc: doc
+-	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
+-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+-	@list='$(srcdir)/doc/man/*.n'; for i in $$list; do \
+-	    echo "Installing $$i"; \
+-	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+-	done
++#install-doc: doc
++#	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
++#	@echo "Installing documentation in $(DESTDIR)$(mandir)"
++#	@list='$(srcdir)/doc/man/*.n'; for i in $$list; do \
++#	    echo "Installing $$i"; \
++#	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
++#	done
+ 
+ test: binaries libraries
+ 	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+diff -Naur TCL_BLD/pkgs/thread2.8.8/win/makefile.vc tcl/pkgs/thread2.8.8/win/makefile.vc
+--- TCL_BLD/pkgs/thread2.8.8/win/makefile.vc	2024-03-14 10:22:50.511442069 -0400
++++ tcl/pkgs/thread2.8.8/win/makefile.vc	2024-03-14 10:44:19.148756816 -0400
+@@ -25,7 +25,7 @@
+ 
+ PROJECT = thread
+ RCFILE = thread.rc
+-DOCDIR          = $(ROOT)\doc\html
++#DOCDIR          = $(ROOT)\doc\html
+ 
+ PRJ_DEFINES = -D _CRT_SECURE_NO_DEPRECATE -D _CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS
+ PRJ_DEFINES = $(PRJ_DEFINES) -DTCL_TIP143 -DTCL_TIP285 -DTCL_NO_DEPRECATED=1 $(ADDOPTDEFINES)
+@@ -48,7 +48,7 @@
+ 
+ !include "$(_RULESDIR)\targets.vc"
+ 
+-install:    default-install-docs-html
++#install:    default-install-docs-html
+ pkgindex:   default-pkgindex-tea
+ 
+ $(ROOT)\manifest.uuid:
+diff -Naur TCL_BLD/pkgs/thread2.8.8/win/rules.vc tcl/pkgs/thread2.8.8/win/rules.vc
+--- TCL_BLD/pkgs/thread2.8.8/win/rules.vc	2024-03-14 10:22:50.516442040 -0400
++++ tcl/pkgs/thread2.8.8/win/rules.vc	2024-03-14 10:45:19.628447901 -0400
+@@ -189,9 +189,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1334,7 +1334,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1354,7 +1354,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1707,15 +1707,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++
++#default-install-docs-n:
++#	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+diff -Naur TCL_BLD/unix/Makefile.in tcl/unix/Makefile.in
+--- TCL_BLD/unix/Makefile.in	2024-03-14 10:22:51.534436177 -0400
++++ tcl/unix/Makefile.in	2024-03-14 10:38:28.350553108 -0400
+@@ -880,7 +880,7 @@
+ #--------------------------------------------------------------------------
+ 
+ INSTALL_BASE_TARGETS = install-binaries install-libraries install-msgs $(INSTALL_TZDATA)
+-INSTALL_DOC_TARGETS = install-doc
++#INSTALL_DOC_TARGETS = install-doc
+ INSTALL_PACKAGE_TARGETS = install-packages
+ INSTALL_DEV_TARGETS = install-headers
+ INSTALL_EXTRA_TARGETS = @EXTRA_INSTALL@
+@@ -1027,25 +1027,25 @@
+ 	    $(INSTALL_DATA) $$i "$(SCRIPT_INSTALL_DIR)/msgs"; \
+ 	done
+ 
+-install-doc: doc
+-	@for i in "$(MAN_INSTALL_DIR)" "$(MAN1_INSTALL_DIR)" "$(MAN3_INSTALL_DIR)" "$(MANN_INSTALL_DIR)"; do \
+-	    if [ ! -d "$$i" ] ; then \
+-		echo "Making directory $$i"; \
+-		$(INSTALL_DATA_DIR) "$$i"; \
+-	    fi; \
+-	done
+-	@echo "Installing and cross-linking top-level (.1) docs to $(MAN1_INSTALL_DIR)/"
+-	@for i in $(TOP_DIR)/doc/*.1; do \
+-	    $(SHELL) $(UNIX_DIR)/installManPage $(MAN_FLAGS) $$i "$(MAN1_INSTALL_DIR)"; \
+-	done
+-	@echo "Installing and cross-linking C API (.3) docs to $(MAN3_INSTALL_DIR)/"
+-	@for i in $(TOP_DIR)/doc/*.3; do \
+-	    $(SHELL) $(UNIX_DIR)/installManPage $(MAN_FLAGS) $$i "$(MAN3_INSTALL_DIR)"; \
+-	done
+-	@echo "Installing and cross-linking command (.n) docs to $(MANN_INSTALL_DIR)/";
+-	@for i in $(TOP_DIR)/doc/*.n; do \
+-	    $(SHELL) $(UNIX_DIR)/installManPage $(MAN_FLAGS) $$i "$(MANN_INSTALL_DIR)"; \
+-	done
++#install-doc: doc
++#	@for i in "$(MAN_INSTALL_DIR)" "$(MAN1_INSTALL_DIR)" "$(MAN3_INSTALL_DIR)" "$(MANN_INSTALL_DIR)"; do \
++#	    if [ ! -d "$$i" ] ; then \
++#		echo "Making directory $$i"; \
++#		$(INSTALL_DATA_DIR) "$$i"; \
++#	    fi; \
++#	done
++#	@echo "Installing and cross-linking top-level (.1) docs to $(MAN1_INSTALL_DIR)/"
++#	@for i in $(TOP_DIR)/doc/*.1; do \
++#	    $(SHELL) $(UNIX_DIR)/installManPage $(MAN_FLAGS) $$i "$(MAN1_INSTALL_DIR)"; \
++#	done
++#	@echo "Installing and cross-linking C API (.3) docs to $(MAN3_INSTALL_DIR)/"
++#	@for i in $(TOP_DIR)/doc/*.3; do \
++#	    $(SHELL) $(UNIX_DIR)/installManPage $(MAN_FLAGS) $$i "$(MAN3_INSTALL_DIR)"; \
++#	done
++#	@echo "Installing and cross-linking command (.n) docs to $(MANN_INSTALL_DIR)/";
++#	@for i in $(TOP_DIR)/doc/*.n; do \
++#	    $(SHELL) $(UNIX_DIR)/installManPage $(MAN_FLAGS) $$i "$(MANN_INSTALL_DIR)"; \
++#	done
+ 
+ install-headers:
+ 	@for i in "$(INCLUDE_INSTALL_DIR)"; do \
+@@ -2249,7 +2249,7 @@
+ 
+ .PHONY: all binaries libraries objs doc html html-tcl html-tk test runtest
+ .PHONY: install install-strip install-binaries install-libraries
+-.PHONY: install-headers install-private-headers install-doc
++.PHONY: install-headers install-private-headers
+ .PHONY: clean distclean depend genstubs checkstubs checkexports checkuchar
+ .PHONY: shell gdb valgrind valgrindshell dist alldist rpm
+ .PHONY: tclLibObjs tcltest-real test-tcl gdb-test ro-test trace-test xttest
+diff -Naur TCL_BLD/win/Makefile.in tcl/win/Makefile.in
+--- TCL_BLD/win/Makefile.in	2024-03-14 10:22:51.549436091 -0400
++++ tcl/win/Makefile.in	2024-03-14 10:39:34.229214969 -0400
+@@ -425,9 +425,9 @@
+ 
+ TCL_OBJS = ${GENERIC_OBJS} ${WIN_OBJS} @ZLIB_OBJS@ $(TOMMATH_OBJS)
+ 
+-TCL_DOCS = "$(ROOT_DIR_NATIVE)"/doc/*.[13n]
++#TCL_DOCS = "$(ROOT_DIR_NATIVE)"/doc/*.[13n]
+ 
+-all: binaries libraries doc packages
++all: binaries libraries packages
+ 
+ # Test-suite helper (can be used to test Tcl from build directory with all expected modules).
+ # To start from windows shell use:
+@@ -466,13 +466,13 @@
+ 
+ libraries:
+ 
+-doc:
+-
+-$(TCLSH): $(TCLSH_OBJS) @LIBRARIES@ $(TCL_STUB_LIB_FILE) tclsh.$(RES)
+-	$(CC) $(CFLAGS) $(TCLSH_OBJS) $(TCL_LIB_FILE) $(TCL_STUB_LIB_FILE) $(LIBS) \
+-	tclsh.$(RES) $(CC_EXENAME) $(LDFLAGS_CONSOLE)
+-	$(COPY) tclsh.exe.manifest $(TCLSH).manifest
+-	@VC_MANIFEST_EMBED_EXE@
++#doc:
++#
++#$(TCLSH): $(TCLSH_OBJS) @LIBRARIES@ $(TCL_STUB_LIB_FILE) tclsh.$(RES)
++#	$(CC) $(CFLAGS) $(TCLSH_OBJS) $(TCL_LIB_FILE) $(TCL_STUB_LIB_FILE) $(LIBS) \
++#	tclsh.$(RES) $(CC_EXENAME) $(LDFLAGS_CONSOLE)
++#	$(COPY) tclsh.exe.manifest $(TCLSH).manifest
++#	@VC_MANIFEST_EMBED_EXE@
+ 
+ cat32.$(OBJEXT): cat.c
+ 	$(CC) -c $(CC_SWITCHES) -DUNICODE -D_UNICODE @DEPARG@ $(CC_OBJNAME)
+@@ -638,7 +638,7 @@
+ 		"$(TOMMATH_DIR_NATIVE)/tommath.h" \
+ 		> "$(GENERIC_DIR_NATIVE)/tclTomMath.h"
+ 
+-install: all install-binaries install-libraries install-doc install-packages
++install: all install-binaries install-libraries install-packages
+ 
+ install-binaries: binaries
+ 	@for i in "$(LIB_INSTALL_DIR)" "$(BIN_INSTALL_DIR)"; \
+@@ -768,8 +768,6 @@
+ 	$(TCL_EXE) "$(ROOT_DIR)/tools/installData.tcl" \
+ 	    "$(ROOT_DIR)/library/msgs" "$(SCRIPT_INSTALL_DIR_NATIVE)/msgs"
+ 
+-install-doc: doc
+-
+ # Optional target to install private headers
+ install-private-headers: libraries
+ 	@for i in $(PRIVATE_INCLUDE_INSTALL_DIR); \
+@@ -956,9 +954,9 @@
+ # 'make' from getting confused when someone makes an error in a rule.
+ #
+ 
+-.PHONY: all tcltest binaries libraries doc gendate gentommath_h install
++.PHONY: all tcltest binaries libraries gendate gentommath_h install
+ .PHONY: install-binaries install-libraries install-tzdata install-msgs
+-.PHONY: install-doc install-private-headers test test-tcl runtest shell
++.PHONY: install-private-headers test test-tcl runtest shell
+ .PHONY: gdb depend cleanhelp clean distclean packages install-packages
+ .PHONY: test-packages clean-packages distclean-packages genstubs html
+ .PHONY: html-tcl html-tk
+diff -Naur TCL_BLD/win/makefile.vc tcl/win/makefile.vc
+--- TCL_BLD/win/makefile.vc	2024-03-14 10:22:51.554436062 -0400
++++ tcl/win/makefile.vc	2024-03-14 10:40:14.605007730 -0400
+@@ -444,7 +444,7 @@
+ dlls:	    setup $(TCLREGLIB) $(TCLDDELIB)
+ all:	    setup $(TCLSH) $(TCLSTUBLIB) dlls $(CAT32) pkgs
+ tcltest:    setup $(TCLTEST) dlls $(CAT32)
+-install:    install-binaries install-libraries install-docs install-pkgs
++install:    install-binaries install-libraries install-pkgs
+ !if $(SYMBOLS)
+ install:    install-pdbs
+ !endif
+@@ -630,11 +630,11 @@
+ chmsetup:
+ 	@if not exist $(HTMLDIR)\nul mkdir $(HTMLDIR)
+ 
+-install-docs:
+-!if exist("$(CHMFILE)")
+-	@echo Installing compiled HTML help
+-	@$(CPY) "$(CHMFILE)" "$(DOC_INSTALL_DIR)\"
+-!endif
++#install-docs:
++#!if exist("$(CHMFILE)")
++#	@echo Installing compiled HTML help
++#	@$(CPY) "$(CHMFILE)" "$(DOC_INSTALL_DIR)\"
++#!endif
+ 
+ # "emacs font-lock highlighting fix
+ 
+diff -Naur TCL_BLD/win/rules.vc tcl/win/rules.vc
+--- TCL_BLD/win/rules.vc	2024-03-14 10:22:51.255437784 -0400
++++ tcl/win/rules.vc	2024-03-14 10:41:38.797575893 -0400
+@@ -190,9 +190,9 @@
+ !ifndef COMPATDIR
+ COMPATDIR	= $(ROOT)\compat
+ !endif
+-!ifndef DOCDIR
+-DOCDIR		= $(ROOT)\doc
+-!endif
++#!ifndef DOCDIR
++#DOCDIR		= $(ROOT)\doc
++#!endif
+ !ifndef GENERICDIR
+ GENERICDIR	= $(ROOT)\generic
+ !endif
+@@ -1304,7 +1304,7 @@
+ !if $(DOING_TCL) || $(DOING_TK)
+ LIB_INSTALL_DIR		= $(_INSTALLDIR)\lib
+ BIN_INSTALL_DIR		= $(_INSTALLDIR)\bin
+-DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
++#DOC_INSTALL_DIR		= $(_INSTALLDIR)\doc
+ !if $(DOING_TCL)
+ SCRIPT_INSTALL_DIR	= $(_INSTALLDIR)\lib\$(PROJECT)$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)
+ MODULE_INSTALL_DIR	= $(_INSTALLDIR)\lib\tcl$(TCL_MAJOR_VERSION)
+@@ -1324,7 +1324,7 @@
+ LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ !endif
+-DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
++#DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
+ SCRIPT_INSTALL_DIR	= $(PRJ_INSTALL_DIR)
+ DEMO_INSTALL_DIR	= $(PRJ_INSTALL_DIR)\demos
+ INCLUDE_INSTALL_DIR	= $(_INSTALLDIR)\..\include
+@@ -1671,15 +1671,15 @@
+ 
+ # "emacs font-lock highlighting fix
+ 
+-default-install-docs-html:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+-
+-default-install-docs-n:
+-	@echo Installing documentation files to '$(DOC_INSTALL_DIR)'
+-	@if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
+-	@if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#default-install-docs-html:
++#	       @echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	       @if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	       @if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.html" "$(DOCDIR)\*.css" "$(DOCDIR)\*.png") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
++#
++#default-install-docs-n:
++#	       @echo Installing documentation files to '$(DOC_INSTALL_DIR)'
++#	       @if not exist "$(DOC_INSTALL_DIR)" mkdir "$(DOC_INSTALL_DIR)"
++#	       @if exist $(DOCDIR) for %f in ("$(DOCDIR)\*.n") do @$(COPY) %f "$(DOC_INSTALL_DIR)"
+ 
+ default-install-demos:
+ 	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
