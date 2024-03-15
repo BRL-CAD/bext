@@ -43,9 +43,8 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Configure
-        shell: cmd
+        shell: powershell
         run: |
-          call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
           cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE=Release -DENABLE_ALL=ON
           # We do the following in order to help ensure files are "flushed"
           # to disk before compilation is attempted
@@ -54,9 +53,8 @@ jobs:
           powershell Write-VolumeCache D
 
       - name: Build
-        shell: cmd
+        shell: powershell
         run: |
-          call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
           cd build && ninja -j2 -v
 
         # TODO - if the loading isn't too extreme, it would be good to do a BRL-CAD
@@ -88,9 +86,8 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Configure
-        shell: cmd
+        shell: powershell
         run: |
-          call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
           cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE=Debug -DENABLE_ALL=ON
           # We do the following in order to help ensure files are "flushed"
           # to disk before compilation is attempted
@@ -99,9 +96,8 @@ jobs:
           powershell Write-VolumeCache D
 
       - name: Build
-        shell: cmd
+        shell: powershell
         run: |
-          call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
           cd build && ninja -j2 -v
 
         # TODO - if the loading isn't too extreme, it would be good to do a BRL-CAD
