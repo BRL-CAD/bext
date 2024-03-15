@@ -914,7 +914,7 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 +  opennurbs_zlib.cpp
 +  )
 +
-+if (NOT HAVE_UUID_GENERATE)
++if (NOT HAVE_UUID_GENERATE AND NOT MSVC)
 +  set(OPENNURBS_SOURCES ${OPENNURBS_SOURCES}
 +    android_uuid/clear.c
 +    android_uuid/compare.c
@@ -935,7 +935,7 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 +      android_uuid/uuid_time.c
 +      )
 +  endif (WIN32)
-+endif (NOT HAVE_UUID_GENERATE)
++endif (NOT HAVE_UUID_GENERATE AND NOT MSVC)
 +
 +set(OPENNURBS_HEADERS
 +  opennurbs_3dm_attributes.h
