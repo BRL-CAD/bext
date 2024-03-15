@@ -55,7 +55,7 @@ jobs:
       - name: Build
         shell: powershell
         run: |
-          cd build && ninja -j2 -v
+          cd build; ninja -j2 -v
 
         # TODO - if the loading isn't too extreme, it would be good to do a BRL-CAD
         # build against the output of this...
@@ -98,7 +98,7 @@ jobs:
       - name: Build
         shell: powershell
         run: |
-          cd build && ninja -j2 -v
+          cd build; ninja -j2 -v
 
         # TODO - if the loading isn't too extreme, it would be good to do a BRL-CAD
         # build against the output of this...
