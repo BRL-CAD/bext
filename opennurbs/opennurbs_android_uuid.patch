@@ -1,9 +1,0 @@
-diff -Naur opennurbs/android_uuid/COPYING OPENNURBS_BLD/android_uuid/COPYING
---- opennurbs/android_uuid/COPYING	2023-12-20 11:22:46.198511306 -0500
-+++ OPENNURBS_BLD/android_uuid/COPYING	2023-12-20 10:56:56.954787994 -0500
-@@ -1,3 +1,5 @@
-+Copyright (C) 1996, 1997, 1998, 1999 Theodore Ts'o.
-+
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions
- are met:
