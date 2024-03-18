@@ -264,7 +264,7 @@ option(USE_BRLCAD       "BRL-CAD core dependencies"                  ON)
 option(USE_BRLCAD_EXTRA "BRL-CAD dependencies that can be disabled"  ON)
 option(USE_GDAL         "GDAL terrain support"                       ON)
 option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
-option(USE_QT           "Qt graphical toolkit support"               ON)
+option(USE_QT           "Qt graphical toolkit support"               OFF)
 option(USE_TCL          "Tcl/Tk support"                             ON)
 
 # If configurations change after a build has been performed,
