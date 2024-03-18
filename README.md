@@ -22,10 +22,10 @@ cmake ../bext -DENABLE_ALL=ON
 cmake --build . --config Release --parallel 8
 ```
 
-Note that if you know you are going to build most or all of the component projects you can immediately populate all submodules when performing the clone.  By default the configure logic creates shallow clones of submodules for build purposes (i.e. it doesn't make a full local copy of the complete history).  To do the same thing with an up front recursive clone:
+Note that if you know you are going to build most or all of the component projects you can immediately populate all submodules when performing the clone:
 
 ```sh
-git clone --depth=1 --recursive --shallow-submodules https://github.com/BRL-CAD/bext
+git clone --recursive https://github.com/BRL-CAD/bext
 ```
 
 This is primarily useful if you want to do all the downloading at once up front or you are preparing to work in an environment without an internet connection.

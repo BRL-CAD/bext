@@ -1,377 +1,311 @@
 [submodule "patch/patch"]
 	path = patch/patch
 	url = https://github.com/BRL-CAD/patch
-	shallow = true
 	ignore = dirty
 [submodule "astyle/astyle"]
 	path = astyle/astyle
 	url = https://github.com/BRL-CAD/astyle
-	shallow = true
 	ignore = dirty
 [submodule "lief/LIEF"]
 	path = lief/LIEF
 	url = https://github.com/BRL-CAD/LIEF
 	branch = master
-	shallow = true
 	ignore = dirty
 [submodule "lemon/lemon"]
 	path = lemon/lemon
 	url = https://github.com/BRL-CAD/lemon
-	shallow = true
 	ignore = dirty
 [submodule "re2c/re2c"]
 	path = re2c/re2c
 	url = https://github.com/BRL-CAD/re2c
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "perplex/perplex"]
 	path = perplex/perplex
 	url = https://github.com/BRL-CAD/perplex
-	shallow = true
 	ignore = dirty
 [submodule "plief/plief"]
 	path = plief/plief
 	url = https://github.com/BRL-CAD/plief
-	shallow = true
 	ignore = dirty
 [submodule "strclear/strclear"]
 	path = strclear/strclear
 	url = https://github.com/BRL-CAD/strclear
-	shallow = true
 	ignore = dirty
 [submodule "xmltools/xmltools"]
 	path = xmltools/xmltools
 	url = https://github.com/BRL-CAD/xmltools
-	shallow = true
 	ignore = dirty
 [submodule "zlib/zlib"]
 	path = zlib/zlib
 	url = https://github.com/BRL-CAD/zlib
-	shallow = true
 	ignore = dirty
 [submodule "png/libpng"]
 	path = png/libpng
 	url = https://github.com/BRL-CAD/libpng
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "netpbm/netpbm"]
 	path = netpbm/netpbm
 	url = https://github.com/BRL-CAD/netpbm
 	branch = brlcad
-	shallow = true
 	ignore = dirty
 [submodule "regex/regex"]
 	path = regex/regex
 	url = https://github.com/BRL-CAD/regex
-	shallow = true
 	ignore = dirty
 [submodule "linenoise/linenoise"]
 	path = linenoise/linenoise
 	url = https://github.com/BRL-CAD/linenoise
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "lmdb/lmdb"]
 	path = lmdb/lmdb
 	url = https://github.com/BRL-CAD/lmdb
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "eigen/eigen"]
 	path = eigen/eigen
 	url = https://github.com/BRL-CAD/eigen
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "stepcode/stepcode"]
 	path = stepcode/stepcode
 	url = https://github.com/BRL-CAD/stepcode
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "sqlite3/sqlite3"]
 	path = sqlite3/sqlite3
 	url = https://github.com/BRL-CAD/sqlite3.git
-	shallow = true
 	ignore = dirty
 [submodule "proj/PROJ"]
 	path = proj/PROJ
 	url = https://github.com/BRL-CAD/PROJ
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "gdal/gdal"]
 	path = gdal/gdal
 	url = https://github.com/BRL-CAD/gdal
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "assetimport/assimp"]
 	path = assetimport/assimp
 	url = https://github.com/BRL-CAD/assimp
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "opencv/opencv"]
 	path = opencv/opencv
 	url = https://github.com/BRL-CAD/opencv
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "openmesh/OpenMesh"]
 	path = openmesh/OpenMesh
 	url = https://github.com/BRL-CAD/OpenMesh
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "opennurbs/opennurbs"]
 	path = opennurbs/opennurbs
 	url = https://github.com/BRL-CAD/opennurbs
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "osmesa/osmesa"]
 	path = osmesa/osmesa
 	url = https://github.com/BRL-CAD/osmesa
-	shallow = true
 	ignore = dirty
 [submodule "utahrle/utahrle"]
 	path = utahrle/utahrle
 	url = https://github.com/BRL-CAD/utahrle
-	shallow = true
 	ignore = dirty
 [submodule "poly2tri/poly2tri"]
 	path = poly2tri/poly2tri
 	url = https://github.com/BRL-CAD/poly2tri
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "tk/tk"]
 	path = tk/tk
 	url = https://github.com/BRL-CAD/tk
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "itcl3/itcl"]
 	path = itcl/itcl
 	url = https://github.com/BRL-CAD/itcl
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "itk3/itk"]
 	path = itk/itk
 	url = https://github.com/BRL-CAD/itk
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "iwidgets/iwidgets"]
 	path = iwidgets/iwidgets
 	url = https://github.com/BRL-CAD/iwidgets
-	shallow = true
 	ignore = dirty
 [submodule "tktable/tktable"]
 	path = tktable/tktable
 	url = https://github.com/BRL-CAD/tktable
-	shallow = true
 	ignore = dirty
 [submodule "tkhtml/tkhtml"]
 	path = tkhtml/tkhtml
 	url = https://github.com/BRL-CAD/tkhtml
-	shallow = true
 	ignore = dirty
 [submodule "qt/qt"]
 	path = qt/qt
 	url = https://github.com/BRL-CAD/qt
-	shallow = true
 	ignore = dirty
 [submodule "flexbison/bison"]
 	path = flexbison/bison
 	url = https://github.com/BRL-CAD/bison
-	shallow = true
 	ignore = dirty
 [submodule "flexbison/flex"]
 	path = flexbison/flex
 	url = https://github.com/BRL-CAD/flex
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "flexbison/winflexbison"]
 	path = flexbison/winflexbison
 	url = https://github.com/BRL-CAD/winflexbison
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "minizip-ng/minizip-ng"]
 	path = minizip-ng/minizip-ng
 	url = https://github.com/BRL-CAD/minizip-ng
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "lz4/lz4"]
 	path = lz4/lz4
 	url = https://github.com/BRL-CAD/lz4
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "deflate/libdeflate"]
 	path = deflate/libdeflate
 	url = https://github.com/BRL-CAD/libdeflate
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "fmt/fmt"]
 	path = fmt/fmt
 	url = https://github.com/BRL-CAD/fmt
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "yaml-cpp/yaml-cpp"]
 	path = yaml-cpp/yaml-cpp
 	url = https://github.com/BRL-CAD/yaml-cpp
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "pystring/pystring"]
 	path = pystring/pystring
 	url = https://github.com/BRL-CAD/pystring
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "expat/libexpat"]
 	path = expat/libexpat
 	url = https://github.com/BRL-CAD/libexpat
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "pugixml/pugixml"]
 	path = pugixml/pugixml
 	url = https://github.com/BRL-CAD/pugixml
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "xerces-c/xerces-c"]
 	path = xerces-c/xerces-c
 	url = https://github.com/BRL-CAD/xerces-c
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "icu/icu"]
 	path = icu/icu
 	url = https://github.com/BRL-CAD/icu
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "jpeg/libjpeg-turbo"]
 	path = jpeg/libjpeg-turbo
 	url = https://github.com/BRL-CAD/libjpeg-turbo
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "tiff/libtiff"]
 	path = tiff/libtiff
 	url = https://github.com/BRL-CAD/libtiff
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "onetbb/oneTBB"]
 	path = onetbb/oneTBB
 	url = https://github.com/BRL-CAD/oneTBB
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "llvm/llvm-project"]
 	path = llvm/llvm-project
 	url = https://github.com/BRL-CAD/llvm-project
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "zstd/zstd"]
 	path = zstd/zstd
 	url = https://github.com/BRL-CAD/zstd
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "boost/boost"]
 	path = boost/boost
 	url = https://github.com/BRL-CAD/boost
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "openexr/openexr"]
 	path = openexr/openexr
 	url = https://github.com/BRL-CAD/openexr
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "opencolorio/OpenColorIO"]
 	path = opencolorio/OpenColorIO
 	url = https://github.com/BRL-CAD/OpenColorIO
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "openimageio/oiio"]
 	path = openimageio/oiio
 	url = https://github.com/BRL-CAD/oiio
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "osl/OpenShadingLanguage"]
 	path = osl/OpenShadingLanguage
 	url = https://github.com/BRL-CAD/OpenShadingLanguage
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "embree/embree"]
 	path = embree/embree
 	url = https://github.com/BRL-CAD/embree
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "rkcommon/rkcommon"]
 	path = rkcommon/rkcommon
 	url = https://github.com/BRL-CAD/rkcommon
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "ispc/ispc"]
 	path = ispc/ispc
 	url = https://github.com/BRL-CAD/ispc
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "ospray/ospray"]
 	path = ospray/ospray
 	url = https://github.com/BRL-CAD/ospray
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "ncurses/ncurses"]
 	path = ncurses/ncurses
 	url = https://github.com/BRL-CAD/ncurses
-	shallow = true
 	ignore = dirty
 [submodule "tcl/tcl"]
 	path = tcl/tcl
 	url = https://github.com/BRL-CAD/tcl.git
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "manifold/manifold"]
 	path = manifold/manifold
 	url = https://github.com/BRL-CAD/manifold.git
 	branch = RELEASE
-	shallow = true
 	ignore = dirty
 [submodule "appleseed/appleseed"]
 	path = appleseed/appleseed
 	url = https://github.com/BRL-CAD/appleseed
-	shallow = true
 	ignore = dirty
 [submodule "geogram/geogram"]
 	path = geogram/geogram
 	url = https://github.com/BRL-CAD/geogram.git
 	branch = RELEASE
-        shallow = true
         ignore = dirty

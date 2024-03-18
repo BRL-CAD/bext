@@ -7,7 +7,7 @@ When using submodules, there are some fairly non-intuitive aspects of managing t
 user@linux:~/bext (main) $ cd tcl
 user@linux:~/bext/tcl (main) $ git submodule add -b RELEASE https://github.com/BRL-CAD/tcl.git
 ```
-Edit the new .gitmodules entry to add the "shallow = true" and "ignore = dirty" lines, git add the updated .gitmodules file, and commit the addition of the new submodule.
+Edit the new .gitmodules entry to add the "ignore = dirty" line, git add the updated .gitmodules file, and commit the addition of the new submodule.
 
 
 # Finding the currently referenced submodule SHA1
@@ -20,8 +20,6 @@ user@linux:~/bext (main) $ git ls-tree main tcl/tcl
 
 # Updating a submodule to a newer upstream
 
-The operation of updating submodules requires a full git clone, rather than the shallow
-checkouts used in normal operation:
 ```
 user@linux:~ $ git clone --recurse-submodules git@github.com:BRL-CAD/bext.git
 user@linux:~ $ cd bext
@@ -716,7 +714,6 @@ file:
 bext (main) $ rm -rf geogram/geogram && cd geogram
 bext/geogram (main) $ git submodule add -b RELEASE https://github.com/BRL-CAD/geogram.git
 bext/geogram (main) $ cd ..
-bext (main) $ echo "        shallow = true" >> .gitmodules
 bext (main) $ echo "        ignore = dirty" >> .gitmodules
 ```
 
