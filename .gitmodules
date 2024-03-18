@@ -126,12 +126,6 @@
 	branch = RELEASE
 	shallow = true
 	ignore = dirty
-[submodule "opennurbs/opennurbs"]
-	path = opennurbs/opennurbs
-	url = https://github.com/BRL-CAD/opennurbs
-	branch = RELEASE
-	shallow = true
-	ignore = dirty
 [submodule "osmesa/osmesa"]
 	path = osmesa/osmesa
 	url = https://github.com/BRL-CAD/osmesa
