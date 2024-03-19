@@ -21,7 +21,7 @@ set(ENABLE_MANIFOLD "${ENABLE_MANIFOLD}" CACHE BOOL "Enable manifold build")
 
 if (ENABLE_MANIFOLD)
 
-  git_submodule_init(manifold include/manifold/manifold.h)
+  git_submodule_init(manifold src/manifold/include/manifold.h)
 
   TargetDeps(MANIFOLD)
 
