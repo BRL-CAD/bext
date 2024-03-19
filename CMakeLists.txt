@@ -250,7 +250,7 @@ function(git_submodule_init path checkfile)
       )
     else (NOT GIT_SHALLOW_CLONE)
       execute_process(
-	COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --shallow-submodules --depth=1 ${path}
+	COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --recommend-shallow --single-branch ${path}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       )
     endif (NOT GIT_SHALLOW_CLONE)
