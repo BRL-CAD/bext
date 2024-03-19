@@ -36,7 +36,7 @@ set(ENABLE_ITK "${ENABLE_ITK}" CACHE BOOL "Enable itk build")
 
 if (ENABLE_ITK)
 
-  git_submodule_init(itk CMakeLists.txt)
+  git_submodule_init(itk configure.in)
 
   TargetDeps(ITK)
 

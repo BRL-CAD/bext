@@ -15,7 +15,7 @@ set(ENABLE_ITCL "${ENABLE_ITCL}" CACHE BOOL "Enable itcl build")
 
 if (ENABLE_ITCL)
 
-  git_submodule_init(itcl CMakeLists.txt)
+  git_submodule_init(itcl configure.in)
 
   TargetDeps(ITCL)
 
