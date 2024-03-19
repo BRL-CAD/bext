@@ -243,10 +243,17 @@ function(git_submodule_init path checkfile)
     if (NOT GIT_EXECUTABLE)
       message(FATAL_ERROR "Need to populate Git submodule, but unable to find git executable")
     endif (NOT GIT_EXECUTABLE)
-    execute_process(
-      COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive ${path}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    if (NOT GIT_SHALLOW_CLONE)
+      execute_process(
+	COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive ${path}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       )
+    else (NOT GIT_SHALLOW_CLONE)
+      execute_process(
+	COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --shallow-submodules --depth=1 ${path}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      )
+    endif (NOT GIT_SHALLOW_CLONE)
   endif (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
 endfunction(git_submodule_init path)
 
