@@ -30,6 +30,8 @@ git clone --recursive https://github.com/BRL-CAD/bext
 
 This is primarily useful if you want to do all the downloading at once up front or you are preparing to work in an environment without an internet connection.
 
+A word of caution - full cloning of all the repository contents can be time, bandwidth and space intensive.  To help alleviate this a bit, you can add -DGIT_SHALLOW_CLONE=ON to the CMake configure, or if you're pre-cloning all repositories ahead of time use --depth=1 option with the above recursive clone.  Be aware that shallow clones have some limitations that make them unsuitable for much other than compiling (updating to newer versions of submodules won't work, for example) so use of those options isn't recommended for general use.
+
 # USE_* Options
 
 A complete ENABLE_ALL build of all components in this repository is a *very* large build, and developers not needing some subset of the components may wish to avoid paying the price of building *all* submodules.  That is why the USE_* options are defined - ENABLE_ALL will only enable those submodules that indicate they are used by at least one active USE_* option.  By default, USE_BRLCAD, USE_BRLCAD_EXTRA, USE_GDAL and USE_TCL are enabled as they collectively define the most common set of dependencies used by a standard BRL-CAD build.  However, if a developer is building BRL-CAD without terrain support and without Tcl/Tk support, setting USE_GDAL and USE_TCL to OFF will skip compilation of those submodules.  Available USE_* options are:
