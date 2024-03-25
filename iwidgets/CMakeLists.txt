@@ -1,3 +1,10 @@
+if (USE_BRLCAD)
+
+  # Decide if we're using Tcl
+  cad_enable(IWIDGETS "archer;mged")
+
+endif (USE_BRLCAD)
+
 # Unfortunately, there does not appear to be a reliable way to test for the
 # presence of the IWidgets package on a system Tcl/Tk.  As far as I can tell
 # the "package require Iwidgets" test (which is what is required to properly
@@ -9,9 +16,9 @@
 # Unless we have been specifically instructed not to, provide the bundled
 # version of IWidgets.
 
-if (NOT DEFINED ENABLE_IWIDGETS)
+if (NOT DEFINED ENABLE_IWIDGETS AND NOT DISABLE_IWIDGETS)
   set(ENABLE_IWIDGETS ON)
-endif (NOT DEFINED ENABLE_IWIDGETS)
+endif (NOT DEFINED ENABLE_IWIDGETS AND NOT DISABLE_IWIDGETS)
 
 if (ENABLE_IWIDGETS)
 

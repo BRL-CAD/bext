@@ -30,7 +30,7 @@ git clone --recursive https://github.com/BRL-CAD/bext
 
 This is primarily useful if you want to do all the downloading at once up front or you are preparing to work in an environment without an internet connection.
 
-A word of caution - full cloning of all the repository contents can be time, bandwidth and space intensive.  To help alleviate this a bit, you can add -DGIT_SHALLOW_CLONE=ON to the CMake configure, or if you're pre-cloning all repositories ahead of time use --depth=1 option with the above recursive clone.  Be aware that shallow clones have some limitations that make them unsuitable for much other than compiling (updating to newer versions of submodules won't work, for example) so use of those options isn't recommended for general use.
+A word of caution - full cloning of all the repository contents can be time, bandwidth and space intensive.  To help alleviate this a bit, you can add -DGIT_SHALLOW_CLONE=ON to the CMake configure, or if you're pre-cloning all repositories ahead of time use --depth=1 option with the above recursive clone.  Be aware that shallow clones have some limitations that make them unsuitable for much other than compiling (updating to newer versions of submodules won't work, for example) so shallow clones aren't recommended for development.
 
 # USE_* Options
 
@@ -43,6 +43,8 @@ A complete ENABLE_ALL build of all components in this repository is a *very* lar
 * USE_QT - Qt - cross-platform software for creating graphical user interfaces
 * USE_APPLESEED - Physically-based global illumination rendering engine
 * USE_OSPRAY - Intel high performance ray tracing engine
+
+(For BRL-CAD components specifically, a more nuanced enable/disable decision can be made if the BRLCAD_COMPONENTS variable is set.  If the parent BRL-CAD build is only building a subset of the BRL-CAD target set, no all dependencies will be needed.)
 
 # Using the Build Outputs with BRL-CAD
 

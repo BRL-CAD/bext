@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of osmesa on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_OSMESA)
-  set(ENABLE_OSMESA ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_OSMESA)
+# Decide if we're using osmesa
+cad_enable(OSMESA "libdm")
 
-if (NOT ENABLE_OSMESA)
+if (NOT ENABLE_OSMESA AND NOT DISABLE_OSMESA)
 
   find_package(OSMESA)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_OSMESA)
     set(ENABLE_OSMESA "ON" CACHE BOOL "Enable osmesa build")
   endif (NOT OSMESA_FOUND AND NOT DEFINED ENABLE_OSMESA)
 
-endif (NOT ENABLE_OSMESA)
+endif (NOT ENABLE_OSMESA AND NOT DISABLE_OSMESA)
+
 set(ENABLE_OSMESA "${ENABLE_OSMESA}" CACHE BOOL "Enable osmesa build")
+
+# Decision made
 
 if (ENABLE_OSMESA)
 

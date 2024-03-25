@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of lmdb on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_LMDB)
-  set(ENABLE_LMDB ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_LMDB)
+# Decide if we're using lmdb
+cad_enable(LMDB "libbu")
 
-if (NOT ENABLE_LMDB)
+if (NOT ENABLE_LMDB AND NOT DISABLE_LMDB)
 
   find_package(LMDB)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_LMDB)
     set(ENABLE_LMDB "ON" CACHE BOOL "Enable lmdb build")
   endif (NOT LMDB_FOUND AND NOT DEFINED ENABLE_LMDB)
 
-endif (NOT ENABLE_LMDB)
+endif (NOT ENABLE_LMDB AND NOT DISABLE_LMDB)
+
 set(ENABLE_LMDB "${ENABLE_LMDB}" CACHE BOOL "Enable lmdb build")
+
+# Decision made
 
 if (ENABLE_LMDB)
 

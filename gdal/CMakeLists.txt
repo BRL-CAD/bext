@@ -1,19 +1,19 @@
-# Unless we have ENABLE_ALL set, base the building of png on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_GDAL)
-  set(ENABLE_GDAL ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_GDAL)
+# Decide if we're using GDAL
+cad_enable(GDAL "libgcv")
 
-if (NOT ENABLE_GDAL)
+if (NOT ENABLE_GDAL AND NOT DISABLE_GDAL)
 
   find_package(GDAL)
 
   if (NOT GDAL_FOUND AND NOT DEFINED ENABLE_GDAL)
-    set(ENABLE_GDAL "ON" CACHE BOOL "Enable gdal build")
+    set(ENABLE_GDAL "ON" CACHE BOOL "Enable GDAL build")
   endif (NOT GDAL_FOUND AND NOT DEFINED ENABLE_GDAL)
 
-endif (NOT ENABLE_GDAL)
-set(ENABLE_GDAL "${ENABLE_GDAL}" CACHE BOOL "Enable gdal build")
+endif (NOT ENABLE_GDAL AND NOT DISABLE_GDAL)
+
+set(ENABLE_GDAL "${ENABLE_GDAL}" CACHE BOOL "Enable GDAL build")
+
+# Decision made
 
 if (ENABLE_GDAL)
 

@@ -1,8 +1,17 @@
-if (ENABLE_TCL AND NOT DEFINED ENABLE_ITCL)
-  set(ENABLE_ITCL ON)
-endif (ENABLE_TCL AND NOT DEFINED ENABLE_ITCL)
+if (USE_BRLCAD)
 
-if (NOT ENABLE_ITCL)
+  # Decide if we're using ITcl
+  cad_enable(ITCL "archer;mged;bwish;rtwizard;brlman")
+
+else (USE_BRLCAD)
+
+  if (ENABLE_TCL AND NOT DEFINED ENABLE_ITCL)
+    set(ENABLE_ITCL ON)
+  endif (ENABLE_TCL AND NOT DEFINED ENABLE_ITCL)
+
+endif (USE_BRLCAD)
+
+if (NOT ENABLE_ITCL AND NOT DEFINED DISABLE_ITCL)
 
   find_package(ITCL)
 
@@ -10,7 +19,7 @@ if (NOT ENABLE_ITCL)
     set(ENABLE_ITCL "ON" CACHE BOOL "Enable itcl build")
   endif (NOT ITCL_FOUND AND NOT DEFINED ENABLE_ITCL)
 
-endif (NOT ENABLE_ITCL)
+endif (NOT ENABLE_ITCL AND NOT DEFINED DISABLE_ITCL)
 set(ENABLE_ITCL "${ENABLE_ITCL}" CACHE BOOL "Enable itcl build")
 
 if (ENABLE_ITCL)

@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of png on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_PNG)
-  set(ENABLE_PNG ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_PNG)
+# Decide if we're using png
+cad_enable(PNG "libicv;libdm;libged;libgcv")
 
-if (NOT ENABLE_PNG)
+if (NOT ENABLE_PNG AND NOT DISABLE_PNG)
 
   # We generally don't want the Mac framework libpng...
   set(CMAKE_FIND_FRAMEWORK LAST)
@@ -15,8 +12,11 @@ if (NOT ENABLE_PNG)
     set(ENABLE_PNG "ON" CACHE BOOL "Enable png build")
   endif (NOT PNG_FOUND AND NOT DEFINED ENABLE_PNG)
 
-endif (NOT ENABLE_PNG)
+endif (NOT ENABLE_PNG AND NOT DISABLE_PNG)
+
 set(ENABLE_PNG "${ENABLE_PNG}" CACHE BOOL "Enable png build")
+
+# Decision made
 
 if (ENABLE_PNG)
 

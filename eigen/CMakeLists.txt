@@ -1,10 +1,7 @@
-# Eigen is not bundled with BRL-CAD - it is a header only library
-# and is only required at compile time,
-if (ENABLE_ALL AND NOT DEFINED ENABLE_EIGEN)
-  set(ENABLE_EIGEN ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_EIGEN)
+# Decide if we're using Eigen
+cad_enable(EIGEN "libbg;libbn;librt")
 
-if (NOT ENABLE_EIGEN)
+if (NOT ENABLE_EIGEN AND NOT DISABLE_EIGEN)
 
   # https://eigen.tuxfamily.org/dox/TopicCMakeGuide.html
   find_package(Eigen3 NO_MODULE)
@@ -13,8 +10,11 @@ if (NOT ENABLE_EIGEN)
     set(ENABLE_EIGEN "ON" CACHE BOOL "Enable Eigen build")
   endif (NOT TARGET Eigen3::Eigen)
 
-endif (NOT ENABLE_EIGEN)
+endif (NOT ENABLE_EIGEN AND NOT DISABLE_EIGEN)
+
 set(ENABLE_EIGEN "${ENABLE_EIGEN}" CACHE BOOL "Enable Eigen build")
+
+# Decision made
 
 if (ENABLE_EIGEN)
 

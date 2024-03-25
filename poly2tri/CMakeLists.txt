@@ -1,8 +1,10 @@
+cad_enable(POLY2TRI "libbg")
+
 # System poly2tri versions won't do what we need,
 # but we're not set up to functionally test for that
 # right now, so just build it.
 
-if (USE_BRLCAD)
+if (USE_BRLCAD AND NOT DISABLE_POLY2TRI)
 
   git_submodule_init(poly2tri CMakeLists.txt)
 
@@ -39,7 +41,7 @@ if (USE_BRLCAD)
     COPYONLY
     )
 
-endif (USE_BRLCAD)
+endif (USE_BRLCAD AND NOT DISABLE_POLY2TRI)
 
 # Local Variables:
 # tab-width: 8

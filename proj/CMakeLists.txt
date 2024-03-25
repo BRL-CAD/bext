@@ -1,19 +1,19 @@
-# Unless we have ENABLE_ALL set, based the building of png on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_PROJ)
-  set(ENABLE_PROJ ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_PROJ)
+# Decide if we're using PROJ (needed by GDAL, which is used by gcv)
+cad_enable(PROJ "libgcv")
 
-if (NOT ENABLE_PROJ)
+if (NOT ENABLE_PROJ AND NOT DISABLE_PROJ)
 
   find_package(PROJ)
 
   if (NOT PROJ_FOUND AND NOT DEFINED ENABLE_PROJ)
-    set(ENABLE_PROJ "ON" CACHE BOOL "Enable proj build")
+    set(ENABLE_PROJ "ON" CACHE BOOL "Enable PROJ build")
   endif (NOT PROJ_FOUND AND NOT DEFINED ENABLE_PROJ)
 
-endif (NOT ENABLE_PROJ)
-set(ENABLE_PROJ "${ENABLE_PROJ}" CACHE BOOL "Enable proj build")
+endif (NOT ENABLE_PROJ AND NOT DISABLE_PROJ)
+
+set(ENABLE_PROJ "${ENABLE_PROJ}" CACHE BOOL "Enable PROJ build")
+
+# Decision made
 
 if (ENABLE_PROJ)
 

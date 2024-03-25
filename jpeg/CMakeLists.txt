@@ -1,10 +1,8 @@
-# Unless we have ENABLE_ALL set, based the building of jpeg on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_JPEG)
-  set(ENABLE_JPEG ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_JPEG)
+# jpeg is needed by GDAL, which is used by libgcv.  TODO: Probably ought to
+# wire this into libicv as well if we're going to have it along for the ride...
+cad_enable(JPEG "libgcv;libicv")
 
-if (NOT ENABLE_JPEG)
+if (NOT ENABLE_JPEG AND NOT DISABLE_JPEG)
 
   find_package(JPEG)
 
@@ -12,8 +10,11 @@ if (NOT ENABLE_JPEG)
     set(ENABLE_JPEG "ON" CACHE BOOL "Enable jpeg build")
   endif (NOT JPEG_FOUND AND NOT DEFINED ENABLE_JPEG)
 
-endif (NOT ENABLE_JPEG)
+endif (NOT ENABLE_JPEG AND NOT DISABLE_JPEG)
+
 set(ENABLE_JPEG "${ENABLE_JPEG}" CACHE BOOL "Enable jpeg build")
+
+# Decision made
 
 if (ENABLE_JPEG)
 

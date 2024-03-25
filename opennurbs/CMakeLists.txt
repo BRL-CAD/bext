@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of opennurbs on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_OPENNURBS)
-  set(ENABLE_OPENNURBS ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_OPENNURBS)
+# Decide if we're using openNURBS
+cad_enable(OPENNURBS "libbrep")
 
-if (NOT ENABLE_OPENNURBS)
+if (NOT ENABLE_OPENNURBS AND NOT DISABLE_OPENNURBS)
 
   find_package(OPENNURBS)
 
@@ -16,8 +13,11 @@ if (NOT ENABLE_OPENNURBS)
     set(ENABLE_OPENNURBS "ON" CACHE BOOL "Enable opennurbs build")
   endif (NOT OPENNURBS_FOUND AND NOT DEFINED ENABLE_OPENNURBS)
 
-endif (NOT ENABLE_OPENNURBS)
+endif (NOT ENABLE_OPENNURBS AND NOT DISABLE_OPENNURBS)
+
 set(ENABLE_OPENNURBS "${ENABLE_OPENNURBS}" CACHE BOOL "Enable opennurbs build")
+
+# Decision made, start processing if we are enabled
 
 if (ENABLE_OPENNURBS)
 

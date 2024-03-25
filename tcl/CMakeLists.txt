@@ -1,14 +1,23 @@
-# Unless we have ENABLE_ALL set, base the building of tcl on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_TCL)
-  set(ENABLE_TCL ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_TCL)
+if (USE_BRLCAD)
+
+  # Decide if we're using Tcl
+  cad_enable(TCL "libtclcad")
+
+else (USE_BRLCAD)
+
+  # Unless we have ENABLE_ALL set, base the building of tcl on
+  # the system detection results
+  if (ENABLE_ALL AND NOT DEFINED ENABLE_TCL)
+    set(ENABLE_TCL ON)
+  endif (ENABLE_ALL AND NOT DEFINED ENABLE_TCL)
+
+endif (USE_BRLCAD)
 
 set(TCL_MAJOR_VERSION 8)
 set(TCL_MINOR_VERSION 6)
 set(TCL_VERSION "${TCL_MAJOR_VERSION}.${TCL_MINOR_VERSION}")
 
-if (NOT ENABLE_TCL)
+if (NOT ENABLE_TCL AND NOT DISABLE_TCL)
 
   set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
   set(CMAKE_FIND_FRAMEWORK NEVER)
@@ -18,8 +27,9 @@ if (NOT ENABLE_TCL)
     set(ENABLE_TCL "ON" CACHE BOOL "Enable tcl build")
   endif (NOT TCL_FOUND AND NOT DEFINED ENABLE_TCL)
 
-endif (NOT ENABLE_TCL)
+endif (NOT ENABLE_TCL AND NOT DISABLE_TCL)
 set(ENABLE_TCL "${ENABLE_TCL}" CACHE BOOL "Enable tcl build")
+set(DISABLE_TCL "${DISABLE_TCL}" CACHE BOOL "Disable tcl build")
 
 if (ENABLE_TCL)
 

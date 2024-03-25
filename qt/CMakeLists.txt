@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, based the building of tcl on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_QT)
-  set(ENABLE_QT ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_QT)
+# Decide if we're using Qt6
+cad_enable(QT "libqtcad")
 
-if (NOT ENABLE_QT)
+if (NOT ENABLE_QT AND NOT DISABLE_QT)
 
   find_package(Qt6 COMPONENTS Core Widgets Gui Svg OpenGL OpenGLWidgets Network)
 
@@ -12,9 +9,11 @@ if (NOT ENABLE_QT)
     set(ENABLE_QT "ON" CACHE BOOL "Enable Qt6 build")
   endif (NOT Qt6Widgets_FOUND AND NOT DEFINED ENABLE_QT)
 
-endif (NOT ENABLE_QT)
+endif (NOT ENABLE_QT AND NOT DISABLE_QT)
 
 set(ENABLE_QT "${ENABLE_QT}" CACHE BOOL "Enable Qt6 build")
+
+# Decision made
 
 if (ENABLE_QT)
 

@@ -1,10 +1,8 @@
-# Unless we have ENABLE_ALL set, based the building of tiff on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_TIFF)
-  set(ENABLE_TIFF ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_TIFF)
+# tiff is needed by GDAL, which is used by libgcv.  TODO: Probably ought to
+# wire this into libicv as well if we're going to have it along for the ride...
+cad_enable(TIFF "libgcv;libicv")
 
-if (NOT ENABLE_TIFF)
+if (NOT ENABLE_TIFF AND NOT DISABLE_TIFF)
 
   find_package(TIFF)
 
@@ -12,8 +10,11 @@ if (NOT ENABLE_TIFF)
     set(ENABLE_TIFF "ON" CACHE BOOL "Enable tiff build")
   endif (NOT TIFF_FOUND AND NOT DEFINED ENABLE_TIFF)
 
-endif (NOT ENABLE_TIFF)
+endif (NOT ENABLE_TIFF AND NOT DISABLE_TIFF)
+
 set(ENABLE_TIFF "${ENABLE_TIFF}" CACHE BOOL "Enable tiff build")
+
+# Decision made
 
 if (ENABLE_TIFF)
 

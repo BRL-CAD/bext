@@ -1,23 +1,23 @@
-# Unless we have ENABLE_ALL set, base the building of manifold on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_MANIFOLD)
-  set(ENABLE_MANIFOLD ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_MANIFOLD)
+# Decide if we're using Manifold
+cad_enable(MANIFOLD "librt;libged")
 
-if (NOT ENABLE_MANIFOLD)
-
-  find_package(MANIFOLD)
+if (NOT ENABLE_MANIFOLD AND NOT DISABLE_MANIFOLD)
 
   # TODO - functionality testing is in order for some of our patches - if
   # we do find a system version, but it fails to work the way we need it to,
   # it's still a no-go
 
+  find_package(MANIFOLD)
+
   if (NOT MANIFOLD_FOUND AND NOT DEFINED ENABLE_MANIFOLD)
-    set(ENABLE_MANIFOLD "ON" CACHE BOOL "Enable manifold build")
+    set(ENABLE_MANIFOLD "ON" CACHE BOOL "Enable Manifold build")
   endif (NOT MANIFOLD_FOUND AND NOT DEFINED ENABLE_MANIFOLD)
 
-endif (NOT ENABLE_MANIFOLD)
-set(ENABLE_MANIFOLD "${ENABLE_MANIFOLD}" CACHE BOOL "Enable manifold build")
+endif (NOT ENABLE_MANIFOLD AND NOT DISABLE_MANIFOLD)
+
+set(ENABLE_MANIFOLD "${ENABLE_MANIFOLD}" CACHE BOOL "Enable Manifold build")
+
+# Decision made
 
 if (ENABLE_MANIFOLD)
 

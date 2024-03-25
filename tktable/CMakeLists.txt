@@ -1,3 +1,11 @@
+if (USE_BRLCAD)
+
+  # Decide if we're using Tktable
+  cad_enable(TKTABLE "archer")
+
+endif (USE_BRLCAD)
+
+
 # Unfortunately, there does not appear to be a reliable way to test for the
 # presence of the Tktable package on a system Tcl/Tk.  We key off of the
 # presence of the TK_BLD target, but that may produce a false negative if the
@@ -16,9 +24,9 @@
 # than one Tcl/Tk on a system - this situation is known to have occurred on the
 # Mac when 3rd party package managers are used, for example.)
 
-if (ENABLE_TK AND NOT DEFINED ENABLE_TKTABLE)
+if (ENABLE_TK AND NOT DEFINED ENABLE_TKTABLE AND NOT DISABLE_TKTABLE)
   set(ENABLE_TKTABLE ON)
-endif (ENABLE_TK AND NOT DEFINED ENABLE_TKTABLE)
+endif (ENABLE_TK AND NOT DEFINED ENABLE_TKTABLE AND NOT DISABLE_TKTABLE)
 
 if (NOT ENABLE_TKTABLE)
   find_library(TKTABLE_SYS_LIBRARY NAMES tktable Tktable Tktable2)

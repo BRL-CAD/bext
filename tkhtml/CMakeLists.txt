@@ -1,3 +1,10 @@
+if (USE_BRLCAD)
+
+  # Decide if we're using Tcl
+  cad_enable(TKHTML "archer;mged")
+
+endif (USE_BRLCAD)
+
 # Unfortunately, there does not appear to be a reliable way to test for the
 # presence of the Tkhtml package on a system Tcl/Tk.  We key off of the
 # presence of the TK_BLD target, but that may produce a false negative if the
@@ -16,9 +23,9 @@
 # than one Tcl/Tk on a system - this situation is known to have occurred on the
 # Mac when 3rd party package managers are used, for example.)
 
-if (ENABLE_TK AND NOT DEFINED ENABLE_TKHTML)
+if (ENABLE_TK AND NOT DEFINED ENABLE_TKHTML AND NOT DISABLE_TKHTML)
   set(ENABLE_TKHTML ON)
-endif (ENABLE_TK AND NOT DEFINED ENABLE_TKHTML)
+endif (ENABLE_TK AND NOT DEFINED ENABLE_TKHTML AND NOT DISABLE_TKHTML)
 
 if (NOT ENABLE_TKHTML)
   find_library(TKHTML_SYS_LIBRARY NAMES tkhtml Tkhtml Tkhtml3)

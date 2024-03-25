@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, based the building of utahrle on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_UTAHRLE)
-  set(ENABLE_UTAHRLE ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_UTAHRLE)
+# Decide if we're using utahrle
+cad_enable(UTAHRLE "libicv")
 
-if (NOT ENABLE_UTAHRLE)
+if (NOT ENABLE_UTAHRLE AND NOT DISABLE_UTAHRLE)
 
   find_package(UTAHRLE)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_UTAHRLE)
     set(ENABLE_UTAHRLE "ON" CACHE BOOL "Enable utahrle build")
   endif (NOT UTAHRLE_FOUND AND NOT DEFINED ENABLE_UTAHRLE)
 
-endif (NOT ENABLE_UTAHRLE)
+endif (NOT ENABLE_UTAHRLE AND NOT DISABLE_UTAHRLE)
+
 set(ENABLE_UTAHRLE "${ENABLE_UTAHRLE}" CACHE BOOL "Enable utahrle build")
+
+# Decision made
 
 if (ENABLE_UTAHRLE)
 

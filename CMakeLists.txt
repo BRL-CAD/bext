@@ -274,6 +274,49 @@ option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
 option(USE_QT           "Qt graphical toolkit support"               ON)
 option(USE_TCL          "Tcl/Tk support"                             ON)
 
+# If we're using BRLCAD_COMPONENTS, the check is more nuanced.
+# For bext, the BRLCAD_COMPONENTS list should be the expanded
+# list from BRL-CAD's parent logic that fully populates the
+# dependencies, not just the components directly specified by
+# the user to BRL-CAD's configure.
+function(cad_enable pname components)
+  if (DEFINED BRLCAD_COMPONENTS)
+    # In case the component list changed, make sure we're
+    # not using a cached result.
+    unset(ENABLE_${pname} CACHE)
+    unset(DISABLE_${pname} CACHE)
+
+    set(acomponents ${components})
+
+    # Look for a component in the list
+    foreach(c ${BRLCAD_COMPONENTS})
+      list(FIND acomponents ${c} LFIND)
+      if (NOT LFIND EQUAL -1)
+	if (ENABLE_ALL AND NOT DEFINED ENABLE_${pname})
+	  set(ENABLE_${pname} ON PARENT_SCOPE)
+	endif (ENABLE_ALL AND NOT DEFINED ENABLE_${pname})
+	set(DISABLE_${pname} OFF PARENT_SCOPE)
+	return()
+      endif (NOT LFIND EQUAL -1)
+    endforeach(c ${components})
+
+    # If we're a component build and this component
+    # isn't enabled, it's a definite off
+    set(ENABLE_${pname} OFF)
+    set(DISABLE_${pname} ON)
+  endif (DEFINED BRLCAD_COMPONENTS)
+
+  # Check for ENABLE_ALL
+  if (ENABLE_ALL AND NOT DEFINED ENABLE_${pname})
+    set(ENABLE_${pname} ON)
+  endif (ENABLE_ALL AND NOT DEFINED ENABLE_${pname})
+
+  # Final decision
+  set(ENABLE_${pname} ${ENABLE_${pname}} PARENT_SCOPE)
+  set(DISABLE_${pname} ${DISABLE_${pname}} PARENT_SCOPE)
+endfunction(cad_enable pname components)
+
+
 # If configurations change after a build has been performed,
 # we don't automatically scrub a pre-existing output directory
 # to remove the files from the newly disabled components.
@@ -300,7 +343,7 @@ function(add_project pname)
   endforeach(grp ${A_GROUPS})
   if (NOT is_added)
     if (ENABLE_${UPNAME})
-      message("Disabling ${pname} due to disabled USE flags")
+      message("Disabling ${pname}")
       set(STALE_INSTALL_WARN TRUE PARENT_SCOPE)
     endif (ENABLE_${UPNAME})
     execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/${pname})

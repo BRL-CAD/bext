@@ -1,10 +1,9 @@
-# Unless we have ENABLE_ALL set, base the building of zlib on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_ZLIB)
-  set(ENABLE_ZLIB ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_ZLIB)
+# Decide if we're using zlib - it's used by almost everything,
+# so if lower level libs than these add it as a dependency
+# this list should be updated
+cad_enable(ZLIB "libbrep;libicv;libgcv")
 
-if (NOT ENABLE_ZLIB)
+if (NOT ENABLE_ZLIB AND NOT DISABLE_ZLIB)
 
   find_package(ZLIB)
 
@@ -12,8 +11,11 @@ if (NOT ENABLE_ZLIB)
     set(ENABLE_ZLIB "ON" CACHE BOOL "Enable zlib build")
   endif (NOT ZLIB_FOUND AND NOT DEFINED ENABLE_ZLIB)
 
-endif (NOT ENABLE_ZLIB)
+endif (NOT ENABLE_ZLIB AND NOT DISABLE_ZLIB)
+
 set(ENABLE_ZLIB "${ENABLE_ZLIB}" CACHE BOOL "Enable zlib build")
+
+# Decision made
 
 if (ENABLE_ZLIB)
 

@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of stepcode on
-# the system detection results
-if (ENABLE_ALL)
-  set(ENABLE_STEPCODE ON)
-endif (ENABLE_ALL)
+# Decide if we're using stepcode
+cad_enable(STEPCODE "conv")
 
-if (NOT ENABLE_STEPCODE)
+if (NOT ENABLE_STEPCODE AND NOT DISABLE_STEPCODE)
 
   find_package(STEPCODE)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_STEPCODE)
     set(ENABLE_STEPCODE "ON" CACHE BOOL "Enable stepcode build")
   endif (NOT STEPCODE_FOUND AND NOT DEFINED ENABLE_STEPCODE)
 
-endif (NOT ENABLE_STEPCODE)
+endif (NOT ENABLE_STEPCODE AND NOT DISABLE_STEPCODE)
+
 set(ENABLE_STEPCODE "${ENABLE_STEPCODE}" CACHE BOOL "Enable stepcode build")
+
+# Decision made
 
 if (ENABLE_STEPCODE)
 

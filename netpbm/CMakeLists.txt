@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, based the building of netpbm on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_NETPBM)
-  set(ENABLE_NETPBM ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_NETPBM)
+# Decide if we're using netpbm
+cad_enable(NETPBM "libicv")
 
-if (NOT ENABLE_NETPBM)
+if (NOT ENABLE_NETPBM AND NOT DISABLE_NETPBM)
 
   find_package(NETPBM)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_NETPBM)
     set(ENABLE_NETPBM "ON" CACHE BOOL "Enable netpbm build")
   endif (NOT NETPBM_FOUND AND NOT DEFINED ENABLE_NETPBM)
 
-endif (NOT ENABLE_NETPBM)
+endif (NOT ENABLE_NETPBM AND NOT DISABLE_NETPBM)
+
 set(ENABLE_NETPBM "${ENABLE_NETPBM}" CACHE BOOL "Enable netpbm build")
+
+# Decision made
 
 if (ENABLE_NETPBM)
 

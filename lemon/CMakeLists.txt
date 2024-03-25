@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of lemon on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_LEMON)
-  set(ENABLE_LEMON ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_LEMON)
+# Decide if we're using lemon
+cad_enable(LEMON "libgcv;libged")
 
-if (NOT ENABLE_LEMON)
+if (NOT ENABLE_LEMON AND NOT DISABLE_LEMON)
 
   find_package(LEMON)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_LEMON)
     set(ENABLE_LEMON "ON" CACHE BOOL "Enable lemon build")
   endif (NOT LEMON_FOUND AND NOT DEFINED ENABLE_LEMON)
 
-endif (NOT ENABLE_LEMON)
+endif (NOT ENABLE_LEMON AND NOT DISABLE_LEMON)
+
 set(ENABLE_LEMON "${ENABLE_LEMON}" CACHE BOOL "Enable lemon build")
+
+# Decision made
 
 if (ENABLE_LEMON)
 

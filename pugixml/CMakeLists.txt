@@ -1,10 +1,8 @@
-# Unless we have ENABLE_ALL set, based the building of pugixml on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_PUGIXML)
-  set(ENABLE_PUGIXML ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_PUGIXML)
+# Decide if we're using pugixml - used by assetimport, which
+# is used by Manifold, which is used in librt
+cad_enable(PUGIXML "librt")
 
-if (NOT ENABLE_PUGIXML)
+if (NOT ENABLE_PUGIXML AND NOT DISABLE_PUGIXML)
 
   find_package(PUGIXML)
 
@@ -12,8 +10,11 @@ if (NOT ENABLE_PUGIXML)
     set(ENABLE_PUGIXML "ON" CACHE BOOL "Enable pugixml build")
   endif (NOT PUGIXML_FOUND AND NOT DEFINED ENABLE_PUGIXML)
 
-endif (NOT ENABLE_PUGIXML)
+endif (NOT ENABLE_PUGIXML AND NOT DISABLE_PUGIXML)
+
 set(ENABLE_PUGIXML "${ENABLE_PUGIXML}" CACHE BOOL "Enable pugixml build")
+
+# Decision made
 
 if (ENABLE_PUGIXML)
 

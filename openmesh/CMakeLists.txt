@@ -1,19 +1,19 @@
-# Unless we have ENABLE_ALL set, base the building of png on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_OPENMESH)
-  set(ENABLE_OPENMESH ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_OPENMESH)
+# Decide if we're using OpenMesh
+cad_enable(OPENMESH "libged")
 
-if (NOT ENABLE_OPENMESH)
+if (NOT ENABLE_OPENMESH AND NOT DISABLE_OPENMESH)
 
-  find_package(OpenMesh)
+  find_package(OPENMESH)
 
-  if (NOT OpenMesh_FOUND AND NOT DEFINED ENABLE_OPENMESH)
+  if (NOT OPENMESH_FOUND AND NOT DEFINED ENABLE_OPENMESH)
     set(ENABLE_OPENMESH "ON" CACHE BOOL "Enable OpenMesh build")
-  endif (NOT OpenMesh_FOUND AND NOT DEFINED ENABLE_OPENMESH)
+  endif (NOT OPENMESH_FOUND AND NOT DEFINED ENABLE_OPENMESH)
 
-endif (NOT ENABLE_OPENMESH)
+endif (NOT ENABLE_OPENMESH AND NOT DISABLE_OPENMESH)
+
 set(ENABLE_OPENMESH "${ENABLE_OPENMESH}" CACHE BOOL "Enable OpenMesh build")
+
+# Decision made
 
 if (ENABLE_OPENMESH)
 

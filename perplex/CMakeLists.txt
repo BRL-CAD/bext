@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of perplex on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_PERPLEX)
-  set(ENABLE_PERPLEX ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_PERPLEX)
+# Decide if we're using perplex
+cad_enable(PERPLEX "libgcv;libged")
 
-if (NOT ENABLE_PERPLEX)
+if (NOT ENABLE_PERPLEX AND NOT DISABLE_PERPLEX)
 
   find_package(PERPLEX)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_PERPLEX)
     set(ENABLE_PERPLEX "ON" CACHE BOOL "Enable perplex build")
   endif (NOT PERPLEX_FOUND AND NOT DEFINED ENABLE_PERPLEX)
 
-endif (NOT ENABLE_PERPLEX)
+endif (NOT ENABLE_PERPLEX AND NOT DISABLE_PERPLEX)
+
 set(ENABLE_PERPLEX "${ENABLE_PERPLEX}" CACHE BOOL "Enable perplex build")
+
+# Decision made
 
 if (ENABLE_PERPLEX)
 

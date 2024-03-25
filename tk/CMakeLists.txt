@@ -1,11 +1,15 @@
 # By the time we get here, we have run FindTCL and should know
 # if we have TK.
 
-if (NOT TK_LIBRARY OR TARGET TCL_BLD)
-  set(TK_DO_BUILD 1)
-else (NOT TK_LIBRARY OR TARGET TCL_BLD)
+if (NOT DISABLE_TCL)
+  if (NOT TK_LIBRARY OR TARGET TCL_BLD)
+    set(TK_DO_BUILD 1)
+  else (NOT TK_LIBRARY OR TARGET TCL_BLD)
+    set(TK_DO_BUILD 0)
+  endif (NOT TK_LIBRARY OR TARGET TCL_BLD)
+else (NOT DISABLE_TCL)
   set(TK_DO_BUILD 0)
-endif (NOT TK_LIBRARY OR TARGET TCL_BLD)
+endif (NOT DISABLE_TCL)
 
 if (TK_DO_BUILD)
 

@@ -1,10 +1,8 @@
-# Unless we have ENABLE_ALL set, base the building of png on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_ASSETIMPORT)
-  set(ENABLE_ASSETIMPORT ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_ASSETIMPORT)
+# Decide if we're using assetimport - used by Manifold which is used by librt.
+# Also, assetimport is used directly by a libgcv plugin
+cad_enable(ASSETIMPORT "librt;libgcv")
 
-if (NOT ENABLE_ASSETIMPORT)
+if (NOT ENABLE_ASSETIMPORT AND NOT DISABLE_ASSETIMPORT)
 
   find_package(ASSETIMPORT)
 
@@ -12,8 +10,11 @@ if (NOT ENABLE_ASSETIMPORT)
     set(ENABLE_ASSETIMPORT "ON" CACHE BOOL "Enable assetimport build")
   endif (NOT ASSETIMPORT_FOUND AND NOT DEFINED ENABLE_ASSETIMPORT)
 
-endif (NOT ENABLE_ASSETIMPORT)
+endif (NOT ENABLE_ASSETIMPORT AND NOT DISABLE_ASSETIMPORT)
+
 set(ENABLE_ASSETIMPORT "${ENABLE_ASSETIMPORT}" CACHE BOOL "Enable assetimport build")
+
+# Decision made
 
 if (ENABLE_ASSETIMPORT)
 

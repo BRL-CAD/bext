@@ -1,19 +1,19 @@
-# Unless we have ENABLE_ALL set, base the building of png on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_OPENCV)
-  set(ENABLE_OPENCV ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_OPENCV)
+# Decide if we're using opencv
+cad_enable(OPENCV "gtools")
 
-if (NOT ENABLE_OPENCV)
+if (NOT ENABLE_OPENCV AND NOT DISABLE_OPENCV)
 
-  find_package(OpenCV)
+  find_package(OPENCV)
 
-  if (NOT OpenCV_FOUND AND NOT DEFINED ENABLE_OPENCV)
-    set(ENABLE_OPENCV "ON" CACHE BOOL "Enable OpenCV build")
-  endif (NOT OpenCV_FOUND AND NOT DEFINED ENABLE_OPENCV)
+  if (NOT OPENCV_FOUND AND NOT DEFINED ENABLE_OPENCV)
+    set(ENABLE_OPENCV "ON" CACHE BOOL "Enable opencv build")
+  endif (NOT OPENCV_FOUND AND NOT DEFINED ENABLE_OPENCV)
 
-endif (NOT ENABLE_OPENCV)
-set(ENABLE_OPENCV "${ENABLE_OPENCV}" CACHE BOOL "Enable OpenCV build")
+endif (NOT ENABLE_OPENCV AND NOT DISABLE_OPENCV)
+
+set(ENABLE_OPENCV "${ENABLE_OPENCV}" CACHE BOOL "Enable opencv build")
+
+# Decision made
 
 if (ENABLE_OPENCV)
 

@@ -1,19 +1,19 @@
-# Unless we have ENABLE_ALL set, based the building of png on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_SQLite3)
-  set(ENABLE_SQLite3 ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_SQLite3)
+# Decide if we're using Sqlite3 (needed by PROJ, which is needed by GDAL, which is used by gcv)
+cad_enable(SQLite3 "libgcv")
 
-if (NOT ENABLE_SQLite3)
+if (NOT ENABLE_SQLite3 AND NOT DISABLE_SQLite3)
 
   find_package(SQLite3)
 
   if (NOT SQLite3_FOUND AND NOT DEFINED ENABLE_SQLite3)
-    set(ENABLE_SQLite3 "ON" CACHE BOOL "Enable sqlite3 build")
+    set(ENABLE_SQLite3 "ON" CACHE BOOL "Enable SQLite3 build")
   endif (NOT SQLite3_FOUND AND NOT DEFINED ENABLE_SQLite3)
 
-endif (NOT ENABLE_SQLite3)
-set(ENABLE_SQLite3 "${ENABLE_SQLite3}" CACHE BOOL "Enable sqlite3 build")
+endif (NOT ENABLE_SQLite3 AND NOT DISABLE_SQLite3)
+
+set(ENABLE_SQLite3 "${ENABLE_SQLite3}" CACHE BOOL "Enable SQLite3 build")
+
+# Decision made
 
 if (ENABLE_SQLite3)
 

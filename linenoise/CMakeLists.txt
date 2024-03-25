@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of linenoise on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_LINENOISE)
-  set(ENABLE_LINENOISE ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_LINENOISE)
+# Decide if we're using linenoise
+cad_enable(LINENOISE "gtools;nirt")
 
-if (NOT ENABLE_LINENOISE)
+if (NOT ENABLE_LINENOISE AND NOT DISABLE_LINENOISE)
 
   find_package(LINENOISE)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_LINENOISE)
     set(ENABLE_LINENOISE "ON" CACHE BOOL "Enable linenoise build")
   endif (NOT LINENOISE_FOUND AND NOT DEFINED ENABLE_LINENOISE)
 
-endif (NOT ENABLE_LINENOISE)
+endif (NOT ENABLE_LINENOISE AND NOT DISABLE_LINENOISE)
+
 set(ENABLE_LINENOISE "${ENABLE_LINENOISE}" CACHE BOOL "Enable linenoise build")
+
+# Decision made
 
 if (ENABLE_LINENOISE)
 

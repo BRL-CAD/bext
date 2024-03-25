@@ -1,10 +1,7 @@
-# Unless we have ENABLE_ALL set, base the building of libregex on the system
-# detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_REGEX)
-  set(ENABLE_REGEX ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_REGEX)
+# Decide if we're using regex
+cad_enable(REGEX "librt")
 
-if (NOT ENABLE_REGEX)
+if (NOT ENABLE_REGEX AND NOT DISABLE_REGEX)
 
   find_package(REGEX)
 
@@ -12,8 +9,11 @@ if (NOT ENABLE_REGEX)
     set(ENABLE_REGEX "ON" CACHE BOOL "Enable regex build")
   endif (NOT REGEX_FOUND AND NOT DEFINED ENABLE_REGEX)
 
-endif (NOT ENABLE_REGEX)
+endif (NOT ENABLE_REGEX AND NOT DISABLE_REGEX)
+
 set(ENABLE_REGEX "${ENABLE_REGEX}" CACHE BOOL "Enable regex build")
+
+# Decision made
 
 if (ENABLE_REGEX)
 
