@@ -19,16 +19,9 @@ if (ENABLE_LLVM)
 
   git_submodule_init(llvm-project llvm/CMakeLists.txt)
 
-  # LLVM doesn't accept an empty CMAKE_BUILD_TYPE
-  get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-  set(BUILD_TYPE_SPECIFIER)
-  if (NOT isMultiConfig)
-    if (NOT CMAKE_BUILD_TYPE)
-      set(BUILD_TYPE_SPECIFIER "-DCMAKE_BUILD_TYPE=Release")
-    else (NOT CMAKE_BUILD_TYPE)
-      set(BUILD_TYPE_SPECIFIER "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-    endif (NOT CMAKE_BUILD_TYPE)
-  endif (NOT isMultiConfig)
+  if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    message("NOTE:  Forcing CMAKE_BUILD_TYPE to Release for LLVM compile.  The Debug build configurations of LLVM are EXTREMELY space intensive (to the tune of 50+ gigabytes) and there aren't many scenarios in BRL-CAD usage where we would need to debug into LLVM itself.  If things are that dire the setting in bext/llvm/CMakeLists.txt can be manually edited, but be aware you will need a a few hundred gigabytes of free disk space to handle both the LLVM build/install itself and the copies the BRL-CAD build will make.")
+  endif (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 
   TargetDeps(LLVM)
 
@@ -57,7 +50,7 @@ if (ENABLE_LLVM)
     ${Z_NO_AST_INTRO_PATCH_CMD}
     CMAKE_ARGS
     -C ${CMAKE_CURRENT_SOURCE_DIR}/llvm_targets.cmake
-    ${BUILD_TYPE_SPECIFIER}
+    -DCMAKE_BUILD_TYPE=Release
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
@@ -75,9 +68,6 @@ if (ENABLE_LLVM)
     -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
     -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
-    # we don't need LLVM itself to be debuggable.  Prevents .pdb and .ilk bloat.
-    $<AND:${IS_MSVC},$<CONFIG:Debug>:-DCMAKE_CXX_FLAGS_DEBUG=/DEBUG:NONE>
-    $<AND:${IS_MSVC},$<CONFIG:Debug>:-DCMAKE_EXE_LINKER_FLAGS_DEBUG=/DEBUG:NONE /INCREMENTAL:NO>
     LOG_CONFIGURE ${EXT_BUILD_QUIET}
     LOG_BUILD ${EXT_BUILD_QUIET}
     LOG_INSTALL ${EXT_BUILD_QUIET}
