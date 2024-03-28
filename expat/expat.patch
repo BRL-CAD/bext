@@ -1,0 +1,12 @@
+diff -Naur expat/expat/CMakeLists.txt EXPAT_BLD/expat/CMakeLists.txt
+--- expat/expat/CMakeLists.txt	2024-03-27 23:04:13.509002408 -0400
++++ EXPAT_BLD/expat/CMakeLists.txt	2024-03-27 23:08:38.936387675 -0400
+@@ -433,7 +433,7 @@
+ 
+     expat_shy_set(EXPAT_${build_type_upper}_POSTFIX "${_POSTFIX_WIDE}${_POSTFIX_DEBUG}${_POSTFIX_CRT}" CACHE STRING "Library filename postfix for build type ${build_type_upper}; yields filenames libexpat<postfix=[w][d][MD|MT]>.(dll|dylib|lib|so)")
+     mark_as_advanced(EXPAT_${build_type_upper}_POSTFIX)
+-    set_property(TARGET expat PROPERTY ${build_type_upper}_POSTFIX ${EXPAT_${build_type_upper}_POSTFIX})
++	 #set_property(TARGET expat PROPERTY ${build_type_upper}_POSTFIX ${EXPAT_${build_type_upper}_POSTFIX})
+ endforeach()
+ 
+ set(LIBCURRENT 9)    # sync
