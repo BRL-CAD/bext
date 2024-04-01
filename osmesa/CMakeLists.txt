@@ -1,17 +1,7 @@
 # Decide if we're using osmesa
 cad_enable(OSMESA "libdm")
 
-if (NOT ENABLE_OSMESA AND NOT DISABLE_OSMESA)
-
-  find_package(OSMESA)
-
-  if (NOT OSMESA_FOUND AND NOT DEFINED ENABLE_OSMESA)
-    set(ENABLE_OSMESA "ON" CACHE BOOL "Enable osmesa build")
-  endif (NOT OSMESA_FOUND AND NOT DEFINED ENABLE_OSMESA)
-
-endif (NOT ENABLE_OSMESA AND NOT DISABLE_OSMESA)
-
-set(ENABLE_OSMESA "${ENABLE_OSMESA}" CACHE BOOL "Enable osmesa build")
+bext_enable(OSMESA)
 
 # Decision made
 

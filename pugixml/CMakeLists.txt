@@ -2,17 +2,7 @@
 # is used by Manifold, which is used in librt
 cad_enable(PUGIXML "librt")
 
-if (NOT ENABLE_PUGIXML AND NOT DISABLE_PUGIXML)
-
-  find_package(PUGIXML)
-
-  if (NOT PUGIXML_FOUND AND NOT DEFINED ENABLE_PUGIXML)
-    set(ENABLE_PUGIXML "ON" CACHE BOOL "Enable pugixml build")
-  endif (NOT PUGIXML_FOUND AND NOT DEFINED ENABLE_PUGIXML)
-
-endif (NOT ENABLE_PUGIXML AND NOT DISABLE_PUGIXML)
-
-set(ENABLE_PUGIXML "${ENABLE_PUGIXML}" CACHE BOOL "Enable pugixml build")
+bext_enable(PUGIXML)
 
 # Decision made
 

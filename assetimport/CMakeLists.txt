@@ -2,17 +2,7 @@
 # Also, assetimport is used directly by a libgcv plugin
 cad_enable(ASSETIMPORT "librt;libgcv")
 
-if (NOT ENABLE_ASSETIMPORT AND NOT DISABLE_ASSETIMPORT)
-
-  find_package(ASSETIMPORT)
-
-  if (NOT ASSETIMPORT_FOUND AND NOT DEFINED ENABLE_ASSETIMPORT)
-    set(ENABLE_ASSETIMPORT "ON" CACHE BOOL "Enable assetimport build")
-  endif (NOT ASSETIMPORT_FOUND AND NOT DEFINED ENABLE_ASSETIMPORT)
-
-endif (NOT ENABLE_ASSETIMPORT AND NOT DISABLE_ASSETIMPORT)
-
-set(ENABLE_ASSETIMPORT "${ENABLE_ASSETIMPORT}" CACHE BOOL "Enable assetimport build")
+bext_enable(ASSETIMPORT)
 
 # Decision made
 

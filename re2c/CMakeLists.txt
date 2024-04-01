@@ -1,17 +1,7 @@
 # Decide if we're using re2c
 cad_enable(RE2C "libgcv;libged")
 
-if (NOT ENABLE_RE2C AND NOT DISABLE_RE2C)
-
-  find_package(RE2C)
-
-  if (NOT RE2C_FOUND AND NOT DEFINED ENABLE_RE2C)
-    set(ENABLE_RE2C "ON" CACHE BOOL "Enable re2c build")
-  endif (NOT RE2C_FOUND AND NOT DEFINED ENABLE_RE2C)
-
-endif (NOT ENABLE_RE2C AND NOT DISABLE_RE2C)
-
-set(ENABLE_RE2C "${ENABLE_RE2C}" CACHE BOOL "Enable re2c build")
+bext_enable(RE2C)
 
 # Decision made
 

@@ -1,17 +1,7 @@
 # Decide if we're using OpenMesh
 cad_enable(OPENMESH "libged")
 
-if (NOT ENABLE_OPENMESH AND NOT DISABLE_OPENMESH)
-
-  find_package(OPENMESH)
-
-  if (NOT OPENMESH_FOUND AND NOT DEFINED ENABLE_OPENMESH)
-    set(ENABLE_OPENMESH "ON" CACHE BOOL "Enable OpenMesh build")
-  endif (NOT OPENMESH_FOUND AND NOT DEFINED ENABLE_OPENMESH)
-
-endif (NOT ENABLE_OPENMESH AND NOT DISABLE_OPENMESH)
-
-set(ENABLE_OPENMESH "${ENABLE_OPENMESH}" CACHE BOOL "Enable OpenMesh build")
+bext_enable(OPENMESH)
 
 # Decision made
 

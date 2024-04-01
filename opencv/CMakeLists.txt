@@ -1,17 +1,7 @@
 # Decide if we're using opencv
 cad_enable(OPENCV "gtools")
 
-if (NOT ENABLE_OPENCV AND NOT DISABLE_OPENCV)
-
-  find_package(OPENCV)
-
-  if (NOT OPENCV_FOUND AND NOT DEFINED ENABLE_OPENCV)
-    set(ENABLE_OPENCV "ON" CACHE BOOL "Enable opencv build")
-  endif (NOT OPENCV_FOUND AND NOT DEFINED ENABLE_OPENCV)
-
-endif (NOT ENABLE_OPENCV AND NOT DISABLE_OPENCV)
-
-set(ENABLE_OPENCV "${ENABLE_OPENCV}" CACHE BOOL "Enable opencv build")
+bext_enable(OPENCV)
 
 # Decision made
 

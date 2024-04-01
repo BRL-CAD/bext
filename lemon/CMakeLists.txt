@@ -1,17 +1,7 @@
 # Decide if we're using lemon
 cad_enable(LEMON "libgcv;libged")
 
-if (NOT ENABLE_LEMON AND NOT DISABLE_LEMON)
-
-  find_package(LEMON)
-
-  if (NOT LEMON_FOUND AND NOT DEFINED ENABLE_LEMON)
-    set(ENABLE_LEMON "ON" CACHE BOOL "Enable lemon build")
-  endif (NOT LEMON_FOUND AND NOT DEFINED ENABLE_LEMON)
-
-endif (NOT ENABLE_LEMON AND NOT DISABLE_LEMON)
-
-set(ENABLE_LEMON "${ENABLE_LEMON}" CACHE BOOL "Enable lemon build")
+bext_enable(LEMON)
 
 # Decision made
 

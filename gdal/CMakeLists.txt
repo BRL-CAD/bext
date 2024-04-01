@@ -1,17 +1,7 @@
 # Decide if we're using GDAL
 cad_enable(GDAL "libgcv")
 
-if (NOT ENABLE_GDAL AND NOT DISABLE_GDAL)
-
-  find_package(GDAL)
-
-  if (NOT GDAL_FOUND AND NOT DEFINED ENABLE_GDAL)
-    set(ENABLE_GDAL "ON" CACHE BOOL "Enable GDAL build")
-  endif (NOT GDAL_FOUND AND NOT DEFINED ENABLE_GDAL)
-
-endif (NOT ENABLE_GDAL AND NOT DISABLE_GDAL)
-
-set(ENABLE_GDAL "${ENABLE_GDAL}" CACHE BOOL "Enable GDAL build")
+bext_enable(GDAL)
 
 # Decision made
 

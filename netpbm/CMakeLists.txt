@@ -1,17 +1,7 @@
 # Decide if we're using netpbm
 cad_enable(NETPBM "libicv")
 
-if (NOT ENABLE_NETPBM AND NOT DISABLE_NETPBM)
-
-  find_package(NETPBM)
-
-  if (NOT NETPBM_FOUND AND NOT DEFINED ENABLE_NETPBM)
-    set(ENABLE_NETPBM "ON" CACHE BOOL "Enable netpbm build")
-  endif (NOT NETPBM_FOUND AND NOT DEFINED ENABLE_NETPBM)
-
-endif (NOT ENABLE_NETPBM AND NOT DISABLE_NETPBM)
-
-set(ENABLE_NETPBM "${ENABLE_NETPBM}" CACHE BOOL "Enable netpbm build")
+bext_enable(NETPBM)
 
 # Decision made
 

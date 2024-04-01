@@ -1,17 +1,7 @@
 # Decide if we're using perplex
 cad_enable(PERPLEX "libgcv;libged")
 
-if (NOT ENABLE_PERPLEX AND NOT DISABLE_PERPLEX)
-
-  find_package(PERPLEX)
-
-  if (NOT PERPLEX_FOUND AND NOT DEFINED ENABLE_PERPLEX)
-    set(ENABLE_PERPLEX "ON" CACHE BOOL "Enable perplex build")
-  endif (NOT PERPLEX_FOUND AND NOT DEFINED ENABLE_PERPLEX)
-
-endif (NOT ENABLE_PERPLEX AND NOT DISABLE_PERPLEX)
-
-set(ENABLE_PERPLEX "${ENABLE_PERPLEX}" CACHE BOOL "Enable perplex build")
+bext_enable(PERPLEX)
 
 # Decision made
 

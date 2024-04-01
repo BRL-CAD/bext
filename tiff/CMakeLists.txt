@@ -2,17 +2,7 @@
 # wire this into libicv as well if we're going to have it along for the ride...
 cad_enable(TIFF "libgcv;libicv")
 
-if (NOT ENABLE_TIFF AND NOT DISABLE_TIFF)
-
-  find_package(TIFF)
-
-  if (NOT TIFF_FOUND AND NOT DEFINED ENABLE_TIFF)
-    set(ENABLE_TIFF "ON" CACHE BOOL "Enable tiff build")
-  endif (NOT TIFF_FOUND AND NOT DEFINED ENABLE_TIFF)
-
-endif (NOT ENABLE_TIFF AND NOT DISABLE_TIFF)
-
-set(ENABLE_TIFF "${ENABLE_TIFF}" CACHE BOOL "Enable tiff build")
+bext_enable(TIFF)
 
 # Decision made
 

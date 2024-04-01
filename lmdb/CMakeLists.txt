@@ -1,17 +1,7 @@
 # Decide if we're using lmdb
 cad_enable(LMDB "libbu")
 
-if (NOT ENABLE_LMDB AND NOT DISABLE_LMDB)
-
-  find_package(LMDB)
-
-  if (NOT LMDB_FOUND AND NOT DEFINED ENABLE_LMDB)
-    set(ENABLE_LMDB "ON" CACHE BOOL "Enable lmdb build")
-  endif (NOT LMDB_FOUND AND NOT DEFINED ENABLE_LMDB)
-
-endif (NOT ENABLE_LMDB AND NOT DISABLE_LMDB)
-
-set(ENABLE_LMDB "${ENABLE_LMDB}" CACHE BOOL "Enable lmdb build")
+bext_enable(LMDB)
 
 # Decision made
 

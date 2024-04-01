@@ -1,17 +1,7 @@
 # Decide if we're using Geogram
 cad_enable(GEOGRAM "librt")
 
-if (NOT ENABLE_GEOGRAM AND NOT DISABLE_GEOGRAM)
-
-  find_package(Geogram)
-
-  if (NOT Geogram_FOUND AND NOT DEFINED ENABLE_GEOGRAM)
-    set(ENABLE_GEOGRAM "ON" CACHE BOOL "Enable Geogram build")
-  endif (NOT Geogram_FOUND AND NOT DEFINED ENABLE_GEOGRAM)
-
-endif (NOT ENABLE_GEOGRAM AND NOT DISABLE_GEOGRAM)
-
-set(ENABLE_GEOGRAM "${ENABLE_GEOGRAM}" CACHE BOOL "Enable Geogram build")
+bext_enable(Geogram)
 
 # Decision made, start processing if we are enabled
 

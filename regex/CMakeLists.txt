@@ -1,17 +1,7 @@
 # Decide if we're using regex
 cad_enable(REGEX "librt")
 
-if (NOT ENABLE_REGEX AND NOT DISABLE_REGEX)
-
-  find_package(REGEX)
-
-  if (NOT REGEX_FOUND AND NOT DEFINED ENABLE_REGEX)
-    set(ENABLE_REGEX "ON" CACHE BOOL "Enable regex build")
-  endif (NOT REGEX_FOUND AND NOT DEFINED ENABLE_REGEX)
-
-endif (NOT ENABLE_REGEX AND NOT DISABLE_REGEX)
-
-set(ENABLE_REGEX "${ENABLE_REGEX}" CACHE BOOL "Enable regex build")
+bext_enable(REGEX)
 
 # Decision made
 

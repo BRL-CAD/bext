@@ -1,17 +1,7 @@
 # Decide if we're using stepcode
 cad_enable(STEPCODE "conv")
 
-if (NOT ENABLE_STEPCODE AND NOT DISABLE_STEPCODE)
-
-  find_package(STEPCODE)
-
-  if (NOT STEPCODE_FOUND AND NOT DEFINED ENABLE_STEPCODE)
-    set(ENABLE_STEPCODE "ON" CACHE BOOL "Enable stepcode build")
-  endif (NOT STEPCODE_FOUND AND NOT DEFINED ENABLE_STEPCODE)
-
-endif (NOT ENABLE_STEPCODE AND NOT DISABLE_STEPCODE)
-
-set(ENABLE_STEPCODE "${ENABLE_STEPCODE}" CACHE BOOL "Enable stepcode build")
+bext_enable(STEPCODE)
 
 # Decision made
 

@@ -1,17 +1,7 @@
 # Decide if we're using linenoise
 cad_enable(LINENOISE "gtools;nirt")
 
-if (NOT ENABLE_LINENOISE AND NOT DISABLE_LINENOISE)
-
-  find_package(LINENOISE)
-
-  if (NOT LINENOISE_FOUND AND NOT DEFINED ENABLE_LINENOISE)
-    set(ENABLE_LINENOISE "ON" CACHE BOOL "Enable linenoise build")
-  endif (NOT LINENOISE_FOUND AND NOT DEFINED ENABLE_LINENOISE)
-
-endif (NOT ENABLE_LINENOISE AND NOT DISABLE_LINENOISE)
-
-set(ENABLE_LINENOISE "${ENABLE_LINENOISE}" CACHE BOOL "Enable linenoise build")
+bext_enable(LINENOISE)
 
 # Decision made
 

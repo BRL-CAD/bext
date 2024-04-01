@@ -327,7 +327,7 @@ macro(bext_enable pname)
     set(ENABLE_${upname} ON)
   endif (ENABLE_ALL AND NOT DEFINED ENABLE_${upname})
 
-  if (NOT ENABLE_${upname})
+  if (NOT ENABLE_${upname} AND NOT DISABLE_${upname})
 
     find_package(${pname})
 
@@ -335,7 +335,7 @@ macro(bext_enable pname)
       set(ENABLE_${upname} "ON" CACHE BOOL "Enable ${pname} build")
     endif (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
 
-  endif (NOT ENABLE_${upname})
+  endif (NOT ENABLE_${upname} AND NOT DISABLE_${upname})
   set(ENABLE_${upname} "${ENABLE_${upname}}" CACHE BOOL "Enable ${pname} build")
 endmacro(bext_enable pname)
 

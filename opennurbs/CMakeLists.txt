@@ -1,21 +1,7 @@
 # Decide if we're using openNURBS
 cad_enable(OPENNURBS "libbrep")
 
-if (NOT ENABLE_OPENNURBS AND NOT DISABLE_OPENNURBS)
-
-  find_package(OPENNURBS)
-
-  # TODO - functionality testing is in order for some of our patches - if
-  # we do find a system version, but it fails to work the way we need it to,
-  # it's still a no-go
-
-  if (NOT OPENNURBS_FOUND AND NOT DEFINED ENABLE_OPENNURBS)
-    set(ENABLE_OPENNURBS "ON" CACHE BOOL "Enable opennurbs build")
-  endif (NOT OPENNURBS_FOUND AND NOT DEFINED ENABLE_OPENNURBS)
-
-endif (NOT ENABLE_OPENNURBS AND NOT DISABLE_OPENNURBS)
-
-set(ENABLE_OPENNURBS "${ENABLE_OPENNURBS}" CACHE BOOL "Enable opennurbs build")
+bext_enable(OPENNURBS)
 
 # Decision made, start processing if we are enabled
 

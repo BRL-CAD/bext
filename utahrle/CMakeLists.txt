@@ -1,17 +1,7 @@
 # Decide if we're using utahrle
 cad_enable(UTAHRLE "libicv")
 
-if (NOT ENABLE_UTAHRLE AND NOT DISABLE_UTAHRLE)
-
-  find_package(UTAHRLE)
-
-  if (NOT UTAHRLE_FOUND AND NOT DEFINED ENABLE_UTAHRLE)
-    set(ENABLE_UTAHRLE "ON" CACHE BOOL "Enable utahrle build")
-  endif (NOT UTAHRLE_FOUND AND NOT DEFINED ENABLE_UTAHRLE)
-
-endif (NOT ENABLE_UTAHRLE AND NOT DISABLE_UTAHRLE)
-
-set(ENABLE_UTAHRLE "${ENABLE_UTAHRLE}" CACHE BOOL "Enable utahrle build")
+bext_enable(UTAHRLE)
 
 # Decision made
 

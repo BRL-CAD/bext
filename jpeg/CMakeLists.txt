@@ -2,17 +2,7 @@
 # wire this into libicv as well if we're going to have it along for the ride...
 cad_enable(JPEG "libgcv;libicv")
 
-if (NOT ENABLE_JPEG AND NOT DISABLE_JPEG)
-
-  find_package(JPEG)
-
-  if (NOT JPEG_FOUND AND NOT DEFINED ENABLE_JPEG)
-    set(ENABLE_JPEG "ON" CACHE BOOL "Enable jpeg build")
-  endif (NOT JPEG_FOUND AND NOT DEFINED ENABLE_JPEG)
-
-endif (NOT ENABLE_JPEG AND NOT DISABLE_JPEG)
-
-set(ENABLE_JPEG "${ENABLE_JPEG}" CACHE BOOL "Enable jpeg build")
+bext_enable(JPEG)
 
 # Decision made
 
