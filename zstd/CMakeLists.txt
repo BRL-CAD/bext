@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, base the building of zstd on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_ZSTD)
-  set(ENABLE_ZSTD ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_ZSTD)
 
-if (NOT ENABLE_ZSTD)
-
-  find_package(ZSTD)
-
-  if (NOT ZSTD_FOUND AND NOT DEFINED ENABLE_ZSTD)
-    set(ENABLE_ZSTD "ON" CACHE BOOL "Enable zstd build")
-  endif (NOT ZSTD_FOUND AND NOT DEFINED ENABLE_ZSTD)
-
-endif (NOT ENABLE_ZSTD)
-set(ENABLE_ZSTD "${ENABLE_ZSTD}" CACHE BOOL "Enable zstd build")
+bext_enable(ZSTD)
 
 if (ENABLE_ZSTD)
 

@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of fmt on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_FMT)
-  set(ENABLE_FMT ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_FMT)
 
-if (NOT ENABLE_FMT)
-
-  find_package(FMT)
-
-  if (NOT FMT_FOUND AND NOT DEFINED ENABLE_FMT)
-    set(ENABLE_FMT "ON" CACHE BOOL "Enable fmt build")
-  endif (NOT FMT_FOUND AND NOT DEFINED ENABLE_FMT)
-
-endif (NOT ENABLE_FMT)
-set(ENABLE_FMT "${ENABLE_FMT}" CACHE BOOL "Enable fmt build")
+bext_enable(FMT)
 
 if (ENABLE_FMT)
 

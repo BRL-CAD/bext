@@ -1,22 +1,7 @@
 # It looks like Windows and OSX have their own solutions for unicode...
 if (NOT WIN32 AND NOT APPLE)
 
-  # Unless we have ENABLE_ALL set, base the building of icu on
-  # the system detection results
-  if (ENABLE_ALL AND NOT DEFINED ENABLE_ICU)
-    set(ENABLE_ICU ON)
-  endif (ENABLE_ALL AND NOT DEFINED ENABLE_ICU)
-
-  if (NOT ENABLE_ICU)
-
-    find_package(ICU)
-
-    if (NOT ICU_FOUND AND NOT DEFINED ENABLE_ICU)
-      set(ENABLE_ICU "ON" CACHE BOOL "Enable icu build")
-    endif (NOT ICU_FOUND AND NOT DEFINED ENABLE_ICU)
-
-  endif (NOT ENABLE_ICU)
-  set(ENABLE_ICU "${ENABLE_ICU}" CACHE BOOL "Enable icu build")
+  bext_enable(ICU)
 
   if (ENABLE_ICU)
 

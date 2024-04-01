@@ -1,24 +1,5 @@
-# NOTE - I thought xerces-c was having problems linking to icu,
-# but it turns out the actual problem was a problem with the LIEF
-# library BRL-CAD was using to update the RPATH - for whatever
-# reason it doesn't seem to handle libicuuc.so successfully...
 
-# Unless we have ENABLE_ALL set, based the building of xerces-c on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_XERCES_C)
-  set(ENABLE_XERCES_C ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_XERCES_C)
-
-if (NOT ENABLE_XERCES_C)
-
-  find_package(XERCES_C)
-
-  if (NOT XERCES_C_FOUND AND NOT DEFINED ENABLE_XERCES_C)
-    set(ENABLE_XERCES_C "ON" CACHE BOOL "Enable xerces-c build")
-  endif (NOT XERCES_C_FOUND AND NOT DEFINED ENABLE_XERCES_C)
-
-endif (NOT ENABLE_XERCES_C)
-set(ENABLE_XERCES_C "${ENABLE_XERCES_C}" CACHE BOOL "Enable xerces-c build")
+bext_enable(XERCES_C)
 
 if (ENABLE_XERCES_C)
 

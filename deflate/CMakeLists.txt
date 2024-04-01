@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of deflate on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_DEFLATE)
-  set(ENABLE_DEFLATE ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_DEFLATE)
 
-if (NOT ENABLE_DEFLATE)
-
-  find_package(DEFLATE)
-
-  if (NOT DEFLATE_FOUND AND NOT DEFINED ENABLE_DEFLATE)
-    set(ENABLE_DEFLATE "ON" CACHE BOOL "Enable deflate build")
-  endif (NOT DEFLATE_FOUND AND NOT DEFINED ENABLE_DEFLATE)
-
-endif (NOT ENABLE_DEFLATE)
-set(ENABLE_DEFLATE "${ENABLE_DEFLATE}" CACHE BOOL "Enable deflate build")
+bext_enable(DEFLATE)
 
 if (ENABLE_DEFLATE)
 

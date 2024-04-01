@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of appleseed on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_APPLESEED)
-  set(ENABLE_APPLESEED ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_APPLESEED)
 
-if (NOT ENABLE_APPLESEED)
-
-  find_package(APPLESEED)
-
-  if (NOT APPLESEED_FOUND AND NOT DEFINED ENABLE_APPLESEED)
-    set(ENABLE_APPLESEED "ON" CACHE BOOL "Enable appleseed build")
-  endif (NOT APPLESEED_FOUND AND NOT DEFINED ENABLE_APPLESEED)
-
-endif (NOT ENABLE_APPLESEED)
-set(ENABLE_APPLESEED "${ENABLE_APPLESEED}" CACHE BOOL "Enable appleseed build")
+bext_enable(APPLESEED)
 
 if (ENABLE_APPLESEED)
 

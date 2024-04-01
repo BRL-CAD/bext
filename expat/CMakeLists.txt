@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of expat on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_EXPAT)
-  set(ENABLE_EXPAT ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_EXPAT)
 
-if (NOT ENABLE_EXPAT)
-
-  find_package(EXPAT)
-
-  if (NOT EXPAT_FOUND AND NOT DEFINED ENABLE_EXPAT)
-    set(ENABLE_EXPAT "ON" CACHE BOOL "Enable expat build")
-  endif (NOT EXPAT_FOUND AND NOT DEFINED ENABLE_EXPAT)
-
-endif (NOT ENABLE_EXPAT)
-set(ENABLE_EXPAT "${ENABLE_EXPAT}" CACHE BOOL "Enable expat build")
+bext_enable(EXPAT)
 
 if (ENABLE_EXPAT)
 

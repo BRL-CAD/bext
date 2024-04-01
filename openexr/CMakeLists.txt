@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of openexr on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_OPENEXR)
-  set(ENABLE_OPENEXR ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_OPENEXR)
 
-if (NOT ENABLE_OPENEXR)
-
-  find_package(OPENEXR)
-
-  if (NOT OPENEXR_FOUND AND NOT DEFINED ENABLE_OPENEXR)
-    set(ENABLE_OPENEXR "ON" CACHE BOOL "Enable openexr build")
-  endif (NOT OPENEXR_FOUND AND NOT DEFINED ENABLE_OPENEXR)
-
-endif (NOT ENABLE_OPENEXR)
-set(ENABLE_OPENEXR "${ENABLE_OPENEXR}" CACHE BOOL "Enable openexr build")
+bext_enable(OPENEXR)
 
 if (ENABLE_OPENEXR)
 

@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of embree on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_EMBREE)
-  set(ENABLE_EMBREE ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_EMBREE)
 
-if (NOT ENABLE_EMBREE)
-
-  find_package(EMBREE)
-
-  if (NOT EMBREE_FOUND AND NOT DEFINED ENABLE_EMBREE)
-    set(ENABLE_EMBREE "ON" CACHE BOOL "Enable embree build")
-  endif (NOT EMBREE_FOUND AND NOT DEFINED ENABLE_EMBREE)
-
-endif (NOT ENABLE_EMBREE)
-set(ENABLE_EMBREE "${ENABLE_EMBREE}" CACHE BOOL "Enable embree build")
+bext_enable(EMBREE)
 
 if (ENABLE_EMBREE)
 

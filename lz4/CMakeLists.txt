@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of lz4 on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_LZ4)
-  set(ENABLE_LZ4 ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_LZ4)
 
-if (NOT ENABLE_LZ4)
-
-  find_package(LZ4)
-
-  if (NOT LZ4_FOUND AND NOT DEFINED ENABLE_LZ4)
-    set(ENABLE_LZ4 "ON" CACHE BOOL "Enable lz4 build")
-  endif (NOT LZ4_FOUND AND NOT DEFINED ENABLE_LZ4)
-
-endif (NOT ENABLE_LZ4)
-set(ENABLE_LZ4 "${ENABLE_LZ4}" CACHE BOOL "Enable lz4 build")
+bext_enable(LZ4)
 
 if (ENABLE_LZ4)
 

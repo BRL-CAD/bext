@@ -5,21 +5,7 @@
 # everywhere
 if (NOT MSVC AND NOT APPLE)
 
-  if (ENABLE_ALL AND NOT DEFINED ENABLE_LIEF)
-    set(ENABLE_LIEF ON)
-  endif (ENABLE_ALL AND NOT DEFINED ENABLE_LIEF)
-
-  if (NOT ENABLE_LIEF)
-
-    find_package(LIEF)
-
-    if (NOT LIEF_FOUND AND NOT DEFINED ENABLE_LIEF)
-      set(ENABLE_LIEF "ON" CACHE BOOL "Enable LIEF build")
-    endif (NOT LIEF_FOUND AND NOT DEFINED ENABLE_LIEF)
-
-  endif (NOT ENABLE_LIEF)
-
-  set(ENABLE_LIEF "${ENABLE_LIEF}" CACHE BOOL "Enable LIEF build")
+  bext_enable(LIEF)
 
   if (ENABLE_LIEF)
 

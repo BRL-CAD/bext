@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of openimageio on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_ISPC)
-  set(ENABLE_ISPC ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_ISPC)
 
-if (NOT ENABLE_ISPC)
-
-  find_package(ISPC)
-
-  if (NOT ISPC_FOUND AND NOT DEFINED ENABLE_ISPC)
-    set(ENABLE_ISPC "ON" CACHE BOOL "Enable ispc build")
-  endif (NOT ISPC_FOUND AND NOT DEFINED ENABLE_ISPC)
-
-endif (NOT ENABLE_ISPC)
-set(ENABLE_ISPC "${ENABLE_ISPC}" CACHE BOOL "Enable ispc build")
+bext_enable(ISPC)
 
 if (ENABLE_ISPC)
 

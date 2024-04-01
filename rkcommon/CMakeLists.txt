@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of rkcommon on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_RKCOMMON)
-  set(ENABLE_RKCOMMON ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_RKCOMMON)
 
-if (NOT ENABLE_RKCOMMON)
-
-  find_package(RKCOMMON)
-
-  if (NOT RKCOMMON_FOUND AND NOT DEFINED ENABLE_RKCOMMON)
-    set(ENABLE_RKCOMMON "ON" CACHE BOOL "Enable rkcommon build")
-  endif (NOT RKCOMMON_FOUND AND NOT DEFINED ENABLE_RKCOMMON)
-
-endif (NOT ENABLE_RKCOMMON)
-set(ENABLE_RKCOMMON "${ENABLE_RKCOMMON}" CACHE BOOL "Enable rkcommon build")
+bext_enable(RKCOMMON)
 
 if (ENABLE_RKCOMMON)
 

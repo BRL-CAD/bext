@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of pystring on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_PYSTRING)
-  set(ENABLE_PYSTRING ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_PYSTRING)
 
-if (NOT ENABLE_PYSTRING)
-
-  find_package(PYSTRING)
-
-  if (NOT PYSTRING_FOUND AND NOT DEFINED ENABLE_PYSTRING)
-    set(ENABLE_PYSTRING "ON" CACHE BOOL "Enable pystring build")
-  endif (NOT PYSTRING_FOUND AND NOT DEFINED ENABLE_PYSTRING)
-
-endif (NOT ENABLE_PYSTRING)
-set(ENABLE_PYSTRING "${ENABLE_PYSTRING}" CACHE BOOL "Enable pystring build")
+bext_enable(PYSTRING)
 
 if (ENABLE_PYSTRING)
 

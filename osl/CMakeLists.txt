@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of openshadinglanguage on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_OSL)
-  set(ENABLE_OSL ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_OSL)
 
-if (NOT ENABLE_OSL)
-
-  find_package(OSL)
-
-  if (NOT OSL_FOUND AND NOT DEFINED ENABLE_OSL)
-    set(ENABLE_OSL "ON" CACHE BOOL "Enable OpenShadingLanguage build")
-  endif (NOT OSL_FOUND AND NOT DEFINED ENABLE_OSL)
-
-endif (NOT ENABLE_OSL)
-set(ENABLE_OSL "${ENABLE_OSL}" CACHE BOOL "Enable OpenShadingLanguage build")
+bext_enable(OSL)
 
 if (ENABLE_OSL)
 

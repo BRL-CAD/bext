@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of LLVM on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_LLVM)
-  set(ENABLE_LLVM ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_LLVM)
 
-if (NOT ENABLE_LLVM)
-
-  find_package(LLVM)
-
-  if (NOT LLVM_FOUND AND NOT DEFINED ENABLE_LLVM)
-    set(ENABLE_LLVM "ON" CACHE BOOL "Enable LLVM build")
-  endif (NOT LLVM_FOUND AND NOT DEFINED ENABLE_LLVM)
-
-endif (NOT ENABLE_LLVM)
-set(ENABLE_LLVM "${ENABLE_LLVM}" CACHE BOOL "Enable LLVM build")
+bext_enable(LLVM)
 
 if (ENABLE_LLVM)
 

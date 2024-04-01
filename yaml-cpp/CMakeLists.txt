@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of yaml-cpp on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_YAML_CPP)
-  set(ENABLE_YAML_CPP ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_YAML_CPP)
 
-if (NOT ENABLE_YAML_CPP)
-
-  find_package(YAML_CPP)
-
-  if (NOT YAML_CPP_FOUND AND NOT DEFINED ENABLE_YAML_CPP)
-    set(ENABLE_YAML_CPP "ON" CACHE BOOL "Enable yaml-cpp build")
-  endif (NOT YAML_CPP_FOUND AND NOT DEFINED ENABLE_YAML_CPP)
-
-endif (NOT ENABLE_YAML_CPP)
-set(ENABLE_YAML_CPP "${ENABLE_YAML_CPP}" CACHE BOOL "Enable yaml-cpp build")
+bext_enable(YAML_CPP)
 
 if (ENABLE_YAML_CPP)
 

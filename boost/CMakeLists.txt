@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of BOOST on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_BOOST)
-  set(ENABLE_BOOST ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_BOOST)
 
-if (NOT ENABLE_BOOST)
-
-  find_package(Boost)
-
-  if (NOT Boost_FOUND AND NOT DEFINED ENABLE_BOOST)
-    set(ENABLE_BOOST "ON" CACHE BOOL "Enable BOOST build")
-  endif (NOT Boost_FOUND AND NOT DEFINED ENABLE_BOOST)
-
-endif (NOT ENABLE_BOOST)
-set(ENABLE_BOOST "${ENABLE_BOOST}" CACHE BOOL "Enable BOOST build")
+bext_enable(Boost)
 
 if (ENABLE_BOOST)
 

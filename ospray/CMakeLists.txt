@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, base the building of ospray on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_OSPRAY)
-  set(ENABLE_OSPRAY ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_OSPRAY)
 
-if (NOT ENABLE_OSPRAY)
-
-  find_package(OSPRAY)
-
-  if (NOT OSPRAY_FOUND AND NOT DEFINED ENABLE_OSPRAY)
-    set(ENABLE_OSPRAY "ON" CACHE BOOL "Enable OSPRay build")
-  endif (NOT OSPRAY_FOUND AND NOT DEFINED ENABLE_OSPRAY)
-
-endif (NOT ENABLE_OSPRAY)
-set(ENABLE_OSPRAY "${ENABLE_OSPRAY}" CACHE BOOL "Enable OSPRay build")
+bext_enable(OSPRAY)
 
 if (ENABLE_OSPRAY)
 

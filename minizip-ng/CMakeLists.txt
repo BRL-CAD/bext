@@ -1,19 +1,5 @@
-# Unless we have ENABLE_ALL set, based the building of minizip-ng on
-# the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_MINIZIP_NG)
-  set(ENABLE_MINIZIP_NG ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_MINIZIP_NG)
 
-if (NOT ENABLE_MINIZIP_NG)
-
-  find_package(MINIZIP_NG)
-
-  if (NOT MINIZIP_NG_FOUND AND NOT DEFINED ENABLE_MINIZIP_NG)
-    set(ENABLE_MINIZIP_NG "ON" CACHE BOOL "Enable minizip-ng build")
-  endif (NOT MINIZIP_NG_FOUND AND NOT DEFINED ENABLE_MINIZIP_NG)
-
-endif (NOT ENABLE_MINIZIP_NG)
-set(ENABLE_MINIZIP_NG "${ENABLE_MINIZIP_NG}" CACHE BOOL "Enable minizip-ng build")
+bext_enable(MINIZIP_NG)
 
 if (ENABLE_MINIZIP_NG)
 

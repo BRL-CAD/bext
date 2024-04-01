@@ -316,6 +316,29 @@ function(cad_enable pname components)
   set(DISABLE_${pname} ${DISABLE_${pname}} PARENT_SCOPE)
 endfunction(cad_enable pname components)
 
+# The enable-disable-find logic for a lot of these follows a
+# pattern.  Try to wrap that pattern up so we can more easily
+# adjust it for multiple projects simultaneously.
+macro(bext_enable pname)
+  string(TOUPPER "${pname}" upname)
+  #string(TOLOWER "${pname}" lpname)
+
+  if (ENABLE_ALL AND NOT DEFINED ENABLE_${upname})
+    set(ENABLE_${upname} ON)
+  endif (ENABLE_ALL AND NOT DEFINED ENABLE_${upname})
+
+  if (NOT ENABLE_${upname})
+
+    find_package(${pname})
+
+    if (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
+      set(ENABLE_${upname} "ON" CACHE BOOL "Enable ${pname} build")
+    endif (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
+
+  endif (NOT ENABLE_${upname})
+  set(ENABLE_${upname} "${ENABLE_${upname}}" CACHE BOOL "Enable ${pname} build")
+endmacro(bext_enable pname)
+
 
 # If configurations change after a build has been performed,
 # we don't automatically scrub a pre-existing output directory
