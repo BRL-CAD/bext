@@ -45,10 +45,9 @@ if (ENABLE_SQLite3)
   TargetInstallDeps(SQLITE3 SQLITE3_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/sqlite3.txt
+    ${DOC_LICENSE_DIR}/sqlite3.txt
     COPYONLY
     )
 

@@ -62,10 +62,9 @@ if (ENABLE_OPENNURBS)
   TargetInstallDeps(OPENNURBS OPENNURBS_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/opennurbs/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openNURBS.txt
+    ${DOC_LICENSE_DIR}/openNURBS.txt
     COPYONLY
     )
 

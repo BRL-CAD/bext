@@ -34,10 +34,9 @@ if (ENABLE_ZSTD)
   TargetInstallDeps(ZSTD ZSTD_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/zstd/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/zstd.txt
+    ${DOC_LICENSE_DIR}/zstd.txt
     COPYONLY
     )
 

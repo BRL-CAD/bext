@@ -57,10 +57,9 @@ if (ENABLE_TIFF)
   TargetInstallDeps(TIFF TIFF_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/libtiff/LICENSE.md
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/tiff.txt
+    ${DOC_LICENSE_DIR}/tiff.txt
     COPYONLY
     )
 

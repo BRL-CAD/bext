@@ -76,13 +76,12 @@ if (ENABLE_QT)
   ExternalProject_Add_StepDependencies(Qt6Svg_BLD configure Qt6_BLD-install)
 
   # Copy the license info into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
-  execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtbase)
-  file(COPY qt/qtbase/LICENSES DESTINATION ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/)
-  file(RENAME ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/LICENSES ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtbase)
-  execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtsvg)
-  file(COPY qt/qtsvg/LICENSES DESTINATION ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/)
-  file(RENAME ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/LICENSES ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/qtsvg)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${DOC_LICENSE_DIR}/qtbase)
+  file(COPY qt/qtbase/LICENSES DESTINATION ${DOC_LICENSE_DIR}/)
+  file(RENAME ${DOC_LICENSE_DIR}/LICENSES ${DOC_LICENSE_DIR}/qtbase)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${DOC_LICENSE_DIR}/qtsvg)
+  file(COPY qt/qtsvg/LICENSES DESTINATION ${DOC_LICENSE_DIR}/)
+  file(RENAME ${DOC_LICENSE_DIR}/LICENSES ${DOC_LICENSE_DIR}/qtsvg)
 
 endif (ENABLE_QT)
 

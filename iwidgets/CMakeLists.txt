@@ -44,10 +44,9 @@ if (ENABLE_IWIDGETS)
   TargetInstallDeps(IWIDGETS IWIDGETS_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/iwidgets/license.terms
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/iwidgets.txt
+    ${DOC_LICENSE_DIR}/iwidgets.txt
     COPYONLY
     )
 

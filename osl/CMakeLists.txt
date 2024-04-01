@@ -52,10 +52,9 @@ if (ENABLE_OSL)
   TargetInstallDeps(OSL OSL_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/OpenShadingLanguage/LICENSE.md
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openshadinglanguage.txt
+    ${DOC_LICENSE_DIR}/openshadinglanguage.txt
     COPYONLY
     )
 

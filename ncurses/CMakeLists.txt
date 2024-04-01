@@ -46,10 +46,9 @@ if (NOT WIN32)
     TargetInstallDeps(NCURSES NCURSES_DEPENDS)
 
     # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-    file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/ncurses/COPYING
-      ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/ncurses.txt
+      ${DOC_LICENSE_DIR}/ncurses.txt
       COPYONLY
       )
 

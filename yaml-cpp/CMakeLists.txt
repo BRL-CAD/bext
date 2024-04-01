@@ -30,10 +30,9 @@ if (ENABLE_YAML_CPP)
   TargetInstallDeps(YAML_CPP YAML_CPP_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/yaml-cpp.txt
+    ${DOC_LICENSE_DIR}/yaml-cpp.txt
     COPYONLY
     )
 

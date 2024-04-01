@@ -50,10 +50,9 @@ if (ENABLE_OPENCOLORIO)
   TargetInstallDeps(OPENCOLORIO OPENCOLORIO_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/OpenColorIO/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/opencolorio.txt
+    ${DOC_LICENSE_DIR}/opencolorio.txt
     COPYONLY
     )
 

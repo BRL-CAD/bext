@@ -34,10 +34,9 @@ if (ENABLE_UTAHRLE)
   TargetInstallDeps(UTAHRLE UTAHRLE_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/utahrle/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/utahrle.txt
+    ${DOC_LICENSE_DIR}/utahrle.txt
     COPYONLY
     )
 

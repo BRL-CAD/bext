@@ -60,10 +60,9 @@ if (ENABLE_PNG)
   TargetInstallDeps(PNG PNG_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/libpng/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/png.txt
+    ${DOC_LICENSE_DIR}/png.txt
     COPYONLY
     )
 

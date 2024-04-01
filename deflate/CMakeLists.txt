@@ -31,10 +31,9 @@ if (ENABLE_DEFLATE)
   TargetInstallDeps(DEFLATE DEFLATE_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/libdeflate/COPYING
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/deflate.txt
+    ${DOC_LICENSE_DIR}/deflate.txt
     COPYONLY
     )
 

@@ -34,10 +34,9 @@ if (USE_BRLCAD AND NOT DISABLE_POLY2TRI)
   TargetInstallDeps(POLY2TRI POLY2TRI_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/poly2tri/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/poly2tri.txt
+    ${DOC_LICENSE_DIR}/poly2tri.txt
     COPYONLY
     )
 

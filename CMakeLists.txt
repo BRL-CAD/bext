@@ -98,6 +98,11 @@ set(CMAKE_NOBUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/noinstal
 file(MAKE_DIRECTORY "${CMAKE_BUNDLE_INSTALL_PREFIX}")
 file(MAKE_DIRECTORY "${CMAKE_NOBUNDLE_INSTALL_PREFIX}")
 
+# We want to install the license files where BRL-CAD expects them
+# to be
+set(DOC_LICENSE_DIR ${CMAKE_BUNDLE_INSTALL_PREFIX}/share/doc/legal/other)
+file(MAKE_DIRECTORY ${DOC_LICENSE_DIR})
+
 #---------------------------------------------------------------------
 # By default, changes in ExternalProject_Add directories won't trigger
 # rebuilding of those targets.  Setting this to 1 changes that, but at the

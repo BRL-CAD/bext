@@ -66,10 +66,9 @@ if (ENABLE_APPLESEED)
   TargetInstallDeps(APPLESEED APPLESEED_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/appleseed/LICENSE.txt
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/appleseed.txt
+    ${DOC_LICENSE_DIR}/appleseed.txt
     COPYONLY
     )
 

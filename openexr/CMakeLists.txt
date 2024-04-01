@@ -31,10 +31,9 @@ if (ENABLE_OPENEXR)
   TargetInstallDeps(OPENEXR OPENEXR_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/openexr/LICENSE.md
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/openexr.txt
+    ${DOC_LICENSE_DIR}/openexr.txt
     COPYONLY
     )
 

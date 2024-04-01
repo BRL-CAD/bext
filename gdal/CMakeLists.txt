@@ -167,10 +167,9 @@ if (ENABLE_GDAL)
   TargetInstallDeps(GDAL GDAL_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/gdal/LICENSE.TXT
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/gdal.txt
+    ${DOC_LICENSE_DIR}/gdal.txt
     COPYONLY
     )
 

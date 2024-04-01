@@ -59,10 +59,9 @@ if (ENABLE_ITCL)
   TargetInstallDeps(ITCL ITCL_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/itcl/license.terms
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/itcl3.txt
+    ${DOC_LICENSE_DIR}/itcl3.txt
     COPYONLY
     )
 

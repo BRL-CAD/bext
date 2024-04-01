@@ -35,10 +35,9 @@ if (ENABLE_LINENOISE)
   TargetInstallDeps(LINENOISE LINENOISE_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/license.txt
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/linenoise.txt
+    ${DOC_LICENSE_DIR}/linenoise.txt
     COPYONLY
     )
 

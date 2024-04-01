@@ -38,10 +38,9 @@ if (ENABLE_OSPRAY)
   TargetInstallDeps(OSPRAY OSPRAY_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/ospray/LICENSE.txt
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/ospray.txt
+    ${DOC_LICENSE_DIR}/ospray.txt
     COPYONLY
     )
 

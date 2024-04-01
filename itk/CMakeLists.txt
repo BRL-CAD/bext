@@ -73,10 +73,9 @@ if (ENABLE_ITK)
   TargetInstallDeps(ITK ITK_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/itk/license.terms
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/itk3.txt
+    ${DOC_LICENSE_DIR}/itk3.txt
     COPYONLY
     )
 

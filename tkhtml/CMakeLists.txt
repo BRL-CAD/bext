@@ -68,10 +68,9 @@ if (ENABLE_TKHTML)
   TargetInstallDeps(TKHTML TKHTML_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/tkhtml/COPYING
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/tkhtml.txt
+    ${DOC_LICENSE_DIR}/tkhtml.txt
     COPYONLY
     )
 
