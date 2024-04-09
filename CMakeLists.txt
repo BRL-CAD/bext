@@ -708,6 +708,8 @@ endif (EXISTS "${CMAKE_BUNDLE_INSTALL_PREFIX}" AND STALE_INSTALL_WARN)
 # Close out dependencies DOT file
 file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\n}\n")
 
+message("Output directory: ${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}")
+
 # Local Variables:
 # tab-width: 8
 # mode: cmake
