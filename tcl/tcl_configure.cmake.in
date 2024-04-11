@@ -1,0 +1,29 @@
+if (NOT WIN32)
+  set(ENV{LD_LIBRARY_PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+  set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(ENV{TCL_SHLIB_LD_EXTRAS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+
+  execute_process(
+    COMMAND @TCL_SRC_DIR@/unix/configure --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@
+    RESULT_VARIABLE TCL_RET
+    WORKING_DIRECTORY "@TCL_BIN_DIR@"
+    OUTPUT_VARIABLE MSG
+    ERROR_VARIABLE MSG
+    )
+
+  if (TCL_RET)
+    message(FATAL_ERROR "Tcl configure failed:\n${MSG}\n")
+  endif (TCL_RET)
+
+  message("${MSG}\nTcl configure succeeded.\n")
+
+endif (NOT WIN32)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

@@ -1,0 +1,34 @@
+if (WIN32)
+  execute_process(
+    COMMAND "@VCVARS_BAT@"
+    )
+  execute_process(
+    COMMAND nmake -f makefile.vc INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=
+    RESULT_VARIABLE TCL_RET
+    WORKING_DIRECTORY "@TCL_SRC_DIR@/win"
+    OUTPUT_VARIABLE MSG
+    ERROR_VARIABLE MSG
+    )
+else (WIN32)
+  execute_process(
+    COMMAND make -j@pcnt@
+    RESULT_VARIABLE TCL_RET
+    WORKING_DIRECTORY "@TCL_BIN_DIR@"
+    OUTPUT_VARIABLE MSG
+    ERROR_VARIABLE MSG
+    )
+endif (WIN32)
+
+if (TCL_RET)
+  message(FATAL_ERROR "Tcl build failed: ${MSG}\n")
+endif (TCL_RET)
+
+message("Tcl build succeeded: ${MSG}\n")
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+
