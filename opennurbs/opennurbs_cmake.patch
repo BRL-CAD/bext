@@ -126,9 +126,10 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 +    endif()
 +endif()
 
---- opennurbs/CMakeLists.txt	2024-02-16 13:44:43.176776155 -0500
-+++ OPENNURBS_BLD/CMakeLists.txt	2024-02-16 14:04:34.272730640 -0500
-@@ -1,609 +1,633 @@
+
+--- opennurbs/CMakeLists.txt	2024-03-27 14:02:42.314905288 -0400
++++ OPENNURBS_BLD/CMakeLists.txt	2024-04-13 17:17:06.861466755 -0400
+@@ -1,609 +1,637 @@
 -cmake_minimum_required (VERSION 3.16)
 -#set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
 -project(opennurbs CXX)
@@ -1117,6 +1118,10 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 +  opennurbs_xml.h
 +  opennurbs_zlib.h
 +  )
++
++if (NOT HAVE_UUID_GENERATE AND NOT MSVC)
++  install(FILES android_uuid/uuid.h DESTINATION include/openNURBS/android_uuid)
++endif (NOT HAVE_UUID_GENERATE AND NOT MSVC)
 +
 +include(CheckIncludeFiles)
 +check_include_files(emmintrin.h HAVE_EMMINTRIN_H)
