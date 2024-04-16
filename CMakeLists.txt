@@ -45,6 +45,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # versions.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
+# We do NOT want CMake looking in the User Package Registry - have encountered
+# at least one case where stale or incorrect information there has resulted in
+# an incorrect include directory for Eigen based on bext build info.
+#
+# TODO - may want/need to pass this as a -D argument to the ExternalProject_Add
+# calls as well...
+set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)
+
 # If we're not multiconfig and the user hasn't specified something, go with
 # Release mode.  We're generally looking to bundle these as if they were system
 # libraries, so that's going to mean we want release configurations.
