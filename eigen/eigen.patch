@@ -1,6 +1,18 @@
-diff -Naur eigen.orig/Eigen/src/Core/util/Memory.h eigen/Eigen/src/Core/util/Memory.h
---- eigen.orig/Eigen/src/Core/util/Memory.h	2023-09-12 19:23:02.737590519 -0400
-+++ eigen/Eigen/src/Core/util/Memory.h	2023-09-12 19:24:31.555943337 -0400
+diff -Naur eigen/CMakeLists.txt EIGEN_BLD/CMakeLists.txt
+--- eigen/CMakeLists.txt	2024-04-16 20:37:46.506698007 -0400
++++ EIGEN_BLD/CMakeLists.txt	2024-04-16 20:38:21.574118370 -0400
+@@ -635,7 +635,7 @@
+ export (TARGETS eigen NAMESPACE Eigen3:: FILE Eigen3Targets.cmake)
+ # Export Eigen3 package to CMake registry such that it can be easily found by
+ # CMake even if it has not been installed to a standard directory.
+-export (PACKAGE Eigen3)
++#export (PACKAGE Eigen3)
+ 
+ install (EXPORT Eigen3Targets NAMESPACE Eigen3:: DESTINATION ${CMAKEPACKAGE_INSTALL_DIR})
+ 
+diff -Naur eigen/Eigen/src/Core/util/Memory.h EIGEN_BLD/Eigen/src/Core/util/Memory.h
+--- eigen/Eigen/src/Core/util/Memory.h	2024-04-16 20:37:46.522697745 -0400
++++ EIGEN_BLD/Eigen/src/Core/util/Memory.h	2024-04-16 20:37:14.119233248 -0400
 @@ -586,6 +586,9 @@
  // to the appropriate stack allocation function
  #if ! defined EIGEN_ALLOCA && ! defined EIGEN_GPU_COMPILE_PHASE
