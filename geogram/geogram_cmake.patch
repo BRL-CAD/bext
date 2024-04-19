@@ -1,6 +1,28 @@
+diff -Naur geogram/CMakeLists.txt GEOGRAM_BLD/CMakeLists.txt
+--- geogram/CMakeLists.txt	2024-04-19 18:18:32.084173009 -0400
++++ GEOGRAM_BLD/CMakeLists.txt	2024-04-19 18:19:29.107021784 -0400
+@@ -88,18 +88,6 @@
+ endif()
+ 
+ ##############################################################################
+-# RPATH (where executables find the .so / DLLs)
+-# - Enables RPATH support for MACOSX
+-# - Makes RPATH of dynamic libraries and executable point to the directory
+-#   where libraries are installed.
+-
+-if(VORPALINE_BUILD_DYNAMIC)
+-   set(CMAKE_MACOSX_RPATH 1)
+-   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+-endif()
+-
+-set(CMAKE_INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+-
+ # uninstall target
+ # Needs to be created before add_subdirectory() because GLFw has
+ # also an uninstall target that will be inhibited if there is
 diff -Naur geogram/src/lib/geogram/CMakeLists.txt GEOGRAM_BLD/src/lib/geogram/CMakeLists.txt
---- geogram/src/lib/geogram/CMakeLists.txt	2024-01-27 01:03:38.771848391 -0500
-+++ GEOGRAM_BLD/src/lib/geogram/CMakeLists.txt	2024-01-27 01:04:09.835359301 -0500
+--- geogram/src/lib/geogram/CMakeLists.txt	2024-04-19 18:18:32.092172847 -0400
++++ GEOGRAM_BLD/src/lib/geogram/CMakeLists.txt	2024-04-19 18:18:42.479961704 -0400
 @@ -45,7 +45,7 @@
  
  include_directories(${PROJECT_BINARY_DIR}/src/lib)
