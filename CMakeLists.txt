@@ -639,10 +639,6 @@ add_project(pugixml GROUPS "BRLCAD;APPLESEED")
 # https://github.com/assimp/assimp
 add_project(assetimport GROUPS "BRLCAD")
 
-# mmesh - mesh optimization and decimation library
-# https://github.com/BRL-CAD/mmesh
-add_project(mmesh GROUPS "BRLCAD")
-
 # OpenCV - Open Source Computer Vision Library
 # http://opencv.org
 add_project(opencv GROUPS "BRLCAD_EXTRA")

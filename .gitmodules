@@ -309,7 +309,3 @@
 	url = https://github.com/BRL-CAD/geogram.git
 	branch = RELEASE
         ignore = dirty
-[submodule "mmesh/mmesh"]
-	path = mmesh/mmesh
-	url = https://github.com/BRL-CAD/mmesh.git
-	ignore = dirty
