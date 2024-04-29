@@ -259,7 +259,7 @@ jobs:
 
       - name: Install Xquartz
         run: |
-          brew --cask install xquartz
+          brew cask install xquartz
 
       - name: Configure
         run: |
@@ -287,7 +287,7 @@ jobs:
 
       - name: Install Xquartz
         run: |
-          brew --cask install xquartz
+          brew cask install xquartz
 
       - name: Configure
         run: |
