@@ -257,6 +257,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Xquartz
+        run: |
+          brew --cask install xquartz
+
       - name: Configure
         run: |
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
@@ -280,6 +284,10 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Xquartz
+        run: |
+          brew --cask install xquartz
 
       - name: Configure
         run: |
