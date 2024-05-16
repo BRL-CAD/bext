@@ -1,0 +1,217 @@
+diff -Naur geogram/cmake/FindGeogram.cmake GEOGRAM_BLD/cmake/FindGeogram.cmake
+--- geogram/cmake/FindGeogram.cmake	2024-05-16 19:12:42.296106646 -0400
++++ GEOGRAM_BLD/cmake/FindGeogram.cmake	2024-05-16 19:13:05.295717740 -0400
+@@ -109,36 +109,3 @@
+ # Hide variables from the default CMake-Gui options
+ mark_as_advanced (GEOGRAM_LIBRARY GEOGRAM_GFX_LIBRARY GEOGRAM_INCLUDE_DIR)
+ 
+-# Some specific settings for Windows
+-
+-if(WIN32)
+-
+-  # Default mode for Windows uses static libraries. Use this variable to
+-  # link with geogram compiled as DLLs.
+-  set(VORPALINE_BUILD_DYNAMIC FALSE CACHE BOOL "Installed Geogram uses DLLs")
+-
+-  # remove warning for multiply defined symbols (caused by multiple
+-  # instanciations of STL templates)
+-  add_definitions(/wd4251)
+-
+-  # remove all unused stuff from windows.h
+-  add_definitions(-DWIN32_LEAN_AND_MEAN)
+-  add_definitions(-DVC_EXTRALEAN)
+-
+-  # do not define a min() and a max() macro, breaks
+-  # std::min() and std::max() !!
+-  add_definitions(-DNOMINMAX )
+-
+-  # we want M_PI etc...
+-  add_definitions(-D_USE_MATH_DEFINES)
+-
+-  if(NOT VORPALINE_BUILD_DYNAMIC) 
+-      # If we use static library, we link with the static C++ runtime.
+-      foreach(config ${CMAKE_CONFIGURATION_TYPES})
+-         string(TOUPPER ${config} config)
+-         string(REPLACE /MD /MT CMAKE_C_FLAGS_${config} "${CMAKE_C_FLAGS_${config}}")
+-         string(REPLACE /MD /MT CMAKE_CXX_FLAGS_${config} "${CMAKE_CXX_FLAGS_${config}}")
+-      endforeach()
+-  endif()
+-
+-endif()    
+diff -Naur geogram/cmake/platforms/Windows-vs.cmake GEOGRAM_BLD/cmake/platforms/Windows-vs.cmake
+--- geogram/cmake/platforms/Windows-vs.cmake	2024-05-16 19:12:42.300106579 -0400
++++ GEOGRAM_BLD/cmake/platforms/Windows-vs.cmake	2024-05-16 19:13:46.791015211 -0400
+@@ -64,18 +64,9 @@
+     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7")
+ endif()
+ 
+-# Change flags for static link
+-if(VORPALINE_BUILD_DYNAMIC)
+ # remove warning for multiply defined symbols (caused by multiple
+ # instanciations of STL templates)
+-  add_definitions(/wd4251)
+-else()
+-  foreach(config ${CMAKE_CONFIGURATION_TYPES})
+-    string(TOUPPER ${config} config)
+-    string(REPLACE /MD /MT CMAKE_C_FLAGS_${config} "${CMAKE_C_FLAGS_${config}}")
+-    string(REPLACE /MD /MT CMAKE_CXX_FLAGS_${config} "${CMAKE_CXX_FLAGS_${config}}")
+-  endforeach()
+-endif()
++add_definitions(/wd4251)
+ 
+ # Additional release flags
+ foreach(config RELEASE RELWITHDEBINFO MINSIZEREL)
+diff -Naur geogram/src/tutorial/01_basics/hello_geogram/FindGeogram.cmake GEOGRAM_BLD/src/tutorial/01_basics/hello_geogram/FindGeogram.cmake
+--- geogram/src/tutorial/01_basics/hello_geogram/FindGeogram.cmake	2024-05-16 19:12:42.376105295 -0400
++++ GEOGRAM_BLD/src/tutorial/01_basics/hello_geogram/FindGeogram.cmake	2024-05-16 19:14:56.457833524 -0400
+@@ -5,8 +5,9 @@
+ #
+ # This module defines the following variables:
+ #
+-#   Geogram_FOUND       - True if geogram has been found.
+-#   Geogram::geogram    - Imported target for the main Geogram library.
++#   Geogram_FOUND        - True if geogram has been found.
++#   Geogram::geogram     - Imported target for the main Geogram library.
++#   Geogram::geogram_gfx - Imported target for Geogram graphics library.
+ #
+ # This module reads hints about the Geogram location from the following
+ # environment variables:
+@@ -52,20 +53,20 @@
+ # system search path since it may be already installed
+ # in the system
+ find_library (GEOGRAM_GLFW3_LIBRARY
+-                NAMES glfw3 glfw geogram_glfw3
++                NAMES glfw3 glfw geogram_glfw3 glfw3dll glfwdll
+                 PATHS ${GEOGRAM_SEARCH_PATHS} ${GEOGRAM_SEARCH_PATHS_SYSTEM}
+                 PATH_SUFFIXES lib
+ )
+ 
+ include (FindPackageHandleStandardArgs)
+ find_package_handle_standard_args(
+-  Geogram DEFAULT_MSG GEOGRAM_LIBRARY GEOGRAM_INCLUDE_DIR
++  GEOGRAM DEFAULT_MSG GEOGRAM_LIBRARY GEOGRAM_INCLUDE_DIR
+ )
+ 
+ # Create an imported target for Geogram 
+-If (Geogram_FOUND)
++If (GEOGRAM_FOUND)
+   
+-        set(GEOGRAM_INSTALL_PREFIX ${GEOGRAM_INCLUDE_DIR}/..)
++        set(GEOGRAM_INSTALL_PREFIX ${GEOGRAM_INCLUDE_DIR}/../..)
+   
+         if (NOT TARGET Geogram::geogram)
+                 add_library (Geogram::geogram UNKNOWN IMPORTED)
+@@ -108,36 +109,3 @@
+ # Hide variables from the default CMake-Gui options
+ mark_as_advanced (GEOGRAM_LIBRARY GEOGRAM_GFX_LIBRARY GEOGRAM_INCLUDE_DIR)
+ 
+-# Some specific settings for Windows
+-
+-if(WIN32)
+-
+-  # Default mode for Windows uses static libraries. Use this variable to
+-  # link with geogram compiled as DLLs.
+-  set(VORPALINE_BUILD_DYNAMIC FALSE CACHE BOOL "Installed Geogram uses DLLs")
+-
+-  # remove warning for multiply defined symbols (caused by multiple
+-  # instanciations of STL templates)
+-  add_definitions(/wd4251)
+-
+-  # remove all unused stuff from windows.h
+-  add_definitions(-DWIN32_LEAN_AND_MEAN)
+-  add_definitions(-DVC_EXTRALEAN)
+-
+-  # do not define a min() and a max() macro, breaks
+-  # std::min() and std::max() !!
+-  add_definitions(-DNOMINMAX )
+-
+-  # we want M_PI etc...
+-  add_definitions(-D_USE_MATH_DEFINES)
+-
+-  if(NOT VORPALINE_BUILD_DYNAMIC) 
+-      # If we use static library, we link with the static C++ runtime.
+-      foreach(config ${CMAKE_CONFIGURATION_TYPES})
+-         string(TOUPPER ${config} config)
+-         string(REPLACE /MD /MT CMAKE_C_FLAGS_${config} "${CMAKE_C_FLAGS_${config}}")
+-         string(REPLACE /MD /MT CMAKE_CXX_FLAGS_${config} "${CMAKE_CXX_FLAGS_${config}}")
+-      endforeach()
+-  endif()
+-
+-endif()    
+diff -Naur geogram/src/tutorial/01_basics/hello_GLUP_app/FindGeogram.cmake GEOGRAM_BLD/src/tutorial/01_basics/hello_GLUP_app/FindGeogram.cmake
+--- geogram/src/tutorial/01_basics/hello_GLUP_app/FindGeogram.cmake	2024-05-16 19:12:42.376105295 -0400
++++ GEOGRAM_BLD/src/tutorial/01_basics/hello_GLUP_app/FindGeogram.cmake	2024-05-16 19:14:16.402513268 -0400
+@@ -5,8 +5,9 @@
+ #
+ # This module defines the following variables:
+ #
+-#   Geogram_FOUND       - True if geogram has been found.
+-#   Geogram::geogram    - Imported target for the main Geogram library.
++#   Geogram_FOUND        - True if geogram has been found.
++#   Geogram::geogram     - Imported target for the main Geogram library.
++#   Geogram::geogram_gfx - Imported target for Geogram graphics library.
+ #
+ # This module reads hints about the Geogram location from the following
+ # environment variables:
+@@ -52,20 +53,20 @@
+ # system search path since it may be already installed
+ # in the system
+ find_library (GEOGRAM_GLFW3_LIBRARY
+-                NAMES glfw3 glfw geogram_glfw3
++                NAMES glfw3 glfw geogram_glfw3 glfw3dll glfwdll
+                 PATHS ${GEOGRAM_SEARCH_PATHS} ${GEOGRAM_SEARCH_PATHS_SYSTEM}
+                 PATH_SUFFIXES lib
+ )
+ 
+ include (FindPackageHandleStandardArgs)
+ find_package_handle_standard_args(
+-  Geogram DEFAULT_MSG GEOGRAM_LIBRARY GEOGRAM_INCLUDE_DIR
++  GEOGRAM DEFAULT_MSG GEOGRAM_LIBRARY GEOGRAM_INCLUDE_DIR
+ )
+ 
+ # Create an imported target for Geogram 
+-If (Geogram_FOUND)
++If (GEOGRAM_FOUND)
+   
+-        set(GEOGRAM_INSTALL_PREFIX ${GEOGRAM_INCLUDE_DIR}/..)
++        set(GEOGRAM_INSTALL_PREFIX ${GEOGRAM_INCLUDE_DIR}/../..)
+   
+         if (NOT TARGET Geogram::geogram)
+                 add_library (Geogram::geogram UNKNOWN IMPORTED)
+@@ -108,36 +109,3 @@
+ # Hide variables from the default CMake-Gui options
+ mark_as_advanced (GEOGRAM_LIBRARY GEOGRAM_GFX_LIBRARY GEOGRAM_INCLUDE_DIR)
+ 
+-# Some specific settings for Windows
+-
+-if(WIN32)
+-
+-  # Default mode for Windows uses static libraries. Use this variable to
+-  # link with geogram compiled as DLLs.
+-  set(VORPALINE_BUILD_DYNAMIC FALSE CACHE BOOL "Installed Geogram uses DLLs")
+-
+-  # remove warning for multiply defined symbols (caused by multiple
+-  # instanciations of STL templates)
+-  add_definitions(/wd4251)
+-
+-  # remove all unused stuff from windows.h
+-  add_definitions(-DWIN32_LEAN_AND_MEAN)
+-  add_definitions(-DVC_EXTRALEAN)
+-
+-  # do not define a min() and a max() macro, breaks
+-  # std::min() and std::max() !!
+-  add_definitions(-DNOMINMAX )
+-
+-  # we want M_PI etc...
+-  add_definitions(-D_USE_MATH_DEFINES)
+-
+-  if(NOT VORPALINE_BUILD_DYNAMIC) 
+-      # If we use static library, we link with the static C++ runtime.
+-      foreach(config ${CMAKE_CONFIGURATION_TYPES})
+-         string(TOUPPER ${config} config)
+-         string(REPLACE /MD /MT CMAKE_C_FLAGS_${config} "${CMAKE_C_FLAGS_${config}}")
+-         string(REPLACE /MD /MT CMAKE_CXX_FLAGS_${config} "${CMAKE_CXX_FLAGS_${config}}")
+-      endforeach()
+-  endif()
+-
+-endif()    
