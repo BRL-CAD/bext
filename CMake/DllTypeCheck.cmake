@@ -48,6 +48,7 @@ function(DllTypeCheck btype dlldir)
   file(GLOB dll_files RELATIVE "${dlldir}" "${dlldir}/*.dll")
   set(non_match 0)
   foreach(dlf ${dll_files})
+    message("Checking ${dlf}")
     # dumpbin doesn't like CMake style paths
     file(TO_NATIVE_PATH "${dlf}" TBFN)
     # https://stackoverflow.com/a/28304716/2037687
