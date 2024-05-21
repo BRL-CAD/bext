@@ -718,6 +718,12 @@ file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\n}\n")
 
 message("Output directory: ${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}")
 
+#---------------------------------------------------------------------
+# On Windows, if we get dlls built for the wrong configuration it can
+# cause problems.  Define a utility target to check
+add_custom_target(dllcheck ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/bext_output/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/DllTypeCheck.cmake)
+
+
 # Local Variables:
 # tab-width: 8
 # mode: cmake
