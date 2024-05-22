@@ -45,6 +45,35 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # versions.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
+#------------------------------------------------------------------------------
+# To match the BRL-CAD configurations, limit bext builds to a single type
+
+# Normalize the build type capitalization
+if(CMAKE_BUILD_TYPE)
+  string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_UPPER)
+  if ("${BUILD_TYPE_UPPER}" STREQUAL "RELEASE")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build Type" FORCE)
+  endif ("${BUILD_TYPE_UPPER}" STREQUAL "RELEASE")
+  if ("${BUILD_TYPE_UPPER}" STREQUAL "DEBUG")
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build Type" FORCE)
+  endif ("${BUILD_TYPE_UPPER}" STREQUAL "DEBUG")
+endif(CMAKE_BUILD_TYPE)
+
+# CMake configuration types need to be overridden.  If a CMAKE_BUILD_TYPE
+# has been specified, use that - otherwise default to Debug.
+if(CMAKE_CONFIGURATION_TYPES)
+  if (CMAKE_BUILD_TYPE)
+    set(CMAKE_CONFIGURATION_TYPES "${CMAKE_BUILD_TYPE}" CACHE STRING "Force a single build type" FORCE)
+  else (CMAKE_BUILD_TYPE)
+    set(CMAKE_CONFIGURATION_TYPES "Debug" CACHE STRING "Force a single build type" FORCE)
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build Type" FORCE)
+  endif (CMAKE_BUILD_TYPE)
+endif(CMAKE_CONFIGURATION_TYPES)
+
+mark_as_advanced(CMAKE_BUILD_TYPE)
+mark_as_advanced(CMAKE_CONFIGURATION_TYPES)
+
+#------------------------------------------------------------------------------
 # We do NOT want CMake looking in the User Package Registry - have encountered
 # at least one case where stale or incorrect information there has resulted in
 # an incorrect include directory for Eigen based on bext build info.
