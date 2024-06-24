@@ -16,6 +16,7 @@ if (WIN32 AND ENABLE_FLEX)
   set(FLEX_DEPENDS PATCH)
   TargetVars(FLEX_DEPENDS)
 
+  # https://github.com/lexxmark/winflexbison
   ExternalProject_Add(FLEX_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/winflexbison"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
