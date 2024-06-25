@@ -96,25 +96,3 @@ diff -Naur PROJ/CMakeLists.txt PROJ_BLD/CMakeLists.txt
  if(NOT EXE_SQLITE3)
    message(SEND_ERROR "sqlite3 binary not found!")
  endif()
-diff -Naur PROJ/src/iso19111/operation/coordinateoperationfactory.cpp PROJ_BLD/src/iso19111/operation/coordinateoperationfactory.cpp
---- PROJ/src/iso19111/operation/coordinateoperationfactory.cpp	2024-03-06 12:18:36.945777084 -0500
-+++ PROJ_BLD/src/iso19111/operation/coordinateoperationfactory.cpp	2024-03-06 12:16:17.844130903 -0500
-@@ -5159,18 +5159,6 @@
- 
- // ---------------------------------------------------------------------------
- 
--static std::string
--getBallparkTransformationVertToVert(const crs::CRSNNPtr &sourceCRS,
--                                    const crs::CRSNNPtr &targetCRS) {
--    auto name = buildTransfName(sourceCRS->nameStr(), targetCRS->nameStr());
--    name += " (";
--    name += BALLPARK_VERTICAL_TRANSFORMATION;
--    name += ')';
--    return name;
--}
--
--// ---------------------------------------------------------------------------
--
- void CoordinateOperationFactory::Private::createOperationsVertToVert(
-     const crs::CRSNNPtr &sourceCRS, const crs::CRSNNPtr &targetCRS,
-     Private::Context &context, const crs::VerticalCRS *vertSrc,
