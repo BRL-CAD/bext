@@ -346,18 +346,19 @@ diff -Naur opencv/cmake/OpenCVInstallLayout.cmake OPENCV_BLD/cmake/OpenCVInstall
      ocv_update(OPENCV_INSTALL_BINARIES_SUFFIX "staticlib")
    else()
 diff -Naur opencv/CMakeLists.txt OPENCV_BLD/CMakeLists.txt
---- opencv/CMakeLists.txt	2024-03-06 11:15:17.977395348 -0500
-+++ OPENCV_BLD/CMakeLists.txt	2024-03-06 11:14:00.646674429 -0500
-@@ -13,6 +13,7 @@
+--- opencv/CMakeLists.txt	2024-06-25 10:25:05.539691869 -0400
++++ OPENCV_BLD/CMakeLists.txt	2024-06-25 10:28:39.828624534 -0400
+@@ -13,6 +13,8 @@
  ")
  endif()
  
 +list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
- 
++
  include(cmake/OpenCVMinDepVersions.cmake)
  
-@@ -65,6 +66,10 @@
-   cmake_policy(SET CMP0068 NEW)  # CMake 3.9+: `RPATH` settings on macOS do not affect `install_name`.
+ if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
+@@ -68,6 +70,10 @@
+   cmake_policy(SET CMP0071 NEW)  # CMake 3.10+: Let `AUTOMOC` and `AUTOUIC` process `GENERATED` files.
  endif()
  
 +if (POLICY CMP0074)
@@ -367,7 +368,7 @@ diff -Naur opencv/CMakeLists.txt OPENCV_BLD/CMakeLists.txt
  if(POLICY CMP0075)
    cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
  endif()
-@@ -1110,7 +1115,7 @@
+@@ -1154,7 +1160,7 @@
  if(ANDROID OR NOT UNIX)
    install(FILES ${OPENCV_LICENSE_FILE}
          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
