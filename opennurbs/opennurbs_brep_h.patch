@@ -1,6 +1,6 @@
---- opennurbs/opennurbs_brep.h	2024-02-16 13:44:43.176776155 -0500
-+++ OPENNURBS_BLD/opennurbs_brep.h	2024-02-16 14:00:20.173055503 -0500
-@@ -4141,6 +4141,7 @@
+--- opennurbs/opennurbs_brep.h	2024-06-25 15:28:09.117849296 -0400
++++ OPENNURBS_BLD/opennurbs_brep.h	2024-06-25 15:26:59.814993508 -0400
+@@ -4152,6 +4152,7 @@
          );
  
    // helpers for validation checking
@@ -8,7 +8,7 @@
    bool IsValidTrim(int trim_index,ON_TextLog* text_log) const;
    bool IsValidTrimTopology(int trim_index,ON_TextLog* text_log) const;
    bool IsValidTrimGeometry(int trim_index,ON_TextLog* text_log) const;
-@@ -4166,6 +4167,7 @@
+@@ -4177,6 +4178,7 @@
    bool IsValidVertexGeometry(int vertex_index,ON_TextLog* text_log) const;
    bool IsValidVertexTolerancesAndFlags(int vertex_index,ON_TextLog* text_log) const;
  

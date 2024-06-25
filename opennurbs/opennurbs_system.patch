@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_system.h	2024-02-16 13:44:43.192775892 -0500
-+++ OPENNURBS_BLD/opennurbs_system.h	2024-02-16 14:38:32.266292178 -0500
+--- opennurbs/opennurbs_system.h	2024-06-25 15:44:35.955646175 -0400
++++ OPENNURBS_BLD/opennurbs_system.h	2024-06-25 15:44:06.135134526 -0400
 @@ -494,7 +494,7 @@
  #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
  

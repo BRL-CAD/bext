@@ -1,6 +1,6 @@
---- opennurbs/opennurbs_brep.cpp	2024-02-16 13:44:43.176776155 -0500
-+++ OPENNURBS_BLD/opennurbs_brep.cpp	2024-02-16 13:49:38.419887610 -0500
-@@ -3578,6 +3578,10 @@
+--- opennurbs/opennurbs_brep.cpp	2024-06-25 15:28:09.117849296 -0400
++++ OPENNURBS_BLD/opennurbs_brep.cpp	2024-06-25 15:26:59.805993657 -0400
+@@ -3595,6 +3595,10 @@
      }   
    }
  
@@ -11,7 +11,7 @@
  
    // make sure ends of trims jibe
    int ci0, ci1, next_lti;
-@@ -3606,6 +3610,12 @@
+@@ -3623,6 +3627,12 @@
        //    didn't get flagged as bad.
        double xtol = (fabs(P0.x) + fabs(P1.x))*1.0e-10;
        double ytol = (fabs(P0.y) + fabs(P1.y))*1.0e-10;

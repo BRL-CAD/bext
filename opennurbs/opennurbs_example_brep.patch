@@ -1,5 +1,5 @@
---- opennurbs/example_brep/example_brep.cpp	2024-02-16 13:44:43.200775762 -0500
-+++ OPENNURBS_BLD/example_brep/example_brep.cpp	2024-02-16 14:14:26.914632518 -0500
+--- opennurbs/example_brep/example_brep.cpp	2024-06-25 15:44:35.959646109 -0400
++++ OPENNURBS_BLD/example_brep/example_brep.cpp	2024-06-25 15:44:06.087135312 -0400
 @@ -589,9 +589,9 @@
      brep = NULL;
    }

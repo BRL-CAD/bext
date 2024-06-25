@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_version_number.cpp	2024-02-16 14:43:07.537610278 -0500
-+++ OPENNURBS_BLD/opennurbs_version_number.cpp	2024-02-16 14:37:57.878876713 -0500
+--- opennurbs/opennurbs_version_number.cpp	2024-06-25 15:44:35.957646142 -0400
++++ OPENNURBS_BLD/opennurbs_version_number.cpp	2024-06-25 15:44:06.146134346 -0400
 @@ -375,7 +375,7 @@
      str_version =
        (0 != version_number)
