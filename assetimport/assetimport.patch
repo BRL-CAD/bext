@@ -1,6 +1,6 @@
-diff -Naur assimp/cmake-modules/FindZLIB.cmake assimp_BLD/cmake-modules/FindZLIB.cmake
---- assimp/cmake-modules/FindZLIB.cmake	2023-09-20 21:22:27.781576452 -0400
-+++ assimp_BLD/cmake-modules/FindZLIB.cmake	2023-09-23 11:22:52.826020362 -0400
+diff -Naur ASSETIMPORT/cmake-modules/FindZLIB.cmake ASSETIMPORT_BLD/cmake-modules/FindZLIB.cmake
+--- ASSETIMPORT/cmake-modules/FindZLIB.cmake	2024-06-25 10:10:10.163683303 -0400
++++ ASSETIMPORT_BLD/cmake-modules/FindZLIB.cmake	2024-06-25 10:08:14.147412121 -0400
 @@ -1,48 +1,123 @@
 -#-------------------------------------------------------------------
 -# This file is part of the CMake build system for OGRE
@@ -170,9 +170,9 @@ diff -Naur assimp/cmake-modules/FindZLIB.cmake assimp_BLD/cmake-modules/FindZLIB
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naur assimp/code/AssetLib/MDL/MDLFileData.h ASSETIMPORT_BLD/code/AssetLib/MDL/MDLFileData.h
---- assimp/code/AssetLib/MDL/MDLFileData.h	2024-03-06 16:18:12.369764492 -0500
-+++ ASSETIMPORT_BLD/code/AssetLib/MDL/MDLFileData.h	2024-03-06 16:18:36.229358252 -0500
+diff -Naur ASSETIMPORT/code/AssetLib/MDL/MDLFileData.h ASSETIMPORT_BLD/code/AssetLib/MDL/MDLFileData.h
+--- ASSETIMPORT/code/AssetLib/MDL/MDLFileData.h	2024-06-25 10:10:10.171683183 -0400
++++ ASSETIMPORT_BLD/code/AssetLib/MDL/MDLFileData.h	2024-06-25 10:08:14.148412106 -0400
 @@ -876,7 +876,7 @@
          : apcOutBones(),
          iNum()
@@ -182,9 +182,9 @@ diff -Naur assimp/code/AssetLib/MDL/MDLFileData.h ASSETIMPORT_BLD/code/AssetLib/
      }
  
      //! Destruction: properly delete all allocated resources
-diff -Naur assimp/code/CMakeLists.txt ASSETIMPORT_BLD/code/CMakeLists.txt
---- assimp/code/CMakeLists.txt	2024-03-06 16:18:12.377764357 -0500
-+++ ASSETIMPORT_BLD/code/CMakeLists.txt	2024-03-06 16:15:11.452846911 -0500
+diff -Naur ASSETIMPORT/code/CMakeLists.txt ASSETIMPORT_BLD/code/CMakeLists.txt
+--- ASSETIMPORT/code/CMakeLists.txt	2024-06-25 10:10:10.175683123 -0400
++++ ASSETIMPORT_BLD/code/CMakeLists.txt	2024-06-25 10:08:14.149412091 -0400
 @@ -906,17 +906,18 @@
  SOURCE_GROUP( Extra FILES ${Extra_SRCS})
  
@@ -215,7 +215,7 @@ diff -Naur assimp/code/CMakeLists.txt ASSETIMPORT_BLD/code/CMakeLists.txt
  
  # utf8
  IF(ASSIMP_HUNTER_ENABLED)
-@@ -1203,6 +1204,10 @@
+@@ -1268,6 +1269,10 @@
    $<INSTALL_INTERFACE:${ASSIMP_INCLUDE_INSTALL_DIR}>
  )
  
@@ -226,8 +226,8 @@ diff -Naur assimp/code/CMakeLists.txt ASSETIMPORT_BLD/code/CMakeLists.txt
  IF(ASSIMP_HUNTER_ENABLED)
    TARGET_LINK_LIBRARIES(assimp
        PUBLIC
-@@ -1224,7 +1229,7 @@
-     target_link_libraries(assimp PUBLIC ${draco_LIBRARIES})
+@@ -1289,7 +1294,7 @@
+     target_link_libraries(assimp PRIVATE ${draco_LIBRARIES})
    endif()
  ELSE()
 -  TARGET_LINK_LIBRARIES(assimp ${ZLIB_LIBRARIES} ${OPENDDL_PARSER_LIBRARIES})
@@ -235,7 +235,7 @@ diff -Naur assimp/code/CMakeLists.txt ASSETIMPORT_BLD/code/CMakeLists.txt
    if (ASSIMP_BUILD_DRACO)
      target_link_libraries(assimp ${draco_LIBRARIES})
    endif()
-@@ -1242,6 +1243,7 @@
+@@ -1307,6 +1312,7 @@
    TARGET_LINK_LIBRARIES(assimp ${C4D_EXTRA_LIBRARIES})
  ENDIF ()
  
@@ -243,7 +243,7 @@ diff -Naur assimp/code/CMakeLists.txt ASSETIMPORT_BLD/code/CMakeLists.txt
  if( MSVC )
    # in order to prevent DLL hell, each of the DLLs have to be suffixed with the major version and msvc prefix
    # CMake 3.12 added a variable for this
-@@ -1288,11 +1290,12 @@
+@@ -1353,11 +1359,12 @@
      target_compile_definitions(assimp PUBLIC WindowsStore)
      TARGET_LINK_LIBRARIES(assimp advapi32)
  endif()
