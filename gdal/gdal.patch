@@ -303,6 +303,23 @@ diff -Naurw gdal-3.6.3/cmake/modules/packages/FindZLIB.cmake gdal/cmake/modules/
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
+diff -Naur gdal/gcore/gdal_priv.h GDAL_BLD/gcore/gdal_priv.h
+--- gdal/gcore/gdal_priv.h	2024-06-26 17:01:06.199711566 -0400
++++ GDAL_BLD/gcore/gdal_priv.h	2024-06-26 17:00:48.433037793 -0400
+@@ -96,6 +96,13 @@
+ /*                       GDALMultiDomainMetadata                        */
+ /************************************************************************/
+ 
++#if defined(_WIN32)
++#define STRCASECMP(a, b) (_stricmp(a, b))
++#else
++/** Alias for strcasecmp() */
++#define STRCASECMP(a, b) (strcasecmp(a, b))
++#endif
++
+ //! @cond Doxygen_Suppress
+ class CPL_DLL GDALMultiDomainMetadata
+ {
 diff -Naur gdal/gdal.cmake GDAL_BLD/gdal.cmake
 --- gdal/gdal.cmake	2024-06-25 09:56:45.660500506 -0400
 +++ GDAL_BLD/gdal.cmake	2024-06-25 09:55:37.834206511 -0400
