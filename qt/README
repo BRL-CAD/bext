@@ -3,7 +3,7 @@ on a more minimal subset for easier compilation.
 
 Sources are from:  https://download.qt.io/official_releases/qt/
 
-Current version present:  6.6.2
+Current version present:  6.7.2
 
 
 Building on Redhat 8 and derivatives (tested with Rocky Linux 8)
