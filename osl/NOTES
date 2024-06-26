@@ -1,0 +1,14 @@
+For building OSL to work, it is necessary that the bundled clang (if a bundled
+LLVM is in use) also work.  Clang on Linux needs gcc headers, and will look in
+multiple locations.  If a location with an incomplete directory is found, that
+will be problematic.
+
+Observed example:
+
+libgcc-14-dev directory was present on a system with gcc 13 as the compiler.
+Clang reported it was selecting that directory rather than the 13-dev
+directory, and subsequent builds were failing due to missing basic C++ headers.
+
+Solution was to remove the libgcc-14-dev directory (in the case prompting this
+note, it apparently got pulled in to support emacs packages)
+
