@@ -126,8 +126,8 @@ diff -Naur ispc/cmake/FindZLIB.cmake ISPC_BLD/cmake/FindZLIB.cmake
 +    endif()
 +endif()
 diff -Naur ispc/CMakeLists.txt ISPC_BLD/CMakeLists.txt
---- ispc/CMakeLists.txt	2023-12-21 14:05:10.132040601 -0500
-+++ ISPC_BLD/CMakeLists.txt	2023-12-21 14:06:37.898556691 -0500
+--- ispc/CMakeLists.txt	2024-06-26 20:46:06.003030179 -0400
++++ ISPC_BLD/CMakeLists.txt	2024-06-26 20:52:51.978011242 -0400
 @@ -265,6 +265,7 @@
  endif()
  
@@ -136,27 +136,28 @@ diff -Naur ispc/CMakeLists.txt ISPC_BLD/CMakeLists.txt
  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ispcrt/cmake)
  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLLVM.cmake)
-@@ -626,6 +627,10 @@
-     target_link_libraries(${PROJECT_NAME} "-Wl,--start-group")
+@@ -712,6 +713,10 @@
+     list(APPEND LINK_LIBRARIES "-Wl,--start-group")
  endif()
  
 +# Link against zlib
 +find_package(ZLIB)
-+target_link_libraries(${PROJECT_NAME} ${ZLIB_LIBRARIES})
++list(APPEND LINK_LIBRARIES ${ZLIB_LIBRARIES})
 +
  # Link against Clang libraries
  foreach(clangLib ${CLANG_LIBRARY_LIST})
      # Preferred way to build ISPC is to link it with individual clang static
-@@ -676,7 +681,11 @@
+@@ -762,7 +767,12 @@
          # but it contains both libform.so and libcurses.so.
          # We need libcurses.so only, so exclude libform.so from the list.
          list(FILTER CURSES_LIBRARIES EXCLUDE REGEX ".*libform.*")
--        target_link_libraries(${PROJECT_NAME} pthread ${CURSES_LIBRARIES})
+-        list(APPEND LINK_LIBRARIES pthread ${CURSES_LIBRARIES})
++        list(APPEND LINK_LIBRARIES pthread)
 +		  if (CURSES_NCURSES_LIBRARY)
-+			  target_link_libraries(${PROJECT_NAME} pthread ${CURSES_NCURSES_LIBRARY})
-+		  elseif (CURSES_LIBRARIES)
-+			  target_link_libraries(${PROJECT_NAME} pthread ${CURSES_LIBRARIES})
-+		  endif (CURSES_NCURSES_LIBRARY)
++			  list(APPEND LINK_LIBRARIES ${CURSES_NCURSES_LIBRARY})
++		  elseif (CURSES_NCURSES_LIBRARY)
++			  list(APPEND LINK_LIBRARIES ${CURSES_LIBRARIES})
++		  endif ()
      endif()
  endif()
  
