@@ -14,13 +14,8 @@ if (ENABLE_LLVM)
   set(PATCH_CMD "PATCH_COMMAND")
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
-    set(Z_BRL_PATCH_CMD "${PATCH_CMD};${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/llvm_z_brl.patch")
-    set(PATCH_CMD "COMMAND")
+    set(Z_BRL_PATCH_CMD "COMMAND;${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/llvm_z_brl.patch")
   endif (TARGET ZLIB_BLD)
-  if (MSVC)
-    set(Z_NO_AST_INTRO_PATCH_CMD "${PATCH_CMD};${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch")
-    set(PATCH_CMD "COMMAND")
-  endif (MSVC)
 
   if (WIN32)
 
@@ -39,8 +34,8 @@ if (ENABLE_LLVM)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/llvm-project"
       SOURCE_SUBDIR llvm
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+      PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch"
       ${Z_BRL_PATCH_CMD}
-      ${Z_NO_AST_INTRO_PATCH_CMD}
       CMAKE_ARGS
       -C ${CMAKE_CURRENT_SOURCE_DIR}/llvm_targets.cmake
       ${BUILD_TYPE_SPECIFIER}
@@ -80,8 +75,8 @@ if (ENABLE_LLVM)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/llvm-project"
       SOURCE_SUBDIR llvm
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+      PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch"
       ${Z_BRL_PATCH_CMD}
-      ${Z_NO_AST_INTRO_PATCH_CMD}
       CMAKE_ARGS
       -C ${CMAKE_CURRENT_SOURCE_DIR}/llvm_targets.cmake
       -DCMAKE_BUILD_TYPE=Release

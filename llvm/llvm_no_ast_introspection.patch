@@ -1,7 +1,6 @@
-diff -Naur llvm-project/clang/lib/Tooling/CMakeLists.txt LLVM_BLD/clang/lib/Tooling/CMakeLists.txt
 --- llvm-project/clang/lib/Tooling/CMakeLists.txt	2024-06-26 10:58:56.993040845 -0400
-+++ LLVM_BLD/clang/lib/Tooling/CMakeLists.txt	2024-06-26 11:56:09.496630352 -0400
-@@ -24,11 +24,12 @@
++++ LLVM_BLD/clang/lib/Tooling/CMakeLists.txt	2024-06-27 18:30:51.174617217 -0400
+@@ -24,12 +24,13 @@
  string(SUBSTRING ${CMAKE_CURRENT_BINARY_DIR} ${PATH_LIB_END} -1 PATH_TAIL)
  string(CONCAT BINARY_INCLUDE_DIR ${PATH_HEAD} "/include/clang/" ${PATH_TAIL})
  
@@ -10,12 +9,14 @@ diff -Naur llvm-project/clang/lib/Tooling/CMakeLists.txt LLVM_BLD/clang/lib/Tool
 -    OR CMAKE_CROSSCOMPILING
 -    OR GENERATOR_IS_MULTI_CONFIG
 -    OR NOT LLVM_NATIVE_ARCH IN_LIST LLVM_TARGETS_TO_BUILD
+-    )
 +#if (NOT Python3_EXECUTABLE
 +#    OR APPLE
 +#    OR CMAKE_CROSSCOMPILING
 +#    OR GENERATOR_IS_MULTI_CONFIG
 +#    OR NOT LLVM_NATIVE_ARCH IN_LIST LLVM_TARGETS_TO_BUILD
++#    )
 +if (1)
-     )
      configure_file(
        EmptyNodeIntrospection.inc.in
+       ${BINARY_INCLUDE_DIR}/NodeIntrospection.inc
