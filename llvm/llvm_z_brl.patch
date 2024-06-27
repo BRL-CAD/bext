@@ -768,7 +768,7 @@ diff -Naur llvm-project/llvm/lib/Support/CRC.cpp LLVM_BLD/llvm/lib/Support/CRC.c
  #endif
  
 -uint32_t llvm::crc32(ArrayRef<uint8_t> Data) { return crc32(0, Data); }
-+uint32_t llvm::brl_crc32(ArrayRef<uint8_t> Data) { return crc32(0, Data); }
++uint32_t llvm::brl_crc32(ArrayRef<uint8_t> Data) { return brl_crc32(0, Data); }
  
  void JamCRC::update(ArrayRef<uint8_t> Data) {
    CRC ^= 0xFFFFFFFFU; // Undo CRC-32 Init.
