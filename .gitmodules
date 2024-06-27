@@ -116,11 +116,6 @@
 	path = utahrle/utahrle
 	url = https://github.com/BRL-CAD/utahrle
 	ignore = dirty
-[submodule "poly2tri/poly2tri"]
-	path = poly2tri/poly2tri
-	url = https://github.com/BRL-CAD/poly2tri
-	branch = RELEASE
-	ignore = dirty
 [submodule "tk/tk"]
 	path = tk/tk
 	url = https://github.com/BRL-CAD/tk

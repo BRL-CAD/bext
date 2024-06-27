@@ -243,10 +243,6 @@ add_project(opennurbs GROUPS "BRLCAD")
 # https://github.com/starseeker/osmesa
 add_project(osmesa GROUPS "BRLCAD")
 
-# Poly2Tri - constrained Delaunay triangulation
-# https://github.com/jhasse/poly2tri
-add_project(poly2tri GROUPS "BRLCAD")
-
 # Geogram - a programming library with geometric algorithms
 # https://github.com/BrunoLevy/geogram
 add_project(geogram GROUPS "BRLCAD_EXTRA")
