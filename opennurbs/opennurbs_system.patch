@@ -1,6 +1,18 @@
---- opennurbs/opennurbs_system.h	2024-06-25 15:44:35.955646175 -0400
-+++ OPENNURBS_BLD/opennurbs_system.h	2024-06-25 15:44:06.135134526 -0400
-@@ -494,7 +494,7 @@
+--- opennurbs/opennurbs_system.h	2024-06-25 11:11:12.124747567 -0400
++++ OPENNURBS_BLD/opennurbs_system.h	2024-06-28 18:43:51.808824736 -0400
+@@ -111,11 +111,6 @@
+ 
+ #pragma ON_PRAGMA_WARNING_PUSH
+ 
+-/* compiler choice */
+-#if defined(ON_COMPILER_MSC)
+-#include "opennurbs_windows_targetver.h"
+-#endif
+-
+ #if defined(ON_RUNTIME_APPLE) && defined(__OBJC__)
+ 
+ // The header file opennurbs_system_runtime.h is included in several
+@@ -494,7 +489,7 @@
  #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
  
  #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
