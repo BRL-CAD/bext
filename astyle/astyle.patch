@@ -57,10 +57,16 @@ diff -Naur astyle/build/cmake/InstallOptions.cmake ASTYLE_BLD/build/cmake/Instal
 -	endif()
 -endif()
 diff -Naur astyle/CMakeLists.txt ASTYLE_BLD/CMakeLists.txt
---- astyle/CMakeLists.txt	2024-06-24 11:35:23.448068159 -0400
-+++ ASTYLE_BLD/CMakeLists.txt	2024-06-24 11:34:01.154415093 -0400
-@@ -8,7 +8,7 @@
+--- astyle/CMakeLists.txt	2024-06-06 01:30:44.000000000 -0400
++++ ASTYLE_BLD/CMakeLists.txt	2024-06-28 12:11:49.297259511 -0400
+@@ -6,9 +6,13 @@
  
+ project(astyle CXX)
+ 
++set(CMAKE_CXX_EXTENSIONS OFF)
++set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++
  include( build/cmake/Options.cmake REQUIRED )
  include( build/cmake/CompilerOptions.cmake REQUIRED )
 -include( build/cmake/LinkerOptions.cmake REQUIRED )
