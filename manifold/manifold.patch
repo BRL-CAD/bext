@@ -1,6 +1,6 @@
 diff -Naur manifold/src/third_party/glm/glm/detail/setup.hpp MANIFOLD_BLD/src/third_party/glm/glm/detail/setup.hpp
 --- manifold/src/third_party/glm/glm/detail/setup.hpp	2024-06-25 10:59:36.219351152 -0400
-+++ MANIFOLD_BLD/src/third_party/glm/glm/detail/setup.hpp	2024-07-09 20:09:07.054278365 -0400
++++ MANIFOLD_BLD/src/third_party/glm/glm/detail/setup.hpp	2024-07-09 21:27:42.922845184 -0400
 @@ -493,7 +493,7 @@
  #	define GLM_NEVER_INLINE
  #endif//defined(GLM_FORCE_INLINE)
@@ -12,7 +12,7 @@ diff -Naur manifold/src/third_party/glm/glm/detail/setup.hpp MANIFOLD_BLD/src/th
  #define GLM_FUNC_QUALIFIER GLM_CUDA_FUNC_DEF GLM_INLINE
 diff -Naur manifold/src/utilities/include/optional_assert.h MANIFOLD_BLD/src/utilities/include/optional_assert.h
 --- manifold/src/utilities/include/optional_assert.h	2024-07-02 20:09:19.078438473 -0400
-+++ MANIFOLD_BLD/src/utilities/include/optional_assert.h	2024-07-09 17:10:40.601974842 -0400
++++ MANIFOLD_BLD/src/utilities/include/optional_assert.h	2024-07-09 21:32:03.965382198 -0400
 @@ -15,7 +15,7 @@
  #pragma once
  
@@ -22,3 +22,12 @@ diff -Naur manifold/src/utilities/include/optional_assert.h MANIFOLD_BLD/src/uti
  #include <stdexcept>
  #endif
  
+@@ -40,7 +40,7 @@
+ #define DEBUG_ASSERT(condition, EX, msg)
+ #endif
+ 
+-#if MANIFOLD_EXCEPTIONS
++#ifdef MANIFOLD_EXCEPTIONS
+ #define ASSERT(condition, EX) \
+   if (!(condition)) throw(EX);
+ #else
