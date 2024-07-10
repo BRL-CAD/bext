@@ -14,14 +14,7 @@
 
 name: BRL-CAD Linux Interactive Debugging
 
-on:
-  workflow_dispatch:
-    inputs:
-      debug_enabled:
-        type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-        required: false
-        default: false
+on: [workflow_dispatch]
 
 jobs:
 
@@ -58,14 +51,6 @@ jobs:
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
           cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug
 
-      - name: Build
-        run: |
-          export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
-          cd build && ninja -j2 -v
-
       - name: Debugging - tmate session
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
         uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
 
