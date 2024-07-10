@@ -622,7 +622,7 @@ diff -Naur itk/CMake/FindTCL.cmake ITK_BLD/CMake/FindTCL.cmake
 +# ex: shiftwidth=2 tabstop=8
 diff -Naur itk/CMakeLists.txt ITK_BLD/CMakeLists.txt
 --- itk/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
-+++ ITK_BLD/CMakeLists.txt	2024-07-10 10:41:52.225087088 -0400
++++ ITK_BLD/CMakeLists.txt	2024-07-10 11:14:36.054324121 -0400
 @@ -0,0 +1,280 @@
 +#                     C M A K E L I S T S . T X T
 +# ITK
@@ -843,14 +843,14 @@ diff -Naur itk/CMakeLists.txt ITK_BLD/CMakeLists.txt
 +endif (NOT TCL_PRIVATE_HDRS)
 +
 +include_directories(
++  # Itcl3 is iffy as a system install - just reference the local copy
++  ${CMAKE_SOURCE_DIR}/generic/itcl3
 +  ${TCL_INCLUDE_PATH}
 +  ${TK_INCLUDE_PATH}
 +  ${ITCL_INCLUDE_PATH}
 +  ${ITK_INCLUDE_DIRS}
 +  ${X11_INCLUDE_DIR}
 +  ${TCL_PRIVATE_HDRS}
-+  # Itcl3 is iffy as a system install - just reference the local copy
-+  ${CMAKE_SOURCE_DIR}/generic/itcl3
 +  )
 +
 +add_library(itk${ITK_VERSION} SHARED ${ITK_SRCS})
