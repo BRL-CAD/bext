@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_object_history.cpp	2024-02-16 13:44:43.188775957 -0500
-+++ OPENNURBS_BLD/opennurbs_object_history.cpp	2024-02-16 14:26:16.210773859 -0500
+--- opennurbs/opennurbs_object_history.cpp	2024-06-25 15:44:35.950646257 -0400
++++ OPENNURBS_BLD/opennurbs_object_history.cpp	2024-06-25 15:44:06.115134853 -0400
 @@ -28,7 +28,7 @@
    // The VALUE_TYPE enum values must never be changed
    // because the values are used to determine the parameter

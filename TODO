@@ -8,6 +8,6 @@ valid if one of their dependencies changes.  We need to:
 
 2.  remove old build directory contents for those projects that have
     had a dependency change status, so their compiles end up detecting
-    and linking to the correct versions.  We can't depend on thrid
+    and linking to the correct versions.  We can't depend on third
     party build systems to reset everything correctly, so we need to
     start clean.

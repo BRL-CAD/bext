@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_optimize.h	2024-02-16 13:44:43.188775957 -0500
-+++ OPENNURBS_BLD/opennurbs_optimize.h	2024-02-16 14:27:19.549703573 -0500
+--- opennurbs/opennurbs_optimize.h	2024-06-25 15:44:35.950646257 -0400
++++ OPENNURBS_BLD/opennurbs_optimize.h	2024-06-25 15:44:06.119134788 -0400
 @@ -15,6 +15,7 @@
  #define OPENNURBS_OPTIMIZE_INC_
  

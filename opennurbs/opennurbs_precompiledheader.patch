@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_precompiledheader.cpp	2024-02-16 13:44:43.188775957 -0500
-+++ OPENNURBS_BLD/opennurbs_precompiledheader.cpp	2024-02-16 14:32:40.056274471 -0500
+--- opennurbs/opennurbs_precompiledheader.cpp	2024-06-25 15:44:35.951646240 -0400
++++ OPENNURBS_BLD/opennurbs_precompiledheader.cpp	2024-06-25 15:44:06.127134657 -0400
 @@ -32,9 +32,9 @@
  #error Incorrect _M_... setting for x64 build
  #endif

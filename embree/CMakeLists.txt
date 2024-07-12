@@ -39,6 +39,10 @@ if (ENABLE_EMBREE)
     )
 
   TargetInstallDeps(EMBREE EMBREE_DEPENDS)
+  # ISPC use is conditional so it's not (currently) part of the deps file
+  if (USE_OSPRAY AND TARGET ISPC_BLD)
+    ExternalProject_Add_stepdependencies(EMBREE_BLD configure ISPC_BLD-install)
+  endif (USE_OSPRAY AND TARGET ISPC_BLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   configure_file(

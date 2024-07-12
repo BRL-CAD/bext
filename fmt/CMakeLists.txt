@@ -33,7 +33,7 @@ if (ENABLE_FMT)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/fmt/LICENSE.rst
+    ${CMAKE_CURRENT_SOURCE_DIR}/fmt/LICENSE
     ${DOC_LICENSE_DIR}/fmt.txt
     COPYONLY
     )

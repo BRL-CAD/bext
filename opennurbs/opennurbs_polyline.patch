@@ -1,6 +1,6 @@
---- opennurbs/opennurbs_polyline.cpp	2024-02-16 13:44:43.188775957 -0500
-+++ OPENNURBS_BLD/opennurbs_polyline.cpp	2024-02-16 14:28:31.000495061 -0500
-@@ -450,7 +450,7 @@
+--- opennurbs/opennurbs_polyline.cpp	2024-06-25 15:28:09.126849147 -0400
++++ OPENNURBS_BLD/opennurbs_polyline.cpp	2024-06-25 15:26:59.863992698 -0400
+@@ -455,7 +455,7 @@
    maxN = maxN.UnitVector();
    for (size_t i = 0; i < point_count; ++i)
    {

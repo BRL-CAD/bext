@@ -1,19 +1,34 @@
-diff -Naur OpenShadingLanguage/src/cmake/Config.cmake.in OpenShadingLanguage_BLD/src/cmake/Config.cmake.in
---- OpenShadingLanguage/src/cmake/Config.cmake.in	2023-09-20 21:22:54.885148544 -0400
-+++ OpenShadingLanguage_BLD/src/cmake/Config.cmake.in	2023-09-25 21:05:34.672936351 -0400
+diff -Naur OpenShadingLanguage/CMakeLists.txt OSL_BLD/CMakeLists.txt
+--- OpenShadingLanguage/CMakeLists.txt	2024-06-26 16:05:10.530665518 -0400
++++ OSL_BLD/CMakeLists.txt	2024-06-26 16:00:29.386207307 -0400
+@@ -15,6 +15,11 @@
+ project (OSL VERSION ${OSL_VERSION}
+          LANGUAGES CXX C
+          HOMEPAGE_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage")
++
++set(CMAKE_CXX_EXTENSIONS OFF)
++set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++
+ set (PROJ_NAME ${PROJECT_NAME})    # short name
+ string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
+ string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
+diff -Naur OpenShadingLanguage/src/cmake/Config.cmake.in OSL_BLD/src/cmake/Config.cmake.in
+--- OpenShadingLanguage/src/cmake/Config.cmake.in	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/Config.cmake.in	2024-06-26 16:00:29.386207307 -0400
 @@ -8,7 +8,7 @@
  
  # add here all the find_dependency() whenever switching to config based dependencies
  if (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 3.0)
 -    find_dependency(Imath @Imath_VERSION@)
-+    find_dependency(OpenEXR @OpenEXR_VERSION@)
++	 find_dependency(OpenEXR @OpenEXR_VERSION@)
  elseif (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 2.4 AND @FOUND_OPENEXR_WITH_CONFIG@)
      find_dependency(IlmBase @OpenEXR_VERSION@)
      find_dependency(OpenEXR @OpenEXR_VERSION@)
-diff -Naur OpenShadingLanguage/src/cmake/externalpackages.cmake OpenShadingLanguage_BLD/src/cmake/externalpackages.cmake
---- OpenShadingLanguage/src/cmake/externalpackages.cmake	2023-09-20 21:22:54.889148481 -0400
-+++ OpenShadingLanguage_BLD/src/cmake/externalpackages.cmake	2023-09-25 21:05:14.829265011 -0400
-@@ -49,11 +49,6 @@
+diff -Naur OpenShadingLanguage/src/cmake/externalpackages.cmake OSL_BLD/src/cmake/externalpackages.cmake
+--- OpenShadingLanguage/src/cmake/externalpackages.cmake	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/externalpackages.cmake	2024-06-26 16:00:29.387207292 -0400
+@@ -49,13 +49,6 @@
      # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
  else ()
      set (Boost_COMPONENTS filesystem system thread)
@@ -21,13 +36,15 @@ diff -Naur OpenShadingLanguage/src/cmake/externalpackages.cmake OpenShadingLangu
 -    # cmake output (e.g. boost 1.70.0, cmake <= 3.14). Specifically it fails
 -    # to set the expected variables printed below. So until that's fixed
 -    # force FindBoost.cmake to use the original brute force path.
--    set (Boost_NO_BOOST_CMAKE ON)
+-    if (NOT DEFINED Boost_NO_BOOST_CMAKE)
+-        set (Boost_NO_BOOST_CMAKE ON)
+-    endif ()
      checked_find_package (Boost REQUIRED
                         VERSION_MIN 1.55
                         COMPONENTS ${Boost_COMPONENTS}
-diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OpenShadingLanguage_BLD/src/cmake/flexbison.cmake
---- OpenShadingLanguage/src/cmake/flexbison.cmake	2023-09-20 21:22:54.889148481 -0400
-+++ OpenShadingLanguage_BLD/src/cmake/flexbison.cmake	2023-09-25 21:05:14.829265011 -0400
+diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OSL_BLD/src/cmake/flexbison.cmake
+--- OpenShadingLanguage/src/cmake/flexbison.cmake	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/flexbison.cmake	2024-06-26 16:00:29.387207292 -0400
 @@ -27,6 +27,11 @@
                   DOC "path to the bison executable")
  endif()
@@ -40,9 +57,29 @@ diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OpenShadingLanguage_BLD
  checked_find_package (BISON 2.7 REQUIRED
                        PRINT BISON_EXECUTABLE)
  checked_find_package (FLEX 2.3.35 REQUIRED
-diff -Naur OpenShadingLanguage/src/cmake/modules/FindZLIB.cmake OpenShadingLanguage_BLD/src/cmake/modules/FindZLIB.cmake
+diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmake/modules/FindLLVM.cmake
+--- OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/modules/FindLLVM.cmake	2024-06-26 16:22:10.337491211 -0400
+@@ -128,7 +128,7 @@
+ foreach (COMPONENT clangFrontend clangDriver clangSerialization
+                    clangParse clangSema clangAnalysis clangAST
+                    clangASTMatchers clangBasic clangEdit clangLex
+-                   clangSupport)
++                   clangSupport clangAPINotes)
+     find_library ( _CLANG_${COMPONENT}_LIBRARY
+                   NAMES ${COMPONENT}
+                   PATHS ${LLVM_LIB_DIR})
+@@ -156,6 +156,7 @@
+   endif ()
+ endif ()
+ 
++set(LLVM_LIBRARIES ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
+ 
+ include(FindPackageHandleStandardArgs)
+ find_package_handle_standard_args (LLVM
+diff -Naur OpenShadingLanguage/src/cmake/modules/FindZLIB.cmake OSL_BLD/src/cmake/modules/FindZLIB.cmake
 --- OpenShadingLanguage/src/cmake/modules/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ OpenShadingLanguage_BLD/src/cmake/modules/FindZLIB.cmake	2023-09-27 07:26:38.787393077 -0400
++++ OSL_BLD/src/cmake/modules/FindZLIB.cmake	2024-06-26 16:00:29.387207292 -0400
 @@ -0,0 +1,123 @@
 +#.rst:
 +# FindZLIB
@@ -167,102 +204,125 @@ diff -Naur OpenShadingLanguage/src/cmake/modules/FindZLIB.cmake OpenShadingLangu
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naur OpenShadingLanguage/src/liboslcomp/ast.cpp OpenShadingLanguage_BLD/src/liboslcomp/ast.cpp
---- OpenShadingLanguage/src/liboslcomp/ast.cpp	2023-09-20 21:22:54.897148354 -0400
-+++ OpenShadingLanguage_BLD/src/liboslcomp/ast.cpp	2023-09-25 21:05:14.829265011 -0400
-@@ -46,7 +46,7 @@
-     for (int i = 0; i < ASTNode::_last_node; ++i)
-         if (node_counts[i] > 0)
-             Strutil::print("ASTNode type {:2}: {:5}   (peak {:5})\n", i,
--                           node_counts[i], node_counts_peak[i]);
-+                           (int)node_counts[i], (int)node_counts_peak[i]);
- });
- }  // namespace
- #endif
+diff -Naur OpenShadingLanguage/src/liboslcomp/CMakeLists.txt OSL_BLD/src/liboslcomp/CMakeLists.txt
+--- OpenShadingLanguage/src/liboslcomp/CMakeLists.txt	2024-06-26 16:05:10.536665401 -0400
++++ OSL_BLD/src/liboslcomp/CMakeLists.txt	2024-06-26 16:00:29.387207292 -0400
+@@ -60,6 +60,7 @@
+         SOVERSION   ${SOVERSION}
+         OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
+         LINK_FLAGS  ${link_flags}
++		  CXX_STANDARD 17
+         POSITION_INDEPENDENT_CODE ON
+     )
+ 
 diff -Naur OpenShadingLanguage/src/liboslexec/CMakeLists.txt OSL_BLD/src/liboslexec/CMakeLists.txt
---- OpenShadingLanguage/src/liboslexec/CMakeLists.txt	2023-09-27 10:07:27.042600776 -0400
-+++ OSL_BLD/src/liboslexec/CMakeLists.txt	2023-09-27 09:57:04.218992278 -0400
-@@ -553,6 +553,7 @@
+--- OpenShadingLanguage/src/liboslexec/CMakeLists.txt	2024-06-26 16:05:10.537665382 -0400
++++ OSL_BLD/src/liboslexec/CMakeLists.txt	2024-06-26 16:02:50.189463356 -0400
+@@ -583,6 +583,7 @@
          ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
          ${CLANG_LIBRARIES}
          ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
-+	${ZLIB_LIBRARIES}
++		  ${ZLIB_LIBRARIES}
      )
  
  target_compile_features (${local_lib}
-@@ -583,17 +584,17 @@
+@@ -599,6 +600,7 @@
+         VERSION     ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
+         SOVERSION   ${SOVERSION}
+         OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
++		  CXX_STANDARD 17
+         LINK_FLAGS  ${link_flags}
+     )
+ 
+@@ -613,17 +615,17 @@
  # Unit tests
- if (OSL_BUILD_TESTS)
+ if (OSL_BUILD_TESTS AND BUILD_TESTING)
      add_executable (accum_test accum_test.cpp)
 -    target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-+    target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} LLVMSupport ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
++	 target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
      set_target_properties (accum_test PROPERTIES FOLDER "Unit Tests")
      add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
  
      add_executable (dual_test dual_test.cpp)
 -    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-+    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} LLVMSupport ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
++    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
      set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
      add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
  
      add_executable (llvmutil_test llvmutil_test.cpp)
 -    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-+    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} LLVMSupport ${ZLIB_LIBRARIES})
++    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
      set_target_properties (llvmutil_test PROPERTIES FOLDER "Unit Tests")
      add_test (unit_llvmutil ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvmutil_test)
  endif ()
+diff -Naur OpenShadingLanguage/src/liboslexec/llvm_util.cpp OSL_BLD/src/liboslexec/llvm_util.cpp
+--- OpenShadingLanguage/src/liboslexec/llvm_util.cpp	2024-06-26 16:05:10.538665362 -0400
++++ OSL_BLD/src/liboslexec/llvm_util.cpp	2024-06-26 16:04:03.078993987 -0400
+@@ -3266,12 +3266,6 @@
+     }
+ }
+ 
+-bool
+-LLVM_Util::is_type_array(llvm::Type* type)
+-{
+-    return type->isArrayTy();
+-}
+-
+ llvm::Type*
+ LLVM_Util::type_array(llvm::Type* type, int n)
+ {
 diff -Naur OpenShadingLanguage/src/oslc/CMakeLists.txt OSL_BLD/src/oslc/CMakeLists.txt
---- OpenShadingLanguage/src/oslc/CMakeLists.txt	2023-09-27 10:07:27.023600875 -0400
-+++ OSL_BLD/src/oslc/CMakeLists.txt	2023-09-27 09:57:46.671744918 -0400
+--- OpenShadingLanguage/src/oslc/CMakeLists.txt	2024-06-26 16:05:10.542665284 -0400
++++ OSL_BLD/src/oslc/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
 @@ -12,5 +12,5 @@
  endif ()
  
  add_executable ( oslc ${oslc_srcs} )
 -target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-+target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} LLVMSupport ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
++target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
  install_targets (oslc)
 diff -Naur OpenShadingLanguage/src/testrender/CMakeLists.txt OSL_BLD/src/testrender/CMakeLists.txt
---- OpenShadingLanguage/src/testrender/CMakeLists.txt	2023-09-27 10:07:27.074600609 -0400
-+++ OSL_BLD/src/testrender/CMakeLists.txt	2023-09-27 10:06:52.103783118 -0400
-@@ -61,7 +61,10 @@
+--- OpenShadingLanguage/src/testrender/CMakeLists.txt	2024-06-26 16:05:10.542665284 -0400
++++ OSL_BLD/src/testrender/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
+@@ -69,7 +69,10 @@
  target_link_libraries (testrender
      PRIVATE
          oslexec oslquery
 -        pugixml::pugixml)
 +        pugixml::pugixml
-+	LLVMSupport
-+	${ZLIB_LIBRARIES}
-+	)
++		  LLVMSupport
++		  ${ZLIB_LIBRARIES}
++		  )
  
  osl_optix_target (testrender)
  
 diff -Naur OpenShadingLanguage/src/testshade/CMakeLists.txt OSL_BLD/src/testshade/CMakeLists.txt
---- OpenShadingLanguage/src/testshade/CMakeLists.txt	2023-09-27 10:07:27.101600468 -0400
-+++ OSL_BLD/src/testshade/CMakeLists.txt	2023-09-27 10:04:10.260627826 -0400
-@@ -68,7 +68,7 @@
+--- OpenShadingLanguage/src/testshade/CMakeLists.txt	2024-06-26 16:05:10.543665265 -0400
++++ OSL_BLD/src/testshade/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
+@@ -79,7 +79,7 @@
  
  target_link_libraries (testshade
                         PRIVATE
 -                           oslexec oslquery)
-+		       oslexec oslquery LLVMSupport ${ZLIB_LIBRARIES})
- 
++                           oslexec oslquery LLVMSupport ${ZLIB_LIBRARIES})
  
  install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
-@@ -85,7 +85,7 @@
  
- target_link_libraries (libtestshade
-                        PRIVATE
--                           oslexec oslquery)
-+                           oslexec oslquery LLVMSupport ${ZLIB_LIBRARIES})
- set_target_properties (libtestshade PROPERTIES PREFIX "")
+@@ -106,7 +106,7 @@
  
- install_targets ( libtestshade )
-@@ -95,7 +95,7 @@
- target_link_libraries (testshade_dso
-                        PRIVATE
-                            OpenImageIO::OpenImageIO
--                           ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
-+                           ${Boost_LIBRARIES} LLVMSupport ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS} )
- install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+     target_link_libraries (libtestshade
+                            PRIVATE
+-                               oslexec oslquery)
++									oslexec oslquery LLVMSupport ${ZLIB_LIBRARIES})
+     set_target_properties (libtestshade PROPERTIES PREFIX "")
  
- osl_optix_target(testshade)
+     install_targets ( libtestshade )
+@@ -116,7 +116,7 @@
+     target_link_libraries (testshade_dso
+                            PRIVATE
+                                OpenImageIO::OpenImageIO
+-                               ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
++                               ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS} )
+     install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+     osl_optix_target(libtestshade)
+ endif ()

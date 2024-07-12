@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_font.cpp	2024-02-16 13:44:43.180776089 -0500
-+++ OPENNURBS_BLD/opennurbs_font.cpp	2024-02-16 14:19:51.793238751 -0500
+--- opennurbs/opennurbs_font.cpp	2024-06-25 15:44:35.946646322 -0400
++++ OPENNURBS_BLD/opennurbs_font.cpp	2024-06-25 15:44:06.105135017 -0400
 @@ -8936,7 +8936,7 @@
      const wchar_t* prev_clean_family_name = nullptr;
      for (size_t i = 0; i < installed_count; i++)

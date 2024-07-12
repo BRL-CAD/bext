@@ -1,7 +1,6 @@
-diff -Naur embree/common/cmake/package.cmake EMBREE_BLD/common/cmake/package.cmake
---- embree/common/cmake/package.cmake	2023-09-18 12:26:06.118808150 -0400
-+++ EMBREE_BLD/common/cmake/package.cmake	2023-09-18 12:25:52.347047879 -0400
-@@ -171,13 +171,13 @@
+--- embree/common/cmake/package.cmake	2024-06-25 19:45:03.229489407 -0400
++++ EMBREE_BLD/common/cmake/package.cmake	2024-06-25 19:42:33.118981564 -0400
+@@ -178,13 +178,13 @@
    ELSEIF(APPLE)
      CONFIGURE_FILE("${PROJECT_SOURCE_DIR}/scripts/install_macosx/embree-vars.sh" embree-vars.sh @ONLY)
      CONFIGURE_FILE("${PROJECT_SOURCE_DIR}/scripts/install_macosx/embree-vars.csh" embree-vars.csh @ONLY)
@@ -18,4 +17,4 @@ diff -Naur embree/common/cmake/package.cmake EMBREE_BLD/common/cmake/package.cma
 +    INSTALL(FILES "${PROJECT_BINARY_DIR}/embree-vars.csh" DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT lib)
    ENDIF()
  ENDIF()
-
+ 

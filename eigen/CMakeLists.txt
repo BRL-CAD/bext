@@ -1,6 +1,8 @@
 # Decide if we're using Eigen
 cad_enable(EIGEN "libbg;libbn;librt")
 
+unset(ENGEN_BUNDLED CACHE)
+
 if (NOT ENABLE_EIGEN AND NOT DISABLE_EIGEN)
 
   # https://eigen.tuxfamily.org/dox/TopicCMakeGuide.html
@@ -48,6 +50,8 @@ if (ENABLE_EIGEN)
     )
 
   TargetInstallDeps(EIGEN EIGEN_DEPENDS)
+
+  set(EIGEN_BUNDLED TRUE CACHE BOOL "Eigen bundle flag")
 
 endif (ENABLE_EIGEN)
 

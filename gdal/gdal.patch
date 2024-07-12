@@ -163,16 +163,17 @@ diff -Naurw gdal-3.6.3/cmake/modules/FindPNG.cmake gdal/cmake/modules/FindPNG.cm
 +find_package_handle_standard_args(PNG
 +                                  REQUIRED_VARS PNG_LIBRARY PNG_PNG_INCLUDE_DIR
 +                                  VERSION_VAR PNG_VERSION_STRING)
-diff -Naurw gdal-3.6.3/cmake/modules/packages/FindSQLite3.cmake gdal/cmake/modules/packages/FindSQLite3.cmake
---- gdal-3.6.3/cmake/modules/packages/FindSQLite3.cmake	2023-03-07 12:14:55.000000000 -0500
-+++ gdal/cmake/modules/packages/FindSQLite3.cmake	2023-08-17 15:46:10.496245830 -0400
-@@ -58,7 +58,7 @@
-           NAMES  sqlite3.h
-           HINTS ${PC_SQLITE3_INCLUDE_DIRS})
- find_library(SQLite3_LIBRARY
--             NAMES sqlite3 sqlite3_i
-+             NAMES sqlite3 sqlite3_i libsqlite3 libsqlite libsqlite3_i
-              HINTS ${PC_SQLITE3_LIBRARY_DIRS})
+diff -Naur gdal/cmake/modules/packages/FindSQLite3.cmake GDAL_BLD/cmake/modules/packages/FindSQLite3.cmake
+--- gdal/cmake/modules/packages/FindSQLite3.cmake	2024-06-25 09:56:45.835498631 -0400
++++ GDAL_BLD/cmake/modules/packages/FindSQLite3.cmake	2024-06-25 09:59:46.365399374 -0400
+@@ -57,7 +57,7 @@
+             NAMES  sqlite3.h
+             HINTS ${PC_SQLITE3_INCLUDE_DIRS})
+   find_library(SQLite3_LIBRARY
+-               NAMES sqlite3 sqlite3_i
++               NAMES sqlite3 sqlite3_i libsqlite3 libsqlite libsqlite3_i
+                HINTS ${PC_SQLITE3_LIBRARY_DIRS})
+ endif()
  
  # Extract version information from the header file
 diff -Naurw gdal-3.6.3/cmake/modules/packages/FindZLIB.cmake gdal/cmake/modules/packages/FindZLIB.cmake
@@ -302,10 +303,27 @@ diff -Naurw gdal-3.6.3/cmake/modules/packages/FindZLIB.cmake gdal/cmake/modules/
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naurw gdal-3.6.3/gdal.cmake gdal/gdal.cmake
---- gdal-3.6.3/gdal.cmake	2023-03-07 12:14:56.000000000 -0500
-+++ gdal/gdal.cmake	2023-08-17 10:20:09.926682759 -0400
-@@ -380,12 +380,6 @@
+diff -Naur gdal/gcore/gdal_priv.h GDAL_BLD/gcore/gdal_priv.h
+--- gdal/gcore/gdal_priv.h	2024-06-26 17:01:06.199711566 -0400
++++ GDAL_BLD/gcore/gdal_priv.h	2024-06-26 17:00:48.433037793 -0400
+@@ -96,6 +96,13 @@
+ /*                       GDALMultiDomainMetadata                        */
+ /************************************************************************/
+ 
++#if defined(_WIN32)
++#define STRCASECMP(a, b) (_stricmp(a, b))
++#else
++/** Alias for strcasecmp() */
++#define STRCASECMP(a, b) (strcasecmp(a, b))
++#endif
++
+ //! @cond Doxygen_Suppress
+ class CPL_DLL GDALMultiDomainMetadata
+ {
+diff -Naur gdal/gdal.cmake GDAL_BLD/gdal.cmake
+--- gdal/gdal.cmake	2024-06-25 09:56:45.660500506 -0400
++++ GDAL_BLD/gdal.cmake	2024-06-25 09:55:37.834206511 -0400
+@@ -379,12 +379,6 @@
  set_property(TARGET ${GDAL_LIB_TARGET_NAME} PROPERTY PLUGIN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/gdalplugins")
  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gdalplugins")
  
@@ -318,10 +336,10 @@ diff -Naurw gdal-3.6.3/gdal.cmake gdal/gdal.cmake
  if (MINGW AND BUILD_SHARED_LIBS)
      set_target_properties(${GDAL_LIB_TARGET_NAME} PROPERTIES SUFFIX "-${GDAL_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
  endif ()
-diff -Naurw gdal-3.6.3/port/cpl_port.h gdal/port/cpl_port.h
---- gdal-3.6.3/port/cpl_port.h	2023-03-07 12:14:56.000000000 -0500
-+++ gdal/port/cpl_port.h	2023-08-17 10:20:09.966682108 -0400
-@@ -1148,7 +1148,7 @@
+diff -Naur gdal/port/cpl_port.h GDAL_BLD/port/cpl_port.h
+--- gdal/port/cpl_port.h	2024-06-25 09:56:45.954497348 -0400
++++ GDAL_BLD/port/cpl_port.h	2024-06-25 09:55:37.836206491 -0400
+@@ -1123,7 +1123,7 @@
  #define TRUE 1
  #endif
  

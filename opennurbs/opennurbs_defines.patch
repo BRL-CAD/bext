@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_defines.h	2024-02-16 13:44:43.180776089 -0500
-+++ OPENNURBS_BLD/opennurbs_defines.h	2024-02-16 14:09:03.688135229 -0500
+--- opennurbs/opennurbs_defines.h	2024-06-25 15:28:09.119849263 -0400
++++ OPENNURBS_BLD/opennurbs_defines.h	2024-06-25 15:26:59.823993359 -0400
 @@ -102,6 +102,11 @@
  #define ON_EXTERN_DECL __declspec(dllimport)
  #define ON_DLL_TEMPLATE extern
@@ -12,7 +12,7 @@
  #elif defined(ON_COMPILER_CLANG)
  /* using opennurbs as an Apple shared library */
  #define ON_CLASS __attribute__ ((visibility ("default")))
-@@ -2191,7 +2196,7 @@
+@@ -2351,7 +2356,7 @@
    // the values.  The reason for the gaps between the enum
    // values is to leave room for future snaps with prededence
    // falling between existing snaps
@@ -21,7 +21,7 @@
    {
      os_none          =          0,
      os_near          =          2,
-@@ -2581,7 +2586,7 @@
+@@ -2741,7 +2746,7 @@
    // Do not change these values; they are stored in 3dm archives
    // and provide a persistent way to identify components of
    // complex objects.
@@ -30,15 +30,3 @@
    {
      invalid_type       =   0,
  
- 
---- opennurbs/opennurbs_defines.cpp	2024-02-16 13:44:43.180776089 -0500
-+++ OPENNURBS_BLD/opennurbs_defines.cpp	2024-02-16 14:09:42.375474772 -0500
-@@ -498,7 +498,7 @@
- #elif defined(ON_RUNTIME_APPLE) || defined(ON_RUNTIME_ANDROID)
-   //fcloseall is not supported on mac/ios or android
-   return EOF;
--#else
-+#elif defined(ON_COMPILER_GNU) && defined(__GLIBC__)
-   return fcloseall();
- #endif
- }
