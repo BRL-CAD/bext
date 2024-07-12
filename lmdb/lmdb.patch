@@ -1,7 +1,7 @@
 diff -Naur lmdb/CMakeLists.txt LMDB_BLD/CMakeLists.txt
 --- lmdb/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
-+++ LMDB_BLD/CMakeLists.txt	2023-09-17 11:45:28.312009417 -0400
-@@ -0,0 +1,92 @@
++++ LMDB_BLD/CMakeLists.txt	2024-07-12 10:57:50.320556893 -0400
+@@ -0,0 +1,118 @@
 +#                     C M A K E L I S T S . T X T
 +# BRL-CAD
 +#
@@ -64,6 +64,14 @@ diff -Naur lmdb/CMakeLists.txt LMDB_BLD/CMakeLists.txt
 +  set (INCLUDE_DIR include)
 +endif (NOT DEFINED INCLUDE_DIR)
 +
++if (NOT DEFINED BUILD_SHARED_LIBS)
++  set(BUILD_SHARED_LIBS ON)
++endif (NOT DEFINED BUILD_SHARED_LIBS)
++
++if (NOT DEFINED BUILD_STATIC_LIBS)
++  set(BUILD_STATIC_LIBS ON)
++endif (NOT DEFINED BUILD_STATIC_LIBS)
++
 +find_package(Threads)
 +
 +set(LMDB_SOURCES
@@ -71,15 +79,33 @@ diff -Naur lmdb/CMakeLists.txt LMDB_BLD/CMakeLists.txt
 +  libraries/liblmdb/midl.c
 +  )
 +
-+add_library(lmdb SHARED ${LMDB_SOURCES})
-+target_link_libraries(lmdb PRIVATE Threads::Threads)
-+set_property(TARGET lmdb APPEND PROPERTY COMPILE_DEFINITIONS "LMDB_DLL_EXPORTS")
-+set_property(TARGET lmdb APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "LMDB_DLL_IMPORTS")
-+install(TARGETS lmdb
-+  RUNTIME DESTINATION ${BIN_DIR}
-+  LIBRARY DESTINATION ${LIB_DIR}
-+  ARCHIVE DESTINATION ${LIB_DIR}
-+  )
++if(BUILD_SHARED_LIBS)
++    add_library(lmdb SHARED ${LMDB_SOURCES})
++    target_link_libraries(lmdb PRIVATE Threads::Threads)
++    set_property(TARGET lmdb APPEND PROPERTY COMPILE_DEFINITIONS "LMDB_DLL_EXPORTS")
++    set_property(TARGET lmdb APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "LMDB_DLL_IMPORTS")
++    install(TARGETS lmdb
++      RUNTIME DESTINATION ${BIN_DIR}
++      LIBRARY DESTINATION ${LIB_DIR}
++      ARCHIVE DESTINATION ${LIB_DIR}
++      )
++endif(BUILD_SHARED_LIBS)
++
++if(BUILD_STATIC_LIBS)
++    add_library(lmdb-static STATIC ${LMDB_SOURCES})
++    if(MSVC)
++      # msvc does not append 'lib' - do it here to have consistent name
++      set_target_properties(lmdb-static PROPERTIES PREFIX "lib")
++    else(MSVC)
++      set_target_properties(lmdb-static PROPERTIES OUTPUT_NAME "lmdb")
++    endif(MSVC)
++    target_link_libraries(lmdb-static PRIVATE Threads::Threads)
++    install(TARGETS lmdb-static
++      RUNTIME DESTINATION ${BIN_DIR}
++      LIBRARY DESTINATION ${LIB_DIR}
++      ARCHIVE DESTINATION ${LIB_DIR}
++      )
++endif(BUILD_STATIC_LIBS)
 +
 +set(LMDB_HDRS
 +  libraries/liblmdb/lmdb.h
