@@ -32,3 +32,10 @@ diff -Naur geogram/src/lib/geogram/CMakeLists.txt GEOGRAM_BLD/src/lib/geogram/CM
  
  target_include_directories(geogram PRIVATE
      ${PROJECT_SOURCE_DIR}/src/lib/geogram/third_party/amgcl
+--- geogram/cmake/platforms/Linux-clang.cmake	2024-07-12 20:43:59.314646694 -0400
++++ GEOGRAM_BLD/cmake/platforms/Linux-clang.cmake	2024-07-12 20:42:45.974952959 -0400
+@@ -147,3 +147,4 @@
+ 
+ endmacro()
+ 
++add_link_options(-latomic)
