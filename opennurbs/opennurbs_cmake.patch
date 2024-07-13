@@ -127,8 +127,8 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 +endif()
 
 
---- opennurbs/CMakeLists.txt	2024-06-25 16:29:10.288832430 -0400
-+++ OPENNURBS_BLD/CMakeLists.txt	2024-06-25 16:28:29.525527195 -0400
+--- opennurbs/CMakeLists.txt	2024-07-13 00:43:41.388860103 -0400
++++ OPENNURBS_BLD/CMakeLists.txt	2024-07-13 00:44:17.319201520 -0400
 @@ -2,15 +2,54 @@
  #set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
  project(opennurbs CXX)
@@ -338,7 +338,7 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
      set( OPENNURBS_APPLE_DEFINES
          ON_COMPILER_CLANG
          ON_RUNTIME_APPLE
-@@ -531,98 +617,32 @@
+@@ -531,98 +617,33 @@
      )
      target_compile_definitions(opennurbsStatic PRIVATE ${OPENNURBS_APPLE_DEFINES})
      target_compile_definitions(OpenNURBS PRIVATE ${OPENNURBS_APPLE_DEFINES})
@@ -385,10 +385,10 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -    add_compile_options(-Wno-writable-strings)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch")
 -endif()
--
 +target_compile_definitions(opennurbsStatic PRIVATE ON_COMPILING_OPENNURBS)
 +target_compile_definitions(OpenNURBS PRIVATE OPENNURBS_EXPORTS ON_COMPILING_OPENNURBS)
  
+-
 -target_compile_definitions(opennurbsStatic PRIVATE ON_COMPILING_OPENNURBS Z_PREFIX MY_ZCALLOC)
 -target_compile_definitions(OpenNURBS PRIVATE OPENNURBS_EXPORTS Z_PREFIX MY_ZCALLOC)
 -
@@ -407,15 +407,8 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
  
 -install( TARGETS opennurbsStatic DESTINATION "lib")
 -install( FILES ${OPENNURBS_PUBLIC_HEADERS} DESTINATION "include/opennurbsStatic")
-+if (OPENNURBS_LINKLIBRARIES)
-+  target_link_libraries( OpenNURBS ${OPENNURBS_LINKLIBRARIES})
-+endif()
- 
-+install(TARGETS OpenNURBS
-+    RUNTIME DESTINATION ${BIN_DIR}
-+    LIBRARY DESTINATION ${LIB_DIR}
-+    ARCHIVE DESTINATION ${LIB_DIR})
- 
+-
+-
 -if (ANDROID)
 -target_link_libraries( OpenNURBS zlib opennurbs_public_freetype android_uuid android)
 -target_link_libraries( opennurbsStatic zlib opennurbs_public_freetype android_uuid android)
@@ -431,11 +424,9 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -if (WIN32)
 -target_link_libraries( OpenNURBS Shlwapi Usp10 zlib)
 -target_link_libraries( opennurbsStatic Shlwapi Usp10 zlib)
--endif()
-+install(TARGETS opennurbsStatic
-+    RUNTIME DESTINATION ${BIN_DIR}
-+    LIBRARY DESTINATION ${LIB_DIR}
-+    ARCHIVE DESTINATION ${LIB_DIR})
++if (OPENNURBS_LINKLIBRARIES)
++  target_link_libraries( OpenNURBS ${OPENNURBS_LINKLIBRARIES})
+ endif()
  
 -if (APPLE)
 -   set_target_properties( OpenNURBS PROPERTIES
@@ -446,7 +437,18 @@ diff -Naur opennurbs/CMake/FindZLIB.cmake openNURBS/CMake/FindZLIB.cmake
 -# SOVERSION  "8.0.0"
 -PUBLIC_HEADER "${OPENNURBS_PUBLIC_HEADERS}"
 -)
++install(TARGETS OpenNURBS
++    RUNTIME DESTINATION ${BIN_DIR}
++    LIBRARY DESTINATION ${LIB_DIR}
++    ARCHIVE DESTINATION ${LIB_DIR})
++
++install(TARGETS opennurbsStatic
++    RUNTIME DESTINATION ${BIN_DIR}
++    LIBRARY DESTINATION ${LIB_DIR}
++    ARCHIVE DESTINATION ${LIB_DIR})
++
 +install( FILES ${OPENNURBS_PUBLIC_HEADERS} DESTINATION "include/OpenNURBS")
++install( FILES android_uuid/uuid.h DESTINATION "include/OpenNURBS/android_uuid")
  
 -   install( TARGETS OpenNURBS DESTINATION "Frameworks")
 -else()
