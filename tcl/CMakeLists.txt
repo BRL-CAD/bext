@@ -71,8 +71,12 @@ if (ENABLE_TCL)
       COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch
       COMMAND ${ZLIB_PATCH_CMD}
       CONFIGURE_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake
-      BUILD_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake
-      INSTALL_COMMAND make install
+
+      # NOTE: Forcing -j on all sub-make calls to work around cmake+make
+      # jobserver mode bug.  Tcl also seems to have a race fixed via genstubs.
+
+      BUILD_COMMAND make -j${pcnt}
+      INSTALL_COMMAND make -j1 genstubs install
       ${RPATH_CMD}
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
@@ -85,7 +89,10 @@ if (ENABLE_TCL)
 
   else (NOT MSVC)
 
-    # TODO - how to pass Z_PREFIX through nmake so zlib.h has the correct prefix?  Is https://stackoverflow.com/a/11041834 what we need?  Also, do we need to patch makefile.vc to reference our zlib dll?
+    # TODO - how to pass Z_PREFIX through nmake so zlib.h has the correct
+    # prefix?  Is https://stackoverflow.com/a/11041834 what we need?  Also, do
+    # we need to patch makefile.vc to reference our zlib dll?
+
     ExternalProject_Add(TCL_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/tcl"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
