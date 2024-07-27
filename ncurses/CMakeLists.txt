@@ -34,7 +34,7 @@ if (NOT WIN32)
       #CONFIGURE_COMMAND ${NCURSES_SRC_DIR}/autogen.sh
       CONFIGURE_COMMAND ${NCURSES_SRC_DIR}/configure --with-shared --enable-rpath --prefix=${CMAKE_BUNDLE_INSTALL_PREFIX}
       BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make install
+      INSTALL_COMMAND make -j1 install
       DEPENDS ${ZLIB_TARGET}
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}

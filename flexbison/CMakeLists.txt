@@ -58,7 +58,7 @@ if (NOT WIN32)
       CONFIGURE_COMMAND ${FLEX_SRC_DIR}/autogen.sh
       COMMAND ${FLEX_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
       BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make install
+      INSTALL_COMMAND make -j1 install
       DEPENDS ${ZLIB_TARGET}
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
@@ -88,7 +88,7 @@ if (NOT WIN32)
       COMMAND ${BISON_SRC_DIR}/autogen.sh
       COMMAND ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
       BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make install
+      INSTALL_COMMAND make -j1 install
       DEPENDS ${ZLIB_TARGET}
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
