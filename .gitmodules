@@ -304,3 +304,6 @@
 	url = https://github.com/BRL-CAD/geogram.git
 	branch = RELEASE
         ignore = dirty
+[submodule "gte/GeometricTools"]
+	path = gte/GeometricTools
+	url = https://github.com/BRL-CAD/GeometricTools

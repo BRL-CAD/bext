@@ -1,0 +1,23 @@
+diff -Naur GeometricTools/CMakeLists.txt GTE_BLD/CMakeLists.txt
+--- GeometricTools/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
++++ GTE_BLD/CMakeLists.txt	2024-07-31 16:48:17.163077007 -0400
+@@ -0,0 +1,19 @@
++cmake_minimum_required(VERSION 3.8)
++
++project(GTE)
++
++file(GLOB GTE_MFILES "${CMAKE_SOURCE_DIR}/GTE/Mathematics/*")
++
++if(NOT DEFINED INCLUDE_DIR)
++  set(INCLUDE_DIR include)
++endif(NOT DEFINED INCLUDE_DIR)
++
++install(FILES ${GTE_MFILES} DESTINATION ${INCLUDE_DIR}/GTE/Mathematics)
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
++

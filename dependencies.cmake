@@ -227,6 +227,11 @@ add_project(assetimport GROUPS "BRLCAD")
 # http://opencv.org
 add_project(opencv GROUPS "BRLCAD_EXTRA")
 
+# GeometricTools - a collection of geometry algorithms.
+# https://github.com/davideberly/GeometricTools
+add_project(gte GROUPS "BRLCAD")
+
+
 # OpenMesh Library - library for representing and manipulating polygonal meshes
 # https://www.graphics.rwth-aachen.de/software/openmesh/
 add_project(openmesh GROUPS "BRLCAD_EXTRA")
