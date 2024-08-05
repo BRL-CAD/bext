@@ -166,7 +166,7 @@ diff -Naur tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
  
  # support for embedded libraries on Darwin / Mac OS X
 -DYLIB_INSTALL_DIR	= $(libdir)
-+DYLIB_INSTALL_DIR	= @executable_path/../lib
++DYLIB_INSTALL_DIR	= @rpath
  
  #--------------------------------------------------------------------------
  # The information below is modified by the configure script when Makefile is
