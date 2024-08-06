@@ -9,7 +9,7 @@ if (ENABLE_REGEX)
 
   git_submodule_init(regex regex2.h)
 
-  TargetDeps(REGEX)
+  RegisterDeps(REGEX)
 
   set(REGEX_PREFIX_STR "libregex_")
 

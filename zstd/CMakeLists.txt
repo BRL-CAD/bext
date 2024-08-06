@@ -5,7 +5,7 @@ if (ENABLE_ZSTD)
 
   git_submodule_init(zstd LICENSE)
 
-  TargetDeps(ZSTD)
+  RegisterDeps(ZSTD)
 
   ExternalProject_Add(ZSTD_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/zstd"

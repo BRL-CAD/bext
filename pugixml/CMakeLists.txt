@@ -10,7 +10,7 @@ if (ENABLE_PUGIXML)
 
   git_submodule_init(pugixml CMakeLists.txt)
 
-  TargetDeps(PUGIXML)
+  RegisterDeps(PUGIXML)
 
   ExternalProject_Add(PUGIXML_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/pugixml"

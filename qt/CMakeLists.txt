@@ -19,7 +19,7 @@ if (ENABLE_QT)
 
   git_submodule_init(qt qtbase/configure)
 
-  TargetDeps(Qt6)
+  RegisterDeps(Qt6)
 
   if (isMultiConfig)
     set(CBT $<CONFIG>)

@@ -38,7 +38,7 @@ if (ENABLE_ITK)
 
   git_submodule_init(itk configure.in)
 
-  TargetDeps(ITK)
+  RegisterDeps(ITK)
 
   # If we're building ITK, it's path setup must take into account the
   # subdirectory in which we are storing the library.

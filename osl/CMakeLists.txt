@@ -5,7 +5,7 @@ if (ENABLE_OSL)
 
   git_submodule_init(OpenShadingLanguage CMakeLists.txt)
 
-  TargetDeps(OSL)
+  RegisterDeps(OSL)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

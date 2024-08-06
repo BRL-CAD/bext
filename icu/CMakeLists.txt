@@ -7,7 +7,7 @@ if (NOT WIN32 AND NOT APPLE)
 
     git_submodule_init(icu icu4c/source/configure)
 
-    TargetDeps(ICU)
+    RegisterDeps(ICU)
 
     ExternalProject_Add(ICU_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/icu"

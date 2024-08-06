@@ -5,7 +5,7 @@ if (ENABLE_OPENEXR)
 
   git_submodule_init(openexr CMakeLists.txt)
 
-  TargetDeps(OPENEXR)
+  RegisterDeps(OPENEXR)
 
   ExternalProject_Add(OPENEXR_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/openexr"

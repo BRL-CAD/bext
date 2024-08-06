@@ -5,7 +5,7 @@ if (ENABLE_OPENCOLORIO)
 
   git_submodule_init(OpenColorIO CMakeLists.txt)
 
-  TargetDeps(OPENCOLORIO)
+  RegisterDeps(OPENCOLORIO)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

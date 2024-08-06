@@ -22,7 +22,7 @@ if (ENABLE_POISSONRECON)
 
   git_submodule_init(PoissonRecon POISSONRECON/CMakeLists.txt)
 
-  TargetDeps(POISSONRECON)
+  RegisterDeps(POISSONRECON)
 
   ExternalProject_Add(POISSONRECON_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/PoissonRecon"

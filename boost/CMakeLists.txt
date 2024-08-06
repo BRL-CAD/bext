@@ -5,7 +5,7 @@ if (ENABLE_BOOST)
 
   git_submodule_init(boost CMakeLists.txt)
 
-  TargetDeps(BOOST)
+  RegisterDeps(BOOST)
 
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")

@@ -9,7 +9,7 @@ if (ENABLE_STEPCODE)
 
   git_submodule_init(stepcode CMakeLists.txt)
 
-  TargetDeps(STEPCODE)
+  RegisterDeps(STEPCODE)
 
   # For OSX, we need CMAKE_INSTALL_NAME_DIR
   set(CMAKE_INSTALL_NAME_DIR "@rpath")

@@ -22,7 +22,7 @@ if (ENABLE_GTE)
 
   git_submodule_init(GeometricTools GTE/CMakeLists.txt)
 
-  TargetDeps(GTE)
+  RegisterDeps(GTE)
 
   ExternalProject_Add(GTE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/GeometricTools"

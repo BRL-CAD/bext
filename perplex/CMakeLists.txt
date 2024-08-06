@@ -9,7 +9,7 @@ if (ENABLE_PERPLEX)
 
   git_submodule_init(perplex CMakeLists.txt)
 
-  TargetDeps(PERPLEX)
+  RegisterDeps(PERPLEX)
 
   ExternalProject_Add(PERPLEX_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/perplex"

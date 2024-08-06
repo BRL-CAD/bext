@@ -24,7 +24,7 @@ if (ENABLE_IWIDGETS)
 
   git_submodule_init(iwidgets CMakeLists.txt)
 
-  TargetDeps(IWIDGETS)
+  RegisterDeps(IWIDGETS)
 
   ExternalProject_Add(IWIDGETS_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/iwidgets"

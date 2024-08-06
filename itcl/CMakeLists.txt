@@ -26,7 +26,7 @@ if (ENABLE_ITCL)
 
   git_submodule_init(itcl configure.in)
 
-  TargetDeps(ITCL)
+  RegisterDeps(ITCL)
 
   # Itcl3 has a problem in that it requires internal Tcl headers.
   # Occasionally (but not always) we can get these headers from
@@ -41,6 +41,8 @@ if (ENABLE_ITCL)
     endif(NOT WIN32)
   endif (EXISTS ${HDRS_CANDIDATE_DIR})
 
+  # message("TCL HEADERS1:  ${TCL_PRIVATE_HDRS}")
+  
   # If we can't find them from the system, see if we have a local
   # clone of Tcl to use
   if (NOT TCL_PRIVATE_HDRS AND EXISTS ${CMAKE_SOURCE_DIR}/tcl/tcl)
@@ -51,6 +53,8 @@ if (ENABLE_ITCL)
       set(TCL_PRIVATE_HDRS_OS ${TCL_SOURCE_DIR}/win)
     endif(NOT WIN32)
   endif (NOT TCL_PRIVATE_HDRS AND EXISTS ${CMAKE_SOURCE_DIR}/tcl/tcl)
+
+  # message("TCL HEADERS2:  ${TCL_PRIVATE_HDRS}")
 
   # If we STILL don't have anything, patch the Itcl sources to add
   # the headers in question
@@ -64,6 +68,8 @@ if (ENABLE_ITCL)
       set(TCL_PRIVATE_HDRS_OS ${TCL_PRIVATE_HDRS}/win)
     endif(NOT WIN32)
   endif (NOT TCL_PRIVATE_HDRS)
+
+  # message("TCL HEADERS3:  ${TCL_PRIVATE_HDRS}")
 
   # When building ITCL, its path setup must take into account the subdirectory
   # in which we are storing the library.

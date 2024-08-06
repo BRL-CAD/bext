@@ -9,7 +9,7 @@ if (ENABLE_OPENNURBS)
 
   git_submodule_init(opennurbs opennurbs.h)
 
-  TargetDeps(OPENNURBS)
+  RegisterDeps(OPENNURBS)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

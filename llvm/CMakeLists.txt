@@ -5,7 +5,7 @@ if (ENABLE_LLVM)
 
   git_submodule_init(llvm-project llvm/CMakeLists.txt)
 
-  TargetDeps(LLVM)
+  RegisterDeps(LLVM)
 
   # We may need one or more patches, depending on settings.  ExternalProject_Add
   # expects the first command to be "PATCH_COMMAND", with subsequent patch commands
