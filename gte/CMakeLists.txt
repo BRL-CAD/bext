@@ -1,7 +1,7 @@
 # Decide if we're using GeometricTools
 cad_enable(GTE "libbg")
 
-unset(ENGEN_BUNDLED CACHE)
+unset(GTE_BUNDLED CACHE)
 
 if (NOT ENABLE_GTE AND NOT DISABLE_GTE)
 
