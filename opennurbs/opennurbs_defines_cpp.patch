@@ -1,0 +1,14 @@
+diff --git a/opennurbs_defines.cpp b/opennurbs_defines.cpp
+index 8d5f8830..1f60f588 100644
+--- a/opennurbs_defines.cpp
++++ b/opennurbs_defines.cpp
+@@ -498,6 +498,9 @@ int ON::CloseAllFiles()
+ #elif defined(ON_RUNTIME_APPLE) || defined(ON_RUNTIME_ANDROID)
+   //fcloseall is not supported on mac/ios or android
+   return EOF;
++#elif defined(BSD)
++  fcloseall();
++  return 0;
+ #else
+   return fcloseall();
+ #endif
