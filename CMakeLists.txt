@@ -74,6 +74,15 @@ mark_as_advanced(CMAKE_BUILD_TYPE)
 mark_as_advanced(CMAKE_CONFIGURATION_TYPES)
 
 #------------------------------------------------------------------------------
+# Once we do a run, we want our ENABLE_ALL setting to be consistent in
+# subsequent CMake runs
+if (ENABLE_ALL)
+  set(ENABLE_ON "ON" CACHE BOOL "Enable all local versions of packages")
+else (ENABLE_ALL)
+  set(ENABLE_ON "OFF" CACHE BOOL "Prefer system versions of packages")
+endif (ENABLE_ALL)
+
+#------------------------------------------------------------------------------
 # We do NOT want CMake looking in the User Package Registry - have encountered
 # at least one case where stale or incorrect information there has resulted in
 # an incorrect include directory for Eigen based on bext build info.
