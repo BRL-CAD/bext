@@ -1,0 +1,53 @@
+# Decide if we're using GeometricTools
+cad_enable(POISSONRECON "libbg")
+
+unset(POISSONRECON_BUNDLED CACHE)
+
+if (NOT ENABLE_POISSONRECON AND NOT DISABLE_POISSONRECON)
+
+  # https://github.com/mkazhdan/PoissonRecon/
+  find_package(POISSONRECON)
+
+  if (NOT TARGET POISSONRECON::POISSONRECON)
+    set(ENABLE_POISSONRECON "ON" CACHE BOOL "Enable SPSR build")
+  endif (NOT TARGET POISSONRECON::POISSONRECON)
+
+endif (NOT ENABLE_POISSONRECON AND NOT DISABLE_POISSONRECON)
+
+set(ENABLE_POISSONRECON "${ENABLE_POISSONRECON}" CACHE BOOL "Enable SPSR build")
+
+# Decision made
+
+if (ENABLE_POISSONRECON)
+
+  git_submodule_init(PoissonRecon POISSONRECON/CMakeLists.txt)
+
+  TargetDeps(POISSONRECON)
+
+  ExternalProject_Add(POISSONRECON_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/PoissonRecon"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(POISSONRECON POISSONRECON_DEPENDS)
+
+  set(POISSONRECON_BUNDLED TRUE CACHE BOOL "SPSR bundle flag")
+
+endif (ENABLE_POISSONRECON)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+
