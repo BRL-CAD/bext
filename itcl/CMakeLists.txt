@@ -28,14 +28,52 @@ if (ENABLE_ITCL)
 
   TargetDeps(ITCL)
 
-  # If we're building ITCL, it's path setup must take into account the
-  # subdirectory in which we are storing the library.
+  # Itcl3 has a problem in that it requires internal Tcl headers.
+  # Occasionally (but not always) we can get these headers from
+  # a system include path.
+  set(HDRS_CANDIDATE_DIR ${TCL_INCLUDE_PATH}8.6/tcl-private)
+  if (EXISTS ${HDRS_CANDIDATE_DIR})
+    set(TCL_PRIVATE_HDRS ${HDRS_CANDIDATE_DIR}/generic)
+    if(NOT WIN32)
+      set(TCL_PRIVATE_HDRS_OS ${HDRS_CANDIDATE_DIR}/unix)
+    else(NOT WIN32)
+      set(TCL_PRIVATE_HDRS_OS ${HDRS_CANDIDATE_DIR}/win)
+    endif(NOT WIN32)
+  endif (EXISTS ${HDRS_CANDIDATE_DIR})
+
+  # If we can't find them from the system, see if we have a local
+  # clone of Tcl to use
+  if (NOT TCL_PRIVATE_HDRS AND EXISTS ${CMAKE_SOURCE_DIR}/tcl/tcl)
+    set(TCL_PRIVATE_HDRS ${TCL_SOURCE_DIR}/generic)
+    if(NOT WIN32)
+      set(TCL_PRIVATE_HDRS_OS ${TCL_SOURCE_DIR}/unix)
+    else(NOT WIN32)
+      set(TCL_PRIVATE_HDRS_OS ${TCL_SOURCE_DIR}/win)
+    endif(NOT WIN32)
+  endif (NOT TCL_PRIVATE_HDRS AND EXISTS ${CMAKE_SOURCE_DIR}/tcl/tcl)
+
+  # If we STILL don't have anything, patch the Itcl sources to add
+  # the headers in question
+  set(TCL_HDRS_PATCH_CMD)
+  if (NOT TCL_PRIVATE_HDRS)
+    set(TCL_HDRS_PATCH_CMD ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl_priv_hdrs.patch)
+    set(TCL_PRIVATE_HDRS "${CMAKE_CURRENT_BINARY_DIR}/ITCL_BLD-prefix/src/ITCL_BLD/tcl_hdrs")
+    if(NOT WIN32)
+      set(TCL_PRIVATE_HDRS_OS ${TCL_PRIVATE_HDRS}/unix)
+    else(NOT WIN32)
+      set(TCL_PRIVATE_HDRS_OS ${TCL_PRIVATE_HDRS}/win)
+    endif(NOT WIN32)
+  endif (NOT TCL_PRIVATE_HDRS)
+
+  # When building ITCL, its path setup must take into account the subdirectory
+  # in which we are storing the library.
   set(RPATH_SUFFIX itcl3.4)
 
   ExternalProject_Add(ITCL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/itcl"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/itcl.patch
+    COMMAND ${TCL_HDRS_PATCH_CMD}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=$<IF:$<BOOL:${WIN32}>,${LIB_DIR},${BIN_DIR}>
@@ -48,7 +86,8 @@ if (ENABLE_ITCL)
     -DSHARED_DIR=${LIB_DIR}
     -DTCL_ENABLE_TK=ON
     -DTCL_ROOT=$<$<BOOL:${TCL_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
-    -DTCL_SOURCE_DIR=${CMAKE_SOURCE_DIR}/tcl/tcl
+    -DTCL_PRIVATE_HDRS=${TCL_PRIVATE_HDRS}
+    -DTCL_PRIVATE_HDRS_OS=${TCL_PRIVATE_HDRS_OS}
     LOG_CONFIGURE ${EXT_BUILD_QUIET}
     LOG_BUILD ${EXT_BUILD_QUIET}
     LOG_INSTALL ${EXT_BUILD_QUIET}
