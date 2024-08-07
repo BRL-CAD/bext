@@ -31,15 +31,22 @@ if (ENABLE_ITCL)
   # Itcl3 has a problem in that it requires internal Tcl headers.
   # Occasionally (but not always) we can get these headers from
   # a system include path.
-  set(HDRS_CANDIDATE_DIR ${TCL_INCLUDE_PATH}8.6/tcl-private)
-  if (EXISTS ${HDRS_CANDIDATE_DIR})
-    set(TCL_PRIVATE_HDRS ${HDRS_CANDIDATE_DIR}/generic)
-    if(NOT WIN32)
-      set(TCL_PRIVATE_HDRS_OS ${HDRS_CANDIDATE_DIR}/unix)
-    else(NOT WIN32)
-      set(TCL_PRIVATE_HDRS_OS ${HDRS_CANDIDATE_DIR}/win)
-    endif(NOT WIN32)
-  endif (EXISTS ${HDRS_CANDIDATE_DIR})
+
+  if (NOT TARGET TCL_BLD)
+    # If we're not building the bundled Tcl, see if the system
+    # Tcl gives us the private headers.
+    set(CMAKE_FIND_FRAMEWORK NEVER)
+    find_package(TCL)
+    set(HDRS_CANDIDATE_DIR ${TCL_INCLUDE_PATH}8.6/tcl-private)
+    if (EXISTS ${HDRS_CANDIDATE_DIR})
+      set(TCL_PRIVATE_HDRS ${HDRS_CANDIDATE_DIR}/generic)
+      if(NOT WIN32)
+	set(TCL_PRIVATE_HDRS_OS ${HDRS_CANDIDATE_DIR}/unix)
+      else(NOT WIN32)
+	set(TCL_PRIVATE_HDRS_OS ${HDRS_CANDIDATE_DIR}/win)
+      endif(NOT WIN32)
+    endif (EXISTS ${HDRS_CANDIDATE_DIR})
+  endif (NOT TARGET TCL_BLD)
 
   # message("TCL HEADERS1:  ${TCL_PRIVATE_HDRS}")
   
