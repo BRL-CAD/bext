@@ -46,6 +46,7 @@ if (ENABLE_ITCL)
   # If we can't find them from the system, see if we have a local
   # clone of Tcl to use
   if (NOT TCL_PRIVATE_HDRS AND EXISTS ${CMAKE_SOURCE_DIR}/tcl/tcl)
+    set(TCL_SOURCE_DIR ${CMAKE_SOURCE_DIR}/tcl/tcl)
     set(TCL_PRIVATE_HDRS ${TCL_SOURCE_DIR}/generic)
     if(NOT WIN32)
       set(TCL_PRIVATE_HDRS_OS ${TCL_SOURCE_DIR}/unix)
