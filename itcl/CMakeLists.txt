@@ -83,11 +83,17 @@ if (ENABLE_ITCL)
   # in which we are storing the library.
   set(RPATH_SUFFIX itcl3.4)
 
+  set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/itcl")
+  set(BLD_DIR "${CMAKE_CURRENT_BINARY_DIR}/ITCL_BLD-prefix/src/ITCL_BLD")
+  file(MAKE_DIRECTORY ${BLD_DIR})
+  set(MD5_SUMMARY "${BLD_DIR}/../md5_summary.txt")
+  set(PATCH_FILES itcl.patch ${TCL_HDRS_PATCH})
+  configure_file(${CMAKE_SOURCE_DIR}/CMake/UpdateSync.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/UpdateSync.cmake @ONLY)
+
   ExternalProject_Add(ITCL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/itcl"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/itcl.patch
-    COMMAND ${TCL_HDRS_PATCH_CMD}
+    UPDATE_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/UpdateSync.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=$<IF:$<BOOL:${WIN32}>,${LIB_DIR},${BIN_DIR}>

@@ -1,0 +1,149 @@
+cmake_policy(SET CMP0007 NEW)
+
+if (NOT EXISTS "@SRC_DIR@")
+	message(FATAL_ERROR "@SRC_DIR@ not found on filesystem")
+endif (NOT EXISTS "@SRC_DIR@")
+file(GLOB_RECURSE SRC_FILES LIST_DIRECTORIES false RELATIVE "@SRC_DIR@" "@SRC_DIR@/*")
+list(FILTER SRC_FILES EXCLUDE REGEX ".*[.]git.*")
+list(SORT SRC_FILES)
+
+# If we have a prior existing source directory state, read it in
+set(prev_md5)
+set(prev_files)
+if (EXISTS "@MD5_SUMMARY@")
+	# Read each line in to make two lists - files and MD5 hashes.  First entry
+	# is MD5.  Will use file list to get the index to use to get the MD5 hash
+	# for each file in subsequent lookups
+	file(STRINGS "@MD5_SUMMARY@" hash_strings)
+	foreach(hs ${hash_strings})
+		set(hlist ${hs})
+		list(POP_FRONT hlist pmd5)
+		list(APPEND prev_md5 "${pmd5}")
+		list(APPEND prev_files "${hlist}")
+	endforeach(hs ${hash_strings})
+	file(REMOVE "@MD5_SUMMARY@")
+endif (EXISTS "@MD5_SUMMARY@")
+
+message("prev_files: ${prev_files}")
+
+# Generate an MD5 summary for the current source dir state
+set(curr_md5)
+set(curr_files)
+foreach(S ${SRC_FILES})
+	file(MD5 "@SRC_DIR@/${S}" md5_hash)
+	file(APPEND "@MD5_SUMMARY@" "${md5_hash};${S}\n")
+	list(APPEND curr_md5 "${md5_hash}")
+	list(APPEND curr_files "${S}")
+endforeach(S ${SRC_FILES})
+
+message("curr_files: ${curr_files}")
+
+# Check if we have any changed files.  If so, update the src copy
+set(updated_files)
+foreach(S ${SRC_FILES})
+	list(FIND prev_files "${S}" prev_ind)
+	if ("${prev_ind}" EQUAL -1)
+		# New file
+		message("New file: ${S}")
+		list(APPEND update_files ${S})
+		continue()
+	endif ("${prev_ind}" EQUAL -1)
+	# Check file contents
+	list(GET prev_md5 ${prev_ind} pmd5)
+	list(FIND curr_files "${S}" curr_ind)
+	list(GET curr_md5 ${curr_ind} cmd5)
+	if (NOT "${pmd5}" STREQUAL "${cmd5}")
+		list(APPEND update_files ${S})
+		message("File changed: ${S}")
+	endif (NOT "${pmd5}" STREQUAL "${cmd5}")
+endforeach(S ${SRC_FILES})
+# Copy any changed files from the src directory to the build directory
+foreach(CF ${updated_files})
+	execute_process(COMMAND "@CMAKE_COMMAND@" -E copy "@SRC_DIR@/${CF}" "@BLD_DIR@/${CF}")
+endforeach(S ${SRC_FILES})
+
+
+# If we have previously applied patches, read in that information.  We will need:
+#
+# md5 of previously applied patch file.  If that's changed, we need to remove all
+# added files from the previous patch and re-apply
+#
+# list of files changed by the patch.  If any of the updated files were also
+# patch targets, we need to reset all files involved with the patch and
+# re-apply.  To that end, we also need a separate list of files added by the
+# patch so we can remove them. (Unless a file created by patch is already part
+# of the update list - in that case leave the file from the update - the patch
+# will need to be corrected.)
+set(patch_changed_files)
+if (EXISTS "@PATCH_CHANGED_SUMMARY@")
+	file(STRINGS "@PATCH_CHANGED_SUMMARY@" patch_changed_files)
+	file(REMOVE "@PATCH_CHANGED_SUMMARY@")
+endif (EXISTS "@PATCH_CHANGED_SUMMARY@")
+set(patch_added_files)
+if (EXISTS "@PATCH_ADDED_SUMMARY@")
+	file(STRINGS "@PATCH_ADDED_SUMMARY@" patch_added_files)
+	file(REMOVE "@PATCH_ADDED_SUMMARY@")
+endif (EXISTS "@PATCH_ADDED_SUMMARY@")
+
+# First check for changed files
+set(changed_patch FALSE)
+foreach(pcf ${patch_changed_files})
+	list(FIND updated_files "${pcf}" pcf_ind)
+	if (NOT "${pcf_ind}" EQUAL -1)
+		set(changed_patch TRUE)
+	endif (NOT "${pcf_ind}" EQUAL -1)
+endforeach(pcf ${patch_changed_files})
+
+
+
+
+# Remove files present only in the build dir
+# TODO - this needs to be more nuanced - files may be added by patching, and we don't
+# want to remove those
+if (NOT EXISTS "@BLD_DIR@")
+	message(FATAL_ERROR "@BLD_DIR@ not found on filesystem")
+endif (NOT EXISTS "@BLD_DIR@")
+file(GLOB_RECURSE BLD_FILES LIST_DIRECTORIES false RELATIVE "@BLD_DIR@" "@BLD_DIR@/*")
+list(FILTER BLD_FILES EXCLUDE REGEX ".*[.]git.*")
+set(BLD_ONLY ${BLD_FILES})
+list(REMOVE_ITEM BLD_ONLY ${SRC_FILES})
+foreach(B ${BLD_ONLY})
+	message("Removing: ${B}")
+	file(REMOVE "@BLD_DIR@/${B}")
+endforeach(B ${BLD_ONLY})
+
+# If any previously patched files are present in the updated
+# files list (or if we have never applied patches before)
+# we need to proceed with patching.
+set(prev_files)
+if (EXISTS "@PATCH_SUMMARY@")
+	# Read each line in to make two lists - files and MD5 hashes.  First entry
+	# is MD5.  Will use file list to get the index to use to get the MD5 hash
+	# for each file in subsequent lookups
+	file(STRINGS "@MD5_SUMMARY@" hash_strings)
+	foreach(hs ${hash_strings})
+		set(hlist ${hs})
+		list(POP_FRONT hlist pmd5)
+		list(APPEND prev_md5 "${pmd5}")
+		list(APPEND prev_files "${hlist}")
+	endforeach(hs ${hash_strings})
+	file(REMOVE "@MD5_SUMMARY@")
+endif (EXISTS "@MD5_SUMMARY@")
+
+
+
+
+# Copy any changed files from the src directory to the build directory
+foreach(S ${SRC_FILES})
+	execute_process(COMMAND "@CMAKE_COMMAND@" -E compare_files "@SRC_DIR@/${S}" "@BLD_DIR@/${S}" RESULT_VARIABLE FILES_DIFFER)
+	if (FILES_DIFFER)
+		execute_process(COMMAND "@CMAKE_COMMAND@" -E copy "@SRC_DIR@/${S}" "@BLD_DIR@/${S}")
+		set(HAVE_DIFFERENCE TRUE)
+	endif (FILES_DIFFER)
+endforeach(S ${SRC_FILES})
+
+set(PFILES @PATCH_FILES@)
+foreach(PF ${PFILES})
+	# Ignore whitespace, don't attempt reverse patching
+	execute_process(COMMAND "@PATCH_EXECUTABLE@" -E -p1 --ignore-whitespace -N -i "@CMAKE_CURRENT_SOURCE_DIR@/${PF}")
+endforeach(PF ${PFILES})
