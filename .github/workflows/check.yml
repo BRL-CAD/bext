@@ -237,7 +237,8 @@ jobs:
       - name: Configure
         run: |
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
-          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug
+          # We're running into disk space issues with the Linux debug build, so turn off GDAL
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug -DUSE_GDAL=OFF
 
       - name: Build
         run: |
