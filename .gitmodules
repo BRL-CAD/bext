@@ -307,3 +307,8 @@
 [submodule "gte/GeometricTools"]
 	path = gte/GeometricTools
 	url = https://github.com/BRL-CAD/GeometricTools
+        ignore = dirty
+[submodule "mmesh/mmesh"]
+	path = mmesh/mmesh
+	url = https://github.com/BRL-CAD/mmesh.git
+        ignore = dirty

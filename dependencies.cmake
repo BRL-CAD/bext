@@ -237,7 +237,7 @@ add_project(gte GROUPS "BRLCAD")
 
 # mmesh - mesh decimation and processing library.
 # https://github.com/BRL-CAD/mmesh
-#add_project(mmesh GROUPS "BRLCAD")
+add_project(mmesh GROUPS "BRLCAD")
 
 # OpenMesh Library - library for representing and manipulating polygonal meshes
 # https://www.graphics.rwth-aachen.de/software/openmesh/
