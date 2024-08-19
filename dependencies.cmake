@@ -235,6 +235,10 @@ add_project(gte GROUPS "BRLCAD")
 # https://github.com/mkazhdan/PoissonRecon
 #add_project(poissonrecon GROUPS "BRLCAD")
 
+# mmesh - mesh decimation and processing library.
+# https://github.com/BRL-CAD/mmesh
+#add_project(mmesh GROUPS "BRLCAD")
+
 # OpenMesh Library - library for representing and manipulating polygonal meshes
 # https://www.graphics.rwth-aachen.de/software/openmesh/
 add_project(openmesh GROUPS "BRLCAD_EXTRA")
