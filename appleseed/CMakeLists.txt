@@ -5,7 +5,7 @@ if (ENABLE_APPLESEED)
 
   git_submodule_init(appleseed CMakeLists.txt)
 
-  TargetDeps(APPLESEED)
+  RegisterDeps(APPLESEED)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

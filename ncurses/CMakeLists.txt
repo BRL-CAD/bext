@@ -22,7 +22,7 @@ if (NOT WIN32)
 
     git_submodule_init(ncurses README)
 
-    TargetDeps(NCURSES)
+    RegisterDeps(NCURSES)
 
     set(NCURSES_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/NCURSES_BLD-prefix/src/NCURSES_BLD")
 

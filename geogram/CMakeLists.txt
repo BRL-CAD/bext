@@ -9,7 +9,7 @@ if (ENABLE_GEOGRAM)
 
   git_submodule_init(geogram CMakeLists.txt)
 
-  TargetDeps(GEOGRAM)
+  RegisterDeps(GEOGRAM)
 
   ExternalProject_Add(GEOGRAM_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/geogram"

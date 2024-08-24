@@ -9,7 +9,7 @@ if (ENABLE_LEMON)
 
   git_submodule_init(lemon lemon.c)
 
-  TargetDeps(LEMON)
+  RegisterDeps(LEMON)
 
   ExternalProject_Add(LEMON_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lemon"

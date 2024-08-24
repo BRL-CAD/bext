@@ -44,7 +44,7 @@ A complete ENABLE_ALL build of all components in this repository is a *very* lar
 * USE_APPLESEED - Physically-based global illumination rendering engine
 * USE_OSPRAY - Intel high performance ray tracing engine
 
-(For BRL-CAD components specifically, a more nuanced enable/disable decision can be made if the BRLCAD_COMPONENTS variable is set.  If the parent BRL-CAD build is only building a subset of the BRL-CAD target set, no all dependencies will be needed.)
+(For BRL-CAD components specifically, a more nuanced enable/disable decision can be made if the BRLCAD_COMPONENTS variable is set.  If the parent BRL-CAD build is only building a subset of the BRL-CAD target set, not all dependencies will be needed.)
 
 # Using the Build Outputs with BRL-CAD
 
@@ -87,8 +87,7 @@ In broad, the structure of the source tree is two tiered - the top level directo
 * A <dirname>.deps file identifying a project's dependencies on other bext projects
 * Any patch files or other supporting resources not part of the upstream tree
 
-Sometimes third party libraries will depend on other third party libraries (for example, libpng's use of zlib) - when a bundled component that is a dependency of other bundled projects is enabled, the expectation is that the other bundled
-components will use our copy rather than system copies of those libraries.
+Sometimes third party libraries will depend on other third party libraries (for example, libpng's use of zlib) - when a bundled component that is a dependency of other bundled projects is enabled, the expectation is that the other bundled components will use our copy rather than system copies of those libraries.
 
 # Compilation-Only Tools
 

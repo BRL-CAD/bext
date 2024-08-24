@@ -74,6 +74,15 @@ mark_as_advanced(CMAKE_BUILD_TYPE)
 mark_as_advanced(CMAKE_CONFIGURATION_TYPES)
 
 #------------------------------------------------------------------------------
+# Once we do a run, we want our ENABLE_ALL setting to be consistent in
+# subsequent CMake runs
+if (ENABLE_ALL)
+  set(ENABLE_ON "ON" CACHE BOOL "Enable all local versions of packages")
+else (ENABLE_ALL)
+  set(ENABLE_ON "OFF" CACHE BOOL "Prefer system versions of packages")
+endif (ENABLE_ALL)
+
+#------------------------------------------------------------------------------
 # We do NOT want CMake looking in the User Package Registry - have encountered
 # at least one case where stale or incorrect information there has resulted in
 # an incorrect include directory for Eigen based on bext build info.
@@ -239,23 +248,29 @@ macro(TargetVars roots)
   endforeach(root ${${roots}})
 endmacro(TargetVars root)
 
-macro(TargetDeps proot)
+
+###
+# Loads dependencies from an in-src file named same as containing
+# directory with .deps suffix.  Dependencies are added to the
+# corresponding ${proot}_DEPENDS variable.
+# 
+# FIXME: Dependencies are also added here to a .dot file dependency
+# graph file, but that shouldn't be intertwined here as side effect.
+###
+macro(RegisterDeps proot)
   get_filename_component(dirname ${CMAKE_CURRENT_SOURCE_DIR} NAME)
   if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${dirname}.deps")
     message(FATAL_ERROR "No ${dirname}.deps file found in ${CMAKE_CURRENT_SOURCE_DIR}/")
   endif (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${dirname}.deps")
   file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/${dirname}.deps" DEP_LINES)
   string(TOLOWER "${proot}" lr)
+
+  # Add each dependency to this directory's _DEPENDS list
   foreach(dl ${DEP_LINES})
     set(${proot}_DEPENDS ${${proot}_DEPENDS} ${dl})
-    string(TOLOWER "${dl}" ldl)
-    # Add the dependency to the dot file
-    if (NOT "${ldl}" STREQUAL "patch")
-      file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\t${lr} -> ${ldl};\n")
-    endif (NOT "${ldl}" STREQUAL "patch")
   endforeach(dl ${DEP_LINES})
 
-  # Add these dependencies to the global list
+  # Add all dependencies to the global ALL_DEPENDENCIES list
   get_property(ALL_DEPS GLOBAL PROPERTY ALL_DEPENDENCIES)
   set(ALL_DEPS ${ALL_DEPS} ${${proot}_DEPENDS})
   list(SORT ALL_DEPS)
@@ -264,7 +279,16 @@ macro(TargetDeps proot)
 
   # Set the TARGET variables for CMake generator expression "if" tests
   TargetVars(${proot}_DEPENDS)
-endmacro(TargetDeps)
+
+  # Add each dependency to a global .dot file
+  foreach(dl ${DEP_LINES})
+    string(TOLOWER "${dl}" ldl)
+    if (NOT "${ldl}" STREQUAL "patch")
+      file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\t${lr} -> ${ldl};\n")
+    endif (NOT "${ldl}" STREQUAL "patch")
+  endforeach(dl ${DEP_LINES})
+
+endmacro(RegisterDeps)
 
 macro(TargetInstallDeps croot roots)
   foreach(root ${${roots}})

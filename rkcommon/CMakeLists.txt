@@ -5,7 +5,7 @@ if (ENABLE_RKCOMMON)
 
   git_submodule_init(rkcommon CMakeLists.txt)
 
-  TargetDeps(RKCOMMON)
+  RegisterDeps(RKCOMMON)
 
     ExternalProject_Add(RKCOMMON_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/rkcommon"

@@ -1,0 +1,23 @@
+diff -Naur PoissonRecon/CMakeLists.txt POISSONRECON_BLD/CMakeLists.txt
+--- PoissonRecon/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
++++ POISSONRECON_BLD/CMakeLists.txt	2024-07-31 16:48:17.163077007 -0400
+@@ -0,0 +1,19 @@
++cmake_minimum_required(VERSION 3.8)
++
++project(SPSR)
++
++file(GLOB SPSR_FILES "${CMAKE_SOURCE_DIR}/Src/*")
++
++if(NOT DEFINED INCLUDE_DIR)
++  set(INCLUDE_DIR include)
++endif(NOT DEFINED INCLUDE_DIR)
++
++install(FILES ${SPSR_FILES} DESTINATION ${INCLUDE_DIR}/SPSR)
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
++

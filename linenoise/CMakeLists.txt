@@ -9,7 +9,7 @@ if (ENABLE_LINENOISE)
 
   git_submodule_init(linenoise linenoise.c)
 
-  TargetDeps(LINENOISE)
+  RegisterDeps(LINENOISE)
 
   ExternalProject_Add(LINENOISE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/linenoise"

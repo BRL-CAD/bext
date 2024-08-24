@@ -13,6 +13,7 @@ else (USE_BRLCAD)
 
 endif (USE_BRLCAD)
 
+# minimum version of Tcl supported
 set(TCL_MAJOR_VERSION 8)
 set(TCL_MINOR_VERSION 6)
 set(TCL_VERSION "${TCL_MAJOR_VERSION}.${TCL_MINOR_VERSION}")
@@ -21,7 +22,7 @@ if (NOT ENABLE_TCL AND NOT DISABLE_TCL)
 
   set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
   set(CMAKE_FIND_FRAMEWORK NEVER)
-  find_package(TCL "8.6...<9.0")
+  find_package(TCL "${TCL_VERSION}")
 
   if (NOT TCL_FOUND AND NOT DEFINED ENABLE_TCL)
     set(ENABLE_TCL "ON" CACHE BOOL "Enable tcl build")
@@ -35,7 +36,7 @@ if (ENABLE_TCL)
 
   git_submodule_init(tcl unix/configure)
 
-  TargetDeps(TCL)
+  RegisterDeps(TCL)
 
   set(TCL_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD")
   set(TCL_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD-build")
@@ -138,7 +139,7 @@ if (ENABLE_TCL)
     if (MSVC)
       set(LIB_PREFIX)
       set(SHARED_DIR ${BIN_DIR})
-      set(TCL_VERSION "86")
+      set(TCL_VERSION "${TCL_MAJOR_VERSION}${TCL_MINOR_VERSION}")
     else (MSVC)
       set(LIB_PREFIX "lib")
       set(SHARED_DIR ${LIB_DIR})

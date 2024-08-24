@@ -41,7 +41,7 @@ if (ENABLE_TKHTML)
 
   git_submodule_init(tkhtml CMakeLists.txt)
 
-  TargetDeps(TKHTML)
+  RegisterDeps(TKHTML)
 
   ExternalProject_Add(TKHTML_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tkhtml"

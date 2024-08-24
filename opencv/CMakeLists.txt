@@ -9,7 +9,7 @@ if (ENABLE_OPENCV)
 
   git_submodule_init(opencv CMakeLists.txt)
 
-  TargetDeps(OPENCV)
+  RegisterDeps(OPENCV)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

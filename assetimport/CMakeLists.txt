@@ -10,7 +10,7 @@ if (ENABLE_ASSETIMPORT)
 
   git_submodule_init(assimp CMakeLists.txt)
 
-  TargetDeps(ASSETIMPORT)
+  RegisterDeps(ASSETIMPORT)
   if (TARGET ZLIB_BLD)
     set(ZLIB_TARGET ZLIB_BLD)
   endif (TARGET ZLIB_BLD)

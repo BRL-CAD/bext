@@ -9,7 +9,7 @@ if (ENABLE_MANIFOLD)
 
   git_submodule_init(manifold src/manifold/include/manifold.h)
 
-  TargetDeps(MANIFOLD)
+  RegisterDeps(MANIFOLD)
 
   ExternalProject_Add(MANIFOLD_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/manifold"

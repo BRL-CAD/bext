@@ -11,7 +11,7 @@ if (ENABLE_ISPC)
 
   git_submodule_init(ispc CMakeLists.txt)
 
-  TargetDeps(ISPC)
+  RegisterDeps(ISPC)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

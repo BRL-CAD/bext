@@ -5,7 +5,7 @@ if (ENABLE_EXPAT)
 
   git_submodule_init(libexpat CMakeLists.txt)
 
-  TargetDeps(EXPAT)
+  RegisterDeps(EXPAT)
 
   ExternalProject_Add(EXPAT_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libexpat"

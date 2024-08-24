@@ -9,7 +9,7 @@ if (ENABLE_PROJ)
 
   git_submodule_init(PROJ CMakeLists.txt)
 
-  TargetDeps(PROJ)
+  RegisterDeps(PROJ)
 
   ExternalProject_Add(PROJ_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/PROJ"

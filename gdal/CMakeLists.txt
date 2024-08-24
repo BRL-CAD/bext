@@ -9,7 +9,7 @@ if (ENABLE_GDAL)
 
   git_submodule_init(gdal CMakeLists.txt)
 
-  TargetDeps(GDAL)
+  RegisterDeps(GDAL)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

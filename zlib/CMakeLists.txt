@@ -11,7 +11,7 @@ if (ENABLE_ZLIB)
 
   git_submodule_init(zlib zlib.h)
 
-  TargetDeps(ZLIB)
+  RegisterDeps(ZLIB)
 
   set(Z_PREFIX_STR "brl_")
   mark_as_advanced(Z_PREFIX_STR)

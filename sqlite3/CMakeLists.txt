@@ -19,7 +19,7 @@ if (ENABLE_SQLite3)
 
   git_submodule_init(sqlite3 sqlite3.c)
 
-  TargetDeps(SQLITE3)
+  RegisterDeps(SQLITE3)
 
   ExternalProject_Add(SQLITE3_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3"

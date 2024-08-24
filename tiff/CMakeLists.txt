@@ -10,7 +10,7 @@ if (ENABLE_TIFF)
 
   git_submodule_init(libtiff CMakeLists.txt)
 
-  TargetDeps(TIFF)
+  RegisterDeps(TIFF)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

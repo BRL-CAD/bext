@@ -9,7 +9,7 @@ if (ENABLE_RE2C)
 
   git_submodule_init(re2c CMakeLists.txt)
 
-  TargetDeps(RE2C)
+  RegisterDeps(RE2C)
 
   ExternalProject_Add(RE2C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/re2c"

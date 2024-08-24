@@ -10,7 +10,7 @@ if (ENABLE_JPEG)
 
   git_submodule_init(libjpeg-turbo CMakeLists.txt)
 
-  TargetDeps(JPEG)
+  RegisterDeps(JPEG)
 
   ExternalProject_Add(JPEG_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libjpeg-turbo"

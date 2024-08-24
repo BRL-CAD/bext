@@ -5,7 +5,7 @@ if (ENABLE_MINIZIP_NG)
 
   git_submodule_init(minizip-ng CMakeLists.txt)
 
-  TargetDeps(MINIZIP_NG)
+  RegisterDeps(MINIZIP_NG)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

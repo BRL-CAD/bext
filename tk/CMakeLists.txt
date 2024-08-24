@@ -15,7 +15,7 @@ if (TK_DO_BUILD)
 
   git_submodule_init(tk unix/configure)
 
-  TargetDeps(TK)
+  RegisterDeps(TK)
 
   if (TARGET TCL_BLD)
     # If we're building against a compiled Tcl and not a system Tcl,

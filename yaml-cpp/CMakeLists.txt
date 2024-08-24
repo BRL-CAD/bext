@@ -5,7 +5,7 @@ if (ENABLE_YAML_CPP)
 
   git_submodule_init(yaml-cpp CMakeLists.txt)
 
-  TargetDeps(YAML_CPP)
+  RegisterDeps(YAML_CPP)
 
   ExternalProject_Add(YAML_CPP_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp"

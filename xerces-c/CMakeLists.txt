@@ -5,7 +5,7 @@ if (ENABLE_XERCES_C)
 
   git_submodule_init(xerces-c CMakeLists.txt)
 
-  TargetDeps(XERCES_C)
+  RegisterDeps(XERCES_C)
 
   ExternalProject_Add(XERCES_C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/xerces-c"

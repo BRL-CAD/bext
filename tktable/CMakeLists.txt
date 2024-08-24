@@ -42,7 +42,7 @@ if (ENABLE_TKTABLE)
 
   git_submodule_init(tktable CMakeLists.txt)
 
-  TargetDeps(TKTABLE)
+  RegisterDeps(TKTABLE)
 
   ExternalProject_Add(TKTABLE_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tktable"

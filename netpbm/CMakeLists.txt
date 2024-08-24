@@ -9,7 +9,7 @@ if (ENABLE_NETPBM)
 
   git_submodule_init(netpbm CMakeLists.txt)
 
-  TargetDeps(NETPBM)
+  RegisterDeps(NETPBM)
 
   ExternalProject_Add(NETPBM_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/netpbm"

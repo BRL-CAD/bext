@@ -25,7 +25,7 @@ if (NOT MSVC AND NOT APPLE)
 
     git_submodule_init(plief CMakeLists.txt)
 
-    TargetDeps(PLIEF)
+    RegisterDeps(PLIEF)
 
     ExternalProject_Add(PLIEF_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/plief"
