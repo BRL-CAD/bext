@@ -257,7 +257,7 @@ add_project(osmesa GROUPS "BRLCAD")
 
 # Geogram - a programming library with geometric algorithms
 # https://github.com/BrunoLevy/geogram
-add_project(geogram GROUPS "BRLCAD_EXTRA")
+add_project(geogram GROUPS "BRLCAD")
 
 # Open Shading Language (OSL) - language for programmable shading
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
