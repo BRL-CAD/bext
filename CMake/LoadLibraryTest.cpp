@@ -24,7 +24,7 @@ int main(int argc, const char **argv)
 	printf("LoadLibrary of %s failed\n", argv[1]);
 	return 1;
     }
-    Bool flr = FreeLibrary(linst);
+    BOOL flr = FreeLibrary(linst);
     if (!flr) {
 	printf("FreeLibrary failed for %s\n", argv[1]);
 	return 1;
