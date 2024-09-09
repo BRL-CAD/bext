@@ -491,8 +491,19 @@ endif (EXISTS "${CMAKE_BUNDLE_INSTALL_PREFIX}" AND STALE_INSTALL_WARN)
 # On Windows, if we get dlls built for the wrong configuration it can cause
 # problems.  Define a utility target to check
 ###############################################################################
-add_custom_target(dllcheck
+add_custom_target(dll_typecheck
   COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"$<CONFIG>\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/bext_output/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/DllTypeCheck.cmake)
+
+###############################################################################
+# Check that Windows LoadLibrary call can succeed with our dll outputs
+###############################################################################
+if (WIN32)
+  add_executable(lltest ${CMAKE_CURRENT_SOURCE_DIR}/LoadLibraryTest.cpp)
+  add_custom_target(dll_loadcheck
+    COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"$<CONFIG>\" -DLEXEC=\"$<TARGET_FILE>:lltest\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/bext_output/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/LoadLibraryCheck.cmake
+    DEPENDS lltest
+    )
+endif (WIN32)
 
 ###############################################################################
 # Report where we will be putting our output
