@@ -500,7 +500,7 @@ add_custom_target(dll_typecheck
 if (WIN32)
   add_executable(lltest ${CMAKE_SOURCE_DIR}/CMake/LoadLibraryTest.cpp)
   add_custom_target(dll_loadcheck
-    COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"$<CONFIG>\" -DLEXEC=\"$<TARGET_FILE>:lltest\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/bext_output/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/LoadLibraryCheck.cmake
+    COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"$<CONFIG>\" -DLEXEC=\"$<TARGET_FILE:lltest>\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/bext_output/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/LoadLibraryCheck.cmake
     DEPENDS lltest
     )
 endif (WIN32)
