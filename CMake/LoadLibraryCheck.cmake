@@ -38,18 +38,23 @@
 
 function(LoadLibraryCheck LLTEST_EXEC dlldir)
   if (NOT EXISTS "${dlldir}")
+    message("Dll directory ${dlldir} not found\n")
     return()
   endif (NOT EXISTS "${dlldir}")
   if (NOT EXISTS "${LLTEST_EXEC}")
+    message("Test executable ${LLTEST_EXEC} not found\n")
     return()
   endif (NOT EXISTS "${LLTEST_EXEC}")
   file(GLOB dll_files RELATIVE "${dlldir}" "${dlldir}/*.dll")
   set(load_fail 0)
   foreach(dlf ${dll_files})
-    message("Dll LoadLibrary check: ${dlf}")
-    execute_process(COMMAND ${LLTEST_EXEC} ${dlf} RESULT_VARIABLE LSTATUS OUTPUT_VARIABLE LOUT)
+    message("Dll LoadLibrary check: ${LLTEST_EXEC} ${dlf}")
+    execute_process(COMMAND ${LLTEST_EXEC} ${dlf}
+      RESULT_VARIABLE LSTATUS OUTPUT_VARIABLE LOUT ERROR_VARIABLE LOUT
+      WORKING_DIRECTORY ${dlldir}
+      )
     if (LSTATUS)
-      message("LoadLibrary call with dll file ${dllfile} did not succeed.")
+      message("LoadLibrary call with dll file ${dllfile} did not succeed: ${LOUT}")
       set(load_fail 1)
     endif (LSTATUS)
   endforeach(dlf ${dll_files})
@@ -58,9 +63,9 @@ function(LoadLibraryCheck LLTEST_EXEC dlldir)
   endif (load_fail)
 endfunction(LoadLibraryCheck)
 
-if (CMAKE_BUILD_TYPE AND LEXEC AND DLL_DIR)
-  LoadLibraryCheck(${CMAKE_BUILD_TYPE} ${LEXEC} ${DLL_DIR})
-endif (CMAKE_BUILD_TYPE AND LEXEC AND DLL_DIR)
+if (LEXEC AND DLL_DIR)
+  LoadLibraryCheck(${LEXEC} ${DLL_DIR})
+endif (LEXEC AND DLL_DIR)
 
 # Local Variables:
 # tab-width: 8
