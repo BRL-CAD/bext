@@ -9,6 +9,9 @@ index 8d5f8830..1f60f588 100644
 +#elif defined(BSD)
 +  fcloseall();
 +  return 0;
++#elif defined(__FreeBSD__)
++  fcloseall();
++  return 0;
  #else
    return fcloseall();
  #endif
