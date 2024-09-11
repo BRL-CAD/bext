@@ -138,6 +138,13 @@ if (NOT JCEXEC OR NOT JAREXEC OR NOT JEXEC)
   set(JAREXEC ${Java_JAR_EXECUTABLE})
 endif (NOT JCEXEC OR NOT JAREXEC OR NOT JEXEC)
 
+# Report the active parameters
+message("Java executable (JEXEC): ${JEXEC}")
+message("Java compiler executable (JCEXEC): ${JCEXEC}")
+message("Java archiver executable (JAREXEC): ${JAREXEC}")
+message("Dll suffix (DLLSUFFIX): ${DLLSUFFIX}")
+message("Dll directory (DLL_DIR): ${DLL_DIR}")
+
 if (JCEXEC AND JAREXEC AND JEXEC AND DLLSUFFIX AND DLL_DIR)
   JavaCheck(${JCEXEC} ${JAREXEC} ${JEXEC} ${DLLSUFFIX} ${DLL_DIR})
 endif ()
