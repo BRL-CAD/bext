@@ -36,11 +36,20 @@
 # Utility function to check that dlls can be loaded by the Java
 # System.loadLibrary mechanism. Parameters (all are mandatory):
 #
+# Required parameters:
+# DLLSUFFIX = platform specific shared library suffix (.so, .dll, etc.)
+# DLL_DIR = directory holding shared library files to check
+#
+# (Note:  Ideally DLLSUFFIX shouldn't be needed, but the CMake
+# variable for this (CMAKE_SHARED_LIBRARY_SUFFIX) isn't defined when
+# running CMake in -P mode, at least as of Sept. 2024.)
+#
+# The following can be specified in lieu of relying on find_package
+# to locate Java:
 # JCEXEC = path to javac compiler
 # JAREXEC = path to jar archive creater
 # JEXEC = path to java executable
-# DLLSUFFIX = platform specific shared library suffix (.so, .dll, etc.)
-# DLL_DIR = directory holding shared library files to check
+
 
 function(JavaCheck JC_EXEC JAR_EXEC J_EXEC DLL_SUFFIX dlldir)
 
@@ -121,6 +130,13 @@ function(JavaCheck JC_EXEC JAR_EXEC J_EXEC DLL_SUFFIX dlldir)
     message(FATAL_ERROR "Dll files present that failed to load with LoadLibrary.")
   endif (load_fail)
 endfunction(JavaCheck)
+
+if (NOT JCEXEC OR NOT JAREXEC OR NOT JEXEC)
+  find_package(Java REQUIRED)
+  set(JEXEC ${Java_JAVA_EXECUTABLE})
+  set(JCEXEC ${Java_JAVAC_EXECUTABLE})
+  set(JAREXEC ${Java_JAR_EXECUTABLE})
+endif (NOT JCEXEC OR NOT JAREXEC OR NOT JEXEC)
 
 if (JCEXEC AND JAREXEC AND JEXEC AND DLLSUFFIX AND DLL_DIR)
   JavaCheck(${JCEXEC} ${JAREXEC} ${JEXEC} ${DLLSUFFIX} ${DLL_DIR})
