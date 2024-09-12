@@ -55,10 +55,6 @@ To test it, the steps are as follows:
 ```sh
 git clone https://github.com/BRL-CAD/brlcad
 ```
-* Remove the internal 3rd party directories (be sure NOT to accidentally commit this change to the repository...)
-```sh
-cd brlcad && rm -rf misc/tools/ext src/other
-```
 * Make a build directory
 ```sh
 cd .. && mkdir brlcad_exttest_build && cd brlcad_exttest_build
