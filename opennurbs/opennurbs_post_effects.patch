@@ -1,0 +1,152 @@
+diff -Naur OPENNURBS_BLD/CMakeLists.txt OPENNURBS_BLD_post_effects/CMakeLists.txt
+--- OPENNURBS_BLD/CMakeLists.txt	2024-09-12 16:36:35.117795099 -0400
++++ OPENNURBS_BLD_post_effects/CMakeLists.txt	2024-09-12 16:24:05.279982073 -0400
+@@ -161,7 +161,7 @@
+     opennurbs_polyedgecurve.h
+     opennurbs_polyline.h
+     opennurbs_polylinecurve.h
+-	 opennurbs_post_effects.h
++	 #opennurbs_post_effects.h
+     opennurbs_private_wrap.h
+     opennurbs_private_wrap_defs.h
+     opennurbs_progress_reporter.h
+@@ -343,7 +343,7 @@
+     opennurbs_polyedgecurve.cpp
+     opennurbs_polyline.cpp
+     opennurbs_polylinecurve.cpp
+-	 opennurbs_post_effects.cpp
++	 #opennurbs_post_effects.cpp
+     opennurbs_progress_reporter.cpp
+     opennurbs_quaternion.cpp
+     opennurbs_rand.cpp
+diff -Naur OPENNURBS_BLD/opennurbs_3dm_settings.cpp OPENNURBS_BLD_post_effects/opennurbs_3dm_settings.cpp
+--- OPENNURBS_BLD/opennurbs_3dm_settings.cpp	2024-09-12 16:34:34.070763108 -0400
++++ OPENNURBS_BLD_post_effects/opennurbs_3dm_settings.cpp	2024-09-12 16:30:02.344180182 -0400
+@@ -976,7 +976,7 @@
+   delete _render_channels;
+   delete _sun;
+   delete _environments;
+-  delete _post_effects;
++  //delete _post_effects;
+ }
+ 
+ const ON_3dmRenderSettingsPrivate& ON_3dmRenderSettingsPrivate::operator = (const ON_3dmRenderSettingsPrivate& p)
+@@ -1001,7 +1001,7 @@
+     _linear_workflow->OnInternalXmlChanged(p._linear_workflow);
+     _render_channels->OnInternalXmlChanged(p._render_channels);
+     _sun            ->OnInternalXmlChanged(p._sun            );
+-    _post_effects   ->OnInternalXmlChanged(p._post_effects   );
++    //_post_effects   ->OnInternalXmlChanged(p._post_effects   );
+ 
+ #ifdef _DEBUG // See https://mcneel.myjetbrains.com/youtrack/issue/RH-77284
+ 
+@@ -1044,7 +1044,7 @@
+   _render_channels = new ON_RenderChannels  (_rdk_document_data);
+   _sun             = new ON_Sun             (_rdk_document_data);
+   _environments    = new ON_EnvironmentsImpl(_rdk_document_data);
+-  _post_effects    = new ON_PostEffects     (_rdk_document_data);
++  //_post_effects    = new ON_PostEffects     (_rdk_document_data);
+ }
+ 
+ ON_3dmRenderSettingsPrivate& ON_3dmRenderSettingsPrivate::Get(const ON_3dmRenderSettings& rs)
+@@ -1840,6 +1840,7 @@
+   }
+ }
+ 
++#if 0
+ ON_PostEffects& ON_3dmRenderSettings::PostEffects(void)
+ {
+   ON_3dmRenderSettingsPrivate::Get(*this);
+@@ -1854,6 +1855,7 @@
+ {
+   return const_cast<ON_3dmRenderSettings*>(this)->PostEffects();
+ }
++#endif
+ 
+ void ON_3dmRenderSettings::InvalidateCaches(void) const
+ {
+@@ -1864,7 +1866,7 @@
+   m_private->_linear_workflow->OnInternalXmlChanged(nullptr);
+   m_private->_render_channels->OnInternalXmlChanged(nullptr);
+   m_private->_sun->OnInternalXmlChanged(nullptr);
+-  m_private->_post_effects->OnInternalXmlChanged(nullptr);
++  //m_private->_post_effects->OnInternalXmlChanged(nullptr);
+ }
+ 
+ #ifdef RDK_RENDER_PRESETS
+diff -Naur OPENNURBS_BLD/opennurbs_3dm_settings.h OPENNURBS_BLD_post_effects/opennurbs_3dm_settings.h
+--- OPENNURBS_BLD/opennurbs_3dm_settings.h	2024-09-12 16:34:33.914765644 -0400
++++ OPENNURBS_BLD_post_effects/opennurbs_3dm_settings.h	2024-09-12 16:30:15.539965709 -0400
+@@ -833,9 +833,11 @@
+   class ON_Sun& Sun(void);
+   const ON_Sun& Sun(void) const;
+ 
++#if 0
+   // Access to Post Effect information.
+   class ON_PostEffects& PostEffects(void);
+   const ON_PostEffects& PostEffects(void) const;
++#endif
+ 
+   // Access to information about which environments are used for rendering.
+ 
+diff -Naur OPENNURBS_BLD/opennurbs_extensions.cpp OPENNURBS_BLD_post_effects/opennurbs_extensions.cpp
+--- OPENNURBS_BLD/opennurbs_extensions.cpp	2024-09-12 16:34:33.919765562 -0400
++++ OPENNURBS_BLD_post_effects/opennurbs_extensions.cpp	2024-09-12 16:31:05.319156591 -0400
+@@ -311,7 +311,7 @@
+   bool CreateXMLFromRenderContent(ON_XMLNode& model_node, RenderContentKinds kind) const;
+   bool SetRDKDocumentInformation(const wchar_t* xml, ONX_Model_UserData& docud, int archive_3dm_version) const;
+   ON_XMLNode* GetRenderContentSectionNode(ON_XMLNode& model_node, RenderContentKinds kind) const;
+-  ON_XMLNode* GetPostEffectSectionNode(ON_XMLNode& model_node, ON_PostEffect::Types type) const;
++  //ON_XMLNode* GetPostEffectSectionNode(ON_XMLNode& model_node, ON_PostEffect::Types type) const;
+   static void RemoveAllEmbeddedFiles(ONX_Model& model);
+   static bool GetEntireRDKDocument(const ONX_Model_UserData& docud, ON_wString& xml, ONX_Model* model);
+ 
+@@ -4975,6 +4975,7 @@
+   return false;
+ }
+ 
++#if 0
+ ON_XMLNode* ONX_ModelPrivate::GetPostEffectSectionNode(ON_XMLNode& docNode, ON_PostEffect::Types type) const
+ {
+   ON_wString s = ON_RDK_DOCUMENT  ON_XML_SLASH  ON_RDK_SETTINGS  ON_XML_SLASH  ON_RDK_POST_EFFECTS  ON_XML_SLASH;
+@@ -4982,6 +4983,7 @@
+ 
+   return docNode.CreateNodeAtPath(s);
+ }
++#endif
+ 
+ ON_XMLNode* ONX_ModelPrivate::GetRenderContentSectionNode(ON_XMLNode& docNode, RenderContentKinds kind) const
+ {
+diff -Naur OPENNURBS_BLD/opennurbs.h OPENNURBS_BLD_post_effects/opennurbs.h
+--- OPENNURBS_BLD/opennurbs.h	2024-09-12 16:34:34.136762035 -0400
++++ OPENNURBS_BLD_post_effects/opennurbs.h	2024-09-12 16:28:32.655637840 -0400
+@@ -177,7 +177,7 @@
+ #include "opennurbs_safe_frame.h"          // Safe Frame support.
+ #include "opennurbs_skylight.h"            // Skylight support.
+ #include "opennurbs_sun.h"                 // Sun support.
+-#include "opennurbs_post_effects.h"        // Post Effect support.
++//#include "opennurbs_post_effects.h"        // Post Effect support.
+ #include "opennurbs_mesh_modifiers.h"      // Mesh Modifiers support.
+ #include "opennurbs_extensions.h"
+ #include "opennurbs_freetype.h"
+diff -Naur OPENNURBS_BLD/opennurbs_internal_defines.h OPENNURBS_BLD_post_effects/opennurbs_internal_defines.h
+--- OPENNURBS_BLD/opennurbs_internal_defines.h	2024-09-12 16:34:33.915765627 -0400
++++ OPENNURBS_BLD_post_effects/opennurbs_internal_defines.h	2024-09-12 16:29:12.256994238 -0400
+@@ -50,7 +50,7 @@
+ void SetModel(const class ON_RenderContent&, ONX_Model&);
+ ON_3dmObjectAttributes* GetComponentAttributes(const ON_ModelComponent& component);
+ ON_RenderContent* NewRenderContentFromNode(const class ON_XMLNode& node);
+-ON_PostEffect* NewPostEffectFromNode(ON_XMLNode& node);
++//ON_PostEffect* NewPostEffectFromNode(ON_XMLNode& node);
+ void SetRenderContentNodeRecursive(const ON_RenderContent& rc, ON_XMLNode& node);
+ ON_XMLNode* FindPostEffectNodeForId(const ON_XMLNode& sectionNode, const ON_UUID& id);
+ bool SetRDKObjectInformation(ON_Object& object, const ON_wString& xml, int archive_3dm_version);
+@@ -215,7 +215,7 @@
+   ON_RenderChannels* _render_channels = nullptr;
+   ON_Sun* _sun = nullptr;
+   ON_EnvironmentsImpl* _environments = nullptr;
+-  ON_PostEffects* _post_effects = nullptr;
++  //ON_PostEffects* _post_effects = nullptr;
+   bool _gp_specialized = false;
+   bool _lw_specialized = false;
+   bool _sun_specialized = false;

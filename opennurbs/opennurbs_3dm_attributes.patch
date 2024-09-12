@@ -1,0 +1,51 @@
+diff -Naur opennurbs/opennurbs_3dm_attributes.cpp OPENNURBS_BLD/opennurbs_3dm_attributes.cpp
+--- opennurbs/opennurbs_3dm_attributes.cpp	2024-09-12 16:38:12.106218132 -0400
++++ OPENNURBS_BLD/opennurbs_3dm_attributes.cpp	2024-09-12 16:40:22.534097367 -0400
+@@ -97,7 +97,7 @@
+   return !ON_3dmObjectAttributesPrivate::operator==(other);
+ }
+ 
+-static const ON_3dmObjectAttributesPrivate DefaultAttributesPrivate(nullptr);
++//static const ON_3dmObjectAttributesPrivate DefaultAttributesPrivate(nullptr);
+ 
+ ON_OBJECT_IMPLEMENT( ON_3dmObjectAttributes, ON_Object, "A828C015-09F5-477c-8665-F0482F5D6996" );
+ 
+@@ -237,9 +237,9 @@
+   }
+   else
+   {
+-    if (m_private && *m_private != DefaultAttributesPrivate)
++    if (m_private)// && *m_private != DefaultAttributesPrivate)
+       return false;
+-    if (other.m_private && *other.m_private != DefaultAttributesPrivate)
++    if (other.m_private)// && *other.m_private != DefaultAttributesPrivate)
+       return false;
+   }
+ 
+@@ -2377,7 +2377,7 @@
+ 
+ ON::SectionAttributesSource ON_3dmObjectAttributes::SectionAttributesSource() const
+ {
+-  return m_private ? m_private->m_section_attributes_source : DefaultAttributesPrivate.m_section_attributes_source;
++  return m_private ? m_private->m_section_attributes_source : ON::SectionAttributesSource();//DefaultAttributesPrivate.m_section_attributes_source;
+ }
+ void ON_3dmObjectAttributes::SetSectionAttributesSource(ON::SectionAttributesSource source)
+ {
+@@ -2472,7 +2472,7 @@
+ }
+ bool ON_3dmObjectAttributes::HatchBoundaryVisible() const
+ {
+-  return m_private ? m_private->m_hatch_boundary_visible : DefaultAttributesPrivate.m_hatch_boundary_visible;
++  return m_private ? m_private->m_hatch_boundary_visible : false;//DefaultAttributesPrivate.m_hatch_boundary_visible;
+ }
+ void ON_3dmObjectAttributes::SetHatchBoundaryVisible(bool on)
+ {
+@@ -2486,7 +2486,7 @@
+ 
+ ON::SectionLabelStyle ON_3dmObjectAttributes::ClippingPlaneLabelStyle() const
+ {
+-  return m_private ? m_private->m_section_label_style : DefaultAttributesPrivate.m_section_label_style;
++  return m_private ? m_private->m_section_label_style : ON::SectionLabelStyle();//DefaultAttributesPrivate.m_section_label_style;
+ }
+ void ON_3dmObjectAttributes::SetClippingPlaneLabelStyle(ON::SectionLabelStyle style)
+ {
