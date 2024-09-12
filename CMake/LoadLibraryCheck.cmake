@@ -1,4 +1,4 @@
-#               D L L T Y P E C H E C K . C M A K E
+#           L O A D L I B R A R Y C H E C K . C M A K E
 # BRL-CAD
 #
 # Copyright (c) 2024 United States Government as represented by
@@ -33,49 +33,39 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 ###
-# Utility function to check the type of dlls built by bext.
+# Utility function to check that a dll can be loaded by the LoadLibrary
+# function on Windows.
 
-include(CMakeParseArguments)
-
-function(DllTypeCheck btype dlldir)
+function(LoadLibraryCheck LLTEST_EXEC dlldir)
   if (NOT EXISTS "${dlldir}")
+    message("Dll directory ${dlldir} not found\n")
     return()
   endif (NOT EXISTS "${dlldir}")
-  find_program(DUMPBIN_EXEC dumpbin)
-  if (NOT DUMPBIN_EXEC)
+  if (NOT EXISTS "${LLTEST_EXEC}")
+    message("Test executable ${LLTEST_EXEC} not found\n")
     return()
-  endif (NOT DUMPBIN_EXEC)
+  endif (NOT EXISTS "${LLTEST_EXEC}")
   file(GLOB dll_files RELATIVE "${dlldir}" "${dlldir}/*.dll")
-  set(non_match 0)
+  set(load_fail 0)
   foreach(dlf ${dll_files})
-    message("Dll Type check: ${dlf}")
-    # dumpbin doesn't like CMake style paths
-    file(TO_NATIVE_PATH "${dlf}" TBFN)
-    # https://stackoverflow.com/a/28304716/2037687
-    execute_process(COMMAND ${DUMPBIN_EXEC} /dependents ${TBFN}
-      OUTPUT_VARIABLE DB_OUT
-      ERROR_VARIABLE DB_OUT)
-    if ("${btype}" STREQUAL "Release")
-      if ("${DB_OUT}" MATCHES ".*MSVCP[0-9]*d.dll.*" OR "${DB_OUT}" MATCHES ".*MSVCP[0-9]*D.dll.*")
-	set(non_match 1)
-        message("Release build specified, but ${dlf} is built as Debug.")
-      endif ("${DB_OUT}" MATCHES ".*MSVCP[0-9]*d.dll.*" OR "${DB_OUT}" MATCHES ".*MSVCP[0-9]*D.dll.*")
-    endif ("${btype}" STREQUAL "Release")
-    if ("${btype}" STREQUAL "Debug")
-      if (NOT "${DB_OUT}" MATCHES ".*MSVCP[0-9]*d.dll.*" AND NOT "${DB_OUT}" MATCHES ".*MSVCP[0-9]*D.dll.*")
-	set(non_match 1)
-        message("Debug build specified, but ${dlf} is built as Release.")
-      endif (NOT "${DB_OUT}" MATCHES ".*MSVCP[0-9]*d.dll.*" AND NOT "${DB_OUT}" MATCHES ".*MSVCP[0-9]*D.dll.*")
-    endif ("${btype}" STREQUAL "Debug")
+    message("Dll LoadLibrary check: ${LLTEST_EXEC} ${dlf}")
+    execute_process(COMMAND ${LLTEST_EXEC} ${dlf}
+      RESULT_VARIABLE LSTATUS OUTPUT_VARIABLE LOUT ERROR_VARIABLE LOUT
+      WORKING_DIRECTORY ${dlldir}
+      )
+    if (LSTATUS)
+      message("LoadLibrary call with dll file ${dllfile} did not succeed: ${LOUT}")
+      set(load_fail 1)
+    endif (LSTATUS)
   endforeach(dlf ${dll_files})
-  if (non_match)
-    message(FATAL_ERROR "Found non-matching dll files - check build logic.")
-  endif (non_match)
-endfunction(DllTypeCheck btype)
+  if (load_fail)
+    message(FATAL_ERROR "Dll files present that failed to load with LoadLibrary.")
+  endif (load_fail)
+endfunction(LoadLibraryCheck)
 
-if (CMAKE_BUILD_TYPE AND DLL_DIR)
-  DllTypeCheck(${CMAKE_BUILD_TYPE} ${DLL_DIR})
-endif (CMAKE_BUILD_TYPE AND DLL_DIR)
+if (LEXEC AND DLL_DIR)
+  LoadLibraryCheck(${LEXEC} ${DLL_DIR})
+endif (LEXEC AND DLL_DIR)
 
 # Local Variables:
 # tab-width: 8

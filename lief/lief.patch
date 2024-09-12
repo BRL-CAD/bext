@@ -1,6 +1,15 @@
-diff -Naur lief/include/LIEF/Abstract/Header.hpp LIEF_BLD/include/LIEF/Abstract/Header.hpp
---- lief/include/LIEF/Abstract/Header.hpp	2024-06-24 12:13:56.338364944 -0400
-+++ LIEF_BLD/include/LIEF/Abstract/Header.hpp	2024-06-24 12:14:18.278008978 -0400
+diff -Naur LIEF/CMakeLists.txt LIEF_BLD/CMakeLists.txt
+--- LIEF/CMakeLists.txt	2024-09-09 14:00:50.787850311 -0400
++++ LIEF_BLD/CMakeLists.txt	2024-09-09 14:01:39.566078344 -0400
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.24)
++cmake_minimum_required(VERSION 3.18)
+ enable_language(C)
+ enable_language(CXX)
+ 
+diff -Naur LIEF/include/LIEF/Abstract/Header.hpp LIEF_BLD/include/LIEF/Abstract/Header.hpp
+--- LIEF/include/LIEF/Abstract/Header.hpp	2024-09-09 14:00:50.813849896 -0400
++++ LIEF_BLD/include/LIEF/Abstract/Header.hpp	2024-09-09 13:41:11.933077938 -0400
 @@ -16,6 +16,7 @@
  #ifndef LIEF_ABSTRACT_HEADER_H
  #define LIEF_ABSTRACT_HEADER_H
