@@ -6,3 +6,30 @@ https://github.com/mcneel/opennurbs
 
 Note that some of these patches DO have behavior modification implications.
 
+
+Debugging notes:  working on an issue where a Java load of the OpenNURBS.dll
+file fails.  Starting with the knowledge that 7.38.2 works.
+
+Doesn't appear to be related to the CMake build setup - 7.38.2 build
+stand-alone in bext successfully, but minimal adjustment of that CMakeLists.txt
+file to build the newer files results in a dll that still fails.
+
+Started working through the changes to incrementally introduce them and see
+when the failure is first observed.  Appears to be narrowing down to:
+
+opennurbs_3dm_attributes.cpp
+opennurbs_post_effects.cpp
+
+The latter we might be able to just comment out, at least for now, but we
+need the former.  Trying to isolate what about the changes is problematic -
+a switch was made from default to explicit constructors, but it looks like
+other changes are also present...
+
+Note:  for debugging iteration, using the JavaCheck.cmake file in bext/CMake
+to quickly look for problems:
+
+cmake -DDLLSUFFIX=".dll" -DLL_DIR=C:\Users\me\opennurbs_working\build\Release -P C:\Users\bext\CMake\JavaCheck.cmake
+
+Make sure to copy the z_brl.dll file from bext_output\install\bin to opennurbs_working\build\Release, since
+it will be needed to successfully load OpenNURBS.dll
+
