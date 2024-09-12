@@ -37,12 +37,7 @@
 # System.loadLibrary mechanism. Parameters (all are mandatory):
 #
 # Required parameters:
-# DLLSUFFIX = platform specific shared library suffix (.so, .dll, etc.)
 # DLL_DIR = directory holding shared library files to check
-#
-# (Note:  Ideally DLLSUFFIX shouldn't be needed, but the CMake
-# variable for this (CMAKE_SHARED_LIBRARY_SUFFIX) isn't defined when
-# running CMake in -P mode, at least as of Sept. 2024.)
 #
 # The following can be specified in lieu of relying on find_package
 # to locate Java:
@@ -113,13 +108,13 @@ function(JavaCheck JC_EXEC JAR_EXEC J_EXEC DLL_SUFFIX dlldir)
   foreach(dlf ${dll_files})
     string(REGEX REPLACE "^lib" "" dlf "${dlf}")
     string(REGEX REPLACE "${DLL_SUFFIX}$" "" dlf "${dlf}")
-    message("Dll LoadLibrary check: ${J_EXEC} -cp LoadLib.jar LoadLib ${dlf}")
+    message("Dll System.loadLibrary check: ${J_EXEC} -cp LoadLib.jar LoadLib ${dlf}")
     execute_process(COMMAND ${J_EXEC} -cp LoadLib.jar LoadLib ${dlf}
       RESULT_VARIABLE LSTATUS OUTPUT_VARIABLE LOUT ERROR_VARIABLE LOUT
       WORKING_DIRECTORY ${dlldir}
       )
     if (LSTATUS)
-      message("LoadLibrary call with dll file ${dlf} did not succeed: ${LOUT}")
+      message("System.loadLibrary call with dll file ${dlf} did not succeed: ${LOUT}")
       set(load_fail 1)
     endif (LSTATUS)
   endforeach(dlf ${dll_files})
@@ -137,6 +132,17 @@ if (NOT JCEXEC OR NOT JAREXEC OR NOT JEXEC)
   set(JCEXEC ${Java_JAVAC_EXECUTABLE})
   set(JAREXEC ${Java_JAR_EXECUTABLE})
 endif (NOT JCEXEC OR NOT JAREXEC OR NOT JEXEC)
+
+# Populate CMAKE_SHARED_LIBRARY_SUFFIX variable.  See:
+# https://discourse.cmake.org/t/cmake-shared-library-suffix-in-script-processing-p-mode/11646
+if (NOT DLLSUFFIX)
+  set(CMAKE_PLATFORM_INFO_DIR ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY})
+  include(${CMAKE_ROOT}/Modules/CMakeDetermineSystem.cmake)
+  include(${CMAKE_ROOT}/Modules/CMakeSystemSpecificInitialize.cmake)
+  include(${CMAKE_ROOT}/Modules/CMakeSystemSpecificInformation.cmake)
+  file(REMOVE ${CMAKE_PLATFORM_INFO_DIR})
+  set(DLLSUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+endif (NOT DLLSUFFIX)
 
 # Report the active parameters
 message("Java executable (JEXEC): ${JEXEC}")
