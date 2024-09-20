@@ -1,15 +1,28 @@
 # By the time we get here, we have run FindTCL and should know
 # if we have TK.
 
-if (NOT DISABLE_TCL)
-  if (NOT TK_LIBRARY OR TARGET TCL_BLD)
-    set(TK_DO_BUILD 1)
-  else (NOT TK_LIBRARY OR TARGET TCL_BLD)
+if (USE_BRLCAD)
+
+  # Decide if we're using Tk
+  cad_enable(TK "archer;mged;bwish;rtwizard;brlman")
+
+  if (DISABLE_TK)
     set(TK_DO_BUILD 0)
-  endif (NOT TK_LIBRARY OR TARGET TCL_BLD)
-else (NOT DISABLE_TCL)
-  set(TK_DO_BUILD 0)
-endif (NOT DISABLE_TCL)
+  endif (DISABLE_TK)
+
+else (USE_BRLCAD)
+
+  if (NOT DISABLE_TCL)
+    if (NOT TK_LIBRARY OR TARGET TCL_BLD)
+      set(TK_DO_BUILD 1)
+    else (NOT TK_LIBRARY OR TARGET TCL_BLD)
+      set(TK_DO_BUILD 0)
+    endif (NOT TK_LIBRARY OR TARGET TCL_BLD)
+  else (NOT DISABLE_TCL)
+    set(TK_DO_BUILD 0)
+  endif (NOT DISABLE_TCL)
+
+endif(USE_BRLCAD)
 
 if (TK_DO_BUILD)
 
