@@ -6,9 +6,12 @@ if (USE_BRLCAD)
   # Decide if we're using Tk
   cad_enable(TK "archer;mged;bwish;rtwizard;brlman")
 
-  if (DISABLE_TK)
+  if (NOT TK_LIBRARY OR TARGET TCL_BLD)
+    set(TK_DO_BUILD 1)
+  endif (NOT TK_LIBRARY OR TARGET TCL_BLD)
+  if (DISABLE_TCL OR DISABLE_TK)
     set(TK_DO_BUILD 0)
-  endif (DISABLE_TK)
+  endif (DISABLE_TCL OR DISABLE_TK)
 
 else (USE_BRLCAD)
 
