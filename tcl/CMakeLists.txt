@@ -1,7 +1,7 @@
 if (USE_BRLCAD)
 
   # Decide if we're using Tcl
-  cad_enable(TCL "libtclcad")
+  cad_enable(TCL "libtclcad;liboptical;libdm")
 
 else (USE_BRLCAD)
 
