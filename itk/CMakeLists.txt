@@ -20,9 +20,18 @@
 # enough that it won't be a significant issue, since there appears to be
 # only so much we can do to sort it out...
 
-if (ENABLE_ITCL AND NOT DEFINED ENABLE_ITK AND NOT DISABLE_TCL)
-  set(ENABLE_ITK ON)
-endif (ENABLE_ITCL AND NOT DEFINED ENABLE_ITK AND NOT DISABLE_TCL)
+if (USE_BRLCAD)
+
+  # Decide if we're using Itk
+  cad_enable(ITK "archer;mged;bwish;rtwizard;brlman")
+
+else (USE_BRLCAD)
+
+  if (ENABLE_ITCL AND NOT DEFINED ENABLE_ITK AND NOT DISABLE_TCL)
+    set(ENABLE_ITK ON)
+  endif (ENABLE_ITCL AND NOT DEFINED ENABLE_ITK AND NOT DISABLE_TCL)
+
+endif (USE_BRLCAD)
 
 if (NOT ENABLE_ITK AND NOT DISABLE_ITCL AND NOT DISABLE_TCL)
   find_library(ITK_SYS_LIBRARY NAMES itk3)
