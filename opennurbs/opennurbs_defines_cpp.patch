@@ -1,7 +1,7 @@
---- opennurbs/opennurbs_defines.cpp	2024-09-09 15:56:01.177363986 -0400
-+++ OPENNURBS_BLD/opennurbs_defines.cpp	2024-09-09 15:56:35.936771800 -0400
+--- opennurbs/opennurbs_defines.cpp	2024-09-24 16:38:32.133385132 -0400
++++ OPENNURBS_BLD/opennurbs_defines.cpp	2024-09-24 16:38:07.405767200 -0400
 @@ -498,6 +498,9 @@
- #elif defined(ON_RUNTIME_APPLE) || defined(ON_RUNTIME_ANDROID)
+ #elif defined(ON_RUNTIME_APPLE) || defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_WASM)
    //fcloseall is not supported on mac/ios or android
    return EOF;
 +#elif defined(BSD) || defined(__FreeBSD__)

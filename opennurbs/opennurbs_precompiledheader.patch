@@ -1,6 +1,6 @@
---- opennurbs/opennurbs_precompiledheader.cpp	2024-06-25 15:44:35.951646240 -0400
-+++ OPENNURBS_BLD/opennurbs_precompiledheader.cpp	2024-06-25 15:44:06.127134657 -0400
-@@ -32,9 +32,9 @@
+--- opennurbs/opennurbs_precompiledheader.cpp	2024-09-24 11:00:03.440753786 -0400
++++ OPENNURBS_BLD/opennurbs_precompiledheader.cpp	2024-09-24 10:59:40.545148988 -0400
+@@ -28,9 +28,9 @@
  #error Incorrect _M_... setting for x64 build
  #endif
  
@@ -12,7 +12,7 @@
  #endif
  
  // All opennurbs code uses the "offical" _M_X64. Unfortunately, 
-@@ -43,9 +43,9 @@
+@@ -39,9 +39,9 @@
  // _M_X64 and _M_AMD64 for the WIN64 platform.  If it doesn't,
  // then we have a serious problem because some system header
  // files will not be correctly preprocessed.
@@ -24,7 +24,7 @@
  #endif
  
  #endif
-@@ -57,7 +57,7 @@
+@@ -53,7 +53,7 @@
  #error Microsoft defines _WIN32 for all Windows builds
  #endif
  
@@ -33,7 +33,7 @@
  #error Incorrect _M_... setting for 32 bit Windows build.
  #endif
  
-@@ -108,9 +108,9 @@
+@@ -104,9 +104,9 @@
  #error Incorrect _M_... setting for x64 build
  #endif
  
@@ -45,7 +45,7 @@
  #endif
  
  // All opennurbs code uses the "offical" _M_X64. Unfortunately, 
-@@ -119,9 +119,9 @@
+@@ -115,9 +115,9 @@
  // _M_X64 and _M_AMD64 for the WIN64 platform.  If it doesn't,
  // then we have a serious problem because some system header
  // files will not be correctly preprocessed.
@@ -57,7 +57,7 @@
  #endif
  
  #endif
-@@ -133,7 +133,7 @@
+@@ -129,7 +129,7 @@
  #error Microsoft defines _WIN32 for all Windows builds
  #endif
  
@@ -66,7 +66,7 @@
  #error Incorrect _M_... setting for 32 bit Windows build.
  #endif
  
-@@ -144,4 +144,4 @@
+@@ -140,4 +140,4 @@
  
  #endif
  

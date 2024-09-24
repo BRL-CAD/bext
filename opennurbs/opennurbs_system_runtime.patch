@@ -1,7 +1,7 @@
---- opennurbs/opennurbs_system_runtime.h	2024-06-25 15:44:35.955646175 -0400
-+++ OPENNURBS_BLD/opennurbs_system_runtime.h	2024-06-25 15:44:06.138134477 -0400
-@@ -56,6 +56,11 @@
- #define ON_RUNTIME_LINUX
+--- opennurbs/opennurbs_system_runtime.h	2024-09-24 11:09:52.628564406 -0400
++++ OPENNURBS_BLD/opennurbs_system_runtime.h	2024-09-24 11:18:03.434592812 -0400
+@@ -61,6 +61,11 @@
+ #define ON_RUNTIME_WASM
  #endif
  
 +#elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__bsdi__)
@@ -12,7 +12,7 @@
  #endif
  /*
  //
-@@ -127,7 +132,7 @@
+@@ -132,7 +137,7 @@
  #define ON_RUNTIME_WIN_WINOS
  #endif
  
@@ -21,7 +21,7 @@
  #define ON_64BIT_RUNTIME
  #elif defined(_M_X86) || defined(_WIN32)
  #define ON_32BIT_RUNTIME
-@@ -136,7 +141,7 @@
+@@ -141,7 +146,7 @@
  #endif
  
  #if !defined(ON_LITTLE_ENDIAN)
@@ -30,16 +30,16 @@
  #define ON_LITTLE_ENDIAN
  #endif
  #endif
-@@ -146,7 +151,7 @@
+@@ -151,7 +156,7 @@
  #define ON_RUNTIME_LINUX
  #endif
  
--#if defined(ON_RUNTIME_LINUX)
-+#if defined(ON_RUNTIME_LINUX) || defined (ON_RUNTIME_BSD)
+-#if defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#if defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined (ON_RUNTIME_BSD)
  
  #if !defined(ON_SIZEOF_WCHAR_T)
  #define ON_SIZEOF_WCHAR_T 4
-@@ -159,7 +164,9 @@
+@@ -164,7 +169,9 @@
  #define ON_32BIT_RUNTIME
  #endif
  

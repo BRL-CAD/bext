@@ -1,11 +1,11 @@
---- opennurbs/opennurbs_font.cpp	2024-06-25 15:44:35.946646322 -0400
-+++ OPENNURBS_BLD/opennurbs_font.cpp	2024-06-25 15:44:06.105135017 -0400
+--- opennurbs/opennurbs_font.cpp	2024-09-24 10:49:49.815389242 -0400
++++ OPENNURBS_BLD/opennurbs_font.cpp	2024-09-24 10:51:07.967027619 -0400
 @@ -8936,7 +8936,7 @@
      const wchar_t* prev_clean_family_name = nullptr;
      for (size_t i = 0; i < installed_count; i++)
      {
--#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
        const ON_Font* font = installed_fonts[(int)i];
  #else
        const ON_Font* font = installed_fonts[i];
@@ -13,8 +13,8 @@
        InternalHashToName candidate;
        for (size_t i = 0; i < count0; i++)
        {
--#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
          InternalHashToName e = a[(int)i];
  #else
          InternalHashToName e = a[i];

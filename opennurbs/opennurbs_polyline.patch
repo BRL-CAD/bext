@@ -1,11 +1,11 @@
---- opennurbs/opennurbs_polyline.cpp	2024-06-25 15:28:09.126849147 -0400
-+++ OPENNURBS_BLD/opennurbs_polyline.cpp	2024-06-25 15:26:59.863992698 -0400
+--- opennurbs/opennurbs_polyline.cpp	2024-09-24 10:54:54.798089595 -0400
++++ OPENNURBS_BLD/opennurbs_polyline.cpp	2024-09-24 10:55:48.500159662 -0400
 @@ -455,7 +455,7 @@
    maxN = maxN.UnitVector();
    for (size_t i = 0; i < point_count; ++i)
    {
--#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
      double d = maxN * C[(unsigned int)i];
  #else
      double d = maxN * C[i];

@@ -1,11 +1,11 @@
---- opennurbs/opennurbs_locale.cpp	2024-06-25 15:28:09.122849214 -0400
-+++ OPENNURBS_BLD/opennurbs_locale.cpp	2024-06-25 15:26:59.851992897 -0400
+--- opennurbs/opennurbs_locale.cpp	2024-09-24 10:52:37.404472702 -0400
++++ OPENNURBS_BLD/opennurbs_locale.cpp	2024-09-24 10:54:00.683027498 -0400
 @@ -32,7 +32,7 @@
      ON_C_locale = _create_locale(LC_ALL, "C");
  #elif defined(ON_RUNTIME_APPLE)
      ON_C_locale = _c_locale;
--#elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
      ON_C_locale = 0;
  #else
      ON_C_locale = _create_locale(category, locale);
@@ -13,8 +13,8 @@
      }
    }
    return newlocale(LC_ALL_MASK, apple_name, ON_CRT_C_locale() );
--#elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
    return 0;
  #else
    return _create_locale(category, locale);
@@ -22,8 +22,8 @@
    static bool Validate_sprintf_l()
    {
  #if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
--#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
      // Test formatted printing
      char buffer[64] = { 0 };
      // Testing C-runtime - do not using ON_String::FormatIntoBuffer
@@ -31,8 +31,8 @@
    static bool Validate_sprintf_s_l()
    {
  #if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
--#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
      // Test formatted printing
      char buffer[64] = { 0 };
      size_t buffer_capacity = (sizeof(buffer) / sizeof(buffer[0])) - 1;
@@ -40,8 +40,8 @@
    static bool Validate_sscanf_l()
    {
  #if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
--#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
      // Test formatted scanning
      double a = ON_UNSET_VALUE;
      // Testing C-runtime - do not using ON_String::Scan
@@ -49,8 +49,8 @@
    static bool Validate_sscanf_s_l()
    {
  #if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
--#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX)
-+#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_BSD)
+-#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
++#if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
      // Test formatted scanning
      double a = ON_UNSET_VALUE;
      // Testing C-runtime - do not using ON_String::Scan

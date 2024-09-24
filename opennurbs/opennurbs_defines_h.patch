@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_defines.h	2024-06-25 15:28:09.119849263 -0400
-+++ OPENNURBS_BLD/opennurbs_defines.h	2024-06-25 15:26:59.823993359 -0400
+--- opennurbs/opennurbs_defines.h	2024-09-24 16:38:32.133385132 -0400
++++ OPENNURBS_BLD/opennurbs_defines.h	2024-09-24 16:38:07.404767216 -0400
 @@ -102,6 +102,11 @@
  #define ON_EXTERN_DECL __declspec(dllimport)
  #define ON_DLL_TEMPLATE extern
@@ -12,7 +12,7 @@
  #elif defined(ON_COMPILER_CLANG)
  /* using opennurbs as an Apple shared library */
  #define ON_CLASS __attribute__ ((visibility ("default")))
-@@ -2351,7 +2356,7 @@
+@@ -2355,7 +2360,7 @@
    // the values.  The reason for the gaps between the enum
    // values is to leave room for future snaps with prededence
    // falling between existing snaps
@@ -21,7 +21,7 @@
    {
      os_none          =          0,
      os_near          =          2,
-@@ -2741,7 +2746,7 @@
+@@ -2745,7 +2750,7 @@
    // Do not change these values; they are stored in 3dm archives
    // and provide a persistent way to identify components of
    // complex objects.
