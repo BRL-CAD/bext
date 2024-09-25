@@ -232,6 +232,10 @@ add_project(assetimport GROUPS "BRLCAD")
 # http://opencv.org
 add_project(opencv GROUPS "BRLCAD_EXTRA")
 
+# Clipper2 - A Polygon Clipping and Offsetting library
+# https://github.com/AngusJohnson/Clipper2
+add_project(clipper2 GROUPS "BRLCAD")
+
 # GeometricTools - a collection of geometry algorithms.
 # https://github.com/davideberly/GeometricTools
 add_project(gte GROUPS "BRLCAD")

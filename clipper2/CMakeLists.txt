@@ -1,0 +1,57 @@
+# Decide if we're using clipper2
+cad_enable(CLIPPER2 "librt")
+
+bext_enable(CLIPPER2)
+
+# Decision made
+
+if (ENABLE_CLIPPER2)
+
+  git_submodule_init(Clipper2 readme.md)
+
+  RegisterDeps(CLIPPER2)
+
+  ExternalProject_Add(CLIPPER2_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/Clipper2/CPP"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/clipper2.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DCLIPPER2_UTILS=OFF
+    -DCLIPPER2_EXAMPLES=OFF
+    -DCLIPPER2_TESTS=OFF
+    -DCLIPPER2_USINGZ=OFF
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_SHARED_LIBS=ON
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
+    -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(CLIPPER2 CLIPPER2_DEPENDS)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Clipper2/LICENSE
+    ${DOC_LICENSE_DIR}/clipper2.txt
+    COPYONLY
+    )
+
+endif (ENABLE_CLIPPER2)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+
