@@ -2,6 +2,80 @@
 
 When using submodules, there are some fairly non-intuitive aspects of managing them that need to be taken into consideration:
 
+# Checkout out particular versions of bext
+
+Because bext makes extensive use of git submodules, operations that in the BRL-CAD repository can normally be achieved with basic git commands may need additional options in bext to achieve expected results.  A common example is switching a clone of bext to a specific revision.  If you have (say) a checkout of main branch but wish to obtain bext's contents from the rel-7-40-2 branch, one might intuitively think a checkout would work.  However, doing that checkout, we see:
+
+```
+bext (main)$ git checkout rel-7-40-2
+M	assetimport/assimp
+M	astyle/astyle
+M	gdal/gdal
+M	gte/GeometricTools
+M	lief/LIEF
+M	lmdb/lmdb
+M	netpbm/netpbm
+M	opennurbs/opennurbs
+M	png/libpng
+M	proj/PROJ
+M	sqlite3/sqlite3
+M	tiff/libtiff
+branch 'rel-7-40-2' set up to track 'origin/rel-7-40-2'.
+Switched to a new branch 'rel-7-40-2'
+```
+What are the modification notifications about?  What has happened is the populated submodules are still in the state set up by the main branch - the checkout to rel-7-40-2 in the parent git repository did not alter their states, and so according to the rel-7-40-2 branch they are modified compared to what they should be:
+
+```
+bext (rel-7-40-2)$ git status
+On branch rel-7-40-2
+Your branch is up to date with 'origin/rel-7-40-2'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   assetimport/assimp (new commits)
+	modified:   astyle/astyle (new commits)
+	modified:   gdal/gdal (new commits)
+	modified:   gte/GeometricTools (new commits)
+	modified:   lief/LIEF (new commits)
+	modified:   lmdb/lmdb (new commits)
+	modified:   netpbm/netpbm (new commits)
+	modified:   opennurbs/opennurbs (new commits)
+	modified:   png/libpng (new commits)
+	modified:   proj/PROJ (new commits)
+	modified:   sqlite3/sqlite3 (new commits)
+	modified:   tiff/libtiff (new commits)
+
+no changes added to commit (use "git add" and/or "git commit -a")
+```
+
+Note that not all submodules are listed. In this case, bext was configured to only clone specific libraries needed for a BRL-CAD build, and unpopulated submodules have made the change to the new version without incident.  To also put the populated submodules in the expected state, a second command is needed:
+
+```
+bext (rel-7-40-2)$ git submodule update --recursive
+Submodule path 'assetimport/assimp': checked out '3783459a97c67ec9e44fbec8c64aa83ff352dd15'
+Submodule path 'astyle/astyle': checked out 'c35f91f650455dc7b9fb16c65bb8f9a94f6a1479'
+Submodule path 'gdal/gdal': checked out '6caa025977ad22a32cba0646cafc30c36ca4f423'
+Submodule path 'gte/GeometricTools': checked out '2cc6ea322f4fca3b51805768485d3da15409aeec'
+Submodule path 'lief/LIEF': checked out '2b68ae538316f9ded03f9e3661d63551ab755cb0'
+Submodule path 'lmdb/lmdb': checked out 'ddd0a773e2f44d38e4e31ec9ed81af81f4e4ccbb'
+Submodule path 'netpbm/netpbm': checked out '3f1172417c2453de752839243e9a36fba5b16b70'
+Submodule path 'opennurbs/opennurbs': checked out '6dce0c19e71812a87cc9de189ba5fdbbf7b56e28'
+Submodule path 'png/libpng': checked out 'ed217e3e601d8e462f7fd1e04bed43ac42212429'
+Submodule path 'proj/PROJ': checked out '47410920e0426d0eccbdbc27ca9dfc494f68a084'
+Submodule path 'sqlite3/sqlite3': checked out 'e3012e5fa233146122a08ab41f33f7747d6c821c'
+Submodule path 'tiff/libtiff': checked out '8b20804fc0ddeaa93667b799b5e1a2a7dc9e3fb2'
+```
+
+A second status check will now report a clean tree:
+
+```
+bext (rel-7-40-2)$ git status
+On branch rel-7-40-2
+Your branch is up to date with 'origin/rel-7-40-2'.
+```
+
+
 # Adding a submodule (using Tcl as an example)
 ```
 user@linux:~/bext (main) $ cd tcl
