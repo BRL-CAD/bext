@@ -1,0 +1,10 @@
+diff -Naur zlib/win32/zlib1.rc ZLIB_BLD/win32/zlib1.rc
+--- zlib/win32/zlib1.rc	2024-10-09 12:48:30.618301910 -0400
++++ ZLIB_BLD/win32/zlib1.rc	2024-10-09 12:47:57.246866207 -0400
+@@ -1,5 +1,5 @@
+ #include <winver.h>
+-#include "../zlib.h"
++#include "zlib.h"
+ 
+ #ifdef GCC_WINDRES
+ VS_VERSION_INFO		VERSIONINFO
