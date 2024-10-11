@@ -2177,7 +2177,7 @@ void ASConsole::printHelp() const
 	std::cout << "    --help  OR  -h  OR  -?\n";
 	std::cout << "    Print this help message.\n";
 	std::cout << '\n';
-	std::cout << "    --html  OR  -!\n";
+	std::cout << "    --html  OR  -! (deprecated)\n";
 	std::cout << "    Open the HTML help file \"astyle.html\" in the default browser.\n";
 	std::cout << "    The documentation must be installed in the standard install path.\n";
 	std::cout << '\n';
