@@ -1,0 +1,28 @@
+diff -Naur gdal/cmake/modules/packages/FindSQLite3.cmake GDAL_BLD/cmake/modules/packages/FindSQLite3.cmake
+--- gdal/cmake/modules/packages/FindSQLite3.cmake	2024-10-11 12:56:24.150252794 -0400
++++ GDAL_BLD/cmake/modules/packages/FindSQLite3.cmake	2024-10-11 12:55:32.592163336 -0400
+@@ -57,7 +57,7 @@
+             NAMES  sqlite3.h
+             HINTS ${PC_SQLITE3_INCLUDE_DIRS})
+   find_library(SQLite3_LIBRARY
+-               NAMES sqlite3 sqlite3_i
++               NAMES sqlite3 sqlite3_i libsqlite3 libsqlite libsqlite3_i
+                HINTS ${PC_SQLITE3_LIBRARY_DIRS})
+ endif()
+ 
+diff -Naur gdal/gdal.cmake GDAL_BLD/gdal.cmake
+--- gdal/gdal.cmake	2024-10-11 12:56:24.291250306 -0400
++++ GDAL_BLD/gdal.cmake	2024-10-11 12:55:32.595163283 -0400
+@@ -379,12 +379,6 @@
+ set_property(TARGET ${GDAL_LIB_TARGET_NAME} PROPERTY PLUGIN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/gdalplugins")
+ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gdalplugins")
+ 
+-if (MSVC)
+-  set(GDAL_DEBUG_POSTFIX
+-      "d"
+-      CACHE STRING "Postfix to add to the GDAL dll name for debug builds")
+-  set_target_properties(${GDAL_LIB_TARGET_NAME} PROPERTIES DEBUG_POSTFIX "${GDAL_DEBUG_POSTFIX}")
+-endif ()
+ if (MINGW AND BUILD_SHARED_LIBS)
+     set_target_properties(${GDAL_LIB_TARGET_NAME} PROPERTIES SUFFIX "-${GDAL_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+ endif ()

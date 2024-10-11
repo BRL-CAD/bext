@@ -1,0 +1,16 @@
+--- gdal/gcore/gdal_priv.h	2024-10-11 12:56:24.284250430 -0400
++++ GDAL_BLD/gcore/gdal_priv.h	2024-10-11 12:55:32.594163301 -0400
+@@ -96,6 +96,13 @@
+ /*                       GDALMultiDomainMetadata                        */
+ /************************************************************************/
+ 
++#if defined(_WIN32)
++#define STRCASECMP(a, b) (_stricmp(a, b))
++#else
++/** Alias for strcasecmp() */
++#define STRCASECMP(a, b) (strcasecmp(a, b))
++#endif
++
+ //! @cond Doxygen_Suppress
+ class CPL_DLL GDALMultiDomainMetadata
+ {

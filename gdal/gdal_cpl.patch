@@ -1,0 +1,11 @@
+--- gdal/port/cpl_port.h	2024-10-11 12:56:24.357249142 -0400
++++ GDAL_BLD/port/cpl_port.h	2024-10-11 12:55:32.596163265 -0400
+@@ -1123,7 +1123,7 @@
+ #define TRUE 1
+ #endif
+ 
+-#if __clang_major__ >= 4 || (__clang_major__ == 3 && __clang_minor__ >= 8)
++#if defined(__clang_major__) && (__clang_major__ >= 4 || ( __clang_major__ == 3 && __clang_minor__ >= 8) )
+ #define CPL_NOSANITIZE_UNSIGNED_INT_OVERFLOW                                   \
+     __attribute__((no_sanitize("unsigned-integer-overflow")))
+ #else
