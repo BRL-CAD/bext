@@ -199,9 +199,13 @@ diff -Naur zlib/ZLIBConfig.cmake ZLIB_BLD/ZLIBConfig.cmake
 +  if(TARGET zlib::zlib)
 +    add_library(ZLIB::ZLIB INTERFACE IMPORTED)
 +    target_link_libraries(ZLIB::ZLIB INTERFACE zlib::zlib)
++    add_library(ZLIB::zlib INTERFACE IMPORTED)
++    target_link_libraries(ZLIB::zlib INTERFACE zlib::zlib)
 +  elseif(TARGET zlib::zlibstatic)
 +    add_library(ZLIB::ZLIB INTERFACE IMPORTED)
 +    target_link_libraries(ZLIB::ZLIB INTERFACE zlib::zlibstatic)
++    add_library(ZLIB::zlib INTERFACE IMPORTED)
++    target_link_libraries(ZLIB::zlib INTERFACE zlib::zlibstatic)
 +  endif()
 +endif()
 +
