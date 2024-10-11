@@ -1,0 +1,64 @@
+diff -Naur libtiff/cmake/FindJPEG.cmake TIFF_BLD/cmake/FindJPEG.cmake
+--- libtiff/cmake/FindJPEG.cmake	2024-10-11 10:31:38.294245336 -0400
++++ TIFF_BLD/cmake/FindJPEG.cmake	2024-10-11 10:31:04.311837917 -0400
+@@ -56,22 +56,33 @@
+   where to find the JPEG library.
+ #]=======================================================================]
+ 
+-find_path(JPEG_INCLUDE_DIR jpeglib.h)
++set(_JPEG_SEARCHES)
+ 
+-set(jpeg_names ${JPEG_NAMES} jpeg jpeg-static libjpeg libjpeg-static turbojpeg turbojpeg-static)
+-foreach(name ${jpeg_names})
+-  list(APPEND jpeg_names_debug "${name}d")
++# Search JPEG_ROOT first if it is set.
++if(JPEG_ROOT)
++  set(_JPEG_SEARCH_ROOT PATHS ${JPEG_ROOT} NO_DEFAULT_PATH)
++  list(APPEND _JPEG_SEARCHES _JPEG_SEARCH_ROOT)
++endif()
++
++set(JPEG_NAMES ${JPEG_NAMES} jpeg jpeg-static libjpeg libjpeg-static)
++foreach(name ${JPEG_NAMES})
++  list(APPEND JPEG_NAMES_DEBUG "${name}d")
+ endforeach()
+ 
+-if(NOT JPEG_LIBRARY)
+-  find_library(JPEG_LIBRARY_RELEASE NAMES ${jpeg_names} NAMES_PER_DIR)
+-  find_library(JPEG_LIBRARY_DEBUG NAMES ${jpeg_names_debug} NAMES_PER_DIR)
++# Try each search configuration.
++foreach(search ${_JPEG_SEARCHES})
++	message("search: ${search}")
++	message("JPEG_NAMES: ${JPEG_NAMES}")
++  find_path(JPEG_INCLUDE_DIR NAMES jpeglib.h     ${${search}} PATH_SUFFIXES include)
++  find_library(JPEG_LIBRARY_RELEASE NAMES ${JPEG_NAMES} ${${search}} PATH_SUFFIXES lib)
++  find_library(JPEG_LIBRARY_DEBUG NAMES ${JPEG_NAMES_DEBUG} ${${search}} PATH_SUFFIXES lib)
+   include(SelectLibraryConfigurations)
+   select_library_configurations(JPEG)
+   mark_as_advanced(JPEG_LIBRARY_RELEASE JPEG_LIBRARY_DEBUG)
+-endif()
+-unset(jpeg_names)
+-unset(jpeg_names_debug)
++endforeach()
++
++unset(JPEG_NAMES)
++unset(JPEG_NAMES_DEBUG)
+ 
+ if(JPEG_INCLUDE_DIR)
+   file(GLOB _JPEG_CONFIG_HEADERS_FEDORA "${JPEG_INCLUDE_DIR}/jconfig*.h")
+diff -Naur libtiff/CMakeLists.txt TIFF_BLD/CMakeLists.txt
+--- libtiff/CMakeLists.txt	2024-10-11 10:31:38.292245370 -0400
++++ TIFF_BLD/CMakeLists.txt	2024-10-11 10:31:04.312837900 -0400
+@@ -24,10 +24,10 @@
+ # LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+ # OF THIS SOFTWARE.
+ 
+-cmake_minimum_required(VERSION 3.9.0)
++cmake_minimum_required(VERSION 3.18)
+ 
+-# Default policy is from 3.9.0
+-cmake_policy(VERSION 3.9.0)
++# Default policy is from 3.18
++cmake_policy(VERSION 3.18)
+ 
+ # Find CMake modules in cmake/
+ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
