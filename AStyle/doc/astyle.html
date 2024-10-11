@@ -59,187 +59,184 @@
 
 </head>
 
-<body>
+<body id="Contents">
 
-    <button onclick="topFunction()" id="topBtn" title="Go to Contents"><b>Top</b></button>
+    <div id="slogan">Artistic Style Manual</div>
+    <button onclick="topFunction()" id="topBtn" title="Go to Contents"><span class="menu-arrow">&#9650;</span> <b>Top</b></button>
 
-    <h1>Artistic Style</h1>
+    <label for="responsive-button" class="responsive-button">Artistic Style Manual</label>
+	<input type="checkbox" id="responsive-button" role="button">
 
-    <h2>
-        A Free, Fast, and Small Automatic Formatter<br />
-        for C, C++, C++/CLI, <span style="white-space: nowrap;">Objective-C</span>, C#, and Java Source Code
-    </h2>
+    <nav class="menu">
+
+        <ul>
+              <li><a href="#_General_Information">Usage <span class="menu-arrow">&#9660;</span></a>
+                  <ul>
+                      <li><a href="#_Quick_Start">Quick Start</a></li>
+                      <li><a href="#_Usage">Usage</a></li>
+                      <li><a href="#_Options">Options</a></li>
+                      <li><a href="#_Option_Files">Option Files</a></li>
+                      <li><a href="#_Disable_Formatting">Disable Formatting</a></li>
+                   </ul>
+              </li>
+
+              <li><a href="#_Brace_Style_Options">Brace Options <span class="menu-arrow">&#9660;</span></a>
+                   <ul>
+                      <li><a href="#_Basic_Brace_Styles">Basic Brace Styles</a></li>
+                      <li><a href="#_default_brace_style">Default Style</a></li>
+                      <li><a href="#_style=allman">style=allman</a></li>
+                      <li><a href="#_style=java">style=java</a></li>
+                      <li><a href="#_style=kr">style=kr</a></li>
+                      <li><a href="#_style=stroustrup">style=stroustrup</a></li>
+                      <li><a href="#_style=whitesmith">style=whitesmith</a></li>
+                      <li><a href="#_style=vtk">style=vtk</a></li>
+                      <li><a href="#_style=ratliff">style=ratliff</a></li>
+                      <li><a href="#_style=gnu">style=gnu</a></li>
+                      <li><a href="#_style=linux">style=linux</a></li>
+                      <li><a href="#_style=horstmann">style=horstmann</a></li>
+                      <li><a href="#_style=1tbs">style=1tbs</a></li>
+                      <li><a href="#_style=google">style=google</a></li>
+                      <li><a href="#_style=mozilla">style=mozilla</a></li>
+                      <li><a href="#_style=webkit">style=webkit</a></li>
+                      <li><a href="#_style=pico">style=pico</a></li>
+                      <li><a href="#_style=lisp">style=lisp</a></li>
+                   </ul>
+              </li>
+
+              <li><a href="#">Brace Attach Options <span class="menu-arrow">&#9660;</span></a>
+                  <ul>
+                      <li><a href="#_attach_namespaces">attach-namespaces</a></li>
+                      <li><a href="#_attach_classes">attach-classes</a></li>
+                      <li><a href="#_attach_inlines">attach-inlines</a></li>
+                      <li><a href="#_attach-extern-c">attach-extern-c</a></li>
+                      <li><a href="#_attach-closing-while">attach-closing-while</a></li>
+                  </ul>
+             </li>
+
+              <li><a href="#_Tab_Options">Tab Options <span class="menu-arrow">&#9660;</span></a>
+                  <ul>
+                       <li><a href="#_default_indent">Default Indent </a></li>
+                       <li><a href="#_indent=spaces">indent=spaces </a></li>
+                       <li><a href="#_indent=tab">indent=tab </a></li>
+                       <li><a href="#_indent=force-tab">indent=force-tab </a></li>
+                       <li><a href="#_indent=force-tab-x">indent=force-tab-x </a></li>
+                  </ul>
+             </li>
+
+             <li><a href="#_Indentation_Options">Indentation Options <span class="menu-arrow">&#9660;</span></a>
+                  <ul>
+                       <li><a href="#_indent-classes">indent-classes </a></li>
+                       <li><a href="#_indent-modifiers">indent-modifiers </a></li>
+                       <li><a href="#_indent-switches">indent-switches </a></li>
+                       <li><a href="#_indent-cases">indent-cases </a></li>
+                       <li><a href="#_indent-namespaces">indent-namespaces </a></li>
+                       <li><a href="#_indent-after-parens">indent-after-parens </a></li>
+                       <li><a href="#_indent-continuation">indent-continuation </a></li>
+                       <li><a href="#_indent-labels">indent-labels </a></li>
+                       <li><a href="#_indent-preproc-block">indent-preproc-block </a></li>
+                       <li><a href="#_indent-preproc-define">indent-preproc-define </a></li>
+                       <li><a href="#_indent-preproc-cond">indent-preproc-cond </a></li>
+                       <li><a href="#_indent-col1-comments">indent-col1-comments </a></li>
+                       <li><a href="#_min-conditional-indent">min-conditional-indent </a></li>
+                       <li><a href="#_max-continuation-indent">max-continuation-indent </a></li>
+                       <li><a href="#_indent_lambda">indent-lambda </a></li>
+                  </ul>
+             </li>
 
 
-    <div style="float: left; background-color: #fbfaef;padding: 2em;">
+             <li><a href="#_Padding_Options">Padding Options <span class="menu-arrow">&#9660;</span></a>
+              <ul>
+                   <li><a href="#_break-blocks">break-blocks </a><li>
+                   <li><a href="#_break-blocks=all">break-blocks=all </a><li>
+                   <li><a href="#_pad-oper">pad-oper </a><li>
+                   <li><a href="#_pad-comma">pad-comma </a><li>
+                   <li><a href="#_pad-negation">pad-negation </a><li>
+                   <li><a href="#_pad-include">pad-include </a><li>
+                   <li><a href="#_pad-paren">pad-paren </a><li>
+                   <li><a href="#_pad-paren-out">pad-paren-out </a><li>
+                   <li><a href="#_pad-first-paren-out">pad-first-paren-out </a><li>
+                   <li><a href="#_pad-paren-in">pad-paren-in </a><li>
+                   <li><a href="#_pad-header">pad-header </a><li>
+                   <li><a href="#_unpad-paren">unpad-paren </a><li>
+                   <li><a href="#_pad-empty-paren">pad-empty-paren </a><li>
+                   <li><a href="#_pad-brackets">pad-brackets </a><li>
+                   <li><a href="#_pad-brackets-in">pad-brackets-in </a><li>
+                   <li><a href="#_pad-brackets-out">pad-brackets-out </a><li>
+                   <li><a href="#_unpad-brackets">unpad-brackets </a><li>
+                   <li><a href="#_delete-empty-lines">delete-empty-lines </a><li>
+                   <li><a href="#_fill-empty-lines">fill-empty-lines </a><li>
+                   <li><a href="#_squeeze-ws">squeeze-ws </a><li>
+                   <li><a href="#_squeeze-lines">squeeze-lines </a><li>
+                   <li><a href="#_align-pointer">align-pointer </a><li>
+                   <li><a href="#_align-reference">align-reference </a><li>
+              </ul>
+         </li>
 
-        <h3 id="Contents" style="margin-top: 0em;">Contents</h3>
+         <li><a href="#_Formatting_Options">Formatting Options <span class="menu-arrow">&#9660;</span></a>
+          <ul>
+               <li><a href="#_break-closing-braces">break-closing-braces </a><li>
+               <li><a href="#_break-elseifs">break-elseifs </a><li>
+               <li><a href="#_break-one-line-headers">break-one-line-headers </a><li>
+               <li><a href="#_add-braces">add-braces </a><li>
+               <li><a href="#_add-one-line-braces">add-one-line-braces </a><li>
+               <li><a href="#_remove-braces">remove-braces </a><li>
+               <li><a href="#_break-return-type">break-return-type </a><li>
+               <li><a href="#_attach-return-type">attach-return-type </a><li>
+               <li><a href="#_keep-one-line-blocks">keep-one-line-blocks </a><li>
+               <li><a href="#_keep-one-line-statements">keep-one-line-statements </a><li>
+               <li><a href="#_convert-tabs">convert-tabs </a><li>
+               <li><a href="#_close-templates">close-templates </a><li>
+               <li><a href="#_remove-comment-prefix">remove-comment-prefix </a><li>
+               <li><a href="#_max-code-length">max-code-length </a><li>
+               <li><a href="#_max-code-length">break-after-logical </a><li>
+               <li><a href="#_mode">mode </a><li>
+          </ul>
+     </li>
 
-    <p class="contents1">
-        <a   href="#_General_Information">General&nbsp;Information</a></p>
-    <p class="contents1">
-        <a   href="#_Quick_Start">Quick&nbsp;Start</a></p>
-    <p class="contents1">
-        <a   href="#_Usage">Usage</a></p>
-    <p class="contents1">
-        <a   href="#_Options">Options</a></p>
-    <p class="contents1">
-        <a   href="#_Option_Files">Option&nbsp;Files</a></p>
-    <p class="contents1">
-        <a   href="#_Disable_Formatting">Disable&nbsp;Formatting</a></p>
-    <p class="contents1">
-        <a   href="#_Basic_Brace_Styles">Basic&nbsp;Brace&nbsp;Styles</a></p>
-    <p class="contents1">
-        <a   href="#_Brace_Style_Options">Brace&nbsp;Style&nbsp;Options</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_default_brace_style">default&nbsp;brace&nbsp;style</a>
-        <a class="contents" href="#_style=allman">style=allman</a>
-        <a class="contents" href="#_style=java">style=java</a>
-        <a class="contents" href="#_style=kr">style=kr</a>
-        <a class="contents" href="#_style=stroustrup">style=stroustrup</a>
-        <a class="contents" href="#_style=whitesmith">style=whitesmith</a>
-        <a class="contents" href="#_style=vtk">style=vtk</a>
-        <a class="contents" href="#_style=ratliff">style=ratliff</a>
-        <a class="contents" href="#_style=gnu">style=gnu</a>
-        <a class="contents" href="#_style=linux">style=linux</a>
-        <a class="contents" href="#_style=horstmann">style=horstmann</a>
-        <a class="contents" href="#_style=1tbs">style=1tbs</a>
-        <a class="contents" href="#_style=google">style=google</a>
-        <a class="contents" href="#_style=mozilla">style=mozilla</a>
-        <a class="contents" href="#_style=webkit">style=webkit</a>
-        <a class="contents" href="#_style=pico">style=pico</a>
-        <a class="contents" href="#_style=lisp">style=lisp</a>
-    </p>
-    <p class="contents1">
-        <a   href="#_Tab_Options">Tab&nbsp;Options</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_default_indent">default&nbsp;indent</a>
-        <a class="contents" href="#_indent=spaces">indent=spaces</a>
-        <a class="contents" href="#_indent=tab">indent=tab</a>
-        <a class="contents" href="#_indent=force-tab">indent=force-tab</a>
-        <a class="contents" href="#_indent=force-tab-x">indent=force-tab-x</a>
-    </p>
-    <p class="contents1">
-        <a  href="#_Brace_Modify_Options">Brace&nbsp;Modify&nbsp;Options</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_attach_namespaces">attach-namespaces</a>
-        <a class="contents" href="#_attach_classes">attach-classes</a>
-        <a class="contents" href="#_attach_inlines">attach-inlines</a>
-        <a class="contents" href="#_attach-extern-c">attach-extern-c</a>
-        <a class="contents" href="#_attach-closing-while">attach-closing-while</a>
-    </p>
-    <p class="contents1">
-        <a  href="#_Indentation_Options">Indentation&nbsp;Options</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_indent-classes">indent-classes</a>
-        <a class="contents" href="#_indent-modifiers">indent-modifiers</a>
-        <a class="contents" href="#_indent-switches">indent-switches</a>
-        <a class="contents" href="#_indent-cases">indent-cases</a>
-        <a class="contents" href="#_indent-namespaces">indent-namespaces</a>
-        <a class="contents" href="#_indent-after-parens">indent-after-parens</a>
-        <a class="contents" href="#_indent-continuation">indent-continuation</a>
-        <a class="contents" href="#_indent-labels">indent-labels</a>
-        <a class="contents" href="#_indent-preproc-block">indent-preproc-block</a>
-        <a class="contents" href="#_indent-preproc-define">indent-preproc-define</a>
-        <a class="contents" href="#_indent-preproc-cond">indent-preproc-cond</a>
-        <a class="contents" href="#_indent-col1-comments">indent-col1-comments</a>
-        <a class="contents" href="#_min-conditional-indent">min-conditional-indent</a>
-        <a class="contents" href="#_max-continuation-indent">max-continuation-indent</a>
-        <a class="contents" href="#_indent_lambda">indent-lambda</a>
+     <li><a href="#_Objective_C_Options">Objective C <span class="menu-arrow">&#9660;</span></a>
+      <ul>
+              <li><a href="#_pad-method-prefix">pad-method-prefix </a><li>
+              <li><a href="#_unpad-method-prefix">unpad-method-prefix </a><li>
+              <li><a href="#_pad-return-type">pad-return-type </a><li>
+              <li><a href="#_unpad-return-type">unpad-return-type </a><li>
+              <li><a href="#_pad-param-type">pad-param-type </a><li>
+              <li><a href="#_unpad-param-type">unpad-param-type </a><li>
+              <li><a href="#_align-method-colon">align-method-colon </a><li>
+              <li><a href="#_pad-method-colon">pad-method-colon </a><li>
+      </ul>
+      </li>
 
-    </p>
-    <p class="contents1">
-        <a href="#_Padding_Options">Padding&nbsp;Options</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_break-blocks">break-blocks</a>
-        <a class="contents" href="#_break-blocks=all">break-blocks=all</a>
-        <a class="contents" href="#_pad-oper">pad-oper</a>
-        <a class="contents" href="#_pad-comma">pad-comma</a>
-        <a class="contents" href="#_pad-negation">pad-negation</a>
-        <a class="contents" href="#_pad-include">pad-include</a>
-        <a class="contents" href="#_pad-paren">pad-paren</a>
-        <a class="contents" href="#_pad-paren-out">pad-paren-out</a>
-        <a class="contents" href="#_pad-first-paren-out">pad-first-paren-out</a>
-        <a class="contents" href="#_pad-paren-in">pad-paren-in</a>
-        <a class="contents" href="#_pad-header">pad-header</a>
-        <a class="contents" href="#_unpad-paren">unpad-paren</a>
-        <a class="contents" href="#_pad-empty-paren">pad-empty-paren</a>
-        <a class="contents" href="#_pad-brackets">pad-brackets</a>
-        <a class="contents" href="#_pad-brackets-in">pad-brackets-in</a>
-        <a class="contents" href="#_pad-brackets-out">pad-brackets-out</a>
-        <a class="contents" href="#_unpad-brackets">unpad-brackets</a>
-        <a class="contents" href="#_delete-empty-lines">delete-empty-lines</a>
-        <a class="contents" href="#_fill-empty-lines">fill-empty-lines</a>
-        <a class="contents" href="#_squeeze-ws">squeeze-ws</a>
-        <a class="contents" href="#_squeeze-lines">squeeze-lines</a>
-        <a class="contents" href="#_align-pointer">align-pointer</a>
-        <a class="contents" href="#_align-reference">align-reference</a>
-    </p>
-    <p class="contents1">
-        <a href="#_Formatting_Options">Formatting&nbsp;Options</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_break-closing-braces">break-closing-braces</a>
-        <a class="contents" href="#_break-elseifs">break-elseifs</a>
-        <a class="contents" href="#_break-one-line-headers">break-one-line-headers</a>
-        <a class="contents" href="#_add-braces">add-braces</a>
-        <a class="contents" href="#_add-one-line-braces">add-one-line-braces</a>
-        <a class="contents" href="#_remove-braces">remove-braces</a>
-        <a class="contents" href="#_break-return-type">break-return-type</a>
-        <a class="contents" href="#_attach-return-type">attach-return-type</a>
-        <a class="contents" href="#_keep-one-line-blocks">keep-one-line-blocks</a>
-        <a class="contents" href="#_keep-one-line-statements">keep-one-line-statements</a>
-        <a class="contents" href="#_convert-tabs">convert-tabs</a>
-        <a class="contents" href="#_close-templates">close-templates</a>
-        <a class="contents" href="#_remove-comment-prefix">remove-comment-prefix</a>
-        <a class="contents" href="#_max-code-length">max-code-length</a>
-        <a class="contents" href="#_max-code-length">break-after-logical</a>
-        <a class="contents" href="#_mode">mode</a>
-    </p>
-    <p class="contents1">
-        <a href="#_Objective_C_Options"><span style="white-space: nowrap;">Objective-C</span>&nbsp;Options</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_pad-method-prefix">pad-method-prefix</a>
-        <a class="contents" href="#_unpad-method-prefix">unpad-method-prefix</a>
-        <a class="contents" href="#_pad-return-type">pad-return-type</a>
-        <a class="contents" href="#_unpad-return-type">unpad-return-type</a>
-        <a class="contents" href="#_pad-param-type">pad-param-type</a>
-        <a class="contents" href="#_unpad-param-type">unpad-param-type</a>
-        <a class="contents" href="#_align-method-colon">align-method-colon</a>
-        <a class="contents" href="#_pad-method-colon">pad-method-colon</a>
-    </p>
-    <p class="contents1">
-        <a href="#_Other_Options">Other&nbsp;Options</a> </p>
-    <p class="contents2">
-        <a class="contents" href="#_suffix">suffix</a>  <a class="contents" href="#_suffix=none">suffix=none</a>
-        <a class="contents" href="#_recursive">recursive</a>
-        <a class="contents" href="#_dry-run">dry-run</a>
-        <a class="contents" href="#_exclude">exclude</a>
-        <a class="contents" href="#_ignore-exclude-errors">ignore-exclude-errors</a>
-        <a class="contents" href="#_ignore-exclude-errors-x">ignore-exclude-errors-x</a>
-        <a class="contents" href="#_errors-to-stdout">errors-to-stdout</a>
-        <a class="contents" href="#_preserve-date">preserve-date</a>
-        <a class="contents" href="#_verbose">verbose</a>
-        <a class="contents" href="#_formatted">formatted</a>
-        <a class="contents" href="#_quiet">quiet</a>
-        <a class="contents" href="#_lineend">lineend</a>
-    </p>
-    <p class="contents1">
-        <a  href="#_Command_Line_Only">Command&nbsp;Line&nbsp;Only</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_options">options</a>
-        <a class="contents" href="#_project">project</a>
-        <a class="contents" href="#_ascii">ascii</a>
-        <a class="contents" href="#_version">version</a>
-        <a class="contents" href="#_help">help</a>
-        <a class="contents" href="#_html">html</a>
-        <a class="contents" href="#_html=">html=</a>
-        <a class="contents" href="#_stdin=">stdin=</a>
-        <a class="contents" href="#_stdout=">stdout=</a>
-    </p>
+     <li><a href="#_Formatting_Options">Other Options <span class="menu-arrow">&#9660;</span></a>
+          <ul>
+              <li><a href="#_suffix">suffix </a><li>
+              <li><a href="#_suffix=none">suffix=none </a><li>
+              <li><a href="#_recursive">recursive </a><li>
+              <li><a href="#_dry-run">dry-run </a><li>
+              <li><a href="#_exclude">exclude </a><li>
+              <li><a href="#_ignore-exclude-errors">ignore-exclude-errors </a><li>
+              <li><a href="#_ignore-exclude-errors-x">ignore-exclude-errors-x </a><li>
+              <li><a href="#_errors-to-stdout">errors-to-stdout </a><li>
+              <li><a href="#_preserve-date">preserve-date </a><li>
+              <li><a href="#_verbose">verbose </a><li>
+              <li><a href="#_formatted">formatted </a><li>
+              <li><a href="#_quiet">quiet </a><li>
+              <li><a href="#_lineend">lineend </a><li>
+              <li><a href="#_options">options </a><li>
+              <li><a href="#_project">project </a><li>
+              <li><a href="#_ascii">ascii </a><li>
+              <li><a href="#_version">version </a><li>
+              <li><a href="#_help">help </a><li>
+              <li><a href="#_stdin=">stdin= </a><li>
+              <li><a href="#_stdout=">stdout= </a><li>
+          </ul>
+      </li>
 
-</div>
+         </ul>
 
-<div style="float: right; width: 65%; margin-top: 0em;">
+        </nav>
+
+
+        <div style="margin-left: 2em;margin-top: 1em;">
 
     <h3 id="_General_Information">General Information</h3>
 
@@ -2633,18 +2630,6 @@ Foo(bool isFoo);</pre>
         <code class="title">--help / -h / -?</code><br />
         Print a help message and quit. The short option must be by itself, it cannot be concatenated with other
         options.</p>
-    <p id="_html">
-        <code class="title">--html / -!</code><br />
-        Open the HTML help file "astyle.html" in the default browser and quit. The short option must be by itself, it
-        cannot be concatenated with other options. The documentation must be installed in the standard install path (/usr/share/doc/astyle/html
-        for Linux or %PROGRAMFILES%\AStyle\doc for Windows). If installed to a different path use html=###.</p>
-    <p id="_html=">
-        <code class="title">--html=<span class="option">####</span></code><br />
-        Open an HTML help file in the default browser using the file path #### and quit. An HTML file other than "astyle.help"
-        may be specified. The path may include a directory path and a file name, or a file name only (e.g. html=install.html).
-        If only a file name is used, it is assumed to be in the standard install path (/usr/share/doc/astyle/html
-        for Linux or %PROGRAMFILES%\AStyle\doc for Windows). In both cases, the file name must include the html extension.
-        File paths containing spaces must be enclosed in quotes.</p>
     <p>
         On Linux the HTML file is opened using the script "xdg-open" from the install package "xdg-utils". This should
         be installed by default on most distributions.</p>
