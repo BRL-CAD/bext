@@ -1,0 +1,81 @@
+diff -Naur opencv/cmake/OpenCVInstallLayout.cmake OPENCV_BLD/cmake/OpenCVInstallLayout.cmake
+--- opencv/cmake/OpenCVInstallLayout.cmake	2024-10-11 12:49:34.114560179 -0400
++++ OPENCV_BLD/cmake/OpenCVInstallLayout.cmake	2024-10-11 12:47:31.106792946 -0400
+@@ -22,12 +22,12 @@
+ 
+ elseif(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
+ 
+-  if(DEFINED OpenCV_RUNTIME AND DEFINED OpenCV_ARCH)
+-    ocv_update(OPENCV_INSTALL_BINARIES_PREFIX "${OpenCV_ARCH}/${OpenCV_RUNTIME}/")
+-  else()
+-    message(STATUS "Can't detect runtime and/or arch")
++	#if(DEFINED OpenCV_RUNTIME AND DEFINED OpenCV_ARCH)
++	#ocv_update(OPENCV_INSTALL_BINARIES_PREFIX "${OpenCV_ARCH}/${OpenCV_RUNTIME}/")
++	#else()
++	#message(STATUS "Can't detect runtime and/or arch")
+     ocv_update(OPENCV_INSTALL_BINARIES_PREFIX "")
+-  endif()
++	#endif()
+   if(OpenCV_STATIC)
+     ocv_update(OPENCV_INSTALL_BINARIES_SUFFIX "staticlib")
+   else()
+diff -Naur opencv/CMakeLists.txt OPENCV_BLD/CMakeLists.txt
+--- opencv/CMakeLists.txt	2024-10-11 12:49:34.061561135 -0400
++++ OPENCV_BLD/CMakeLists.txt	2024-10-11 12:50:02.916040772 -0400
+@@ -68,6 +68,10 @@
+   cmake_policy(SET CMP0071 NEW)  # CMake 3.10+: Let `AUTOMOC` and `AUTOUIC` process `GENERATED` files.
+ endif()
+ 
++if (POLICY CMP0074)
++  cmake_policy(SET CMP0074 NEW)  # CMake 3.12+: find_package() uses <PackageName>_ROOT variables.
++endif (POLICY CMP0074)
++
+ if(POLICY CMP0075)
+   cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
+ endif()
+@@ -1154,7 +1158,7 @@
+ if(ANDROID OR NOT UNIX)
+   install(FILES ${OPENCV_LICENSE_FILE}
+         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+-        DESTINATION ./ COMPONENT libs)
++        DESTINATION doc/legal/other/opencv COMPONENT libs)
+   if(OPENCV_README_FILE)
+     install(FILES ${OPENCV_README_FILE}
+             PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+diff -Naur opencv/modules/core/CMakeLists.txt OPENCV_BLD/modules/core/CMakeLists.txt
+--- opencv/modules/core/CMakeLists.txt	2024-10-11 12:49:34.193558751 -0400
++++ OPENCV_BLD/modules/core/CMakeLists.txt	2024-10-11 12:47:31.108792909 -0400
+@@ -95,7 +95,7 @@
+ ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
+                         HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
+ 
+-ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
++ocv_module_include_directories(${the_module} ${OPENCL_INCLUDE_DIRS})
+ if(ANDROID AND HAVE_CPUFEATURES)
+   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/system.cpp "HAVE_CPUFEATURES=1")
+   ocv_module_include_directories(${CPUFEATURES_INCLUDE_DIRS})
+@@ -166,7 +166,7 @@
+ ocv_create_module(${extra_libs})
+ 
+ ocv_target_link_libraries(${the_module} PRIVATE
+-    "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
++	 ZLIB::ZLIB "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
+     "${OPENGL_LIBRARIES}"
+     "${GLX_LIBRARIES}"
+     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
+diff -Naur opencv/modules/imgcodecs/CMakeLists.txt OPENCV_BLD/modules/imgcodecs/CMakeLists.txt
+--- opencv/modules/imgcodecs/CMakeLists.txt	2024-10-11 12:49:34.252557687 -0400
++++ OPENCV_BLD/modules/imgcodecs/CMakeLists.txt	2024-10-11 12:47:31.108792909 -0400
+@@ -38,7 +38,11 @@
+ if(HAVE_PNG)
+   add_definitions(${PNG_DEFINITIONS})
+   ocv_include_directories(${PNG_INCLUDE_DIR})
+-  list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
++  if(TARGET PNG::PNG)
++	 list(APPEND GRFMT_LIBS PNG::PNG)
++  else(TARGET PNG::PNG)
++    list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
++  endif(TARGET PNG::PNG)
+ endif()
+ 
+ if(HAVE_GDCM)
