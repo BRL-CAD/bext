@@ -10,9 +10,6 @@ if (ENABLE_GDAL)
   git_submodule_init(gdal CMakeLists.txt)
 
   RegisterDeps(GDAL)
-  if (TARGET ZLIB_BLD)
-    set(Z_PREFIX_STR "brl_")
-  endif (TARGET ZLIB_BLD)
 
   ExternalProject_Add(GDAL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/gdal"
@@ -23,8 +20,6 @@ if (ENABLE_GDAL)
     CMAKE_ARGS
     -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
     ${BUILD_TYPE_SPECIFIER}
-    $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
-    $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
