@@ -1,0 +1,70 @@
+diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
+--- libpng/CMakeLists.txt	2024-10-11 10:39:06.421433191 -0400
++++ PNG_BLD/CMakeLists.txt	2024-10-11 10:40:45.921699021 -0400
+@@ -47,8 +47,10 @@
+ # Previously, we used to set CMAKE_DEBUG_POSTFIX globally. That variable should
+ # not be cached, however, because doing so would affect all projects processed
+ # after libpng, in unexpected and undesirable ways.
+-set(PNG_DEBUG_POSTFIX "d"
+-    CACHE STRING "Postfix to append to library file names under the Debug configuration")
++if(NOT PNG_NO_DEBUG_POSTFIX)
++  set(PNG_DEBUG_POSTFIX "d"
++      CACHE STRING "Postfix to append to library file names under the Debug configuration")
++endif(NOT PNG_NO_DEBUG_POSTFIX)
+ 
+ # Allow the users to import their own extra configuration settings.
+ set(DFA_XTRA ""
+@@ -488,10 +490,9 @@
+ 
+   if(PNG_PREFIX)
+     set(PNGLIBCONF_H_EXTRA_DEPENDS
+-        "${CMAKE_CURRENT_BINARY_DIR}/scripts/prefix.out"
+-        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/macro.lst")
++        png_scripts_prefix_out)
+     set(PNGPREFIX_H_EXTRA_DEPENDS
+-        "${CMAKE_CURRENT_BINARY_DIR}/scripts/intprefix.out")
++        png_scripts_intprefix_out)
+   endif()
+ 
+   generate_out(INPUT "${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.c"
+@@ -675,15 +676,15 @@
+   # We are on a Unix or Unix-like toolchain like the GNU toolchain on Windows.
+   # Library file names are expected to have an implicit prefix such as "lib".
+   # Let CMake prepend and append its usual prefixes and suffixes by default.
+-  set(PNG_SHARED_OUTPUT_NAME "png${PNGLIB_ABI_VERSION}")
+-  set(PNG_STATIC_OUTPUT_NAME "png${PNGLIB_ABI_VERSION}")
++  set(PNG_SHARED_OUTPUT_NAME "png_brl${PNGLIB_ABI_VERSION}")
++  set(PNG_STATIC_OUTPUT_NAME "png_brl${PNGLIB_ABI_VERSION}")
+ else()
+   # We are, most likely, on a Windows toolchain like MSVC, Clang on Windows,
+   # Borland/Embarcadero, etc. We need to specify the "libpng" name explicitly.
+   # We also need to use a custom suffix, in order to distinguish between the
+   # shared import library name and the static library name.
+-  set(PNG_SHARED_OUTPUT_NAME "libpng${PNGLIB_ABI_VERSION}")
+-  set(PNG_STATIC_OUTPUT_NAME "libpng${PNGLIB_ABI_VERSION}_static")
++  set(PNG_SHARED_OUTPUT_NAME "libpng_brl${PNGLIB_ABI_VERSION}")
++  set(PNG_STATIC_OUTPUT_NAME "libpng_brl${PNGLIB_ABI_VERSION}_static")
+ endif()
+ 
+ if(PNG_SHARED)
+@@ -1072,16 +1073,16 @@
+   if(PNG_SHARED)
+     # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
+     if(NOT WIN32 OR CYGWIN OR MINGW)
+-      create_symlink(libpng${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
+-      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}
++      create_symlink(libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
++      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX}
+               DESTINATION ${CMAKE_INSTALL_LIBDIR})
+     endif()
+   endif()
+ 
+   if(PNG_STATIC)
+     if(NOT WIN32 OR CYGWIN OR MINGW)
+-      create_symlink(libpng${CMAKE_STATIC_LIBRARY_SUFFIX} TARGET png_static)
+-      install(FILES $<TARGET_LINKER_FILE_DIR:png_static>/libpng${CMAKE_STATIC_LIBRARY_SUFFIX}
++      create_symlink(libpng_brl${CMAKE_STATIC_LIBRARY_SUFFIX} TARGET png_static)
++      install(FILES $<TARGET_LINKER_FILE_DIR:png_static>/libpng_brl${CMAKE_STATIC_LIBRARY_SUFFIX}
+               DESTINATION ${CMAKE_INSTALL_LIBDIR})
+     endif()
+   endif()
