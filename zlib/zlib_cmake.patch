@@ -202,7 +202,7 @@
  endif()
 +
 --- zlib/ZLIBConfig.cmake.in	1969-12-31 19:00:00.000000000 -0500
-+++ ZLIB_BLD/ZLIBConfig.cmake.in	2024-10-11 15:07:08.893321649 -0400
++++ ZLIB_BLD/ZLIBConfig.cmake.in	2024-10-11 16:07:48.044112298 -0400
 @@ -0,0 +1,22 @@
 +# See https://cmake.org/cmake/help/latest/module/CMakePackageConfigHelpers.html
 +@PACKAGE_INIT@
@@ -215,10 +215,14 @@
 +  if(TARGET zlib::zlib)
 +    target_link_libraries(ZLIB::ZLIB INTERFACE zlib::zlib)
 +    target_link_libraries(ZLIB::zlib INTERFACE zlib::zlib)
++	 get_target_property(zl zlib::zlib LOCATION)
 +  elseif(TARGET zlib::zlibstatic)
 +    target_link_libraries(ZLIB::ZLIB INTERFACE zlib::zlibstatic)
 +    target_link_libraries(ZLIB::zlib INTERFACE zlib::zlibstatic)
++	 get_target_property(zl zlib::zlibstatic LOCATION)
 +  endif()
++  set_target_properties(ZLIB::ZLIB PROPERTIES LOCATION ${zl})
++  set_target_properties(ZLIB::zlib PROPERTIES LOCATION ${zl})
 +endif()
 +set(ZLIB_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_PREFIX@/@INSTALL_INC_DIR@")
 +set(ZLIB_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_PREFIX@/@INSTALL_INC_DIR@")
