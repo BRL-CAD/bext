@@ -1,5 +1,5 @@
---- zlib/CMakeLists.txt	2024-10-11 11:17:59.054914321 -0400
-+++ ZLIB_BLD/CMakeLists.txt	2024-10-11 11:18:48.559900632 -0400
+--- zlib/CMakeLists.txt	2024-10-11 12:16:24.041568864 -0400
++++ ZLIB_BLD/CMakeLists.txt	2024-10-11 12:24:35.678684011 -0400
 @@ -7,11 +7,11 @@
  
  option(ZLIB_BUILD_EXAMPLES "Enable Zlib Examples" ON)
@@ -144,7 +144,7 @@
      # This property causes shared libraries on Linux to have the full version
      # encoded into their final filename.  We disable this on Cygwin because
      # it causes cygz-${ZLIB_FULL_VERSION}.dll to be created when cygz.dll
-@@ -165,24 +186,26 @@
+@@ -165,24 +186,32 @@
      # This has no effect with MSVC, on that platform the version info for
      # the DLL comes from the resource file win32/zlib1.rc
      set_target_properties(zlib PROPERTIES VERSION ${ZLIB_FULL_VERSION})
@@ -175,24 +175,30 @@
 +		RUNTIME DESTINATION "${INSTALL_BIN_DIR}"
 +		ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
 +		LIBRARY DESTINATION "${INSTALL_LIB_DIR}" )
++	include(CMakePackageConfigHelpers)
++	write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/ZLIBConfigVersion.cmake
++		VERSION ${VERSION}
++		COMPATIBILITY SameMajorVersion)
 +	install(
 +		EXPORT zlibTargets
 +		NAMESPACE zlib::
 +		DESTINATION ${INSTALL_LIB_DIR}/cmake/ZLIB
 +		)
-+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ZLIBConfig.cmake
++	install(FILES
++	  	${CMAKE_CURRENT_BINARY_DIR}/ZLIBConfigVersion.cmake
++		${CMAKE_CURRENT_BINARY_DIR}/ZLIBConfig.cmake
 +		DESTINATION ${INSTALL_LIB_DIR}/cmake/ZLIB)
  endif()
  if(NOT SKIP_INSTALL_HEADERS AND NOT SKIP_INSTALL_ALL )
      install(FILES ${ZLIB_PUBLIC_HDRS} DESTINATION "${INSTALL_INC_DIR}")
-@@ -216,3 +239,4 @@
+@@ -216,3 +245,4 @@
          set_target_properties(minigzip64 PROPERTIES COMPILE_FLAGS "-D_FILE_OFFSET_BITS=64")
      endif()
  endif()
 +
 --- zlib/ZLIBConfig.cmake.in	1969-12-31 19:00:00.000000000 -0500
 +++ ZLIB_BLD/ZLIBConfig.cmake.in	2024-10-11 11:19:49.808537825 -0400
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,19 @@
 +include("${CMAKE_CURRENT_LIST_DIR}/zlibTargets.cmake")
 +
 +if(NOT TARGET ZLIB::ZLIB)
@@ -208,4 +214,7 @@
 +endif()
 +set(ZLIB_INCLUDE_DIRS "@CMAKE_INSTALL_PREFIX@/@INSTALL_INC_DIR@")
 +set(ZLIB_INCLUDE_DIR "@CMAKE_INSTALL_PREFIX@/@INSTALL_INC_DIR@")
++set(ZLIB_LIBRARY ZLIB::ZLIB)
++set(ZLIB_LIBRARY_DEBUG ZLIB::ZLIB)
++set(ZLIB_LIBRARY_RELEASE ZLIB::ZLIB)
 +
