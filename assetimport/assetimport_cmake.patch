@@ -1,6 +1,6 @@
 diff -Naur assimp/CMakeLists.txt ASSETIMPORT_BLD/CMakeLists.txt
---- assimp/CMakeLists.txt	2024-10-09 16:05:51.701808399 -0400
-+++ ASSETIMPORT_BLD/CMakeLists.txt	2024-10-09 16:05:06.412473372 -0400
+--- assimp/CMakeLists.txt	2024-10-11 09:42:55.176363481 -0400
++++ ASSETIMPORT_BLD/CMakeLists.txt	2024-10-11 09:46:32.046826530 -0400
 @@ -37,6 +37,7 @@
  SET(CMAKE_POLICY_DEFAULT_CMP0012 NEW)
  SET(CMAKE_POLICY_DEFAULT_CMP0074 NEW)
@@ -9,9 +9,34 @@ diff -Naur assimp/CMakeLists.txt ASSETIMPORT_BLD/CMakeLists.txt
  
  CMAKE_MINIMUM_REQUIRED( VERSION 3.22 )
  
+@@ -506,10 +507,10 @@
+   set(ASSIMP_BUILD_MINIZIP TRUE)
+ ELSE()
+   # If the zlib is already found outside, add an export in case assimpTargets can't find it.
+-  IF( ZLIB_FOUND AND ASSIMP_INSTALL)
+-    INSTALL( TARGETS zlib zlibstatic
+-        EXPORT "${TARGETS_EXPORT_NAME}")
+-  ENDIF()
++  #IF( ZLIB_FOUND AND ASSIMP_INSTALL)
++  #  INSTALL( TARGETS zlib zlibstatic
++  #      EXPORT "${TARGETS_EXPORT_NAME}")
++  #ENDIF()
+ 
+   IF ( NOT ASSIMP_BUILD_ZLIB )
+     FIND_PACKAGE(ZLIB)
+@@ -542,9 +543,7 @@
+     SET(ASSIMP_BUILD_MINIZIP 1)
+   ELSE()
+     ADD_DEFINITIONS(-DASSIMP_BUILD_NO_OWN_ZLIB)
+-    SET(ZLIB_LIBRARIES_LINKED -lz)
+   ENDIF()
+-  INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})
+ ENDIF()
+ 
+ IF( NOT IOS )
 diff -Naur assimp/code/CMakeLists.txt ASSETIMPORT_BLD/code/CMakeLists.txt
---- assimp/code/CMakeLists.txt	2024-10-09 16:05:51.702808384 -0400
-+++ ASSETIMPORT_BLD/code/CMakeLists.txt	2024-10-09 16:05:06.415473328 -0400
+--- assimp/code/CMakeLists.txt	2024-10-11 09:42:55.177363459 -0400
++++ ASSETIMPORT_BLD/code/CMakeLists.txt	2024-10-11 09:47:03.945183936 -0400
 @@ -1050,17 +1050,18 @@
  ENDIF() # IF (ASSIMP_BUILD_USD_IMPORTER)
  
@@ -58,7 +83,7 @@ diff -Naur assimp/code/CMakeLists.txt ASSETIMPORT_BLD/code/CMakeLists.txt
    endif()
  ELSE()
 -  TARGET_LINK_LIBRARIES(assimp ${ZLIB_LIBRARIES} ${OPENDDL_PARSER_LIBRARIES})
-+  TARGET_LINK_LIBRARIES(assimp ${ZLIB_LIBRARIES} ${PUGIXML_LIBRARIES} ${OPENDDL_PARSER_LIBRARIES})
++  TARGET_LINK_LIBRARIES(assimp ZLIB::ZLIB ${PUGIXML_LIBRARIES} ${OPENDDL_PARSER_LIBRARIES})
    if (ASSIMP_BUILD_DRACO)
      target_link_libraries(assimp ${draco_LIBRARIES})
    endif()
