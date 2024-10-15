@@ -177,11 +177,6 @@ add_project(linenoise GROUPS "BRLCAD")
 # https://github.com/LMDB/lmdb
 add_project(lmdb GROUPS "BRLCAD")
 
-# GLM - header only C++ mathematics library for graphics software based on the
-# OpenGL Shading Language (GLSL) specifications
-# https://github.com/g-truc/glm
-add_project(glm GROUPS "BRLCAD")
-
 # Eigen - linear algebra library
 # https://eigen.tuxfamily.org
 add_project(eigen GROUPS "BRLCAD;APPLESEED")

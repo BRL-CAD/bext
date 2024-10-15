@@ -312,11 +312,6 @@
 	path = mmesh/mmesh
 	url = https://github.com/BRL-CAD/mmesh.git
         ignore = dirty
-[submodule "glm/glm"]
-	path = glm/glm
-	url = https://github.com/BRL-CAD/glm.git
-	branch = RELEASE
-        ignore = dirty
 [submodule "clipper2/Clipper2"]
 	path = clipper2/Clipper2
 	url = https://github.com/BRL-CAD/Clipper2.git
