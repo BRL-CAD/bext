@@ -54,14 +54,3 @@
      // Test formatted scanning
      double a = ON_UNSET_VALUE;
      // Testing C-runtime - do not using ON_String::Scan
---- opennurbs/opennurbs_locale.h	2024-10-09 16:55:58.208881912 -0400
-+++ OPENNURBS_BLD/opennurbs_locale.h	2024-10-09 16:58:29.524197114 -0400
-@@ -21,6 +21,8 @@
-   locale_t
- #elif defined(ON_RUNTIME_ANDROID)
-   locale_t
-+#elif defined(ON_RUNTIME_BSD)
-+  locale_t
- #else
-   ON__UINT_PTR
- #endif
