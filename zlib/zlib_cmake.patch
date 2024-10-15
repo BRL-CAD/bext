@@ -1,5 +1,6 @@
---- zlib/CMakeLists.txt	2024-10-09 16:23:19.896420813 -0400
-+++ ZLIB_BLD/CMakeLists.txt	2024-10-09 16:29:24.461534998 -0400
+diff -Naur zlib/CMakeLists.txt ZLIB_BLD/CMakeLists.txt
+--- zlib/CMakeLists.txt	2024-10-09 14:20:18.432960905 -0400
++++ ZLIB_BLD/CMakeLists.txt	2024-10-09 14:19:01.970101677 -0400
 @@ -7,11 +7,11 @@
  
  option(ZLIB_BUILD_EXAMPLES "Enable Zlib Examples" ON)
@@ -92,7 +93,7 @@
  string(REGEX REPLACE ".*#define[ \t]+ZLIB_VERSION[ \t]+\"([-0-9A-Za-z.]+)\".*"
      "\\1" ZLIB_FULL_VERSION ${_zlib_h_contents})
  
-@@ -147,16 +136,47 @@
+@@ -147,16 +136,41 @@
                              -o ${CMAKE_CURRENT_BINARY_DIR}/zlib1rc.obj
                              -i ${CMAKE_CURRENT_SOURCE_DIR}/win32/zlib1.rc)
      set(ZLIB_DLL_SRCS ${CMAKE_CURRENT_BINARY_DIR}/zlib1rc.obj)
@@ -105,11 +106,8 @@
 +set_target_properties(zlib PROPERTIES OUTPUT_NAME z_brl)
 +target_include_directories(zlib PUBLIC
 +	$<INSTALL_INTERFACE:include>
-+	PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
++	PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}>
 +	)
-+if(ENABLE_Z_PREFIX)
-+  target_compile_definitions(zlib PUBLIC -DZ_PREFIX)
-+endif()
  add_library(zlibstatic STATIC ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
 -target_include_directories(zlibstatic PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 +if (NOT MSVC)
@@ -124,11 +122,8 @@
 +endif(CMAKE_CL_64)
 +target_include_directories(zlibstatic PUBLIC
 +	$<INSTALL_INTERFACE:include>
-+	PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
++	PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}>
 +	)
-+if(ENABLE_Z_PREFIX)
-+  target_compile_definitions(zlibstatic PUBLIC -DZ_PREFIX)
-+endif()
  set_target_properties(zlib PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
  set_target_properties(zlib PROPERTIES SOVERSION 1)
  
@@ -143,7 +138,7 @@
      # This property causes shared libraries on Linux to have the full version
      # encoded into their final filename.  We disable this on Cygwin because
      # it causes cygz-${ZLIB_FULL_VERSION}.dll to be created when cygz.dll
-@@ -165,24 +185,26 @@
+@@ -165,24 +179,26 @@
      # This has no effect with MSVC, on that platform the version info for
      # the DLL comes from the resource file win32/zlib1.rc
      set_target_properties(zlib PROPERTIES VERSION ${ZLIB_FULL_VERSION})
@@ -184,7 +179,7 @@
  endif()
  if(NOT SKIP_INSTALL_HEADERS AND NOT SKIP_INSTALL_ALL )
      install(FILES ${ZLIB_PUBLIC_HDRS} DESTINATION "${INSTALL_INC_DIR}")
-@@ -216,3 +238,4 @@
+@@ -216,3 +232,4 @@
          set_target_properties(minigzip64 PROPERTIES COMPILE_FLAGS "-D_FILE_OFFSET_BITS=64")
      endif()
  endif()
