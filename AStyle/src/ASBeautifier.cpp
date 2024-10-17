@@ -231,6 +231,8 @@ ASBeautifier::ASBeautifier(const ASBeautifier& other) : ASBase(other)
 	lineOpensWithComment = other.lineOpensWithComment;
 	lineStartsInComment = other.lineStartsInComment;
 	backslashEndsPrevLine = other.backslashEndsPrevLine;
+	quoteContinuationIndent = other.quoteContinuationIndent;
+
 	blockCommentNoIndent = other.blockCommentNoIndent;
 	blockCommentNoBeautify = other.blockCommentNoBeautify;
 	previousLineProbationTab = other.previousLineProbationTab;
@@ -400,6 +402,7 @@ void ASBeautifier::init(ASSourceIterator* iter)
 	probationHeader = nullptr;
 	lastLineHeader = nullptr;
 	backslashEndsPrevLine = false;
+	quoteContinuationIndent = 0;
 	lineOpensWithLineComment = false;
 	lineOpensWithComment = false;
 	lineStartsInComment = false;
@@ -613,6 +616,10 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 			return line;
 	}
 
+	if (isCStyle() && (line[line.length() - 1] == '"' || line[line.length() - 1] == '<' || quoteContinuationIndent)) {
+		quoteContinuationIndent = std::max(quoteContinuationIndent, line.find('"', 0) );
+	}
+
 	// handle preprocessor commands
 	if (isInIndentablePreprocBlock
 	        && !line.empty()
@@ -712,6 +719,7 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 		// check if the last char is a backslash
 		if (!line.empty())
 			backslashEndsPrevLine = (line[line.length() - 1] == '\\');
+
 		// comments within the definition line can be continued without the backslash
 		if (isInPreprocessorUnterminatedComment(line))
 			backslashEndsPrevLine = true;
@@ -3019,7 +3027,7 @@ bool ASBeautifier::handleColonSection(std::string_view line, size_t *i, bool tab
 void ASBeautifier::handleEndOfStatement(size_t i, bool *closingBraceReached, char *ch)
 {
 	isInAssignment = isInInitializerList = false;
-
+	quoteContinuationIndent = 0;
 	if (*ch == '}')
 	{
 
@@ -3728,6 +3736,9 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 		        && (ch == '"'
 		            || (ch == '\'' && !isDigitSeparator(line, i))))
 		{
+			if (!i && quoteContinuationIndent) {
+				spaceIndentCount = quoteContinuationIndent;
+			}
 			if (!isInQuote && !isInMultiLineString)
 			{
 				quoteChar = ch;

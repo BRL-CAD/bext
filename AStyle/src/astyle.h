@@ -581,6 +581,7 @@ private:  // variables
 	int  prevFinalLineIndentCount;
 	int  defineIndentCount;
 	int  preprocBlockIndent;
+	size_t quoteContinuationIndent;
 	char quoteChar;
 	char prevNonSpaceCh;
 	char currentNonSpaceCh;
