@@ -1643,7 +1643,7 @@ void ASFormatter::formatCloseBrace(BraceType braceType)
 
 
 std::string ASFormatter::nextLine() {
-        const std::string* newHeader = nullptr;
+	const std::string* newHeader = nullptr;
 	isInVirginLine = isVirgin;
 	isCharImmediatelyPostComment = false;
 	isPreviousCharPostComment = false;
@@ -2093,7 +2093,7 @@ std::string ASFormatter::nextLine() {
 		}
 
 		size_t lastNonWsChar = currentLine.find_last_not_of(" \t", charNum - 1);
-		if (lastNonWsChar != std::string::npos) {
+		if (lastNonWsChar != std::string::npos && pointerAlignment == PTR_ALIGN_TYPE && !isGSCStyle()) {
 			char lastChar = currentLine[lastNonWsChar];
 			if (lastChar == '(' || lastChar == ',') {
 				formattedLine = rtrim(formattedLine);
