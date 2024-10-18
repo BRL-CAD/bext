@@ -8,3 +8,6 @@ AStyleTest/file-py/*.pyc
 AStyleTest/file-py/test-diff.txt
 AStyleTest/file-py/test.txt
 AStyle/src/.idea/
+AStyle/.ccls-cache/
+AStyle/.vscode/
+AStyle/build_local/

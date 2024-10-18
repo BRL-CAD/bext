@@ -3272,7 +3272,7 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 							|| foundPreCommandMacro
 							|| isInClassHeader
 							|| (isInClassInitializer && !isLegalNameChar(prevNonSpaceCh))
-							|| isNonInStatementArray
+							|| (isNonInStatementArray && !isInClassInitializer)
 							|| isInObjCMethodDefinition
 							|| isInObjCInterface
 							|| isSharpAccessor
