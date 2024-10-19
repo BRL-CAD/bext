@@ -70,7 +70,7 @@ rpaths = -Wl,-rpath,./ -Wl,-rpath,../ -Wl,-rpath,./lib -Wl,-rpath,../lib \
 -Wl,-rpath,../../../../AStyle/build/clang/bin  -Wl,-rpath,../../../../astyle/build/clang/bin
 SOLIBVER = 3.2.0
 # c++11 is required for clang wx=3.0, cannot use no-rtti
-CBASEFLAGS = -Wall -Wextra -std=c++11 -fno-exceptions \
+CBASEFLAGS = -Wall -Wextra -std=c++17 -fno-exceptions \
 -Wno-potentially-evaluated-expression -I../../src -I../../dialog -I../../image
 LDBASEFLAGS = -L../../../AStyle/build/clang/bin  -L../../../astyle/build/clang/bin
 INSTALL=install -o $(USER) -g $(USER)

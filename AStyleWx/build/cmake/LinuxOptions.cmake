@@ -3,21 +3,21 @@ if(NOT WIN32)
     if(APPLE)
         target_compile_options(astylewx PRIVATE -Wall
                                                 -fno-exceptions
-                                                -std=c++11
+                                                -std=c++17
                                                 -stdlib=libc++)
     elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         target_compile_options(astylewx PRIVATE -Wall
                                                 -fno-rtti
                                                 -fno-exceptions
-                                                -std=c++11)
+                                                -std=c++17)
     elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         target_compile_options(astylewx PRIVATE -Wall
                                                 -fno-exceptions
-                                                -std=c++11)
+                                                -std=c++17)
     elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
         target_compile_options(astylewx PRIVATE -Wall
                                                 -fno-exceptions
-                                                -std=c++11)
+                                                -std=c++17)
     endif()
     # GET WXWIDGETS VARIABLES
     set(wxWidgets_USE_UNICODE)
