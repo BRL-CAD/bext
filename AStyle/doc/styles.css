@@ -1,4 +1,4 @@
-﻿
+
 body { background-color: white; font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; }
 
 h1 { color: RoyalBlue; font-style: italic; margin-top: 2em;  }
@@ -266,15 +266,15 @@ html {
     top:initial;
   }
 
-  #slogan {
-    bottom: 45px;           /* Place the button from the bottom */
-    right: 10px;
-    font-size: 20pt;
-    opacity: 0.5;
+#slogan {
+  bottom: 48px;           /* Place the button from the bottom */
+  right: 15px;
+  font-size: 20pt;
+  opacity: 0.5;
 }
 
 #topBtn {
-    bottom: 85px;           /* Place the button from the bottom */
+  bottom: 5px;           /* Place the button from the bottom */
+  left: 10px;            /* Place the button from the right */
 }
-
 }
