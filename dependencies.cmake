@@ -214,6 +214,10 @@ add_project(proj GROUPS "GDAL")
 # https://gdal.org
 add_project(gdal GROUPS "GDAL")
 
+# tinygltf - tiny glTF library(loader/saver)
+# https://github.com/syoyo/tinygltf
+add_project(tinygltf GROUPS "BRLCAD")
+
 # pugixml - a light-weight C++ XML processing library
 # https://pugixml.org/
 add_project(pugixml GROUPS "BRLCAD;APPLESEED")
