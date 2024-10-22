@@ -1,6 +1,6 @@
 # Decide if we're using assetimport - used by Manifold which is used by librt.
 # Also, assetimport is used directly by a libgcv plugin
-cad_enable(ASSETIMPORT "librt;libgcv")
+cad_enable(ASSETIMPORT "libgcv")
 
 bext_enable(ASSETIMPORT)
 
