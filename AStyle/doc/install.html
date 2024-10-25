@@ -13,88 +13,115 @@
 
     <title>Artistic Style - Installation</title>
 
+
+    <script type="text/javascript">
+        // the <button> is described in the <body> section
+        window.onscroll = function () { scrollFunction() };
+
+        // When the user scrolls down 400px from the top of the document, show the button
+        function scrollFunction() {
+            if (document.body.scrollTop > 400 || document.documentElement.scrollTop > 400) {
+                document.getElementById("topBtn").style.display = "block";
+            } else {
+                document.getElementById("topBtn").style.display = "none";
+            }
+        }
+
+        // When the user clicks on the button, scroll to the top of the document
+        // Changed to scroll to "Contents" instead of "Top".
+        function topFunction() {
+            //document.body.scrollTop = 0;
+            //document.documentElement.scrollTop = 0;
+            var scroll_element = document.getElementById("Contents");
+            scroll_element.scrollIntoView();
+        }
+    </script>
+
 </head>
-<body>
+<body id="Contents">
 
-    <h1>Artistic Style Install Information</h1>
+    <div id="slogan">Artistic Style Installation</div>
+    <button onclick="topFunction()" id="topBtn" title="Go to Contents"><span class="menu-arrow">&#9650;</span> <b>Top</b></button>
 
-    <div style="float: left; background-color: #fbfaef;padding: 2em;">
+    <label for="responsive-button" class="responsive-button">Artistic Style Installation</label>
+	<input type="checkbox" id="responsive-button" role="button">
 
-    <h3 id="Contents" style="margin-top: 0em;">Contents</h3>
+    <nav class="menu">
 
-    <p class="contents1">
-        <a class="contents" href="#_Artistic_Style_Versions">Artistic Style Versions</a></p>
-    <p class="contents1">
-        <a class="contents" href="#_Linux_Version">Linux Version</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_CMake_Linux">CMake Linux</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_GCC_Makefile">GCC Makefile</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_Clang_Makefile">Clang Makefile</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_Intel_Makefile">Intel Makefile</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_CodeBlocks_Linux">CodeBlocks Linux</a></p>
-    <p class="contents1">
-        <a class="contents" href="#_MacOS_Version">MacOS Version</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_CMake_MacOS">CMake MacOS</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_MacOS_Makefile">MacOS Makefile</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_Xcode">Xcode</a></p>
-    <p class="contents1">
-        <a class="contents" href="#_Windows_Version">Windows Version</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_Precompiled_Executable">Precompiled Executable</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_CMake_Windows">CMake Windows</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_CodeBlocks_Windows">CodeBlocks Windows</a></p>
-    <p class="contents2">
-        <a class="contents" href="#_Visual_Studio">Visual Studio</a></p>
-    <p class="contents1">
-        <a class="contents" href="#_Other_Makefile_Targets">Other Makefile Targets</a></p>
-    <p class="contents1">
-        <a class="contents" href="#_Other_Development_Environments">Other Development Environments</a></p>
-    <p class="contents1">
-        <a class="contents" href="#_Compiler_Options">Compiler Options</a></p>
+        <ul>
+              <li><a href="#_Artistic_Style_Versions">Package Names</a>
+                  <ul>
+                   </ul>
+              </li>
 
-    <p class="contents2">
-        <a class="contents" href="#_PIP">Python PIP</a></p>
-    </div>
+              <li><a href="#_Linux_Version">Linux <span class="menu-arrow">&#9660;</span></a>
+                   <ul>
+                    <li><a href="#_CMake_Linux">CMake</a></li>
+                    <li><a href="#_GCC_Makefile">GCC Makefile</a></li>
+                    <li><a href="#_Clang_Makefile">Clang Makefile</a></li>
+                    <li><a href="#_Intel_Makefile">Intel Makefile</a></li>
 
-    <div style="float: right; width: 65%; margin-top: 0em;">
+                   </ul>
+              </li>
 
-    <h3 id="_Artistic_Style_Versions" style="margin-top: 1em;">Artistic Style Versions</h3>
+              <li><a href="#_MacOS_Version">MacOS <span class="menu-arrow">&#9660;</span></a>
+                  <ul>
+                    <li><a href="#_CMake_MacOS">CMake</a></li>
+                    <li><a href="#_MacOS_Makefile">Makefile</a></li>
+                    <li><a href="#_Xcode">XCode</a></li>
+                  </ul>
+             </li>
+
+              <li><a href="#_Windows_Version">Windows <span class="menu-arrow">&#9660;</span></a>
+                  <ul>
+                    <li><a href="#_Precompiled_Executable">Precompiled</a></li>
+                    <li><a href="#_CMake_Windows">CMake</a></li>
+                    <li><a href="#_Visual_Studio">Visual Studio</a></li>
+                  </ul>
+             </li>
+
+             <li><a href="">Other <span class="menu-arrow">&#9660;</span></a>
+                  <ul>
+                    <li><a href="#_Other_Makefile_Targets">Makefile Targets</a></li>
+                    <li><a href="#_Other_Development_Environments">Other Development Environments</a></li>
+                  </ul>
+             </li>
+
+             <li><a href="#_Compiler_Options">Compiler Options</a>
+              <ul>
+              </ul>
+         </li>
+
+         <li><a href="#_PIP">Python PIP</a>
+          <ul>
+
+          </ul>
+     </li>
+
+        </nav>
+
+
+        <div style="margin-left: 2em;margin-top: 1em;">
+
+    <h3 id="_Artistic_Style_Versions" style="margin-top: 1em;">Package Names</h3>
+
 
     <p>
-        astyle_x.x_linux.tar.gz is the <strong>Linux </strong>version of Artistic Style. It contains the source code,
+        astyle_x.x.tar.bz2 is the <strong>Linux </strong>version of Artistic Style. It contains the source code,
         documentation, and makefiles. The Linux Version compile instructions below give information for compiling the
         source code.</p>
     <p>
-        astyle_x.x_macos.tar.gz is the <strong>Mac OS </strong>version of Artistic Style. It contains the source code,
-        documentation, Xcode project files, and a makefile. The Mac OS Version compile instructions below give information
-        for compiling the source code.</p>
-    <p>
-        astyle_x.x_windows.zip is the <strong>Windows </strong>version of Artistic Style. It contains the source code,
+        astyle_x.x.zip is the <strong>Windows </strong>version of Artistic Style. It contains the source code,
         documentation, and an executable. The Windows Version compile instructions below give
         information for compiling the source code.
     </p>
     <p>
-        astyle_x.x_windows_x64.zip is the <strong>Windows 64 bit</strong>version of Artistic Style. It contains the source code,
+        astyle_x.x_x64.zip is the <strong>Windows 64 bit</strong>version of Artistic Style. It contains the source code,
         documentation, and an executable. The Windows Version compile instructions below give
         information for compiling the source code.
     </p>
 
-    <p>
-        Only one platform is supported in each distribution package. If you use Artistic Style on more than one platform
-        you will need to download packages for each platform. The main difference in platforms is the build directories
-        and the line endings. Most compilers and development packages will accept any type of line ending. The source
-        code and documentation are the same for all distributions.</p>
-
-    <h3 id="_Linux_Version">Linux Version </h3>
+    <h3 id="_Linux_Version">Linux Version</h3>
 
     <h4 id="_CMake_Linux">CMake Linux</h4>
 
@@ -262,31 +289,6 @@ make install</pre>
         The <a href="#_Other_Makefile_Targets">Other Makefile Targets</a> section contains additional target
         options.</p>
 
-    <h4 id="_CodeBlocks_Linux">CodeBlocks Linux</h4>
-
-    <p>
-        There are build folders for the following compilers. All compiler folders are in the &quot;build&quot; directory.
-    </p>
-    <ul>
-        <li><strong>cb-clang</strong> contains the workspace and project files for the Linux Clang Compiler.</li>
-        <li><strong>cb-gcc</strong> contains the workspace and project files for the Linux GCC Compiler.</li>
-        <li><strong>cb-intel</strong> contains the workspace and project files for the Linux Intel Compiler.</li>
-    </ul>
-    <p>
-        There are workspace and project files for each folder. All projects have at least Debug and Release
-        configurations. All output will be in the &quot;bin&quot; directory. </p>
-    <p>
-        The workspace contains the following projects.</p>
-    <ul>
-        <li><strong>AStyle </strong>builds the Artistic Style command line program (astyle). </li>
-        <li><strong>AStyle So </strong>builds the Artistic Style program as a shared object (libastyle.so). </li>
-        <li><strong>AStyle Java </strong>builds the Artistic Style program as a shared object (libastylej.so) that can
-            be called from a Java program. The Java Development Kit (JDK) is required for the project to compile. The
-            Project Properties must have an include path to the JDK include directories.</li>
-        <li><strong>AStyle A </strong>builds the Artistic Style program as a Static Library (libastyle.a). This can be
-            statically linked to a user program.</li>
-    </ul>
-
     <p>
         For other Linux development environments, follow the instructions in <a href="#_Other_Development_Environments">Other
             Development Environments</a>.</p>
@@ -453,34 +455,6 @@ mingw32-make</pre>
         AStyle folder indicated in the
         Install. </p>
 
-    <h4 id="_CodeBlocks_Windows">CodeBlocks Windows</h4>
-
-    <p>
-        There are build folders for the following compilers. All compiler folders are in the &quot;build&quot; directory.
-    </p>
-    <ul>
-        <li><strong>cb-bcc32c</strong> contains the workspace and project files for the Embarcadero BCC32C Compiler.</li>
-        <li><strong>cb-mingw</strong> contains the workspace and project files for the MinGw or TDM_GCC Compilers.</li>
-    </ul>
-
-    <p>
-        There are workspace and project files for each folder. All projects have at least Debug and Release configurations.
-        All output
-        will be in the &quot;bin&quot; directory.</p>
-    <p>
-        The workspace contains the following projects.</p>
-    <ul>
-        <li><strong>AStyle </strong>builds the Artistic Style command line program (AStyle.exe). </li>
-        <li><strong>AStyle Dll </strong>builds the Artistic Style program as a shared object (AStyle.dll). </li>
-        <li><strong>AStyle Java </strong>builds the Artistic Style program as a shared object AStylej.dll) that can
-            be called from a Java program. The Java Development Kit (JDK) is required for the project to compile. The
-            Project Properties must have an include path to the JDK include directories.</li>
-        <li><strong>AStyle Lib </strong>builds the Artistic Style program as a Static Library (astyle.lib). This can be
-            statically linked to a calling program.</li>
-    </ul>
-    <p>
-        For other Windows development environments, follow the instructions in <a href="#_Other_Development_Environments">
-            Other Development Environments</a>.</p>
 
     <h4 id="_Visual_Studio">Visual Studio</h4>
 
@@ -590,10 +564,9 @@ mingw32-make</pre>
     <p>
         Artistic Style is a small program and it is best to optimize for speed. The debug configurations are not usually
         optimized. To optimize for speed in the release configurations, use the macro NDEBUG to remove asserts. If
-        necessary, use an option to activate the C++11 standards (-std=c++11 or -std=c++0x on most compilers). Use an
+        necessary, use an option to activate the C++17 standards (-std=c++17 on most compilers). Use an
         option that allows inline function expansion. Runtime Type Information (RTTI) is NOT needed and exceptions are
-        NOT used. Use whole program optimization if your compiler supports it. There may be other options you can use
-        depending on the compiler. </p>
+        NOT used. Use whole program optimization if your compiler supports it. </p>
 
      <h3 id="_PIP">Python PIP</h3>
 
@@ -609,6 +582,7 @@ mingw32-make</pre>
         </a></p>
 
     </div>
+</div>
 
 </body>
 
