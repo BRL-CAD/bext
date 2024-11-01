@@ -169,10 +169,6 @@ add_project(openimageio GROUPS "APPLESEED")
 # https://invisible-island.net/ncurses/
 add_project(ncurses GROUPS "OSPRAY")
 
-# Linenoise - line editing library
-# https://github.com/msteveb/linenoise
-add_project(linenoise GROUPS "BRLCAD")
-
 # Lightning Memory-Mapped Database
 # https://github.com/LMDB/lmdb
 add_project(lmdb GROUPS "BRLCAD")

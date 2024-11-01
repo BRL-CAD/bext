@@ -54,11 +54,6 @@
 	path = regex/regex
 	url = https://github.com/BRL-CAD/regex
 	ignore = dirty
-[submodule "linenoise/linenoise"]
-	path = linenoise/linenoise
-	url = https://github.com/BRL-CAD/linenoise
-	branch = RELEASE
-	ignore = dirty
 [submodule "lmdb/lmdb"]
 	path = lmdb/lmdb
 	url = https://github.com/BRL-CAD/lmdb
