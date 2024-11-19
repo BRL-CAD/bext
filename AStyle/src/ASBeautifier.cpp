@@ -3648,8 +3648,11 @@ void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t 
 				if (prevNonLegalCh == '=' && currentNonLegalCh == '=')
 					spaceIndentCount = 0;
 
-				registerContinuationIndent(line, i, spaceIndentCount, tabIncrementIn, 0, false);
-				isContinuation = true;
+				// GH 61
+				if (currentNonLegalCh == '=') {
+					registerContinuationIndent(line, i, spaceIndentCount, tabIncrementIn, 0, false);
+					isContinuation = true;
+				}
 			}
 		}
 	}
