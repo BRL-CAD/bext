@@ -3966,6 +3966,15 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 			}
 		}
 
+
+		size_t eqPos = line.find('=', i);
+		size_t openParenPos = line.find('(', i+1);
+
+		// GL 62
+		if (eqPos != std::string::npos && openParenPos != std::string::npos) {
+			isInInitializerList=false;
+		}
+
 		// handle parentheses
 		if ((ch == '(' && !isInInitializerList) || ch == '[' || ch == ')' || ch == ']')
 		{
