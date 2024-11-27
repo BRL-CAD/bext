@@ -3162,6 +3162,7 @@ void ASBeautifier::handleEndOfStatement(size_t i, bool *closingBraceReached, cha
 
 void ASBeautifier::handleParens(std::string_view line, size_t i, bool tabIncrementIn, bool * isInOperator, char ch)
 {
+
 	// GL28 xx
 	if (ch == '(' || ch == '[')
 	{
@@ -3464,7 +3465,7 @@ void ASBeautifier::handlePotentialHeaderSection(std::string_view line, size_t *i
 				}
 			}
 
-			i += newHeader->length() - 1;
+			*i += newHeader->length() - 1;
 			return;
 		}
 	}
@@ -3531,11 +3532,11 @@ void ASBeautifier::handlePotentialHeaderSection(std::string_view line, size_t *i
 }
 
 
-void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator)
+void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t *i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator)
 {
 	// Check if an operator has been reached.
-	const std::string* foundAssignmentOp = findOperator(line, i, assignmentOperators);
-	const std::string* foundNonAssignmentOp = findOperator(line, i, nonAssignmentOperators);
+	const std::string* foundAssignmentOp = findOperator(line, *i, assignmentOperators);
+	const std::string* foundNonAssignmentOp = findOperator(line, *i, nonAssignmentOperators);
 
 	if (foundNonAssignmentOp != nullptr)
 	{
@@ -3560,19 +3561,19 @@ void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t 
 	if (foundNonAssignmentOp != nullptr)
 	{
 		if (foundNonAssignmentOp->length() > 1)
-			i += foundNonAssignmentOp->length() - 1;
+			*i += foundNonAssignmentOp->length() - 1;
 
 		// For C++ input/output, operator<<, >> and . method calls should be
 		// aligned, if we are not in a statement already and
 		// also not in the "operator<<(...)" header line
 
 		// GL28: method calls have to contain only alphanumeric identifier
-		size_t openParenPos = line.find(ASResource::AS_OPEN_PAREN, i);
+		size_t openParenPos = line.find(ASResource::AS_OPEN_PAREN, *i);
 		size_t closeParenPos = line.find(ASResource::AS_CLOSE_PAREN, openParenPos);
 
-		std::string methodName = getNextWord(std::string(line), i);
-		size_t methodNameEndPos =  i + methodName.length() + 1;
-		size_t firstCharAfterMethod = line.substr(i + methodName.length() + 1).find_first_not_of(" \t");
+		std::string methodName = getNextWord(std::string(line), *i);
+		size_t methodNameEndPos =  *i + methodName.length() + 1;
+		size_t firstCharAfterMethod = line.substr(*i + methodName.length() + 1).find_first_not_of(" \t");
 		if (firstCharAfterMethod != std::string::npos)
 		{
 			methodNameEndPos += firstCharAfterMethod;
@@ -3586,7 +3587,7 @@ void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t 
 		}
 
 		// GL28: do not mixup template closing ">>" with IO operator
-		std::string searchTemplatePattern = std::string(line).substr(0, i);
+		std::string searchTemplatePattern = std::string(line).substr(0, *i);
 		size_t countLS = std::count_if( searchTemplatePattern.begin(), searchTemplatePattern.end(), []( char c ){return c =='<';});
 
 		if (!isInOperator
@@ -3598,10 +3599,10 @@ void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t 
 					|| (foundNonAssignmentOp == &ASResource::AS_DOT && openParenPos == methodNameEndPos && closeParenPos != std::string::npos )))
 		{
 			// this will be true if the line begins with the operator
-			if (i < foundNonAssignmentOp->length() && spaceIndentCount == 0)
+			if (*i < foundNonAssignmentOp->length() && spaceIndentCount == 0)
 				spaceIndentCount += 2 * indentLength;
 			// align to the beginning column of the operator
-			registerContinuationIndent(line, i - foundNonAssignmentOp->length(), spaceIndentCount, tabIncrementIn, 0, false);
+			registerContinuationIndent(line, *i - foundNonAssignmentOp->length(), spaceIndentCount, tabIncrementIn, 0, false);
 		}
 	}
 
@@ -3614,21 +3615,21 @@ void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t 
 		foundPreCommandMacro = false;
 
 		if (foundAssignmentOp->length() > 1)
-			i += foundAssignmentOp->length() - 1;
+			*i += foundAssignmentOp->length() - 1;
 
 		if (!isInOperator && !isInTemplate && (!isNonInStatementArray || isInEnum || isInStruct))
 		{
 			// if multiple assignments, align on the previous word
 			if (foundAssignmentOp == &ASResource::AS_ASSIGN
 					&& prevNonSpaceCh != ']'		// an array
-					&& statementEndsWithComma(line, i))
+					&& statementEndsWithComma(line, *i))
 			{
 				// only one assignment indent per line + GH #10
 				if (!haveAssignmentThisLine && line.find(ASResource::AS_SCOPE_RESOLUTION) == std::string::npos)
 				{
 					// register indent at previous word
 					haveAssignmentThisLine = true;
-					int prevWordIndex = getContinuationIndentAssign(line, i);
+					int prevWordIndex = getContinuationIndentAssign(line, *i);
 					int continuationIndentCount = prevWordIndex + spaceIndentCount + tabIncrementIn;
 					continuationIndentStack->emplace_back(continuationIndentCount);
 					isContinuation = true;
@@ -3641,7 +3642,7 @@ void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t 
 			}
 			else if (!lineBeginsWithComma && !isInDefine)
 			{
-				if (i == 0 && spaceIndentCount == 0)
+				if (*i == 0 && spaceIndentCount == 0)
 					spaceIndentCount += indentLength;
 
 				// #SF 97
@@ -3650,7 +3651,7 @@ void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t 
 
 				// GH 61
 				if (currentNonLegalCh == '=') {
-					registerContinuationIndent(line, i, spaceIndentCount, tabIncrementIn, 0, false);
+					registerContinuationIndent(line, *i, spaceIndentCount, tabIncrementIn, 0, false);
 					isContinuation = true;
 				}
 			}
@@ -4133,7 +4134,7 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 
 		if (isPotentialOperator)
 		{
-			handlePotentialOperatorSection(line, i, tabIncrementIn, haveAssignmentThisLine, isInOperator);
+			handlePotentialOperatorSection(line, &i, tabIncrementIn, haveAssignmentThisLine, isInOperator);
 		}
 	}	// end of for loop * end of for loop * end of for loop * end of for loop * end of for loop *
 }

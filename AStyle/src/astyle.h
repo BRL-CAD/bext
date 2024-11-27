@@ -449,7 +449,7 @@ private:  // functions
 	void handleParens(std::string_view line, size_t i, bool tabIncrementIn, bool * isInOperator, char ch);
 	void handleClosingParen(std::string_view line, size_t i, bool tabIncrementIn);
 	void handlePotentialHeaderSection(std::string_view line, size_t *i, bool tabIncrementIn, bool *isInOperator);
-	void handlePotentialOperatorSection(std::string_view line, size_t i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator);
+	void handlePotentialOperatorSection(std::string_view line, size_t *i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator);
 
 
 private:  // variables
