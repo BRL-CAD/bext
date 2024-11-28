@@ -349,11 +349,11 @@ void ASFormatter::buildLanguageVectors()
 	castOperators->clear();
 	indentableMacros->clear();	// ASEnhancer
 
-	ASResource::buildHeaders(headers, getFileType());
-	ASResource::buildNonParenHeaders(nonParenHeaders, getFileType());
-	ASResource::buildPreDefinitionHeaders(preDefinitionHeaders, getFileType());
-	ASResource::buildPreCommandHeaders(preCommandHeaders, getFileType());
-	ASResource::buildOperators(operators, getFileType());
+	ASResource::buildHeaders(headers, formatterFileType);
+	ASResource::buildNonParenHeaders(nonParenHeaders, formatterFileType);
+	ASResource::buildPreDefinitionHeaders(preDefinitionHeaders, formatterFileType);
+	ASResource::buildPreCommandHeaders(preCommandHeaders, formatterFileType);
+	ASResource::buildOperators(operators, formatterFileType);
 	ASResource::buildAssignmentOperators(assignmentOperators);
 	ASResource::buildCastOperators(castOperators);
 	ASResource::buildIndentableMacros(indentableMacros);	//ASEnhancer
