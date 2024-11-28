@@ -742,7 +742,7 @@ std::string_view ASBase::getCurrentWord(std::string_view line, size_t index) con
 // check if a specific character can be used in a legal variable/method/class name
 bool ASBase::isLegalNameChar(char ch) const
 {
-	if (isWhiteSpace(ch))
+	if (std::isblank(ch))
 		return false;
 	if ((unsigned char) ch > 127)
 		return false;
@@ -756,7 +756,7 @@ bool ASBase::isLegalNameChar(char ch) const
 // check if a specific character can be part of a header
 bool ASBase::isCharPotentialHeader(std::string_view line, size_t i) const
 {
-	assert(!isWhiteSpace(line[i]));
+	assert(!std::isblank(line[i]));
 	char prevCh = ' ';
 	if (i > 0)
 		prevCh = line[i - 1];
@@ -770,7 +770,7 @@ bool ASBase::isCharPotentialHeader(std::string_view line, size_t i) const
 // check if a specific character can be part of an operator
 bool ASBase::isCharPotentialOperator(char ch) const
 {
-	assert(!isWhiteSpace(ch));
+	assert(!std::isblank(ch));
 	if ((unsigned) ch > 127)
 		return false;
 	return (ispunct((unsigned char) ch)

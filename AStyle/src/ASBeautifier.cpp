@@ -1518,7 +1518,7 @@ int ASBeautifier::getNextProgramCharDistance(std::string_view line, int i) const
 			}
 			continue;
 		}
-		if (isWhiteSpace(ch))
+		if (std::isblank(ch))
 			continue;
 		if (ch == '/')
 		{
@@ -1578,10 +1578,10 @@ std::string ASBeautifier::trim(std::string_view str) const
 	int start = 0;
 	int end = str.length() - 1;
 
-	while (start < end && isWhiteSpace(str[start]))
+	while (start < end && std::isblank(str[start]))
 		start++;
 
-	while (start <= end && isWhiteSpace(str[end]))
+	while (start <= end && std::isblank(str[end]))
 		end--;
 
 	// don't trim if it ends in a continuation
@@ -3721,9 +3721,9 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 			continue;
 
 		// bypass whitespace here
-		if (isWhiteSpace(ch))
+		if (std::isblank(ch))
 		{
-			if (squeezeWhitespace && !isInComment && !isInQuote && isWhiteSpace(line[i + 1]) && !isWhiteSpace(line[i - 1]))
+			if (squeezeWhitespace && !isInComment && !isInQuote && std::isblank(line[i + 1]) && !std::isblank(line[i - 1]))
 			{
 				size_t wsSpanEnd = line.find_first_not_of(" \t", i + 1);
 				std::pair<size_t, size_t> wsSpan(i, wsSpanEnd - i - 1);
@@ -4073,7 +4073,7 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 		if (ch == '@'
 		        && isObjCStyle()
 		        && line.length() > i + 1
-		        && !isWhiteSpace(line[i + 1])
+		        && !std::isblank(line[i + 1])
 		        && isCharPotentialHeader(line, i + 1))
 		{
 			std::string_view curWord = getCurrentWord(line, i + 1);

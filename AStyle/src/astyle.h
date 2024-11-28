@@ -291,8 +291,6 @@ protected:  // inline functions
 	bool isObjCStyle() const { return baseFileType == OBJC_TYPE; }
 	bool isGSCStyle() const { return baseFileType == GSC_TYPE; }
 
-	bool isWhiteSpace(char ch) const { return (ch == ' ' || ch == '\t'); }
-
 protected:  // functions definitions are at the end of ASResource.cpp
 	const std::string* findHeader(std::string_view line, int i,
 	                              const std::vector<const std::string*>* possibleHeaders) const;
