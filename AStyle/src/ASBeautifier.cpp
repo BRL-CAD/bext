@@ -616,7 +616,12 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 			return line;
 	}
 
-	if (isCStyle() && (line[line.length() - 1] == '"' || line[line.length() - 1] == '<' || quoteContinuationIndent)) {
+	if (isCStyle()
+		&& !isInComment
+		&& line.find('#', 0) == std::string::npos
+		&& line.find("//", 0) == std::string::npos
+		&& line.find("/*", 0) == std::string::npos
+		&& (line[line.length() - 1] == '"' || line[line.length() - 1] == '<' || quoteContinuationIndent)) {
 		quoteContinuationIndent = std::max(quoteContinuationIndent, line.find('"', 0) );
 	}
 
