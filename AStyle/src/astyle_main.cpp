@@ -295,6 +295,7 @@ ASConsole::ASConsole(ASFormatter& formatterArg) : formatter(formatterArg)
 	bypassBrowserOpen = false;
 	hasWildcard = false;
 	filesAreIdentical = true;
+	acceptEmptyFileList = false;
 	origSuffix = ".orig";
 	mainDirectoryLength = 0;
 	filesFormatted = 0;
@@ -870,6 +871,10 @@ void ASConsole::setStdPathIn(const std::string& path)
 
 void ASConsole::setStdPathOut(const std::string& path)
 { stdPathOut = path; }
+
+void ASConsole::setAcceptEmptyInputFileList(bool state)
+{ acceptEmptyFileList = state; }
+
 
 
 #ifdef _WIN32  // Windows specific
@@ -1569,7 +1574,7 @@ void ASConsole::getFilePaths(const std::string& filePath)
 	}
 
 	// check if files were found (probably an input error if not)
-	if (fileName.empty())
+	if (fileName.empty() &&!acceptEmptyFileList)
 	{
 		fprintf(stderr, _("No file to process %s\n"), filePath.c_str());
 		if (hasWildcard && !isRecursive)
@@ -2126,6 +2131,9 @@ void ASConsole::printHelp() const
 	std::cout << "    --ignore-exclude-errors-x  OR  -xi\n";
 	std::cout << "    Allow processing to continue if there are errors in the exclude=####\n";
 	std::cout << "    options. It will NOT display the unmatched excludes.\n";
+	std::cout << '\n';
+	std::cout << "    --accept-empty-list\n";
+	std::cout << "    With wildcard or -R: Do not report an empty input file list as error.\n";
 	std::cout << '\n';
 	std::cout << "    --errors-to-stdout  OR  -X\n";
 	std::cout << "    Print errors and help information to standard-output rather than\n";
@@ -3529,6 +3537,10 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 	else if (isOption(arg, "i", "ignore-exclude-errors"))
 	{
 		console.setIgnoreExcludeErrors(true);
+	}
+	else if (isOption(arg, "accept-empty-list"))
+	{
+		console.setAcceptEmptyInputFileList(true);
 	}
 	else if (isOption(arg, "xi", "ignore-exclude-errors-x"))
 	{

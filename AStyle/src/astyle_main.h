@@ -230,6 +230,7 @@ private:    // variables
 	bool hasWildcard;                   // file name includes a wildcard
 	size_t mainDirectoryLength;         // directory length to be excluded in displays
 	bool filesAreIdentical;             // input and output files are identical
+	bool acceptEmptyFileList;           // empty input file list will not be reported as error
 	int  filesFormatted;                // number of files formatted
 	int  filesUnchanged;                // number of files unchanged
 	int  linesOut;                      // number of output lines
@@ -278,6 +279,7 @@ public:     // functions
 	bool getLineEndsMixed() const;
 	bool getNoBackup() const;
 	bool getPreserveDate() const;
+
 	std::string getLanguageID() const;
 	std::string getNumberFormat(int num, size_t lcid = 0) const;
 	std::string getNumberFormat(int num, const char* groupingArg, const char* separator) const;
@@ -305,9 +307,11 @@ public:     // functions
 	void setProjectOptionFileName(const std::string& optfilepath);
 	void setStdPathIn(const std::string& path);
 	void setStdPathOut(const std::string& path);
+	void setAcceptEmptyInputFileList(bool state);
 	void standardizePath(std::string& path, bool removeBeginningSeparator = false) const;
 	bool stringEndsWith(std::string_view str, std::string_view suffix) const;
 	void updateExcludeVector(const std::string& suffixParam);
+
 	std::vector<std::string> getExcludeVector() const;
 	std::vector<bool>   getExcludeHitsVector() const;
 	std::vector<std::string> getFileNameVector() const;

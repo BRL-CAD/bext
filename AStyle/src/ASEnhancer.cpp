@@ -155,7 +155,7 @@ void ASEnhancer::convertForceTabIndentToSpaces(std::string& line) const
 	// replace tab indents with spaces
 	for (size_t i = 0; i < line.length(); i++)
 	{
-		if (!isWhiteSpace(line[i]))
+		if (!std::isblank(line[i]))
 			break;
 		if (line[i] == '\t')
 		{
@@ -454,7 +454,7 @@ void ASEnhancer::parseCurrentLine(std::string& line, bool isInPreprocessor, bool
 		char ch = line[i];
 
 		// bypass whitespace
-		if (isWhiteSpace(ch))
+		if (std::isblank(ch))
 			continue;
 
 		// handle special characters (i.e. backslash+character such as \n, \t, ...)
@@ -691,7 +691,7 @@ size_t ASEnhancer::processSwitchBlock(std::string& line, size_t index)
 		i++;
 		for (; i < line.length(); i++)			// bypass whitespace
 		{
-			if (!isWhiteSpace(line[i]))
+			if (!std::isblank(line[i]))
 				break;
 		}
 		if (i < line.length())

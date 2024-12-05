@@ -283,6 +283,9 @@ parser:flag "--squeeze-ws"
 parser:flag "--indent-lambda"
    :description "Indent C++ lambda functions (experimental, broken for complex fct bodies)"
 
+parser:flag "--accept-empty-list"
+   :description "With wildcard or -R: Do not report an empty input file list as error"
+
 local p = argparse "gen-completions"
 p:argument "shell"
    :choices {"bash", "zsh", "fish"}

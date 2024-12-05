@@ -23,7 +23,7 @@
 	#include <cstring>              // need both string and cstring for GCC
 #endif
 
-#define ASTYLE_VERSION "3.6.4"
+#define ASTYLE_VERSION "3.6.5"
 
 namespace astyle {
 
@@ -291,8 +291,6 @@ protected:  // inline functions
 	bool isObjCStyle() const { return baseFileType == OBJC_TYPE; }
 	bool isGSCStyle() const { return baseFileType == GSC_TYPE; }
 
-	bool isWhiteSpace(char ch) const { return (ch == ' ' || ch == '\t'); }
-
 protected:  // functions definitions are at the end of ASResource.cpp
 	const std::string* findHeader(std::string_view line, int i,
 	                              const std::vector<const std::string*>* possibleHeaders) const;
@@ -449,7 +447,7 @@ private:  // functions
 	void handleParens(std::string_view line, size_t i, bool tabIncrementIn, bool * isInOperator, char ch);
 	void handleClosingParen(std::string_view line, size_t i, bool tabIncrementIn);
 	void handlePotentialHeaderSection(std::string_view line, size_t *i, bool tabIncrementIn, bool *isInOperator);
-	void handlePotentialOperatorSection(std::string_view line, size_t i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator);
+	void handlePotentialOperatorSection(std::string_view line, size_t *i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator);
 
 
 private:  // variables

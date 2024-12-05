@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 
 if(CMAKE_VERSION VERSION_GREATER "3.19.0")
   cmake_policy(SET CMP0112 OLD)
@@ -15,6 +15,8 @@ option(BUILD_STATIC_LIBS "Build static library" OFF)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
+
+set(CMAKE_CXX_STANDARD 17)
 
 # Linux Soname Version
 set(MAJORVER 3)
@@ -52,20 +54,18 @@ endif()
 # compiler options:
 
 if(APPLE)
-    target_compile_options( astyle PRIVATE -W -Wall -fno-rtti -fno-exceptions -std=c++17 -stdlib=libc++)
+    target_compile_options( astyle PRIVATE -W -Wall -fno-rtti -fno-exceptions -stdlib=libc++)
 elseif(NOT WIN32)   # Linux
-    target_compile_options(astyle PRIVATE -Wall -Wextra -fno-rtti -fno-exceptions -std=c++17)
+    target_compile_options(astyle PRIVATE -Wall -Wextra -fno-rtti -fno-exceptions)
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "gnu")
         execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-        if (NOT (GCC_VERSION VERSION_GREATER 4.6 OR GCC_VERSION VERSION_EQUAL 4.6))
-            message(FATAL_ERROR "${PROJECT_NAME} c++11 support requires g++ 4.6 or greater, but it is ${GCC_VERSION}")
-        endif ()
+
 	elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "Intel" AND CMAKE_BUILD_TYPE STREQUAL "Release")
         # remove intel remarks for release build
         target_compile_options(astyle PRIVATE -wd11074,11076)
     endif()
 elseif(MINGW)
-    target_compile_options(astyle PRIVATE -Wall -Wextra -fno-rtti -fno-exceptions -std=c++17)
+    target_compile_options(astyle PRIVATE -Wall -Wextra -fno-rtti -fno-exceptions)
 elseif(BORLAND)     # Release must be explicitly requested for Borland
     target_compile_options(astyle PRIVATE -q -w -x-)   # Cannot use no-rtti (-RT-)
 endif()
