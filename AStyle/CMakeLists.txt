@@ -68,6 +68,8 @@ elseif(MINGW)
     target_compile_options(astyle PRIVATE -Wall -Wextra -fno-rtti -fno-exceptions)
 elseif(BORLAND)     # Release must be explicitly requested for Borland
     target_compile_options(astyle PRIVATE -q -w -x-)   # Cannot use no-rtti (-RT-)
+elseif(MSVC)        # Visual Studio
+    target_compile_options(astyle PRIVATE /utf-8)
 endif()
 
 # Set build-specific compile options
