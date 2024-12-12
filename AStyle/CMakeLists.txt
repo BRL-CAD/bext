@@ -97,7 +97,7 @@ endif()
 
 # Strip release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
-	if(NOT BUILD_STATIC_LIBS AND NOT BORLAND)
+	if(NOT BUILD_STATIC_LIBS AND NOT BORLAND AND NOT MSVC)
 		add_custom_command(TARGET astyle POST_BUILD
 						   COMMAND ${CMAKE_STRIP} $<TARGET_FILE_NAME:astyle>)
 	endif()
