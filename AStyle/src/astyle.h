@@ -23,7 +23,7 @@
 	#include <cstring>              // need both string and cstring for GCC
 #endif
 
-#define ASTYLE_VERSION "3.6.5"
+#define ASTYLE_VERSION "3.6.6"
 
 namespace astyle {
 
