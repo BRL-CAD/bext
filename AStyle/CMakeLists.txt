@@ -68,6 +68,8 @@ elseif(MINGW)
     target_compile_options(astyle PRIVATE -Wall -Wextra -fno-rtti -fno-exceptions)
 elseif(BORLAND)     # Release must be explicitly requested for Borland
     target_compile_options(astyle PRIVATE -q -w -x-)   # Cannot use no-rtti (-RT-)
+elseif(MSVC)        # Visual Studio
+    target_compile_options(astyle PRIVATE /utf-8)
 endif()
 
 # Set build-specific compile options
@@ -95,7 +97,7 @@ endif()
 
 # Strip release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
-	if(NOT BUILD_STATIC_LIBS AND NOT BORLAND)
+	if(NOT BUILD_STATIC_LIBS AND NOT BORLAND AND NOT MSVC)
 		add_custom_command(TARGET astyle POST_BUILD
 						   COMMAND ${CMAKE_STRIP} $<TARGET_FILE_NAME:astyle>)
 	endif()
