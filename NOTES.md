@@ -77,6 +77,13 @@ Your branch is up to date with 'origin/rel-7-40-2'.
 
 
 # Adding a submodule (using Tcl as an example)
+
+NOTE:  When testing out new possible dependencies for BEXT, work should be done in
+a branch first and then merged into main.  Once part of the main history, we can't
+remove a dependency repository without breaking bext history - thus, we only want to
+add dependencies we're actually going to use for implementing live features.  Exploratory
+work that might be thrown away is outside of bext's 'main' branch scope.
+
 ```
 user@linux:~/bext (main) $ cd tcl
 user@linux:~/bext/tcl (main) $ git submodule add -b RELEASE https://github.com/BRL-CAD/tcl.git
