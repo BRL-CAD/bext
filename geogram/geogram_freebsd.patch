@@ -1,0 +1,298 @@
+diff -Naur GEOGRAM_BLD/cmake/platforms/FreeBSD/config.cmake GEOGRAM_BLD_bsd/cmake/platforms/FreeBSD/config.cmake
+--- GEOGRAM_BLD/cmake/platforms/FreeBSD/config.cmake	1969-12-31 19:00:00.000000000 -0500
++++ GEOGRAM_BLD_bsd/cmake/platforms/FreeBSD/config.cmake	2025-01-10 12:46:26.972144880 -0500
+@@ -0,0 +1,5 @@
++set(VORPALINE_ARCH_64 true)
++include(${GEOGRAM_SOURCE_DIR}/cmake/platforms/FreeBSD-clang.cmake)
++#add_flags(CMAKE_CXX_FLAGS -m64)
++#add_flags(CMAKE_C_FLAGS -m64)
++
+diff -Naur GEOGRAM_BLD/cmake/platforms/FreeBSD/setvars.sh GEOGRAM_BLD_bsd/cmake/platforms/FreeBSD/setvars.sh
+--- GEOGRAM_BLD/cmake/platforms/FreeBSD/setvars.sh	1969-12-31 19:00:00.000000000 -0500
++++ GEOGRAM_BLD_bsd/cmake/platforms/FreeBSD/setvars.sh	2025-01-10 12:46:26.972144880 -0500
+@@ -0,0 +1,2 @@
++#export CC=clang
++#export CXX=clang++ 
+diff -Naur GEOGRAM_BLD/cmake/platforms/FreeBSD-clang.cmake GEOGRAM_BLD_bsd/cmake/platforms/FreeBSD-clang.cmake
+--- GEOGRAM_BLD/cmake/platforms/FreeBSD-clang.cmake	1969-12-31 19:00:00.000000000 -0500
++++ GEOGRAM_BLD_bsd/cmake/platforms/FreeBSD-clang.cmake	2025-01-10 12:46:26.972144880 -0500
+@@ -0,0 +1,153 @@
++###
++### Adopted from cmake/platforms/Linux-clang.cmake
++###
++
++#-------------------------------------------------------------------
++# Flags common to all FreeBSD based platforms with Clang compiler
++#-------------------------------------------------------------------
++
++include(${GEOGRAM_SOURCE_DIR}/cmake/platforms/FreeBSD.cmake)
++
++# Warning flags
++set(NORMAL_WARNINGS -Wall -Wextra)
++
++set(FULL_WARNINGS
++    -Weverything
++    -Wno-padded # Disable generating a message each time padding is used
++    -Wno-float-equal # Sometimes we compare floats (against 0.0 or 1.0 mainly)
++    -Wno-global-constructors
++    -Wno-exit-time-destructors
++    -Wno-old-style-cast # Yes, old-style cast is sometime more legible...
++    -Wno-format-nonliteral # Todo: use Laurent Alonso's trick
++    -Wno-disabled-macro-expansion # Else it complains with stderr
++)
++
++# Compile with full warnings by default
++add_definitions(${FULL_WARNINGS})
++
++# Run the static analyzer
++if(VORPALINE_WITH_CLANGSA)
++    add_definitions(--analyze)
++endif()
++
++# I do not know where this -Wno-maybe-uninitialized comes from
++# (but clang does not understand it), silence the warning for 
++# now...
++add_flags(CMAKE_CXX_FLAGS -Wno-unknown-warning-option)
++add_flags(CMAKE_C_FLAGS -Wno-unknown-warning-option)
++
++# Add static and dynamic bounds checks (optimization required)
++#add_flags(CMAKE_CXX_FLAGS_RELEASE -D_FORTIFY_SOURCE=2)
++#add_flags(CMAKE_C_FLAGS_RELEASE -D_FORTIFY_SOURCE=2)
++
++# Enable SSE3 instruction set
++add_flags(CMAKE_CXX_FLAGS -msse3)
++add_flags(CMAKE_C_FLAGS -msse3)
++
++# C++11 standard
++add_flags(CMAKE_CXX_FLAGS -Qunused-arguments -std=c++11 -Wno-c++98-compat)
++
++# Enable glibc parallel mode
++#add_flags(CMAKE_CXX_FLAGS -D_GLIBCXX_PARALLEL)
++
++
++# Generate debug information even in release mode
++#add_flags(CMAKE_CXX_FLAGS_RELEASE -g)
++#add_flags(CMAKE_C_FLAGS_RELEASE -g)
++
++
++# Additional debug flags
++# deactivated for now: I added bound checking in VOR::vector<>.
++#add_flags(CMAKE_CXX_FLAGS_DEBUG -D_GLIBCXX_DEBUG)
++
++
++# Compile and link with OpenMP ** NOT YET SUPPORTED in clang 3 **
++#add_flags(CMAKE_CXX_FLAGS -fopenmp)
++#add_flags(CMAKE_C_FLAGS -fopenmp)
++
++
++# Profiler compilation flags
++if(VORPALINE_WITH_GPROF)
++    message(FATAL_ERROR "Profiling is not (yet) available with clang")
++    message(STATUS "Building for code profiling")
++    #add_flags(CMAKE_CXX_FLAGS -pg -DPROFILER)
++    #add_flags(CMAKE_C_FLAGS -pg -DPROFILER)
++endif()
++
++
++# Code coverage compilation flags
++if(VORPALINE_WITH_GCOV)
++    message(STATUS "Building for coverage analysis")
++    add_flags(CMAKE_CXX_FLAGS --coverage)
++    add_flags(CMAKE_C_FLAGS --coverage)
++endif()
++
++
++# Compilation flags for Google's AddressSanitizer
++# These flags can only be specified for dynamic builds
++if(VORPALINE_WITH_ASAN)
++    if(VORPALINE_BUILD_DYNAMIC)
++        message(STATUS "Building with AddressSanitizer (debug only)")
++        add_flags(CMAKE_CXX_FLAGS_DEBUG -fsanitize=address -fno-omit-frame-pointer)
++        add_flags(CMAKE_C_FLAGS_DEBUG -fsanitize=address -fno-omit-frame-pointer)
++    else()
++        message(WARNING "AddressSanitizer can be used with dynamic builds only")
++        set(VORPALINE_WITH_ASAN false)
++    endif()
++endif()
++if(NOT VORPALINE_WITH_ASAN)
++    # Use native GCC stack smash Protection and buffer overflow detection (debug only)
++    add_flags(CMAKE_CXX_FLAGS_DEBUG -fstack-protector-all)
++    add_flags(CMAKE_C_FLAGS_DEBUG -fstack-protector-all)
++endif()
++
++
++# Compilation flags for Google's ThreadSanitizer
++# Does not work for the moment: cannot figure out how to link with library libtsan
++if(VORPALINE_WITH_TSAN)
++    message(STATUS "Building with ThreadSanitizer (debug only)")
++    message(FATAL_ERROR "ThreadSanitizer is not available: cannot figure out how to link with library libtsan")
++    add_flags(CMAKE_CXX_FLAGS_DEBUG -fsanitize=thread)
++    add_flags(CMAKE_C_FLAGS_DEBUG -fsanitize=thread)
++    if(NOT VORPALINE_BUILD_DYNAMIC)
++        add_flags(CMAKE_EXE_LINKER_FLAGS -static-libtsan)
++    endif()
++endif()
++
++
++# Reset the warning level for third parties
++function(vor_reset_warning_level)
++    remove_definitions(${FULL_WARNINGS})
++    add_definitions(${NORMAL_WARNINGS})
++endfunction()
++
++macro(vor_add_executable)
++    if(NOT VORPALINE_BUILD_DYNAMIC)
++        # Create a statically linked executable
++        # Link with static libraries
++        add_flags(CMAKE_CXX_FLAGS -static)
++        add_flags(CMAKE_C_FLAGS -static)
++    endif()
++
++    add_executable(${ARGN})
++
++    if(NOT VORPALINE_BUILD_DYNAMIC AND DEFINED VORPALINE_WITH_DDT)
++        # Static builds running with Allinea's DDT must be linked with a
++        # special malloc library which replaces the malloc primitives of
++        # the Glibc (We must allow multiple definitions)
++        add_flags(CMAKE_EXE_LINKER_FLAGS -Wl,--allow-multiple-definition)
++
++        if(VORPALINE_ARCH_64)
++            link_directories(${VORPALINE_WITH_DDT}/lib/64)
++        else()
++            link_directories(${VORPALINE_WITH_DDT}/lib/32)
++        endif()
++        target_link_libraries(${ARGV0} dmallocthcxx)
++    endif()
++
++    if(UNIX)
++        target_link_libraries(${ARGV0} m pthread)
++    endif()
++
++endmacro()
++
+diff -Naur GEOGRAM_BLD/cmake/platforms/FreeBSD.cmake GEOGRAM_BLD_bsd/cmake/platforms/FreeBSD.cmake
+--- GEOGRAM_BLD/cmake/platforms/FreeBSD.cmake	1969-12-31 19:00:00.000000000 -0500
++++ GEOGRAM_BLD_bsd/cmake/platforms/FreeBSD.cmake	2025-01-10 12:46:26.972144880 -0500
+@@ -0,0 +1,23 @@
++###
++### Adopted from cmake/platforms/Linux.cmake
++###
++
++#-------------------------------------------------------------------
++# Flags common to all Linux based platforms
++#-------------------------------------------------------------------
++
++# Shell script extension
++set(SHELL_SUFFIX "sh")
++
++# This flag MUST be added to solve a bug related to shared lib dynamic loading
++# (std::type_infos representing the same template type do not compare equal,
++# introducing subtle bugs)
++# IMPORTANT: DO NOT ADD THIS FLAG WITH STATIC LINKING
++#add_flags(CMAKE_EXE_LINKER_FLAGS "-Wl,-E")
++
++# Forbid undefined symbols at link time (shared libraries and executables)
++add_flags(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
++add_flags(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-undefined")
++
++# Link with the loader library
++list(APPEND SYSLIBS ${CMAKE_DL_LIBS})
+diff -Naur GEOGRAM_BLD/CMakeLists.txt GEOGRAM_BLD_bsd/CMakeLists.txt
+--- GEOGRAM_BLD/CMakeLists.txt	2025-01-10 12:45:04.545610329 -0500
++++ GEOGRAM_BLD_bsd/CMakeLists.txt	2025-01-10 12:46:50.785730894 -0500
+@@ -129,7 +129,7 @@
+   add_subdirectory(tests)
+ endif()
+ 
+-add_subdirectory(doc)
++#add_subdirectory(doc)
+ 
+ ##############################################################################
+ # Cleanup from previous builds
+diff -Naur GEOGRAM_BLD/src/lib/geogram/basic/algorithm.h GEOGRAM_BLD_bsd/src/lib/geogram/basic/algorithm.h
+--- GEOGRAM_BLD/src/lib/geogram/basic/algorithm.h	2025-01-10 12:45:04.472611652 -0500
++++ GEOGRAM_BLD_bsd/src/lib/geogram/basic/algorithm.h	2025-01-10 12:46:26.972144880 -0500
+@@ -42,7 +42,7 @@
+ 
+ #include <geogram/basic/common.h>
+ 
+-#if defined(GEO_OS_LINUX) && defined(GEO_OPENMP)
++#if (defined(GEO_OS_LINUX) || defined(GEO_OS_FREEBSD)) && defined(GEO_OPENMP)
+ #if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 4) && !defined(GEO_OS_ANDROID)
+ #include <parallel/algorithm>
+ #define GEO_USE_GCC_PARALLEL_STL
+diff -Naur GEOGRAM_BLD/src/lib/geogram/basic/command_line.cpp GEOGRAM_BLD_bsd/src/lib/geogram/basic/command_line.cpp
+--- GEOGRAM_BLD/src/lib/geogram/basic/command_line.cpp	2025-01-10 12:45:04.473611634 -0500
++++ GEOGRAM_BLD_bsd/src/lib/geogram/basic/command_line.cpp	2025-01-10 12:46:26.973144862 -0500
+@@ -49,7 +49,7 @@
+ #include <iostream>
+ #include <iomanip>
+ 
+-#if defined(GEO_OS_LINUX) || defined(GEO_OS_APPLE)
++#if defined(GEO_OS_LINUX) || defined(GEO_OS_FREEBSD) || defined(GEO_OS_APPLE)
+ #include <sys/ioctl.h>
+ #include <stdio.h>
+ #include <unistd.h>
+diff -Naur GEOGRAM_BLD/src/lib/geogram/basic/common.h GEOGRAM_BLD_bsd/src/lib/geogram/basic/common.h
+--- GEOGRAM_BLD/src/lib/geogram/basic/common.h	2025-01-10 12:45:04.473611634 -0500
++++ GEOGRAM_BLD_bsd/src/lib/geogram/basic/common.h	2025-01-10 12:46:26.973144862 -0500
+@@ -216,6 +216,35 @@
+ #  define GEO_ARCH_32
+ #endif
+ 
++// =============================== FreeBSD defines =========================
++
++#elif defined(__FreeBSD__)
++
++#define GEO_OS_FREEBSD
++#define GEO_OS_UNIX
++
++#if defined(_OPENMP)
++#  define GEO_OPENMP
++#endif
++
++#if defined(__INTEL_COMPILER)
++#  define GEO_COMPILER_INTEL
++#elif defined(__clang__)
++#  define GEO_COMPILER_CLANG
++#elif defined(__GNUC__)
++#  define GEO_COMPILER_GCC
++#else
++#  error "Unsupported compiler"
++#endif
++
++// The following works on GCC and ICC
++#if defined(__x86_64)
++#  define GEO_ARCH_64
++#else
++#  define GEO_ARCH_32
++#endif
++
++
+ // =============================== WINDOWS defines =========================
+ 
+ #elif defined(_WIN32) || defined(_WIN64)
+diff -Naur GEOGRAM_BLD/src/lib/geogram/lua/lua_io.cpp GEOGRAM_BLD_bsd/src/lib/geogram/lua/lua_io.cpp
+--- GEOGRAM_BLD/src/lib/geogram/lua/lua_io.cpp	2025-01-10 12:45:04.497611199 -0500
++++ GEOGRAM_BLD_bsd/src/lib/geogram/lua/lua_io.cpp	2025-01-10 12:46:26.973144862 -0500
+@@ -237,6 +237,8 @@
+ 	    const char* result = "unknown";
+ #if defined(GEO_OS_LINUX)
+ 	    result = "Linux";
++#elif defined(GEO_OS_FREEBSD)
++	    result = "FreeBSD";
+ #elif defined(GEO_OS_APPLE)
+ 	    result = "Apple";
+ #elif defined(GEO_OS_WINDOWS)
+diff -Naur GEOGRAM_BLD/src/lib/geogram/NL/nl_private.h GEOGRAM_BLD_bsd/src/lib/geogram/NL/nl_private.h
+--- GEOGRAM_BLD/src/lib/geogram/NL/nl_private.h	2025-01-10 12:45:04.501611127 -0500
++++ GEOGRAM_BLD_bsd/src/lib/geogram/NL/nl_private.h	2025-01-10 12:46:26.973144862 -0500
+@@ -62,7 +62,7 @@
+ #define NL_OS_APPLE
+ #endif
+ 
+-#if defined(__linux__) || defined(__ANDROID__) || defined(NL_OS_APPLE)
++#if defined(__linux__) || defined(__FreeBSD__) || defined(__ANDROID__) || defined(NL_OS_APPLE)
+ /**
+  * \brief Defined if compiled on a Unix-like platform.
+  */
