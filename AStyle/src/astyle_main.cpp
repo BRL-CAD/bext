@@ -283,6 +283,7 @@ ASConsole::ASConsole(ASFormatter& formatterArg) : formatter(formatterArg)
 	// command line options
 	isRecursive = false;
 	isDryRun = false;
+	rejectDryRunWithFormat = false;
 	noBackup = false;
 	preserveDate = false;
 	isVerbose = false;
@@ -847,6 +848,9 @@ void ASConsole::setIsRecursive(bool state)
 
 void ASConsole::setIsDryRun(bool state)
 { isDryRun = state; }
+
+void ASConsole::setRejectFormatWithDryRun(bool state)
+{ rejectDryRunWithFormat = state; }
 
 void ASConsole::setIsVerbose(bool state)
 { isVerbose = state; }
@@ -2121,6 +2125,9 @@ void ASConsole::printHelp() const
 	std::cout << "    --dry-run\n";
 	std::cout << "    Perform a trial run with no changes made to check for formatting.\n";
 	std::cout << '\n';
+	std::cout << "    --error-on-changes\n";
+	std::cout << "    With --dry-run: Report any file reformat as error.\n";
+	std::cout << '\n';
 	std::cout << "    --exclude=####\n";
 	std::cout << "    Specify a file or directory #### to be excluded from processing.\n";
 	std::cout << '\n';
@@ -2231,6 +2238,10 @@ void ASConsole::processFiles()
 	// files are processed, display stats
 	if (isVerbose)
 		printVerboseStats(startTime);
+
+	if (isDryRun && rejectDryRunWithFormat && filesFormatted > 0) {
+		exit(EXIT_FAILURE);
+	}
 }
 
 // process options from the command line and option files
@@ -3517,6 +3528,10 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 	else if (isOption(arg, "dry-run"))
 	{
 		console.setIsDryRun(true);
+	}
+	else if (isOption(arg, "error-on-changes"))
+	{
+		console.setRejectFormatWithDryRun(true);
 	}
 	else if (isOption(arg, "Z", "preserve-date"))
 	{

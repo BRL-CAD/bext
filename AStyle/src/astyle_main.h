@@ -231,6 +231,8 @@ private:    // variables
 	size_t mainDirectoryLength;         // directory length to be excluded in displays
 	bool filesAreIdentical;             // input and output files are identical
 	bool acceptEmptyFileList;           // empty input file list will not be reported as error
+	bool rejectDryRunWithFormat;        // formatted files in dry run mode will be reported as error
+
 	int  filesFormatted;                // number of files formatted
 	int  filesUnchanged;                // number of files unchanged
 	int  linesOut;                      // number of output lines
@@ -296,6 +298,7 @@ public:     // functions
 	void setIgnoreExcludeErrors(bool state);
 	void setIgnoreExcludeErrorsAndDisplay(bool state);
 	void setIsDryRun(bool state);
+	void setRejectFormatWithDryRun(bool state);
 	void setIsFormattedOnly(bool state);
 	void setIsQuiet(bool state);
 	void setIsRecursive(bool state);
