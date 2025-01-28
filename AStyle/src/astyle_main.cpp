@@ -175,7 +175,7 @@ std::string ASStreamIterator<T>::nextLine(bool emptyLineWasDeleted)
 	lastOutputEOL.clear();
 	lastOutputEOL.append(1, ch);
 
-	int peekCh = inStream->peek();
+	char peekCh = (char)inStream->peek();
 
 	// find input end-of-line characters
 	if (!inStream->eof())

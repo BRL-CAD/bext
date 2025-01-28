@@ -5064,8 +5064,8 @@ void ASFormatter::padParensOrBrackets(char openDelim, char closeDelim, bool padF
 			if (shouldPadOutside || prevIsParenHeader) {
 				spacesOutsideToDelete--;
 			} else {
-				static const std::string operators = "|&<>,?:;=+-*/%^";
-				if (operators.find(lastChar) != std::string::npos ||
+				static const std::string operatorList = "|&<>,?:;=+-*/%^";
+				if (operatorList.find(lastChar) != std::string::npos ||
 					(lastChar == openDelim && shouldPadInside) ||
 					(lastChar == '>' && !foundCastOperator)) {
 					spacesOutsideToDelete--;
@@ -5940,10 +5940,10 @@ void ASFormatter::processPreprocessor()
 		&& !isInClassInitializer
 		&& sourceIterator->tellg() > preprocBlockEnd)
 	{
-		std::string preproc = ASBeautifier::extractPreprocessorStatement(currentLine);
+		std::string preprocessor = ASBeautifier::extractPreprocessorStatement(currentLine);
 
 		// indent the #if preprocessor blocks
-		if (preproc.length() >= 2 && preproc.substr(0, 2) == "if") // #if, #ifdef, #ifndef
+		if (preprocessor.length() >= 2 && preprocessor.substr(0, 2) == "if") // #if, #ifdef, #ifndef
 		{
 			if (isImmediatelyPostPreprocessor)
 				breakLine();

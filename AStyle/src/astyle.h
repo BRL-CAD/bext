@@ -6,6 +6,11 @@
 #ifndef ASTYLE_H
 #define ASTYLE_H
 
+// ignore size_t to int conversion warning for now
+#ifdef _WIN64
+#pragma warning( disable : 4267 )
+#endif
+
 //-----------------------------------------------------------------------------
 // headers
 //-----------------------------------------------------------------------------
