@@ -5924,11 +5924,13 @@ void ASFormatter::processPreprocessor()
 	if (includeDirectivePaddingMode != INCLUDE_PAD_NO_CHANGE
 		&& currentLine.compare(preprocPos, 7, "include") == 0) {
 		size_t firstChar = currentLine.find_first_not_of(" \t", preprocPos + 7);
-		if (firstChar != std::string::npos) {
+		if (firstChar != std::string::npos && (currentLine[firstChar] == '<' || currentLine[firstChar] == '"')) {
 			currentLine.erase (preprocPos + 7, firstChar - (preprocPos + 7));
 		}
 
-		if (includeDirectivePaddingMode == INCLUDE_PAD_AFTER && (currentLine[preprocPos+7]=='<' || currentLine[preprocPos+7]=='"')) {
+		if (includeDirectivePaddingMode == INCLUDE_PAD_AFTER &&
+			(currentLine[preprocPos+7]=='<' || currentLine[preprocPos+7]=='"' || std::isalpha(currentLine[preprocPos+7]))
+		) {
 			currentLine.insert(preprocPos+7, 1, ' ');
 		}
 	}
