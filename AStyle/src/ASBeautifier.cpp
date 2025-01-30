@@ -3725,9 +3725,16 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 		// bypass whitespace here
 		if (std::isblank(ch))
 		{
-			if (squeezeWhitespace && !isInComment && !isInQuote && std::isblank(line[i + 1]) && !std::isblank(line[i - 1]))
+			size_t wsSpanEnd = line.find_first_not_of(" \t", i + 1);
+			bool nextTokenIsComment = false;
+			if (wsSpanEnd != std::string::npos && line.length() > wsSpanEnd + 2) {
+				nextTokenIsComment = (line.compare(wsSpanEnd, ASResource::AS_OPEN_LINE_COMMENT.length(), ASResource::AS_OPEN_LINE_COMMENT) == 0
+										|| line.compare(wsSpanEnd, ASResource::AS_OPEN_COMMENT.length(), ASResource::AS_OPEN_COMMENT) == 0
+										|| line.compare(wsSpanEnd, ASResource::AS_GSC_OPEN_COMMENT.length(), ASResource::AS_GSC_OPEN_COMMENT) == 0);
+			}
+			if (squeezeWhitespace && !isInComment && !isInQuote && !nextTokenIsComment && std::isblank(line[i + 1]) && !std::isblank(line[i - 1]))
 			{
-				size_t wsSpanEnd = line.find_first_not_of(" \t", i + 1);
+
 				std::pair<size_t, size_t> wsSpan(i, wsSpanEnd - i - 1);
 				squeezeWSStack.emplace_back(wsSpan);
 			}
