@@ -15,7 +15,7 @@ mkdir bext_build && cd bext_build
 ```
 * Configure with CMake.  Individual components can be enabled or disabled, but the ENABLE_ALL flag is used to automatically turn on all the projects.  There are also USE_* variables that can enable or disable various groupings of components based on which specific application stacks the user wishes to support.
 ```sh
-cmake ../bext -DENABLE_ALL=ON
+cmake ../bext -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
 ```
 * Run the build process.
 ```sh
@@ -61,7 +61,7 @@ cd .. && mkdir brlcad_exttest_build && cd brlcad_exttest_build
 ```
 * Configure with CMake, specifying the path holding the bext output directory the BRLCAD_EXT_DIR variable to locate bext_output. Unless you have overridden the CMAKE_INSTALL_PREFIX of the bext build, it will be located in your home directory.  The bext_output directory should in turn contain install and noinstall folders.  If you also wish to test with Qt, you must currently enable that support in BRL-CAD as well.  (Note that the BRL-CAD configure process is responsible for staging the BRLCAD_EXT_DIR contents into the build directory, so it can take some time to complete...)
 ```sh
-cmake ../brlcad -DBRLCAD_EXT_DIR=<your_bext_install_dir>/bext_output -DBRLCAD_ENABLE_QT=ON
+cmake ../brlcad -DBRLCAD_EXT_DIR=<your_bext_install_dir>/bext_output -DBRLCAD_ENABLE_QT=ON -DCMAKE_BUILD_TYPE=Release
 ```
 * Run the build process.
 ```sh

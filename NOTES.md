@@ -559,7 +559,7 @@ optional third party components:
 
 ```
 geogram (RELEASE)$ mkdir build && cd build
-build (RELEASE)$ cmake ..  -DGEOGRAM_LIB_ONLY=ON -DGEOGRAM_WITH_GRAPHICS=OFF -DGEOGRAM_WITH_LUA=OFF -DGEOGRAM_WITH_HLBFGS=OFF -DGEOGRAM_WITH_TETGEN=OFF -DGEOGRAM_WITH_TRIANGLE=OFF
+build (RELEASE)$ cmake ..  -DGEOGRAM_LIB_ONLY=ON -DGEOGRAM_WITH_GRAPHICS=OFF -DGEOGRAM_WITH_LUA=OFF -DGEOGRAM_WITH_HLBFGS=OFF -DGEOGRAM_WITH_TETGEN=OFF -DGEOGRAM_WITH_TRIANGLE=OFF -DCMAKE_BUILD_TYPE=Release
 CMake Deprecation Warning at CMakeLists.txt:5 (cmake_minimum_required):
   Compatibility with CMake < 3.5 will be removed from a future version of
   CMake.
@@ -742,7 +742,7 @@ so we run make with the GEOGRAM_BLD target.
 ```
 bext (main) $ cp -r ~/geogram geogram/
 bext (main) $ mkdir build && cd build
-build (main) $ cmake .. -DENABLE_ALL=ON
+build (main) $ cmake .. -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
 build (main) $ make GEOGRAM_BLD
 [  0%] Creating directories for 'PATCH_BLD'
 [  0%] No download step for 'PATCH_BLD'
