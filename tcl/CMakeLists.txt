@@ -56,6 +56,7 @@ if (ENABLE_TCL)
 
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake @ONLY)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_install.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_install.cmake @ONLY)
 
   if (NOT MSVC)
 
@@ -105,8 +106,7 @@ if (ENABLE_TCL)
       CONFIGURE_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake
       BINARY_DIR ${TCL_SRC_DIR}/win
       BUILD_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake
-      INSTALL_COMMAND call ${VCVARS_BAT} && nmake -f makefile.vc install INSTALLDIR=${CMAKE_BUNDLE_INSTALL_PREFIX} SUFX=
-      COMMAND echo "Running VCVARS_BAT: ${VCVARS_BAT}"
+      INSTALL_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_install.cmake
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
