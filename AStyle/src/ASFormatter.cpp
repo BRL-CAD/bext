@@ -4465,6 +4465,10 @@ void ASFormatter::padOperators(const std::string* newOperator)
 	bool isSpecialTemplateOperator = (isInTemplate || isImmediatelyPostTemplate) &&
 									(newOperator == &ASResource::AS_LS || newOperator == &ASResource::AS_GR);
 
+	std::string s = currentLine.substr(0, charNum);
+	auto numOfOpening = std::count(s.begin(), s.end(), '<');
+	bool isClosingTemplateDefinition = newOperator == &ASResource::AS_GR_GR && numOfOpening >=2;
+
 	bool shouldPad = (newOperator != &ASResource::AS_SCOPE_RESOLUTION &&
                   newOperator != &ASResource::AS_PLUS_PLUS &&
                   newOperator != &ASResource::AS_MINUS_MINUS &&
@@ -4473,6 +4477,7 @@ void ASFormatter::padOperators(const std::string* newOperator)
                   newOperator != &ASResource::AS_ARROW &&
                   !isSpecialColon &&
                   !isExponentOperator &&
+                  !isClosingTemplateDefinition &&
                   !(newOperator == &ASResource::AS_GR && previousChar == '-') &&
                   !(isUnaryOrModOperator && (allowedChars.find(previousNonWSChar) != allowedChars.end())) &&
                   !(newOperator == &ASResource::AS_MULT &&
