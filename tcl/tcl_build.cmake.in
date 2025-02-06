@@ -1,21 +1,31 @@
 message("Tcl build begins\n")
 
+set(BUILD_SCRIPT "${CMAKE_BINARY_DIR}/build_tcl.bat")
+
+# need to combine vcvars+nmake into same script so environment is shared
+file(WRITE "${BUILD_SCRIPT}"
+  "@echo off\n"
+  "call \"@VCVARS_BAT@\"\n"
+  "cd /D \"@TCL_SRC_DIR@/win\"\n"
+  "set CC=cl\n"
+  "echo In Batch CC=%CC%\n"
+  "nmake -f makefile.vc INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
+  "exit /b %ERRORLEVEL%\n"
+)
+
 execute_process(
   WORKING_DIRECTORY "@TCL_SRC_DIR@/win"
-  COMMAND "call @VCVARS_BAT@"
-  OUTPUT_VARIABLE VARSOUT
-  ERROR_VARIABLE VARSOUT
-  COMMAND nmake -f makefile.vc INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=
+  COMMAND cmd /c "${BUILD_SCRIPT}"
   RESULT_VARIABLE TCL_RET
-  OUTPUT_VARIABLE MSG
-  ERROR_VARIABLE MSG
+  OUTPUT_VARIABLE CMD_OUT
+  ERROR_VARIABLE CMD_OUT
   )
 
 if (TCL_RET)
-  message(FATAL_ERROR "Tcl build failed: ${MSG}\n")
+  message(FATAL_ERROR "Tcl build failed:\n${CMD_OUT}\n")
 endif (TCL_RET)
 
-message("Tcl build succeeded:\n==VARS==\n${VAROUT}\n==NMAKE==\n${MSG}\n")
+message("Tcl build succeeded:\n${CMD_OUT}\n")
 
 # Local Variables:
 # tab-width: 8
@@ -23,4 +33,3 @@ message("Tcl build succeeded:\n==VARS==\n${VAROUT}\n==NMAKE==\n${MSG}\n")
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
