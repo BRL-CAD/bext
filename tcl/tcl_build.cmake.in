@@ -5,6 +5,7 @@ set(BUILD_SCRIPT "${CMAKE_BINARY_DIR}/build_tcl.bat")
 # need to combine vcvars+nmake into same script so environment is shared
 file(WRITE "${BUILD_SCRIPT}"
   "@echo off\n"
+  "set VSCMD_DEBUG=0\n"
   "call \"@VCVARS_BAT@\"\n"
   "cd /D \"@TCL_SRC_DIR@/win\"\n"
   "set CC=cl\n"
