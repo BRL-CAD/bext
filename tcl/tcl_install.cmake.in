@@ -1,19 +1,29 @@
+set(INSTALL_SCRIPT "${CMAKE_BINARY_DIR}/install_tcl.bat")
+
+# need to combine vcvars+nmake into same script so environment is shared
+file(WRITE "${INSTALL_SCRIPT}"
+  "@echo off\n"
+  "set VSCMD_DEBUG=0\n"
+  "call \"@VCVARS_BAT@\"\n"
+  "cd /D \"@TCL_SRC_DIR@/win\"\n"
+  "echo In Batch CC=%CC%\n"
+  "nmake -f makefile.vc install INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
+  "exit /b %ERRORLEVEL%\n"
+)
+
 execute_process(
-  COMMAND "@VCVARS_BAT@"
-  )
-execute_process(
-  COMMAND nmake -f makefile.vc install INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=
-  RESULT_VARIABLE TCL_RET
   WORKING_DIRECTORY "@TCL_SRC_DIR@/win"
-  OUTPUT_VARIABLE MSG
-  ERROR_VARIABLE MSG
+  COMMAND cmd /c "${INSTALL_SCRIPT}"
+  RESULT_VARIABLE TCL_RET
+  OUTPUT_VARIABLE CMD_OUT
+  ERROR_VARIABLE CMD_OUT
   )
 
 if (TCL_RET)
-  message(FATAL_ERROR "Tcl install failed: ${MSG}\n")
+  message(FATAL_ERROR "Tcl install failed:\n${CMD_OUT}\n")
 endif (TCL_RET)
 
-message("Tcl install succeeded: ${MSG}\n")
+message("Tcl install succeeded:\n${CMD_OUT}\n")
 
 # Local Variables:
 # tab-width: 8
