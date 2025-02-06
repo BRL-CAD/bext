@@ -1,10 +1,12 @@
+message("Tcl build begins\n")
+
 execute_process(
-  COMMAND "@VCVARS_BAT@"
-  )
-execute_process(
+  WORKING_DIRECTORY "@TCL_SRC_DIR@/win"
+  COMMAND "call @VCVARS_BAT@"
+  OUTPUT_VARIABLE VARSOUT
+  ERROR_VARIABLE VARSOUT
   COMMAND nmake -f makefile.vc INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=
   RESULT_VARIABLE TCL_RET
-  WORKING_DIRECTORY "@TCL_SRC_DIR@/win"
   OUTPUT_VARIABLE MSG
   ERROR_VARIABLE MSG
   )
@@ -13,7 +15,7 @@ if (TCL_RET)
   message(FATAL_ERROR "Tcl build failed: ${MSG}\n")
 endif (TCL_RET)
 
-message("Tcl build succeeded: ${MSG}\n")
+message("Tcl build succeeded:\n==VARS==\n${VAROUT}\n==NMAKE==\n${MSG}\n")
 
 # Local Variables:
 # tab-width: 8
