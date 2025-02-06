@@ -18,6 +18,17 @@ set(TCL_MAJOR_VERSION 8)
 set(TCL_MINOR_VERSION 6)
 set(TCL_VERSION "${TCL_MAJOR_VERSION}.${TCL_MINOR_VERSION}")
 
+
+# FIXME: Build currently fails hard on MacOS if allowed to use system Tcl
+# due to incompatibilities with Itcl and inconsistent flags, so we turn
+# building on unless it was specifically turned off apriori.
+if (APPLE)
+  if (NOT DEFINED ENABLE_TCL)
+    set(ENABLE_TCL ON)
+  endif (NOT DEFINED ENABLE_TCL)
+endif (APPLE)
+
+
 if (NOT ENABLE_TCL AND NOT DISABLE_TCL)
 
   set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
