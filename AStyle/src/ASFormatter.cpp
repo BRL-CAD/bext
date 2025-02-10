@@ -4466,10 +4466,12 @@ void ASFormatter::padOperators(const std::string* newOperator)
 									(newOperator == &ASResource::AS_LS || newOperator == &ASResource::AS_GR);
 
 	std::string sBegin = currentLine.substr(0, charNum);
-	std::string sEnd = currentLine.substr(charNum);
+	std::string sEnd = currentLine.substr(charNum, currentLine.find_first_not_of(">", charNum + 1));
+
 	auto numOfOpeningBrackets = std::count(sBegin.begin(), sBegin.end(), '<');
 	auto numOfClosingBrackets = std::count(sEnd.begin(), sEnd.end(), '>');
-	bool isClosingTemplateDefinition = numOfClosingBrackets == numOfOpeningBrackets && numOfOpeningBrackets >=2;
+
+	bool isClosingTemplateDefinition = numOfClosingBrackets == numOfOpeningBrackets && numOfOpeningBrackets >= 2;
 
 	bool shouldPad = (newOperator != &ASResource::AS_SCOPE_RESOLUTION &&
                   newOperator != &ASResource::AS_PLUS_PLUS &&
