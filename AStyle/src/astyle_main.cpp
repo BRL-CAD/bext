@@ -999,14 +999,6 @@ void ASConsole::getFileNames(const std::string& directory, const std::vector<std
 		getFileNames(subDirectoryName, wildcards);
 }
 
-// WINDOWS function to get the full path name from the relative path name
-// Return the full path name or an empty string if failed.
-std::string ASConsole::getFullPathName(const std::string& relativePath) const
-{
-	char fullPath[MAX_PATH];
-	GetFullPathName(relativePath.c_str(), MAX_PATH, fullPath, nullptr);
-	return fullPath;
-}
 
 /**
  * WINDOWS function to format a number according to the current locale.
@@ -1242,17 +1234,6 @@ void ASConsole::getFileNames(const std::string& directory, const std::vector<std
 	}
 }
 
-// LINUX function to get the full path name from the relative path name
-// Return the full path name or an empty std::string if failed.
-std::string ASConsole::getFullPathName(const std::string& relativePath) const
-{
-	char* fullPath = realpath(relativePath.c_str(), nullptr);
-	if (fullPath == nullptr)
-		return std::string();
-	const std::string p(fullPath);
-	free(fullPath);
-	return p;
-}
 
 // LINUX function to get the documentation file path prefix
 //     from the executable file path.
@@ -1440,6 +1421,14 @@ void ASConsole::launchDefaultBrowser(const char* filePathIn /*nullptr*/) const
 }
 
 #endif  // _WIN32
+
+
+// function to get the full path name from the relative path name
+// Return the full path name or an empty std::string if failed.
+std::string ASConsole::getFullPathName(const std::string& relativePath) const
+{
+	return std::filesystem::absolute(std::filesystem::path(relativePath));
+}
 
 /**
  * Returns the parent directory of absPath. If absPath is not a valid absolute
