@@ -109,6 +109,9 @@ if (ENABLE_TCL)
     # prefix?  Is https://stackoverflow.com/a/11041834 what we need?  Also, do
     # we need to patch makefile.vc to reference our zlib dll?
 
+    # wipe out any errant CC setting
+    set(CC)
+
     ExternalProject_Add(TCL_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/tcl"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
