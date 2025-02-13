@@ -40,7 +40,7 @@ if (ENABLE_MANIFOLD)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/manifold/LICENSES.txt
+    ${CMAKE_CURRENT_SOURCE_DIR}/manifold/LICENSE
     ${DOC_LICENSE_DIR}/manifold.txt
     COPYONLY
     )
