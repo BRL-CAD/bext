@@ -1427,7 +1427,7 @@ void ASConsole::launchDefaultBrowser(const char* filePathIn /*nullptr*/) const
 // Return the full path name or an empty std::string if failed.
 std::string ASConsole::getFullPathName(const std::string& relativePath) const
 {
-	return std::filesystem::absolute(std::filesystem::path(relativePath));
+	return std::filesystem::absolute(std::filesystem::path(relativePath)).string();
 }
 
 /**
