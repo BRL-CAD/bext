@@ -63,6 +63,7 @@ ASBeautifier::ASBeautifier()
 	setSwitchIndent(false);
 	setCaseIndent(false);
 	setSqueezeWhitespace(false);
+	setPreserveWhitespace(false);
 	setLambdaIndentation(false);
 	setBlockIndent(false);
 	setBraceIndent(false);
@@ -212,6 +213,8 @@ ASBeautifier::ASBeautifier(const ASBeautifier& other) : ASBase(other)
 	switchIndent = other.switchIndent;
 	caseIndent = other.caseIndent;
 	squeezeWhitespace = other.squeezeWhitespace;
+	preserveWhitespace = other.preserveWhitespace;
+
 	attemptLambdaIndentation = other.attemptLambdaIndentation;
 	isInAssignment = other.isInAssignment;
 	isInInitializerList = other.isInInitializerList;
@@ -1166,6 +1169,18 @@ void ASBeautifier::setSqueezeWhitespace(bool state)
 {
 	squeezeWhitespace = state;
 }
+
+/**
+ * set the state of the preserve whitespace option. If true,
+ * original whitespace will be kept near comma operators
+ *
+ * @param   state             state of option.
+ */
+void ASBeautifier::setPreserveWhitespace(bool state)
+{
+	preserveWhitespace = state;
+}
+
 
 /**
  * set the state of the lambda indentation option. If true,

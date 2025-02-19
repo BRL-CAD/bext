@@ -280,6 +280,9 @@ parser:option "--squeeze-lines"
 parser:flag "--squeeze-ws"
    :description "Remove superfluous whitespace"
 
+parser:flag "--preserve-ws"
+   :description "Preserve whitespace near comma operators if squeeze-ws is not set"
+
 parser:flag "--indent-lambda"
    :description "Indent C++ lambda functions (experimental, broken for complex fct bodies)"
 

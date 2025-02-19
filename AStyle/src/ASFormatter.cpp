@@ -2093,15 +2093,16 @@ std::string ASFormatter::nextLine() {
 			handlePotentialOperator(newHeader);
 		}
 
+		// TODO check add flag to preserve space
 		size_t lastNonWsChar = currentLine.find_last_not_of(" \t", charNum - 1);
-		if (lastNonWsChar != std::string::npos && pointerAlignment == PTR_ALIGN_TYPE && !isGSCStyle()) {
+		if (lastNonWsChar != std::string::npos && pointerAlignment == PTR_ALIGN_TYPE && !isGSCStyle() && !preserveWhitespace) {
 			char lastChar = currentLine[lastNonWsChar];
-			if (lastChar == '(' || lastChar == ',') {
-				formattedLine = rtrim(formattedLine);
+			formattedLine = rtrim(formattedLine);
+			//if (lastChar == '(' || lastChar == ',') {
 				if (lastChar == ',') {
 					formattedLine += ' ';
 				}
-			}
+			//}
 		}
 
 		// process pointers and references
@@ -4563,6 +4564,8 @@ void ASFormatter::formatPointerOrReference()
 	        || (currentChar == '&' && peekedChar == '&'))
 	{
 		ptrLength = 2;
+
+		//TODO check
 		size_t nextChar = currentLine.find_first_not_of(" \t", charNum + 2);
 		if (nextChar == std::string::npos)
 			peekedChar = ' ';
@@ -4647,6 +4650,7 @@ void ASFormatter::formatPointerOrReferenceToType()
 	}
 
 	// https://sourceforge.net/p/astyle/bugs/537/
+	// TODO check
 	if ((previousNonWSChar == ',' || previousNonWSChar == '[') && currentChar != ' ')
 		appendSpacePad();
 

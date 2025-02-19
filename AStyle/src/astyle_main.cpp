@@ -1975,6 +1975,9 @@ void ASConsole::printHelp() const
 	std::cout << "    --squeeze-ws\n";
 	std::cout << "    Remove superfluous whitespace.\n";
 	std::cout << '\n';
+	std::cout << "    --preserve-ws\n";
+	std::cout << "    Preserve whitespace near comma operators if squeeze-ws is not set.\n";
+	std::cout << '\n';
 	std::cout << "    --align-pointer=type    OR  -k1\n";
 	std::cout << "    --align-pointer=middle  OR  -k2\n";
 	std::cout << "    --align-pointer=name    OR  -k3\n";
@@ -3584,6 +3587,10 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 	else if (isOption(arg, "squeeze-ws"))
 	{
 		formatter.setSqueezeWhitespace(true);
+	}
+	else if (isOption(arg, "preserve-ws"))
+	{
+		formatter.setPreserveWhitespace(true);
 	}
 	else if (isOption(arg, "pad-brackets"))
 	{

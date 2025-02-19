@@ -356,6 +356,7 @@ public:
 	void setPreprocDefineIndent(bool state);
 	void setPreprocConditionalIndent(bool state);
 	void setSqueezeWhitespace(bool state);
+	void setPreserveWhitespace(bool state);
 	void setLambdaIndentation(bool state);
 	int  getBeautifierFileType() const;
 	int  getFileType() const;
@@ -406,6 +407,7 @@ protected:
 	bool isInIndentableStruct;
 	bool isInIndentablePreproc;
 	bool lambdaIndicator;
+	bool preserveWhitespace;
 
 
 private:  // functions
@@ -555,6 +557,7 @@ private:  // variables
 	bool shouldAlignMethodColon;
 	bool shouldIndentPreprocConditional;
 	bool squeezeWhitespace;
+
 	bool attemptLambdaIndentation;
 
 	bool isInAssignment;
