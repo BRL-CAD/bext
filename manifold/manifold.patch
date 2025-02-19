@@ -1,0 +1,43 @@
+diff -Naur manifold/cmake/manifoldDeps.cmake manifold_pugixml/cmake/manifoldDeps.cmake
+--- manifold/cmake/manifoldDeps.cmake	2025-02-19 08:21:48.447395523 -0500
++++ manifold_pugixml/cmake/manifoldDeps.cmake	2025-02-19 08:46:07.181000927 -0500
+@@ -142,6 +142,9 @@
+ # If we're supporting mesh I/O, we need assimp
+ if(MANIFOLD_EXPORT)
+   find_package(assimp REQUIRED)
++  if (REQUIRE_EXT_PUGIXML)
++     find_package(pugixml REQUIRED)
++  endif (REQUIRE_EXT_PUGIXML)
+ endif()
+ 
+ if(MANIFOLD_PYBIND)
+diff -Naur manifold/src/CMakeLists.txt manifold_pugixml/src/CMakeLists.txt
+--- manifold/src/CMakeLists.txt	2025-02-19 08:21:48.455395473 -0500
++++ manifold_pugixml/src/CMakeLists.txt	2025-02-19 08:47:06.546641580 -0500
+@@ -60,6 +60,7 @@
+ 
+ target_link_libraries(manifold PUBLIC $<$<BOOL:${TRACY_ENABLE}>:TracyClient>)
+ 
++if (REQUIRE_EXT_PUGIXML)
+ target_link_libraries(
+   manifold
+   PRIVATE
+@@ -67,7 +68,18 @@
+     $<$<BOOL:${MANIFOLD_PAR}>:TBB::tbb>
+     $<$<BOOL:${MANIFOLD_CROSS_SECTION}>:Clipper2::Clipper2>
+     $<$<BOOL:${MANIFOLD_EXPORT}>:assimp::assimp>
++    $<$<BOOL:${MANIFOLD_EXPORT}>:pugixml::pugixml>
+ )
++else()
++target_link_libraries(
++  manifold
++  PRIVATE
++    # optional dependencies
++    $<$<BOOL:${MANIFOLD_PAR}>:TBB::tbb>
++    $<$<BOOL:${MANIFOLD_CROSS_SECTION}>:Clipper2::Clipper2>
++    $<$<BOOL:${MANIFOLD_EXPORT}>:assimp::assimp>
++)
++endif (REQUIRE_EXT_PUGIXML)
+ 
+ target_compile_options(manifold PRIVATE ${MANIFOLD_FLAGS})
+ # make sure users use appropriate c++ standard when including our headers
