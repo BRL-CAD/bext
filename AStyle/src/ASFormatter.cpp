@@ -212,7 +212,7 @@ void ASFormatter::init(ASSourceIterator* si)
 	templateDepth = 0;
 	squareBracketCount = 0;
 	parenthesesCount = 0;
-	closingBracesCount = 0;
+	bracesNestingLevel = 0;
 	squeezeEmptyLineCount = 0;
 
 	runInIndentChars = 0;
@@ -768,6 +768,8 @@ void ASFormatter::handleBraces()
 			isInIndentableStruct = isStructAccessModified(currentLine, charNum);
 		else
 			isInIndentableStruct = false;
+
+		bracesNestingLevel++;
 	}
 
 	// this must be done before the braceTypeStack is popped
@@ -834,6 +836,7 @@ void ASFormatter::handleBraces()
 			if (ASBeautifier::peekNextChar(currentLine, nextText + 3) == ' ')
 				shouldBreakLineAtNextChar = true;
 		}
+		bracesNestingLevel--;
 	}
 
 	// format braces
@@ -1107,12 +1110,14 @@ void ASFormatter::handleEndOfBlock()
 	if (currentChar == ';' && !isInAsmBlock)
 	{
 		squareBracketCount = 0;
-		//assert(methodBreakCharNum == std::string::npos);	// comment out
-		//assert(methodBreakLineNum == 0);				// comment out
+
 		methodBreakCharNum = std::string::npos;
 		methodBreakLineNum = 0;
 		methodAttachCharNum = std::string::npos;
 		methodAttachLineNum = 0;
+
+		if (bracesNestingLevel <= 0)
+			isInStruct = false;
 
 		if (((shouldBreakOneLineStatements
 				|| isBraceType(braceTypeStack->back(), SINGLE_LINE_TYPE))
@@ -5025,7 +5030,7 @@ void ASFormatter::padParensOrBrackets(char openDelim, char closeDelim, bool padF
 
 	bool shouldPadOutside = shouldPadParensOutside || shouldPadBracketsOutside;
 	bool shouldPadInside = shouldPadParensInside || shouldPadBracketsInside;
-	bool shouldUnPad = shouldUnPadParens || shouldUnPadBrackets;
+	bool shouldUnPad = (shouldUnPadParens && !isInStruct) || shouldUnPadBrackets;
 
 	if (currentChar == openDelim)
 	{
