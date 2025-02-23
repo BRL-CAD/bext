@@ -5030,7 +5030,7 @@ void ASFormatter::padParensOrBrackets(char openDelim, char closeDelim, bool padF
 
 	bool shouldPadOutside = shouldPadParensOutside || shouldPadBracketsOutside;
 	bool shouldPadInside = shouldPadParensInside || shouldPadBracketsInside;
-	bool shouldUnPad = (shouldUnPadParens && !isInStruct) || shouldUnPadBrackets;
+	bool shouldUnPad = (shouldUnPadParens) || shouldUnPadBrackets;
 
 	if (currentChar == openDelim)
 	{
@@ -5038,7 +5038,7 @@ void ASFormatter::padParensOrBrackets(char openDelim, char closeDelim, bool padF
 		spacesInsideToDelete = 0;
 
 		// compute spaces outside the opening paren to delete
-		if (shouldUnPad)
+		if (shouldUnPad && !isInStruct)
 		{
 			char lastChar = ' ';
 			bool prevIsParenHeader = false;
