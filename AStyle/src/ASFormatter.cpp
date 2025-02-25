@@ -2102,12 +2102,15 @@ std::string ASFormatter::nextLine() {
 		size_t lastNonWsChar = currentLine.find_last_not_of(" \t", charNum - 1);
 		if (lastNonWsChar != std::string::npos && pointerAlignment == PTR_ALIGN_TYPE && !isGSCStyle() && !preserveWhitespace) {
 			char lastChar = currentLine[lastNonWsChar];
-			formattedLine = rtrim(formattedLine);
-			//if (lastChar == '(' || lastChar == ',') {
-				if (lastChar == ',') {
-					formattedLine += ' ';
-				}
-			//}
+
+			if (lastChar != '(') {
+				formattedLine = rtrim(formattedLine);
+			}
+
+			if (lastChar == ',') {
+				formattedLine += ' ';
+			}
+
 		}
 
 		// process pointers and references
@@ -5030,7 +5033,7 @@ void ASFormatter::padParensOrBrackets(char openDelim, char closeDelim, bool padF
 
 	bool shouldPadOutside = shouldPadParensOutside || shouldPadBracketsOutside;
 	bool shouldPadInside = shouldPadParensInside || shouldPadBracketsInside;
-	bool shouldUnPad = (shouldUnPadParens) || shouldUnPadBrackets;
+	bool shouldUnPad = shouldUnPadParens || shouldUnPadBrackets;
 
 	if (currentChar == openDelim)
 	{
