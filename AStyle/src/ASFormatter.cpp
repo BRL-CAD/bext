@@ -1947,6 +1947,7 @@ std::string ASFormatter::nextLine() {
 		// #126
 		if ( currentChar == '*' && shouldPadOperators &&
 			pointerAlignment != PTR_ALIGN_TYPE &&  // SF 557
+			peekNextChar() != '=' && // GH 81
 			( currentHeader == &ASResource::AS_IF || currentHeader == &ASResource::AS_WHILE ||
 			  currentHeader == &ASResource::AS_DO || currentHeader == &ASResource::AS_FOR)
 			&& ( previousChar == ')' || std::isalpha(previousChar) )
@@ -2103,7 +2104,7 @@ std::string ASFormatter::nextLine() {
 		if (lastNonWsChar != std::string::npos && pointerAlignment == PTR_ALIGN_TYPE && !isGSCStyle() && !preserveWhitespace) {
 			char lastChar = currentLine[lastNonWsChar];
 
-			if (lastChar != '(') {
+			if (lastChar != '(' && !isalpha(lastChar)) {
 				formattedLine = rtrim(formattedLine);
 			}
 
