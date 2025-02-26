@@ -407,7 +407,8 @@ void ASConsole::formatCinToCout()
 	{
 		std::cout << formatter.nextLine();
 
-		if (LINEEND_DEFAULT == formatter.getLineEndFormat()){
+		if (LINEEND_DEFAULT == formatter.getLineEndFormat())
+		{
 			outputEOL = streamIterator.getLastOutputEOL();
 		}
 
@@ -469,7 +470,8 @@ void ASConsole::formatFile(const std::string& fileName_)
 		out << nextLine;
 		linesOut++;
 
-		if (LINEEND_DEFAULT == formatter.getLineEndFormat()){
+		if (LINEEND_DEFAULT == formatter.getLineEndFormat())
+		{
 			outputEOL = streamIterator.getLastOutputEOL();
 		}
 
@@ -491,14 +493,18 @@ void ASConsole::formatFile(const std::string& fileName_)
 			}
 		}
 
-		if (filesAreIdentical) {
-			if (streamIterator.checkForEmptyLine) {
+		if (filesAreIdentical)
+		{
+			if (streamIterator.checkForEmptyLine)
+			{
 				filesAreIdentical = (nextLine.find_first_not_of(" \t") == std::string::npos);
-			} else {
+			}
+			else
+			{
 				filesAreIdentical = streamIterator.compareToInputBuffer(nextLine) &&
-						(LINEEND_DEFAULT == formatter.getLineEndFormat() || streamIterator.getLastOutputEOL() == outputEOL);
-    		}
-    		streamIterator.checkForEmptyLine = false;
+				                    (LINEEND_DEFAULT == formatter.getLineEndFormat() || streamIterator.getLastOutputEOL() == outputEOL);
+			}
+			streamIterator.checkForEmptyLine = false;
 		}
 	}
 
@@ -514,7 +520,9 @@ void ASConsole::formatFile(const std::string& fileName_)
 			writeFile(fileName_, encoding, out);
 		printMsg(_("Formatted  %s\n"), displayName);
 		filesFormatted++;
-	} else {
+	}
+	else
+	{
 		if (!isFormattedOnly)
 			printMsg(_("Unchanged  %s\n"), displayName);
 		filesUnchanged++;
@@ -1567,7 +1575,7 @@ void ASConsole::getFilePaths(const std::string& filePath)
 	}
 
 	// check if files were found (probably an input error if not)
-	if (fileName.empty() &&!acceptEmptyFileList)
+	if (fileName.empty() && !acceptEmptyFileList)
 	{
 		fprintf(stderr, _("No file to process %s\n"), filePath.c_str());
 		if (hasWildcard && !isRecursive)
@@ -1643,7 +1651,7 @@ bool ASConsole::isPathExcluded(const std::string& subPath)
 			return true;
 		}
 	}
-    return false;
+	return false;
 }
 
 
@@ -2220,7 +2228,8 @@ void ASConsole::processFiles()
 		getFilePaths(fileNameVectorName);
 
 		// loop thru fileName vector formatting the files
-		for (const std::string& file : fileName) {
+		for (const std::string& file : fileName)
+		{
 			if (!stringEndsWith(file, origSuffix))
 				formatFile(file);
 		}
@@ -2231,7 +2240,8 @@ void ASConsole::processFiles()
 	if (isVerbose)
 		printVerboseStats(startTime);
 
-	if (isDryRun && rejectDryRunWithFormat && filesFormatted > 0) {
+	if (isDryRun && rejectDryRunWithFormat && filesFormatted > 0)
+	{
 		exit(EXIT_FAILURE);
 	}
 }
@@ -2604,7 +2614,7 @@ void ASConsole::sleep(int seconds) const
 
 bool ASConsole::stringEndsWith(std::string_view str, std::string_view suffix) const
 {
-    return str.size() >= suffix.size() && str.compare(str.size()-suffix.size(), suffix.size(), suffix) == 0;
+	return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
 void ASConsole::updateExcludeVector(const std::string& suffixParam)
@@ -4018,9 +4028,9 @@ jstring STDCALL Java_AStyleInterface_AStyleMain(JNIEnv* env,
 
 extern "C"  EXPORT
 jstring STDCALL Java_cc_arduino_packages_formatter_AStyleInterface_AStyleMain(JNIEnv* env,
-                                                jobject obj,
-                                                jstring textInJava,
-                                                jstring optionsJava)
+        jobject obj,
+        jstring textInJava,
+        jstring optionsJava)
 {
 	g_env = env;                                // make object available globally
 	g_obj = obj;                                // make object available globally

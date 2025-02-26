@@ -503,9 +503,9 @@ void ASResource::buildOperators(std::vector<const std::string*>* operators, int 
 		operators->emplace_back(&AS_EQUAL_JS);
 	}
 	if (fileType == SHARP_TYPE)
-    {
-    	operators->emplace_back(&AS_COALESCE_CS);
-    }
+	{
+		operators->emplace_back(&AS_COALESCE_CS);
+	}
 	assert(operators->size() < elements);
 	sort(operators->begin(), operators->end(), sortOnLength);
 }
@@ -732,8 +732,8 @@ std::string_view ASBase::getCurrentWord(std::string_view line, size_t index) con
 	for (i = index; i < lineLength; i++)
 	{
 		if (!isLegalNameChar(line[i])
-			|| ( (isCStyle() || isJavaStyle()) && i > index && line[i]=='.')
-			)
+		        || ( (isCStyle() || isJavaStyle()) && i > index && line[i] == '.')
+		   )
 			break;
 	}
 	return line.substr(index, i - index);
@@ -747,8 +747,8 @@ bool ASBase::isLegalNameChar(char ch) const
 	if ((unsigned char) ch > 127)
 		return false;
 	return (isalnum((unsigned char) ch)
-            || ch == '_'
-            || (!isSharpStyle() && ch == '.' )
+	        || ch == '_'
+	        || (!isSharpStyle() && ch == '.' )
 	        || (isJavaStyle() && ch == '$')
 	        || (isSharpStyle() && ch == '@'));  // may be used as a prefix
 }

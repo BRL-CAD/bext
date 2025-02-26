@@ -8,7 +8,7 @@
 
 // ignore size_t to int conversion warning for now
 #ifdef _WIN64
-#pragma warning( disable : 4267 )
+	#pragma warning( disable : 4267 )
 #endif
 
 //-----------------------------------------------------------------------------
@@ -448,13 +448,13 @@ private:  // functions
 	std::vector<std::vector<const std::string*>*>* copyTempStacks(const ASBeautifier& other) const;
 	std::pair<int, int> computePreprocessorIndent();
 
-	bool handleHeaderSection(std::string_view line, size_t *i, bool closingBraceReached, bool *haveCaseIndent);
-	bool handleColonSection(std::string_view line, size_t *i, bool tabIncrementIn, char *ch);
-	void handleEndOfStatement(size_t i, bool *closingBraceReached, char *ch);
+	bool handleHeaderSection(std::string_view line, size_t* i, bool closingBraceReached, bool *haveCaseIndent);
+	bool handleColonSection(std::string_view line, size_t* i, bool tabIncrementIn, char* ch);
+	void handleEndOfStatement(size_t i, bool *closingBraceReached, char* ch);
 	void handleParens(std::string_view line, size_t i, bool tabIncrementIn, bool * isInOperator, char ch);
 	void handleClosingParen(std::string_view line, size_t i, bool tabIncrementIn);
-	void handlePotentialHeaderSection(std::string_view line, size_t *i, bool tabIncrementIn, bool *isInOperator);
-	void handlePotentialOperatorSection(std::string_view line, size_t *i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator);
+	void handlePotentialHeaderSection(std::string_view line, size_t* i, bool tabIncrementIn, bool *isInOperator);
+	void handlePotentialOperatorSection(std::string_view line, size_t* i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator);
 
 
 private:  // variables
@@ -687,9 +687,9 @@ public:	// functions
 	void init(ASSourceIterator* si) override;
 
 	bool hasMoreLines() const;
-        void extracted();
-        std::string nextLine();
-        LineEndFormat getLineEndFormat() const;
+	void extracted();
+	std::string nextLine();
+	LineEndFormat getLineEndFormat() const;
 	bool getIsLineReady() const;
 	void setFormattingStyle(FormatStyle style);
 	void setAddBracesMode(bool state);
@@ -882,11 +882,11 @@ private:  // functions
 	void handleClosedBracesOrParens();
 	void handleBraces();
 	void handleBreakLine();
-	bool handlePotentialHeader(const std::string *);
+	bool handlePotentialHeader(const std::string*);
 	void handleEndOfBlock();
 	void handleColonSection();
 	void handlePotentialHeaderPart2();
-	void handlePotentialOperator(const std::string *);
+	void handlePotentialOperator(const std::string*);
 	void handleParens();
 	void handleOpenParens();
 
@@ -1138,7 +1138,7 @@ private:  // inline functions
 	// check if a specific sequence exists in the current placement of the current line
 	bool isSequenceReached(std::string_view sequence) const
 	{
-    	return currentLine.compare(charNum, sequence.length(), sequence) == 0;
+		return currentLine.compare(charNum, sequence.length(), sequence) == 0;
 	}
 
 	// call ASBase::findHeader for the current character

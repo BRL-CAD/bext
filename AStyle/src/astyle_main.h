@@ -406,9 +406,9 @@ extern "C" EXPORT
 jstring STDCALL Java_cc_arduino_packages_formatter_AStyleInterface_AStyleGetVersion(JNIEnv* env, jclass);
 extern "C" EXPORT
 jstring STDCALL Java_cc_arduino_packages_formatter_AStyleInterface_AStyleMain(JNIEnv* env,
-                                                jobject obj,
-                                                jstring textInJava,
-                                                jstring optionsJava);
+        jobject obj,
+        jstring textInJava,
+        jstring optionsJava);
 #endif //  ASTYLE_JNI
 
 //----------------------------------------------------------------------------
