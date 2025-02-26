@@ -19,6 +19,21 @@
 
     <h1>Artistic Style Release Notes</h1>
 
+    <h3>Artistic Style 3.6.7 (February 2025)</h3>
+    <ul>
+        <li>Add --error-on-changes option (https://gitlab.com/saalen/astyle/-/issues/68)</li>
+        <li>Add c++17 flags in VS2022 project files; avoid VS2022 compilation warnings</li>
+        <li>Prevent --squeeze-ws of removing whitespace before comments (https://gitlab.com/saalen/astyle/-/issues/74)</li>
+        <li>Adjust --pad-include to ignore macros in include directives (https://gitlab.com/saalen/astyle/-/issues/73)</li>
+        <li>Adjust --pad-include section in the docs (https://gitlab.com/saalen/astyle/-/issues/78)</li>
+        <li>Fix interpretation of closing nested templates as operator (https://gitlab.com/saalen/astyle/-/issues/69)</li>
+        <li>Use standard filesystem API to retrieve absolute file paths (https://gitlab.com/saalen/astyle/-/issues/79)</li>
+        <li>Add operator --preserve-ws (https://gitlab.com/saalen/astyle/-/issues/78)</li>
+        <li>Disable --unpad-paren in structs for leading whitespace (https://gitlab.com/saalen/astyle/-/issues/80)</li>
+        <li>Do not remove space after opening parens and align-pointer=type (https://sourceforge.net/p/astyle/bugs/584)</li>
+        <li>Fix issue with --pad-oper and *= operand (https://gitlab.com/saalen/astyle/-/issues/81)</li>
+    </ul>
+
     <h3>Artistic Style 3.6.6 (December 2024)</h3>
     <ul>
         <li>Fix indent after assignment operators (correct cause) (https://gitlab.com/saalen/astyle/-/issues/61)</li>
@@ -39,23 +54,23 @@
     <h3>Artistic Style 3.6.4 (October 2024)</h3>
     <ul>
         <li>Fix indent of brace initializers within constructor init list (https://sourceforge.net/p/astyle/bugs/467/)</li>
-        <li>improved indent of continued string literals (https://sourceforge.net/p/astyle/bugs/172/)</li>
-        <li>fixed space after opening paren for GSC (https://gitlab.com/saalen/astyle/-/issues/55)</li>
-        <li>updated astyle.html layout</li>
-        <li>added deprecation hint for --html</li>
-        <li>updated install docs</li>
-        <li>deleted old IDE project files</li>
-        <li>moved build/cmake scripts content into main CMakeLists.txt</li>
+        <li>Improve indent of continued string literals (https://sourceforge.net/p/astyle/bugs/172/)</li>
+        <li>Fix space after opening paren for GSC (https://gitlab.com/saalen/astyle/-/issues/55)</li>
+        <li>Update astyle.html layout</li>
+        <li>Add deprecation hint for --html</li>
+        <li>Update install docs</li>
+        <li>Delete old IDE project files</li>
+        <li>Move build/cmake scripts content into main CMakeLists.txt</li>
     </ul>
 
     <h3>Artistic Style 3.6.3 (October 2024)</h3>
     <ul>
-    <li>Fix indent after single open parenthse (https://gitlab.com/saalen/astyle/-/issues/45)</li>
-    <li>Fix padding of operator char * methods (https://sourceforge.net/p/astyle/bugs/273/)</li>
-    <li>Fix padding of user defined type cast (https://sourceforge.net/p/astyle/bugs/250/)</li>
-    <li>Fix bitfield line break with macros (https://sourceforge.net/p/astyle/bugs/148/ )</li>
-    <li>Fix GSC modulo padding (https://gitlab.com/saalen/astyle/-/issues/55)</li>
-    <li>Removed flawed option --add-braces=nested (https://gitlab.com/saalen/astyle/-/issues/27)</li>
+        <li>Fix indent after single open parenthse (https://gitlab.com/saalen/astyle/-/issues/45)</li>
+        <li>Fix padding of operator char * methods (https://sourceforge.net/p/astyle/bugs/273/)</li>
+        <li>Fix padding of user defined type cast (https://sourceforge.net/p/astyle/bugs/250/)</li>
+        <li>Fix bitfield line break with macros (https://sourceforge.net/p/astyle/bugs/148/ )</li>
+        <li>Fix GSC modulo padding (https://gitlab.com/saalen/astyle/-/issues/55)</li>
+        <li>Removed flawed option --add-braces=nested (https://gitlab.com/saalen/astyle/-/issues/27)</li>
     </ul>
 
     <h3>Artistic Style 3.6.2 (September 2024)</h3>
