@@ -1,7 +1,7 @@
 # Decide if we're using OpenMesh
 cad_enable(OPENMESH "libged")
 
-bext_enable(OPENMESH)
+bext_enable(OpenmMesh)
 
 # Decision made
 

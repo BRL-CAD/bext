@@ -1,7 +1,7 @@
 # Decide if we're using opencv
 cad_enable(OPENCV "gtools")
 
-bext_enable(OPENCV)
+bext_enable(OpenCV)
 
 # Decision made
 
