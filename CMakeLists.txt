@@ -73,6 +73,10 @@ endif(CMAKE_CONFIGURATION_TYPES)
 mark_as_advanced(CMAKE_BUILD_TYPE)
 mark_as_advanced(CMAKE_CONFIGURATION_TYPES)
 
+# Frameworks are deprecated in CMake, so avoid finding them
+set(CMAKE_FIND_FRAMEWORK NEVER)
+
+
 #------------------------------------------------------------------------------
 # Once we do a run, we want our ENABLE_ALL setting to be consistent in
 # subsequent CMake runs
