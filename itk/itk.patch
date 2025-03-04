@@ -1,6 +1,6 @@
 diff -Naur itk/CMake/FindITCL.cmake ITK_BLD/CMake/FindITCL.cmake
---- /dev/null	2025-03-04 03:14:25
-+++ CMake/FindITCL.cmake	2025-03-04 02:33:42
+--- itk/CMake/FindITCL.cmake	2025-03-04 03:14:25
++++ ITK_BLD/CMake/FindITCL.cmake	2025-03-04 02:33:42
 @@ -0,0 +1,117 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
