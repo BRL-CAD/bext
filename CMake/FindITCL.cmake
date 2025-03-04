@@ -18,7 +18,6 @@ ITCL_STUB_LIBRARY       = path to Tcl stub library
 
 #]=======================================================================]
 
-include(CMakeFindFrameworks)
 
 set(_ITCL_SEARCHES)
 
