@@ -1,7 +1,7 @@
 diff -Naur itk/CMake/FindITCL.cmake ITK_BLD/CMake/FindITCL.cmake
 --- itk/CMake/FindITCL.cmake	2025-03-04 03:14:25
 +++ ITK_BLD/CMake/FindITCL.cmake	2025-03-04 02:33:42
-@@ -0,0 +1,117 @@
+@@ -0,0 +1,118 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
 +
@@ -119,6 +119,7 @@ diff -Naur itk/CMake/FindITCL.cmake ITK_BLD/CMake/FindITCL.cmake
 +# indent-tabs-mode: t
 +# End:
 +# ex: shiftwidth=2 tabstop=8
++
 diff -Naur itk/CMakeLists.txt ITK_BLD/CMakeLists.txt
 --- itk/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
 +++ ITK_BLD/CMakeLists.txt	2024-07-10 11:14:36.054324121 -0400
