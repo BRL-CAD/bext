@@ -1394,7 +1394,7 @@ std::string ASBeautifier::preLineWS(int lineIndentCount, int lineSpaceIndentCoun
 void ASBeautifier::registerContinuationIndent(std::string_view line, int i, int spaceIndentCount_,
                                               int tabIncrementIn, int minIndent, bool updateParenStack)
 {
-	//return;
+	//return; //todo 585
 	assert(i >= -1);
 	int remainingCharNum = line.length() - i;
 	int nextNonWSChar = getNextProgramCharDistance(line, i);
@@ -3328,6 +3328,7 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 	}
 
 	// GL28 fix initializer lists like x({a.x=0;})
+
 	isInInitializerList = isCStyle() && isBlockOpener && (prevNonSpaceCh == '(' || prevNonSpaceCh == '=');
 
 	if (!isBlockOpener && currentHeader != nullptr)
@@ -3790,6 +3791,7 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 				if (isCStyle() && prevCh == 'R' && !isalpha(prevPrevCh) && !(isalpha(prevNonSpaceCh) ))
 				{
 					int parenPos = line.find('(', i);
+
 					if (parenPos != -1)
 					{
 						isInVerbatimQuote = true;
@@ -3808,7 +3810,11 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 				{
 					std::string delim = ')' + verbatimDelimiter;
 					int delimStart = i - delim.length();
-					if (delimStart >= 0 && line.substr(delimStart, delim.length()) == delim)
+
+					//only stop if no macro is following the end delimiter
+					size_t firstWord = line.find_first_not_of(" \t", i + 1);
+
+					if (!isalpha(line[firstWord]) && delimStart >= 0 && line.substr(delimStart, delim.length()) == delim)
 					{
 						isInQuote = false;
 						isInVerbatimQuote = false;
@@ -4000,10 +4006,8 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 			}
 		}
 
-
 		size_t eqPos = line.find('=', i);
 		size_t openParenPos = line.find('(', i + 1);
-
 		// GL 62
 		if (eqPos != std::string::npos && openParenPos != std::string::npos)
 		{
