@@ -396,6 +396,9 @@ protected:
 	int  runInIndentContinuation;
 	int  nonInStatementBrace;
 	int  objCColonAlignSubsequent;		// for subsequent lines not counting indent
+	int  bracesNestingLevel;
+	int  bracesNestingLevelOfStruct;
+
 	bool lineCommentNoBeautify;
 	bool isElseHeaderIndent;
 	bool isCaseHeaderCommentIndent;
@@ -937,7 +940,7 @@ private:  // variables
 	int  templateDepth;
 	int  squareBracketCount;
 	int  parenthesesCount;
-	int  bracesNestingLevel;
+
 	size_t  squeezeEmptyLineNum;
 	size_t  squeezeEmptyLineCount;
 

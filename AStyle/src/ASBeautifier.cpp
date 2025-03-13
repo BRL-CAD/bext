@@ -1472,7 +1472,6 @@ void ASBeautifier::registerContinuationIndent(std::string_view line, int i, int 
 	if ((isNonInStatementArray && i >= 0 && line[i] == '{')
 	        && !isInEnum && !isInStruct && !braceBlockStateStack->empty() && braceBlockStateStack->back())
 		continuationIndentCount = 0;
-
 	continuationIndentStack->emplace_back(continuationIndentCount);
 }
 
@@ -3057,7 +3056,6 @@ void ASBeautifier::handleEndOfStatement(size_t i, bool *closingBraceReached, cha
 	quoteContinuationIndent = 0;
 	if (*ch == '}')
 	{
-
 		lambdaIndicator = false;
 
 		// first check if this '}' closes a previous block, or a static array...
@@ -3110,12 +3108,15 @@ void ASBeautifier::handleEndOfStatement(size_t i, bool *closingBraceReached, cha
 			spaceIndentCount = 0;
 		isInAsmBlock = false;
 		isInAsm = isInAsmOneLine = isInQuote = false;	// close these just in case
-		isInStruct = false;
+		//isInStruct = bracesNestingLevel <= 0;
+		if (bracesNestingLevel <= bracesNestingLevelOfStruct)
+			isInStruct = false;
 
 		int headerPlace = indexOf(*headerStack, &ASResource::AS_OPEN_BRACE);
 		if (headerPlace != -1)
 		{
 			const std::string* popped = headerStack->back();
+
 			while (popped != &ASResource::AS_OPEN_BRACE)
 			{
 				headerStack->pop_back();
@@ -3238,7 +3239,6 @@ void ASBeautifier::handleParens(std::string_view line, size_t i, bool tabIncreme
 		}
 
 		continuationIndentStackSizeStack->emplace_back(continuationIndentStack->size());
-
 		if (currentHeader != nullptr)
 			registerContinuationIndent(line, i, spaceIndentCount, tabIncrementIn, minConditionalIndent, true);
 		else if (!isInObjCMethodDefinition

@@ -213,6 +213,7 @@ void ASFormatter::init(ASSourceIterator* si)
 	squareBracketCount = 0;
 	parenthesesCount = 0;
 	bracesNestingLevel = 0;
+	bracesNestingLevelOfStruct = 0;
 	squeezeEmptyLineCount = 0;
 
 	runInIndentChars = 0;
@@ -1116,7 +1117,7 @@ void ASFormatter::handleEndOfBlock()
 		methodAttachCharNum = std::string::npos;
 		methodAttachLineNum = 0;
 
-		if (bracesNestingLevel <= 0)
+		if (bracesNestingLevel <= bracesNestingLevelOfStruct)
 			isInStruct = false;
 
 		if (((shouldBreakOneLineStatements
@@ -1262,6 +1263,7 @@ void ASFormatter::handlePotentialHeaderPart2()
 		        || currentLine[firstNum] == '/')
 		{
 			isInStruct = true;
+			bracesNestingLevelOfStruct = bracesNestingLevel;
 		}
 	}
 
