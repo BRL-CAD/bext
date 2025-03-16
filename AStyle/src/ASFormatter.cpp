@@ -583,6 +583,7 @@ bool ASFormatter::handlePassedSemicolonSection()
 	isInAllocator = false; // GH16
 	isInMultlineStatement = false;
 	passedSemicolon = false;
+
 	if (parenStack->back() == 0 && !isCharImmediatelyPostComment && currentChar != ';') // allow ;;
 	{
 		// does a one-line block have ending comments?
@@ -685,6 +686,7 @@ void ASFormatter::handleClosedBracesOrParens()
 		foundQuestionMark = questionMarkStack->back();
 		questionMarkStack->pop_back();
 	}
+
 	if (isInTemplate && currentChar == '>')
 	{
 		templateDepth--;
@@ -1117,9 +1119,6 @@ void ASFormatter::handleEndOfBlock()
 		methodAttachCharNum = std::string::npos;
 		methodAttachLineNum = 0;
 
-		if (bracesNestingLevel <= bracesNestingLevelOfStruct)
-			isInStruct = false;
-
 		if (((shouldBreakOneLineStatements
 		        || isBraceType(braceTypeStack->back(), SINGLE_LINE_TYPE))
 		        && isOkToBreakBlock(braceTypeStack->back()))
@@ -1263,7 +1262,6 @@ void ASFormatter::handlePotentialHeaderPart2()
 		        || currentLine[firstNum] == '/')
 		{
 			isInStruct = true;
-			bracesNestingLevelOfStruct = bracesNestingLevel;
 		}
 	}
 
@@ -1378,6 +1376,7 @@ void ASFormatter::handlePotentialHeaderPart2()
 
 void ASFormatter::handlePotentialOperator(const std::string *newHeader)
 {
+
 	// check for Java ? wildcard
 	if (newHeader != nullptr
 	        && newHeader == &ASResource::AS_GCC_MIN_ASSIGN

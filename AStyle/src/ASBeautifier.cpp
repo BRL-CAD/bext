@@ -611,6 +611,7 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 		{
 			if (isInIndentablePreprocBlock)
 				return preLineWS(preprocBlockIndent, 0);
+
 			if (!headerStack->empty() || isInEnum || isInStruct)
 				return preLineWS(prevFinalLineIndentCount, prevFinalLineSpaceIndentCount);
 			// must fall thru here
@@ -2899,6 +2900,8 @@ bool ASBeautifier::handleHeaderSection(std::string_view line, size_t* i, bool cl
 	if (parenDepth == 0 && (findKeyword(line, *i, ASResource::AS_TYPEDEF_STRUCT) || findKeyword(line, *i, ASResource::AS_STRUCT)) && line.find_first_of(ASResource::AS_SEMICOLON, *i) == std::string::npos)
 	{
 		isInStruct = true;
+		isInTemplate = false;
+		bracesNestingLevelOfStruct = bracesNestingLevel;
 	}
 
 	// avoid regression with neovim test dataset
@@ -3108,9 +3111,15 @@ void ASBeautifier::handleEndOfStatement(size_t i, bool *closingBraceReached, cha
 			spaceIndentCount = 0;
 		isInAsmBlock = false;
 		isInAsm = isInAsmOneLine = isInQuote = false;	// close these just in case
+
 		//isInStruct = bracesNestingLevel <= 0;
-		if (bracesNestingLevel <= bracesNestingLevelOfStruct)
+		if (!bracesNestingLevelOfStruct || !bracesNestingLevel || (bracesNestingLevelOfStruct > 0 && bracesNestingLevel <= bracesNestingLevelOfStruct)) {
 			isInStruct = false;
+		}
+
+		if (!isInStruct) {
+			//bracesNestingLevelOfStruct = 0;
+		}
 
 		int headerPlace = indexOf(*headerStack, &ASResource::AS_OPEN_BRACE);
 		if (headerPlace != -1)
@@ -3458,6 +3467,7 @@ void ASBeautifier::handlePotentialHeaderSection(std::string_view line, size_t* i
 			if (prevNonSpaceCh == ')' || !isalpha(nextChar))
 				newHeader = nullptr;
 		}
+
 		if (newHeader != nullptr
 		        && !(isCStyle() && newHeader == &ASResource::AS_CLASS && (isInEnum || isInStruct))	// is not 'enum class'
 		        && !(isCStyle() && newHeader == &ASResource::AS_INTERFACE			// CORBA IDL interface
