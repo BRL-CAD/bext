@@ -122,29 +122,18 @@ endif(NOT DEFINED DATA_DIR)
 # directory to hold both of these outputs, and we want it to be in a standard
 # location that other projects will know to look for.
 
-# Try to get the home directory
-set(ENV_HOME "$ENV{HOME}")
-if (NOT ENV_HOME)
-  set(ENV_HOME "$ENV{USERPROFILE}")
-endif (NOT ENV_HOME)
-
-# If we're not being forced to a specific location
-# and we know where home is, use it
+# Default to the build directory for output and installation
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${ENV_HOME}")
+  set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE)
 endif (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
-# If home didn't work, fall back on the build directory
-if (NOT CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}")
-endif (NOT CMAKE_INSTALL_PREFIX)
-
-# Having decided on the path, make sure subsequent configures stick with it
+# Make sure subsequent configures stick with the same installation path, whether specified or not
 set(CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Calculated or specified install prefix" FORCE)
 
-set(BEXT_ROOT bext_output)
-set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/install" CACHE PATH "Outputs for bundling" FORCE)
-set(CMAKE_NOBUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}/noinstall" CACHE PATH "Build tools NOT intended for bundling" FORCE)
+message("prefix is ${CMAKE_INSTALL_PREFIX}")
+
+set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/install" CACHE PATH "Outputs for bundling" FORCE)
+set(CMAKE_NOBUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/noinstall" CACHE PATH "Build tools NOT intended for bundling" FORCE)
 file(MAKE_DIRECTORY "${CMAKE_BUNDLE_INSTALL_PREFIX}")
 file(MAKE_DIRECTORY "${CMAKE_NOBUNDLE_INSTALL_PREFIX}")
 
@@ -512,7 +501,7 @@ endif (WIN32)
 ###############################################################################
 # Report where we will be putting our output
 ###############################################################################
-message("Output directory: ${CMAKE_INSTALL_PREFIX}/${BEXT_ROOT}")
+message("Output directory: ${CMAKE_INSTALL_PREFIX}")
 
 # Local Variables:
 # tab-width: 8
