@@ -7785,7 +7785,7 @@ void ASFormatter::checkIfTemplateOpener()
 					if (parenDepth_ == 0)
 					{
 						// this is a template!
-						isInTemplate = true;
+						//isInTemplate = true;
 						templateDepth = maxTemplateDepth;
 					}
 					return;

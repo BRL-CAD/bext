@@ -3110,15 +3110,11 @@ void ASBeautifier::handleEndOfStatement(size_t i, bool *closingBraceReached, cha
 		if (i == 0)
 			spaceIndentCount = 0;
 		isInAsmBlock = false;
-		isInAsm = isInAsmOneLine = isInQuote = false;	// close these just in case
+		isInAsm = isInAsmOneLine = isInQuote = isInTemplate = false;	// close these just in case
 
 		//isInStruct = bracesNestingLevel <= 0;
 		if (!bracesNestingLevelOfStruct || !bracesNestingLevel || (bracesNestingLevelOfStruct > 0 && bracesNestingLevel <= bracesNestingLevelOfStruct)) {
 			isInStruct = false;
-		}
-
-		if (!isInStruct) {
-			//bracesNestingLevelOfStruct = 0;
 		}
 
 		int headerPlace = indexOf(*headerStack, &ASResource::AS_OPEN_BRACE);
