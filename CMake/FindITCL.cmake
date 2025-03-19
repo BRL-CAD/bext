@@ -2,19 +2,19 @@
 # file Copyright.txt or https://cmake.org/licensing for details.
 
 #[=======================================================================[.rst:
-FindTCL
--------
+FindITCL
+--------
 
-This module finds if Tcl is installed and determines where the include
+This module finds if Itcl is installed and determines where the include
 files and libraries are.  It also determines what the name of the
 library is.  This code sets the following variables:
 
 ::
 
-ITCL_FOUND              = Tcl was found
-ITCL_LIBRARY            = path to Tcl library (tcl tcl80)
-ITCL_INCLUDE_PATH       = path to where tcl.h can be found
-ITCL_STUB_LIBRARY       = path to Tcl stub library
+ITCL_FOUND              = Itcl was found
+ITCL_LIBRARY            = path to Itcl library (tcl tcl80)
+ITCL_INCLUDE_PATH       = path to where itcl.h can be found
+ITCL_STUB_LIBRARY       = path to Itcl stub library
 
 #]=======================================================================]
 
