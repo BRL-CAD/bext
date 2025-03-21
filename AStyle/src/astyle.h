@@ -220,7 +220,7 @@ public:
 	static void buildHeaders(std::vector<const std::string*>* headers, int fileType, bool beautifier = false);
 	static void buildIndentableMacros(std::vector<const std::pair<const std::string, const std::string>* >* indentableMacros);
 	static void buildIndentableHeaders(std::vector<const std::string*>* indentableHeaders);
-	static void buildNonAssignmentOperators(std::vector<const std::string*>* nonAssignmentOperators);
+	static void buildNonAssignmentOperators(std::vector<const std::string*>* nonAssignmentOperators, int fileType);
 	static void buildNonParenHeaders(std::vector<const std::string*>* nonParenHeaders, int fileType, bool beautifier = false);
 	static void buildOperators(std::vector<const std::string*>* operators, int fileType);
 	static void buildPreBlockStatements(std::vector<const std::string*>* preBlockStatements, int fileType);

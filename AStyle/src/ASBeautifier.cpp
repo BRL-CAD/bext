@@ -462,7 +462,7 @@ void ASBeautifier::initVectors()
 	ASResource::buildHeaders(headers, fileType, true);
 	ASResource::buildNonParenHeaders(nonParenHeaders, fileType, true);
 	ASResource::buildAssignmentOperators(assignmentOperators);
-	ASResource::buildNonAssignmentOperators(nonAssignmentOperators);
+	ASResource::buildNonAssignmentOperators(nonAssignmentOperators, fileType);
 	ASResource::buildPreBlockStatements(preBlockStatements, fileType);
 	ASResource::buildPreCommandHeaders(preCommandHeaders, fileType);
 	ASResource::buildIndentableHeaders(indentableHeaders);
@@ -2826,6 +2826,9 @@ bool ASBeautifier::handleHeaderSection(std::string_view line, size_t* i, bool cl
 				*haveCaseIndent = true;
 				if (!lineBeginsWithOpenBrace)
 					--indentCount;
+				//TODO https://sourceforge.net/p/astyle/bugs/589/
+				//if (isInStruct)
+				//	++indentCount;
 			}
 		}
 		else if (newHeader == &ASResource::AS_DEFAULT)

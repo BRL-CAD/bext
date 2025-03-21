@@ -356,8 +356,10 @@ void ASResource::buildIndentableMacros(std::vector<const std::pair<const std::st
  * Used by ONLY ASBeautifier.cpp
  *
  * @param nonAssignmentOperators       a reference to the vector to be built.
+ * @param fileType              language identifier.
+ *
  */
-void ASResource::buildNonAssignmentOperators(std::vector<const std::string*>* nonAssignmentOperators)
+void ASResource::buildNonAssignmentOperators(std::vector<const std::string*>* nonAssignmentOperators, int fileType)
 {
 	const size_t elements = 16;
 	nonAssignmentOperators->reserve(elements);
@@ -367,16 +369,19 @@ void ASResource::buildNonAssignmentOperators(std::vector<const std::string*>* no
 	nonAssignmentOperators->emplace_back(&AS_MINUS_MINUS);
 	nonAssignmentOperators->emplace_back(&AS_NOT_EQUAL);
 	nonAssignmentOperators->emplace_back(&AS_GR_EQUAL);
-	nonAssignmentOperators->emplace_back(&AS_GR_GR_GR);
 	nonAssignmentOperators->emplace_back(&AS_GR_GR);
 	nonAssignmentOperators->emplace_back(&AS_LS_EQUAL);
-	nonAssignmentOperators->emplace_back(&AS_LS_LS_LS);
 	nonAssignmentOperators->emplace_back(&AS_LS_LS);
 	nonAssignmentOperators->emplace_back(&AS_ARROW);
 	nonAssignmentOperators->emplace_back(&AS_AND);
 	nonAssignmentOperators->emplace_back(&AS_OR);
 	nonAssignmentOperators->emplace_back(&AS_LAMBDA);
 	nonAssignmentOperators->emplace_back(&AS_DOT);
+
+	if (fileType == JAVA_TYPE) {
+		nonAssignmentOperators->emplace_back(&AS_GR_GR_GR);
+		nonAssignmentOperators->emplace_back(&AS_LS_LS_LS);
+	}
 
 	assert(nonAssignmentOperators->size() < elements);
 	sort(nonAssignmentOperators->begin(), nonAssignmentOperators->end(), sortOnLength);
@@ -388,6 +393,8 @@ void ASResource::buildNonAssignmentOperators(std::vector<const std::string*>* no
  * NOTE: Non-paren headers should also be included in the headers vector.
  *
  * @param nonParenHeaders       a reference to the std::vector to be built.
+ * @param fileType              language identifier.
+ *
  */
 void ASResource::buildNonParenHeaders(std::vector<const std::string*>* nonParenHeaders, int fileType, bool beautifier)
 {
