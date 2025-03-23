@@ -4691,7 +4691,8 @@ void ASFormatter::formatPointerOrReferenceToType()
 	// if no space after then add one
 	if (charNum < (int) currentLine.length() - 1
 	        && !std::isblank(currentLine[charNum + 1])
-	        && currentLine[charNum + 1] != ')')
+	        && currentLine[charNum + 1] != ')'
+		    && peekNextChar() != '&')
 		appendSpacePad();
 
 	// if old pointer or reference is centered, remove a space
@@ -4924,8 +4925,9 @@ void ASFormatter::formatPointerOrReferenceToName()
 	}
 	// if no space before * then add one
 	else if (!formattedLine.empty()
-	         && (formattedLine.length() <= startNum + 1
-	             || !std::isblank(formattedLine[startNum + 1])))
+			&& (currentLine[startNum + 1] != '&')
+			&& (formattedLine.length() <= startNum + 1
+				|| !std::isblank(formattedLine[startNum + 1])))
 	{
 		formattedLine.insert(startNum + 1, 1, ' ');
 		spacePadNum++;
