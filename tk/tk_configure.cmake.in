@@ -1,0 +1,55 @@
+if (NOT WIN32)
+
+  if (APPLE)
+
+    execute_process(
+      COMMAND xcrun --show-sdk-path
+      OUTPUT_VARIABLE SDK_PATH
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    set(ENV{LDFLAGS} "-isysroot ${SDK_PATH} -L${SDK_PATH}/usr/lib -L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@ -F${SDK_PATH}/System/Library/Frameworks  -framework CoreFoundation")
+    set(ENV{CFLAGS} "-isysroot ${SDK_PATH} -L${SDK_PATH}/usr/lib -L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@ -F${SDK_PATH}/System/Library/Frameworks")
+    set(ENV{CPPFLAGS} "-isystem ${SDK_PATH}/usr/include -F${SDK_PATH}/System/Library/Frameworks -I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+
+  else ()
+
+    set(ENV{LD_LIBRARY_PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+    set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+    set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+
+  endif (APPLE)
+
+  set(ENV{TK_SHLIB_LD_EXTRAS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+
+  set (TCL_LIBRARY @TCL_LIBRARY@)
+  if (NOT TCL_LIBRARY)
+    set(WITH_TCL_FLAG "--with-tcl=@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  else ()
+    get_filename_component(TCLCONF_DIR "${TCL_LIBRARY}" DIRECTORY)
+    set(WITH_TCL_FLAG "--with-tcl=${TCLCONF_DIR}")
+  endif (NOT TCL_LIBRAY)
+  
+  execute_process(
+    COMMAND @TK_SRC_DIR@/unix/configure --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@ ${WITH_TCL_FLAG}
+    RESULT_VARIABLE TK_RET
+    WORKING_DIRECTORY "@TK_BIN_DIR@"
+    OUTPUT_VARIABLE MSG
+    ERROR_VARIABLE MSG
+    )
+
+  if (TK_RET)
+    message(FATAL_ERROR "Tk configure failed:\n${MSG}\n")
+  endif (TK_RET)
+
+  message("${MSG}\nTk configure succeeded.\n")
+
+endif (NOT WIN32)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+
