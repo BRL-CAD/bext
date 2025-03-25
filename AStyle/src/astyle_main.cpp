@@ -1906,8 +1906,9 @@ void ASConsole::printHelp() const
 	std::cout << "    Insert empty lines around unrelated blocks, labels, classes, ...\n";
 	std::cout << '\n';
 	std::cout << "    --break-blocks=all  OR  -F\n";
-	std::cout << "    Like --break-blocks, except also insert empty lines \n";
-	std::cout << "    around closing headers (e.g. 'else', 'catch', ...).\n";
+	std::cout << "    Like --break-blocks, except also insert empty lines\n";
+	std::cout << "    around closing headers (e.g. 'else', 'catch', ...), structs,\n";
+	std::cout << "    and functions.\n";
 	std::cout << '\n';
 	std::cout << "    --pad-oper  OR  -p\n";
 	std::cout << "    Insert space padding around operators.\n";

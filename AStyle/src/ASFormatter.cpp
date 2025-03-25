@@ -5616,7 +5616,8 @@ void ASFormatter::formatClosingBrace(BraceType braceType)
 		}
 
 	}
-	else
+	// new option for break-blocks for classes and fcts? GL83
+	else if (shouldBreakClosingHeaderBlocks)
 	{
 		isAppendPostBlockEmptyLineRequested = !currentHeader && shouldBreakBlocks;
 	}
