@@ -3711,12 +3711,13 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 	int tabIncrementIn = 0;
 
 
-	if (isInQuote
+	/*if (isInQuote
 	        && !haveLineContinuationChar
 	        && !isInVerbatimQuote
 	        && !isInAsm
 	        && !isInMultiLineString)
 		isInQuote = false;				// missing closing quote
+    */
 
 	haveLineContinuationChar = false;
 
