@@ -281,6 +281,8 @@ ASBeautifier::ASBeautifier(const ASBeautifier& other) : ASBase(other)
 	currentNonSpaceCh = other.currentNonSpaceCh;
 	currentNonLegalCh = other.currentNonLegalCh;
 	prevNonLegalCh = other.prevNonLegalCh;
+	bracesNestingLevel = other.bracesNestingLevel;
+	bracesNestingLevelOfStruct = other.bracesNestingLevelOfStruct;
 }
 
 /**
@@ -439,6 +441,8 @@ void ASBeautifier::init(ASSourceIterator* iter)
 	runInIndentContinuation = 0;
 	nonInStatementBrace = 0;
 	objCColonAlignSubsequent = 0;
+	bracesNestingLevel = 0;
+	bracesNestingLevelOfStruct = 0;
 }
 
 /*
