@@ -54,7 +54,7 @@ complete -c astyle -l close-templates -d 'Close ending angle brackets on templat
 complete -c astyle -l remove-comment-prefix -d 'Remove the leading \'*\' prefix on multi-line comments and indent the comment text one indent'
 complete -c astyle -l max-code-length -r -d 'Break the line if it exceeds more than # characters'
 complete -c astyle -l break-after-logical -d 'After break line using --max-code-length, place logical conditional last on the previous line'
-complete -c astyle -xa 'c java cs objc js' -d 'Set input syntax mode'
+complete -c astyle -l mode -xa 'c java cs objc js' -d 'Set input syntax mode'
 complete -c astyle -l pad-method-prefix -d 'Insert space padding after the \'-\' or \'+\' Objective-C method prefix'
 complete -c astyle -l unpad-method-prefix -d 'Remove all space padding after the \'-\' or \'+\' Objective-C method prefix'
 complete -c astyle -l pad-return-type -d 'Insert space padding after the Objective-C return type'
