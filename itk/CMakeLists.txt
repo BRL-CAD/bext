@@ -53,10 +53,16 @@ if (ENABLE_ITK)
   # subdirectory in which we are storing the library.
   set(RPATH_SUFFIX itk3.4)
 
+  set(ITK_SRC_CPY_TGT "${CMAKE_CURRENT_BINARY_DIR}/ITK_BLD-prefix/src/ITK_BLD")
+
   ExternalProject_Add(ITK_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/itk"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/itk.patch
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ITK_SRC_CPY_TGT}/CMake
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/CMakeLists.txt ${ITK_SRC_CPY_TGT}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/FindTCL.cmake ${ITK_SRC_CPY_TGT}/CMake
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/FindITCL.cmake ${ITK_SRC_CPY_TGT}/CMake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=$<IF:$<BOOL:${WIN32}>,${LIB_DIR},${BIN_DIR}>
