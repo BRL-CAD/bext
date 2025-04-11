@@ -64,11 +64,20 @@ if (ENABLE_ITCL)
 
   # message("TCL HEADERS2:  ${TCL_PRIVATE_HDRS}")
 
+
+  # We need to know where the ITcl sources will wind up for some of
+  # this logic
+  set(ITCL_SRC_CPY_TGT "${CMAKE_CURRENT_BINARY_DIR}/ITCL_BLD-prefix/src/ITCL_BLD")
+
   # If we STILL don't have anything, patch the Itcl sources to add
   # the headers in question
   set(TCL_HDRS_PATCH_CMD)
   if (NOT TCL_PRIVATE_HDRS)
-    set(TCL_HDRS_PATCH_CMD ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl_priv_hdrs.patch)
+    if(CMAKE_VERSION VERSION_LESS "3.26.0")
+      set(TCL_HDRS_PATCH_CMD ${CMAKE_COMMAND};-E;copy_directory;${CMAKE_CURRENT_SOURCE_DIR}/addfiles/tcl_hdrs;${ITCL_SRC_CPY_TGT}/tcl_hdrs)
+    else()
+      set(TCL_HDRS_PATCH_CMD ${CMAKE_COMMAND};-E;copy_directory_if_different;${CMAKE_CURRENT_SOURCE_DIR}/addfiles/tcl_hdrs;${ITCL_SRC_CPY_TGT}/tcl_hdrs)
+    endif()
     set(TCL_PRIVATE_HDRS "${CMAKE_CURRENT_BINARY_DIR}/ITCL_BLD-prefix/src/ITCL_BLD/tcl_hdrs")
     if(NOT WIN32)
       set(TCL_PRIVATE_HDRS_OS ${TCL_PRIVATE_HDRS}/unix)
@@ -83,14 +92,13 @@ if (ENABLE_ITCL)
   # in which we are storing the library.
   set(RPATH_SUFFIX itcl3.4)
 
-  set(ITCL_SRC_CPY_TGT "${CMAKE_CURRENT_BINARY_DIR}/ITCL_BLD-prefix/src/ITCL_BLD")
 
   ExternalProject_Add(ITCL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/itcl"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/itcl.patch
-    COMMAND ${TCL_HDRS_PATCH_CMD}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${ITCL_SRC_CPY_TGT}/CMake
+    COMMAND ${TCL_HDRS_PATCH_CMD}
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/CMakeLists.txt ${ITCL_SRC_CPY_TGT}
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/FindTCL.cmake ${ITCL_SRC_CPY_TGT}/CMake
     CMAKE_ARGS
