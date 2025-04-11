@@ -37,8 +37,10 @@ if (TK_DO_BUILD)
     # If we're building against a compiled Tcl and not a system Tcl,
     # set some vars accordingly
     set(TCL_SRC_DIR "${CMAKE_BINARY_DIR}/tcl/TCL_BLD-prefix/src/TCL_BLD")
+    set(WITH_TCL_DIR "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}")
   else (TARGET TCL_BLD)
     get_filename_component(TCLCONF_DIR "${TCL_LIBRARY}" DIRECTORY)
+    set(WITH_TCL_DIR "${TCLCONF_DIR}")
   endif (TARGET TCL_BLD)
 
   set(TK_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD")
