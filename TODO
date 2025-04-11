@@ -1,3 +1,10 @@
+A bunch of the patches are still adding FindZLIB.cmake - fix.
+
+Make sure for all the Find*.cmake files we're adding we reference
+the copy in the toplevel bext/CMake directory unless there's a reason
+not to - shouldn't be making per-proejct addfiles/ copies of those
+since we'd just have to update each one.
+
 Right now, I don't think we're really handling switching config options
 properly.  If we enable/disable individual components, dependencies using
 those components need to be reset - their old compiles will no longer be
