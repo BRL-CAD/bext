@@ -63,6 +63,11 @@ if (ENABLE_ITK)
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/CMakeLists.txt ${ITK_SRC_CPY_TGT}
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/FindTCL.cmake ${ITK_SRC_CPY_TGT}/CMake
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/FindITCL.cmake ${ITK_SRC_CPY_TGT}/CMake
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ITK_SRC_CPY_TGT}/CMake/generic/itcl3
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/itclDecls.h ${ITK_SRC_CPY_TGT}/generic/itcl3
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/itcl.h ${ITK_SRC_CPY_TGT}/generic/itcl3
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/itclIntDecls.h ${ITK_SRC_CPY_TGT}/generic/itcl3
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/itclInt.h ${ITK_SRC_CPY_TGT}/generic/itcl3
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=$<IF:$<BOOL:${WIN32}>,${LIB_DIR},${BIN_DIR}>
