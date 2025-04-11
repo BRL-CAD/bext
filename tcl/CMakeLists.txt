@@ -61,6 +61,10 @@ if (ENABLE_TCL)
     set(RPATH_CMD "COMMAND;install_name_tool;-add_rpath;@executable_path/../${LIB_DIR};${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${TCL_VERSION}${CMAKE_EXECUTABLE_SUFFIX}")
   endif (APPLE)
 
+  if (WIN32 AND "${CMAKE_GENERATOR}" MATCHES "Ninja*")
+    message("TODO - per Github CI it looks as if the standard MSVC build and the Ninja build have different enviornmental setup requirements.")
+  endif (WIN32 AND "${CMAKE_GENERATOR}" MATCHES "Ninja*")
+
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_install.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_install.cmake @ONLY)
