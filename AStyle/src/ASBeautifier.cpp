@@ -846,6 +846,7 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 		indentCount = spaceIndentCount = 0;
 
 	// finally, insert indentations into beginning of line
+
 	std::string indentedLine = isIndentModeOff ? originalLine : preLineWS(indentCount, spaceIndentCount) + line;
 
 	prevFinalLineSpaceIndentCount = spaceIndentCount;
@@ -3802,7 +3803,8 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 
 				// GL 32
 				// https://sourceforge.net/p/astyle/bugs/535/
-				if (isCStyle() && prevCh == 'R' && !isalpha(prevPrevCh) && !(isalpha(prevNonSpaceCh) ))
+				// https://gitlab.com/saalen/astyle/-/issues/82
+				if (isCStyle() && prevCh == 'R' && !isalpha(prevPrevCh) && !isalpha(prevNonSpaceCh))
 				{
 					int parenPos = line.find('(', i);
 
