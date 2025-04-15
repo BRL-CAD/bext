@@ -45,7 +45,7 @@ jobs:
       - name: Configure
         shell: powershell
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE=Release -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE=Release -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DEXT_BUILD_VERBOSE=ON
           # We do the following in order to help ensure files are "flushed"
           # to disk before compilation is attempted
           # https://superuser.com/a/1553374/1286142
@@ -88,7 +88,7 @@ jobs:
       - name: Configure
         shell: powershell
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE=Debug -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE=Debug -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DEXT_BUILD_VERBOSE=ON
           # We do the following in order to help ensure files are "flushed"
           # to disk before compilation is attempted
           # https://superuser.com/a/1553374/1286142
@@ -127,7 +127,7 @@ jobs:
         shell: cmd
         run: |
           call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
-          cmake -S . -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON
           # We do the following in order to help ensure files are "flushed"
           # to disk before compilation is attempted
           # https://superuser.com/a/1553374/1286142
@@ -160,7 +160,7 @@ jobs:
         shell: cmd
         run: |
           call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
-          cmake -S . -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug -DEXT_BUILD_VERBOSE=ON
           # We do the following in order to help ensure files are "flushed"
           # to disk before compilation is attempted
           # https://superuser.com/a/1553374/1286142
@@ -202,7 +202,7 @@ jobs:
       - name: Configure
         run: |
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
-          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON
 
       - name: Build
         run: |
@@ -238,7 +238,7 @@ jobs:
         run: |
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
           # We're running into disk space issues with the Linux debug build, so turn off GDAL
-          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug -DUSE_GDAL=OFF
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug -DUSE_GDAL=OFF -DEXT_BUILD_VERBOSE=ON
 
       - name: Build
         run: |
@@ -267,7 +267,7 @@ jobs:
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
           export CC=clang
           export CXX=clang++
-          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON
 
       - name: Build
         run: |
@@ -295,7 +295,7 @@ jobs:
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH
           export CC=clang
           export CXX=clang++
-          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Debug -DEXT_BUILD_VERBOSE=ON
 
       - name: Build
         run: |
