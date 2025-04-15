@@ -49,7 +49,7 @@ if (ENABLE_ITCL)
   endif (NOT TARGET TCL_BLD)
 
   # message("TCL HEADERS1:  ${TCL_PRIVATE_HDRS}")
-  
+
   # If we can't find them from the system, see if we have a local
   # clone of Tcl to use
   if (NOT TCL_PRIVATE_HDRS AND EXISTS ${CMAKE_SOURCE_DIR}/tcl/tcl)
@@ -78,7 +78,7 @@ if (ENABLE_ITCL)
     else()
       set(TCL_HDRS_PATCH_CMD ${CMAKE_COMMAND};-E;copy_directory_if_different;${CMAKE_CURRENT_SOURCE_DIR}/addfiles/tcl_hdrs;${ITCL_SRC_CPY_TGT}/tcl_hdrs)
     endif()
-    set(TCL_PRIVATE_HDRS "${CMAKE_CURRENT_BINARY_DIR}/ITCL_BLD-prefix/src/ITCL_BLD/tcl_hdrs")
+    set(TCL_PRIVATE_HDRS "${ITCL_SRC_CPY_TGT}/tcl_hdrs")
     if(NOT WIN32)
       set(TCL_PRIVATE_HDRS_OS ${TCL_PRIVATE_HDRS}/unix)
     else(NOT WIN32)
