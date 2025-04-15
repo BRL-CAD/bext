@@ -184,7 +184,7 @@ parser:option "--max-code-length"
 parser:flag "--break-after-logical"
    :description "After break line using --max-code-length, place logical conditional last on the previous line"
 
-parser:option "mode"
+parser:option "--mode"
    :description "Set input syntax mode"
    :choices {"c", "java", "cs", "objc", "js"}
 

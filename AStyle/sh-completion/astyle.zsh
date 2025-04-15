@@ -57,7 +57,7 @@ _astyle() {
     "--remove-comment-prefix[Remove the leading '*' prefix on multi-line comments and indent the comment text one indent]"
     "--max-code-length[Break the line if it exceeds more than # characters]: :_files"
     "--break-after-logical[After break line using --max-code-length, place logical conditional last on the previous line]"
-    "mode[Set input syntax mode]: :(c java cs objc js)"
+    "--mode[Set input syntax mode]: :(c java cs objc js)"
     "--pad-method-prefix[Insert space padding after the '-' or '+' Objective-C method prefix]"
     "--unpad-method-prefix[Remove all space padding after the '-' or '+' Objective-C method prefix]"
     "--pad-return-type[Insert space padding after the Objective-C return type]"
