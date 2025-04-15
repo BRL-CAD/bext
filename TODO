@@ -10,7 +10,7 @@ properly.  If we enable/disable individual components, dependencies using
 those components need to be reset - their old compiles will no longer be
 valid if one of their dependencies changes.  We need to:
 
-1.  clear the bext_output directory, so the contents reflect the new
+1.  clear the output directories, so the contents reflect the new
     settings rather than keeping potentially outdated files
 
 2.  remove old build directory contents for those projects that have

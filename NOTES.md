@@ -350,7 +350,7 @@ process are:
     suggests the upstream might be receptive to changing how their install
     structure is laid out.
 
-Once you have everything installing into bext_output/install/ correctly and
+Once you have everything installing into install/ correctly and
 using the correct dependencies, congratulations - you're now ready to add
 the submodule to bext in lieu of a working source copy.  This will allow
 bext to manage when and how the directory is populated based on build
@@ -770,10 +770,10 @@ build (main) $ make GEOGRAM_BLD
 [100%] Built target GEOGRAM_BLD
 ```
 
-Once we have a successful completion, we inspect the contents of bext_output/install:
+Once we have a successful completion, we inspect the contents of install:
 
 ```
-bext/build (main) $ ls -R ~/bext_output/install/
+bext/build (main) $ ls -R ~/install/
 ```
 
 One thing to note is that a lot of the third party headers have been installed,
@@ -867,7 +867,7 @@ By convention we keep the labels alphabetized.
 Note that the bext build takes responsibility for making third party
 dependencies relocatable by leveraging LIEF, but if the upstream project ends
 up encoding fixed install paths rather than using relative lookups it may
-happen that a working bext_output/install copy fails to work when copied into
+happen that a working install copy fails to work when copied into
 the main BRL-CAD build.  If and when that happens, the original sources must be
 patched to allow for relocatable execution (we have to do this for Tcl, for
 example.) This should be done via patch file, and if the upstream project will

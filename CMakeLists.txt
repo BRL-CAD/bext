@@ -607,7 +607,7 @@ endif (EXISTS "${CMAKE_BUNDLE_INSTALL_PREFIX}" AND STALE_INSTALL_WARN)
 # problems.  Define a utility target to check
 ###############################################################################
 add_custom_target(dll_typecheck
-  COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"$<CONFIG>\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/bext_output/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/DllTypeCheck.cmake)
+  COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"$<CONFIG>\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/DllTypeCheck.cmake)
 
 ###############################################################################
 # Check that Windows LoadLibrary call can succeed with our dll outputs
@@ -615,7 +615,7 @@ add_custom_target(dll_typecheck
 if (WIN32)
   add_executable(lltest ${CMAKE_SOURCE_DIR}/CMake/LoadLibraryTest.cpp)
   add_custom_target(dll_loadcheck
-    COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"$<CONFIG>\" -DLEXEC=\"$<TARGET_FILE:lltest>\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/bext_output/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/LoadLibraryCheck.cmake
+    COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=\"$<CONFIG>\" -DLEXEC=\"$<TARGET_FILE:lltest>\" -DDLL_DIR=\"${CMAKE_INSTALL_PREFIX}/install/bin\" -P ${CMAKE_SOURCE_DIR}/CMake/LoadLibraryCheck.cmake
     DEPENDS lltest
     )
 endif (WIN32)
