@@ -237,6 +237,9 @@ macro(TargetVars roots)
     endif (NOT ${root}_ADDED)
     if (TARGET ${root}_BLD)
       set(${root}_TARGET 1)
+      # Also set the TARGET var in the parent scope - may need it in other
+      # build logic besides the current directory.
+      set(${root}_TARGET 1 PARENT_SCOPE)
     endif (TARGET ${root}_BLD)
   endforeach(root ${${roots}})
 endmacro(TargetVars root)
