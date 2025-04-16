@@ -10,6 +10,7 @@ file(WRITE "${BUILD_SCRIPT}"
   "cd /D \"@TCL_SRC_DIR@/win\"\n"
   "echo In Batch CC=%CC% but setting empty\n"
   "set CC=\n"
+  "set RC=\n"
   "nmake -f makefile.vc INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
   "exit /b %ERRORLEVEL%\n"
 )
