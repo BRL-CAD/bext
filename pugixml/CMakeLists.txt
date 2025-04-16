@@ -1,6 +1,6 @@
-# Decide if we're using pugixml - used by assetimport, which
-# is used by Manifold, which is used in librt
-cad_enable(PUGIXML "librt")
+# Decide if we're using pugixml - used by assetimport
+# TODO - won't need librt here after update to Manifold 3.0
+cad_enable(PUGIXML "libgcv;librt")
 
 bext_enable(PUGIXML)
 

@@ -1,6 +1,7 @@
 # Decide if we're using assetimport.
-# Also, assetimport is used directly by a libgcv plugin
-cad_enable(ASSETIMPORT "libgcv")
+# Also, assetimport is used directly by a libgcv plugin and (until we update to Manifold 3.0)
+# is needed by Manifold, which is used by librt
+cad_enable(ASSETIMPORT "libgcv;librt")
 
 bext_enable(ASSETIMPORT)
 
