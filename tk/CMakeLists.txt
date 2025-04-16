@@ -50,6 +50,8 @@ if (TK_DO_BUILD)
   endif (NOT DEFINED TCL_VERSION)
 
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_configure.cmake @ONLY)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_build.cmake @ONLY)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_install.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_install.cmake @ONLY)
 
   if (NOT MSVC)
 
@@ -92,8 +94,8 @@ if (TK_DO_BUILD)
       COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch
       CONFIGURE_COMMAND ""
       BINARY_DIR ${TK_SRC_DIR}/win
-      BUILD_COMMAND ${VCVARS_BAT} && nmake -f makefile.vc INSTALLDIR=${CMAKE_BUNDLE_INSTALL_PREFIX} TCLDIR=${TCL_SRC_DIR} SUFX=
-      INSTALL_COMMAND ${VCVARS_BAT} && nmake -f makefile.vc install INSTALLDIR=${CMAKE_BUNDLE_INSTALL_PREFIX} TCLDIR=${TCL_SRC_DIR} SUFX=
+      BUILD_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tk_build.cmake
+      INSTALL_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tk_install.cmake
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}

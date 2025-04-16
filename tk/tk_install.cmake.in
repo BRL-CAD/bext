@@ -1,32 +1,32 @@
-set(INSTALL_SCRIPT "${CMAKE_BINARY_DIR}/install_tcl.bat")
+set(INSTALL_SCRIPT "${CMAKE_BINARY_DIR}/install_tk.bat")
 
 # need to combine vcvars+nmake into same script so environment is shared
 file(WRITE "${INSTALL_SCRIPT}"
   "@echo off\n"
   "set VSCMD_DEBUG=0\n"
   "call \"@VCVARS_BAT@\"\n"
-  "cd /D \"@TCL_SRC_DIR@/win\"\n"
+  "cd /D \"@TK_SRC_DIR@/win\"\n"
   "echo In Batch CC=%CC% but setting empty\n"
   "set CC=\n"
   "echo In Batch RC=%RC% but setting empty\n"
   "set RC=\n"
-  "nmake -f makefile.vc install INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
+  "nmake -f makefile.vc install INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ TCLDIR=@TCL_SRC_DIR@ SUFX=\n"
   "exit /b %ERRORLEVEL%\n"
 )
 
 execute_process(
-  WORKING_DIRECTORY "@TCL_SRC_DIR@/win"
+  WORKING_DIRECTORY "@TK_SRC_DIR@/win"
   COMMAND cmd /c "${INSTALL_SCRIPT}"
-  RESULT_VARIABLE TCL_RET
+  RESULT_VARIABLE TK_RET
   OUTPUT_VARIABLE CMD_OUT
   ERROR_VARIABLE CMD_OUT
   )
 
-if (TCL_RET)
-  message(FATAL_ERROR "Tcl install failed:\n${CMD_OUT}\n")
-endif (TCL_RET)
+if (TK_RET)
+  message(FATAL_ERROR "Tk install failed:\n${CMD_OUT}\n")
+endif (TK_RET)
 
-message("Tcl install succeeded:\n${CMD_OUT}\n")
+message("Tk install succeeded:\n${CMD_OUT}\n")
 
 # Local Variables:
 # tab-width: 8
