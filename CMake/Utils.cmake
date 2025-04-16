@@ -138,6 +138,13 @@ endfunction(git_submodule_init path)
 ###############################################################################
 function(cad_enable pname components)
   if (DEFINED BRLCAD_COMPONENTS)
+
+    # To avoid problems passing multiple components in, we support using ':' as
+    # a delimiter in addition to the standard CMake list entry delimiter ';'.
+    # TODO: If this doesn't cut it we'll probably have to pass in a file
+    # containing a list and read that.
+    string(REPLACE ":" ";" BRLCAD_COMPONENTS "${BRLCAD_COMPONENTS}")
+
     # In case the component list changed, make sure we're
     # not using a cached result.
     unset(ENABLE_${pname} CACHE)
