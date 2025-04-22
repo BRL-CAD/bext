@@ -191,8 +191,8 @@ img {
   text-align: center;
 }
 
-.menu ul li a:hover, 
-.menu ul li a:focus, 
+.menu ul li a:hover,
+.menu ul li a:focus,
 .menu ul li a:active {
   background: var(--hover-color);
   transform: translateY(-2px);
@@ -271,19 +271,19 @@ input[id=responsive-button]:checked ~ .menu {
   body {
     padding: 1rem;
   }
-  
+
   h1 {
     font-size: 1.8rem;
   }
-  
+
   h2 {
     font-size: 1.5rem;
   }
-  
+
   h3 {
     font-size: 1.3rem;
   }
-  
+
   #slogan {
     font-size: 1.8rem;
     bottom: 2rem;
@@ -295,27 +295,27 @@ input[id=responsive-button]:checked ~ .menu {
   .responsive-button {
     display: block;
   }
-  
+
   .menu {
     display: none;
   }
-  
+
   .menu ul {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .menu ul li {
     width: 100%;
     margin-bottom: 2px;
   }
-  
+
   .menu ul li a {
     width: 100%;
     text-align: left;
     border-radius: 2px;
   }
-  
+
   .menu ul ul {
     position: static;
     display: none;
@@ -325,16 +325,16 @@ input[id=responsive-button]:checked ~ .menu {
     margin-left: 1rem;
     width: calc(100% - 1rem);
   }
-  
+
   .menu ul li:hover ul {
     display: block;
   }
-  
+
   #slogan {
     font-size: 1.5rem;
     opacity: 0.4;
   }
-  
+
   #topBtn {
     bottom: 1rem;
     right: 1rem;
@@ -345,23 +345,23 @@ input[id=responsive-button]:checked ~ .menu {
   body {
     padding: 0.8rem;
   }
-  
+
   h1 {
     font-size: 1.6rem;
   }
-  
+
   h2 {
     font-size: 1.4rem;
   }
-  
+
   h3 {
     font-size: 1.2rem;
   }
-  
+
   pre {
     padding: 1rem;
   }
-  
+
   #slogan {
     display: none;
   }
@@ -398,8 +398,6 @@ input[id=responsive-button]:checked ~ .menu {
 /* Release notes specific styles */
 .release-notes .release {
   margin-bottom: 2.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
 .release-notes .release:last-child {
