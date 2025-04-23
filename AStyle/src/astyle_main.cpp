@@ -43,8 +43,6 @@
 #include <fstream>
 #include <sstream>
 
-#include <filesystem>
-
 // includes for recursive getFileNames() function
 #ifdef _WIN32
 	#undef UNICODE		// use ASCII windows functions
@@ -54,8 +52,6 @@
 	#include <fcntl.h>
 
 #else
-	#include <dirent.h>
-	#include <sys/stat.h>
 	#include <unistd.h>
 
 #endif
@@ -888,6 +884,112 @@ void ASConsole::setAcceptEmptyInputFileList(bool state)
 { acceptEmptyFileList = state; }
 
 
+/**
+ * Function to get the current directory using C++17 filesystem.
+ *
+ * @return              The path of the current directory
+ */
+std::string ASConsole::getCurrentDirectory(const std::string& fileName_) const
+{
+	std::string currentDir = std::filesystem::current_path().string();
+	if (currentDir.empty())
+		error("Cannot find file", fileName_.c_str());
+	return currentDir;
+}
+
+
+/**
+ * Function to resolve wildcards and recurse into sub directories using C++17 filesystem.
+ * The fileName vector is filled with the path and names of files to process.
+ *
+ * @param directory     The path of the directory to be processed.
+ * @param wildcards     A vector of wildcards to be processed (e.g. *.cpp).
+ */
+void ASConsole::getFileNames(const std::string& directory, const std::vector<std::string>& wildcards)
+{
+	// If directory doesn't exist, handle error
+	if (!std::filesystem::exists(directory))
+		error(_("Cannot open directory"), directory.c_str());
+
+	// Save files and subdirectories
+	std::vector<std::string> subDirectory;
+
+	for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+		const std::string entryPath = entry.path().string();
+		const std::string entryName = entry.path().filename().string();
+
+		// Skip hidden or read-only files
+		if (entryName[0] == '.' || !isWriteable(entry.path()))
+			continue;
+
+		// If it's a directory and recursive is enabled
+		if (std::filesystem::is_directory(entry) && isRecursive) {
+			if (isPathExcluded(entryPath))
+				printMsg(_("Exclude  %s\n"), entryPath.substr(mainDirectoryLength));
+			else
+				subDirectory.emplace_back(entryPath);
+			continue;
+		}
+
+		// If it's a regular file
+		if (std::filesystem::is_regular_file(entry)) {
+			// Check exclude before wildcard to avoid "unmatched exclude" error
+			bool isExcluded = isPathExcluded(entryPath);
+			// Save file name if wildcard match
+			for (const std::string& wildcard : wildcards) {
+				if (wildcmp(wildcard.c_str(), entryName.c_str())) {
+					if (isExcluded)
+						printMsg(_("Exclude  %s\n"), entryPath.substr(mainDirectoryLength));
+					else
+						fileName.emplace_back(entryPath);
+					break;
+				}
+			}
+		}
+	}
+
+	// Recurse into subdirectories
+	if (subDirectory.size() > 1)
+		std::sort(subDirectory.begin(), subDirectory.end());
+	for (const auto& subDir : subDirectory) {
+		getFileNames(subDir, wildcards);
+	}
+}
+
+/**
+ * Function to format a number according to the current locale using C++17.
+ * This formats positive integers only, no float.
+ *
+ * @param num       The number to be formatted.
+ * @param lcid      The LCID of the locale to be used for testing (Windows only).
+ * @return          The formatted number.
+ */
+std::string ASConsole::getNumberFormat(int num, size_t /*lcid*/) const
+{
+	#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__BORLANDC__) || defined(__GNUC__)
+	// Compilers that don't support C++ locales should still support this assert.
+	// The C locale should be set but not the C++.
+	// This function is not necessary if the C++ locale is set.
+	// The locale().name() return value is not portable to all compilers.
+	assert(std::locale().name() == "C");
+	#endif
+
+	// convert num to a string
+	std::stringstream alphaNum;
+	alphaNum << num;
+	std::string number = alphaNum.str();
+	if (useAscii)
+		return number;
+
+	// Get C locale information
+	struct lconv* lc = localeconv();
+	if (lc == nullptr)
+		return number;
+
+	// Format the number using the grouping and separator from the locale
+	return getNumberFormat(num, lc->grouping, lc->thousands_sep);
+}
+
 
 #ifdef _WIN32  // Windows specific
 
@@ -912,150 +1014,6 @@ void ASConsole::displayLastError()
 	LocalFree(msgBuf);
 }
 
-/**
- * WINDOWS function to get the current directory.
- * NOTE: getenv("CD") does not work for Windows Vista.
- *        The Windows function GetCurrentDirectory is used instead.
- *
- * @return              The path of the current directory
- */
-std::string ASConsole::getCurrentDirectory(const std::string& fileName_) const
-{
-	char currdir[MAX_PATH];
-	currdir[0] = '\0';
-	if (!GetCurrentDirectory(sizeof(currdir), currdir))
-		error("Cannot find file", fileName_.c_str());
-	return std::string(currdir);
-}
-
-/**
- * WINDOWS function to resolve wildcards and recurse into sub directories.
- * The fileName vector is filled with the path and names of files to process.
- *
- * @param directory     The path of the directory to be processed.
- * @param wildcards     A vector of wildcards to be processed (e.g. *.cpp).
- */
-void ASConsole::getFileNames(const std::string& directory, const std::vector<std::string>& wildcards)
-{
-	std::vector<std::string> subDirectory;    // sub directories of directory
-	WIN32_FIND_DATA findFileData;   // for FindFirstFile and FindNextFile
-
-	// Find the first file in the directory
-	// Find will get at least "." and "..".
-	std::string firstFile = directory + "\\*";
-	HANDLE hFind = FindFirstFile(firstFile.c_str(), &findFileData);
-
-	if (hFind == INVALID_HANDLE_VALUE)
-	{
-		// Error (3) The system cannot find the path specified.
-		// Error (123) The filename, directory name, or volume label syntax is incorrect.
-		// ::FindClose(hFind); before exiting
-		displayLastError();
-		error(_("Cannot open directory"), directory.c_str());
-	}
-
-	// save files and sub directories
-	do
-	{
-		// skip hidden or read only
-		if (findFileData.cFileName[0] == '.'
-		        || (findFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
-		        || (findFileData.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
-			continue;
-
-		// is this a sub directory
-		if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-		{
-			if (!isRecursive)
-				continue;
-			// if a sub directory and recursive, save sub directory
-			std::string subDirectoryPath = directory + g_fileSeparator + findFileData.cFileName;
-			if (isPathExcluded(subDirectoryPath))
-				printMsg(_("Exclude  %s\n"), subDirectoryPath.substr(mainDirectoryLength));
-			else
-				subDirectory.emplace_back(subDirectoryPath);
-			continue;
-		}
-
-		std::string filePathName = directory + g_fileSeparator + findFileData.cFileName;
-		// check exclude before wildcmp to avoid "unmatched exclude" error
-		bool isExcluded = isPathExcluded(filePathName);
-		// save file name if wildcard match
-		for (const std::string& wildcard : wildcards)
-		{
-			if (wildcmp(wildcard.c_str(), findFileData.cFileName))
-			{
-				if (isExcluded)
-					printMsg(_("Exclude  %s\n"), filePathName.substr(mainDirectoryLength));
-				else
-					fileName.emplace_back(filePathName);
-				break;
-			}
-		}
-	}
-	while (FindNextFile(hFind, &findFileData) != 0);
-
-	// check for processing error
-	::FindClose(hFind);
-	DWORD dwError = GetLastError();
-	if (dwError != ERROR_NO_MORE_FILES)
-		error("Error processing directory", directory.c_str());
-
-	// recurse into sub directories
-	// if not doing recursive subDirectory is empty
-	for (const std::string& subDirectoryName : subDirectory)
-		getFileNames(subDirectoryName, wildcards);
-}
-
-
-/**
- * WINDOWS function to format a number according to the current locale.
- * This formats positive integers only, no float.
- *
- * @param num		The number to be formatted.
- * @param lcid		The LCID of the locale to be used for testing.
- * @return			The formatted number.
- */
-std::string ASConsole::getNumberFormat(int num, size_t lcid) const
-{
-#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__BORLANDC__) || defined(__GNUC__)
-	// Compilers that don't support C++ locales should still support this assert.
-	// The C locale should be set but not the C++.
-	// This function is not necessary if the C++ locale is set.
-	// The locale().name() return value is not portable to all compilers.
-	assert(std::locale().name() == "C");
-#endif
-	// convert num to a string
-	std::stringstream alphaNum;
-	alphaNum << num;
-	std::string number = alphaNum.str();
-	if (useAscii)
-		return number;
-
-	// format the number using the Windows API
-	if (lcid == 0)
-		lcid = LOCALE_USER_DEFAULT;
-	int outSize = ::GetNumberFormat(lcid, 0, number.c_str(), nullptr, nullptr, 0);
-	char* outBuf = new (std::nothrow) char[outSize];
-	if (outBuf == nullptr)
-		return number;
-	::GetNumberFormat(lcid, 0, number.c_str(), nullptr, outBuf, outSize);
-	std::string formattedNum(outBuf);
-	delete[] outBuf;
-	// remove the decimal
-	int decSize = ::GetLocaleInfo(lcid, LOCALE_SDECIMAL, nullptr, 0);
-	char* decBuf = new (std::nothrow) char[decSize];
-	if (decBuf == nullptr)
-		return number;
-	::GetLocaleInfo(lcid, LOCALE_SDECIMAL, decBuf, decSize);
-	size_t i = formattedNum.rfind(decBuf);
-	delete[] decBuf;
-	if (i != std::string::npos)
-		formattedNum.erase(i);
-	if (!formattedNum.length())
-		formattedNum = "0";
-	return formattedNum;
-}
 
 /**
  * WINDOWS function to check for a HOME directory
@@ -1133,114 +1091,29 @@ void ASConsole::launchDefaultBrowser(const char* filePathIn /*nullptr*/) const
 
 #else  // Linux specific
 
-/**
- * LINUX function to get the current directory.
- * This is done if the fileName does not contain a path.
- * It is probably from an editor sending a single file.
- *
- * @param fileName_     The filename is used only for  the error message.
- * @return              The path of the current directory
- */
-std::string ASConsole::getCurrentDirectory(const std::string& fileName_) const
-{
-	const char* const currdir = getenv("PWD");
-	if (currdir == nullptr)
-		error("Cannot find file", fileName_.c_str());
-	return std::string(currdir);
-}
+// Linux implementation now uses the cross-platform version defined in the Windows section
 
 /**
- * LINUX function to resolve wildcards and recurse into sub directories.
- * The fileName vector is filled with the path and names of files to process.
+ * Helper function to check if a file is writable using C++17 filesystem.
  *
- * @param directory     The path of the directory to be processed.
- * @param wildcards     A vector of wildcards to be processed (e.g. *.cpp).
+ * @param entry         The filesystem entry to check
+ * @return              true if the file is writable
  */
-void ASConsole::getFileNames(const std::string& directory, const std::vector<std::string>& wildcards)
+bool ASConsole::isWriteable(const std::filesystem::path& path) const
 {
-	struct dirent* entry;           // entry from readdir()
-	struct stat statbuf;            // entry from stat()
-	std::vector<std::string> subDirectory;    // sub directories of this directory
-
-	// errno is defined in <errno.h> and is set for errors in opendir, readdir, or stat
-	errno = 0;
-
-	DIR* dp = opendir(directory.c_str());
-	if (dp == nullptr)
-		error(_("Cannot open directory"), directory.c_str());
-
-	// save the first fileName entry for this recursion
-	const unsigned firstEntry = fileName.size();
-
-	// save files and sub directories
-	while ((entry = readdir(dp)) != nullptr)
-	{
-		// get file status
-		std::string entryFilepath = directory + g_fileSeparator + entry->d_name;
-
-		if (stat(entryFilepath.c_str(), &statbuf) != 0)
-		{
-			if (errno == EOVERFLOW)         // file over 2 GB is OK
-			{
-				errno = 0;
-				continue;
-			}
-			perror("errno message");
-			//error("Error getting file status in directory", directory.c_str());
-			error("Error getting file status for", entryFilepath.c_str());
-		}
-		// skip hidden or read only
-		if (entry->d_name[0] == '.' || !(statbuf.st_mode & S_IWUSR))
-			continue;
-		// if a sub directory and recursive, save sub directory
-		if (S_ISDIR(statbuf.st_mode) && isRecursive)
-		{
-			if (isPathExcluded(entryFilepath))
-				printMsg(_("Exclude  %s\n"), entryFilepath.substr(mainDirectoryLength));
-			else
-				subDirectory.emplace_back(entryFilepath);
-			continue;
-		}
-
-		// if a file, save file name
-		if (S_ISREG(statbuf.st_mode))
-		{
-			// check exclude before wildcmp to avoid "unmatched exclude" error
-			bool isExcluded = isPathExcluded(entryFilepath);
-			// save file name if wildcard match
-			for (const std::string& wildcard : wildcards)
-			{
-				if (wildcmp(wildcard.c_str(), entry->d_name) != 0)
-				{
-					if (isExcluded)
-						printMsg(_("Exclude  %s\n"), entryFilepath.substr(mainDirectoryLength));
-					else
-						fileName.emplace_back(entryFilepath);
-					break;
-				}
-			}
-		}
-	}
-
-	if (closedir(dp) != 0)
-	{
-		perror("errno message");
-		error("Error reading directory", directory.c_str());
-	}
-
-	// sort the current entries for fileName
-	if (firstEntry < fileName.size())
-		sort(fileName.begin() + firstEntry, fileName.end());
-
-	// recurse into sub directories
-	// if not doing recursive, subDirectory is empty
-	if (subDirectory.size() > 1)
-		sort(subDirectory.begin(), subDirectory.end());
-	for (const auto & i : subDirectory)
-	{
-		getFileNames(i, wildcards);
-	}
+#ifdef _WIN32
+	// Windows implementation
+	DWORD attributes = GetFileAttributes(path.string().c_str());
+	return !(attributes & FILE_ATTRIBUTE_READONLY);
+#else
+	// Linux implementation
+	struct stat statbuf;
+	stat(path.c_str(), &statbuf);
+	return (statbuf.st_mode & S_IWUSR);
+#endif
 }
+
+// Linux implementation now uses the cross-platform version defined in the Windows section
 
 
 // LINUX function to get the documentation file path prefix
@@ -1256,40 +1129,16 @@ std::string ASConsole::getHtmlInstallPrefix() const
 	return astyleHtmlPrefix;
 }
 
-/**
- * LINUX function to get locale information and call getNumberFormat.
- * This formats positive integers only, no float.
- *
- * @param num		The number to be formatted.
- *                  size_t is for compatibility with the Windows function.
- * @return			The formatted number.
- */
-std::string ASConsole::getNumberFormat(int num, size_t /*lcid*/) const
-{
-#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__BORLANDC__) || defined(__GNUC__)
-	// Compilers that don't support C++ locales should still support this assert.
-	// The C locale should be set but not the C++.
-	// This function is not necessary if the C++ locale is set.
-	// The locale().name() return value is not portable to all compilers.
-	assert(std::locale().name() == "C");
-#endif
-
-	// get the locale info
-	struct lconv* lc;
-	lc = localeconv();
-
-	// format the number
-	return getNumberFormat(num, lc->grouping, lc->thousands_sep);
-}
+// Linux implementation now uses the cross-platform version defined earlier
 
 /**
- * LINUX function to format a number according to the current locale.
+ * Helper function to format a number according to the current locale.
  * This formats positive integers only, no float.
  *
- * @param num			The number to be formatted.
- * @param groupingArg   The grouping string from the locale.
- * @param  separator	The thousands group separator from the locale.
- * @return				The formatted number.
+ * @param num            The number to be formatted.
+ * @param groupingArg    The grouping string from the locale.
+ * @param separator      The thousands group separator from the locale.
+ * @return               The formatted number.
  */
 std::string ASConsole::getNumberFormat(int num, const char* groupingArg, const char* separator) const
 {
@@ -1391,9 +1240,7 @@ void ASConsole::launchDefaultBrowser(const char* filePathIn /*nullptr*/) const
 	const char* const envPaths = getenv("PATH");
 	if (envPaths == nullptr)
 		error("Cannot read PATH environment variable", "");
-	size_t envlen = strlen(envPaths);
-	char* paths = new char[envlen + 1];
-	strcpy(paths, envPaths);
+
 	// find xdg-open (usually in /usr/bin)
 	// Mac uses open instead
 #ifdef __APPLE__
@@ -1401,21 +1248,27 @@ void ASConsole::launchDefaultBrowser(const char* filePathIn /*nullptr*/) const
 #else
 	const char* fileOpen = "xdg-open";
 #endif
+
 	std::string searchPath;
-	char* searchDir = strtok(paths, ":");
-	while (searchDir != nullptr)
-	{
-		searchPath = searchDir;
-		if (!searchPath.empty()
-		        && searchPath[searchPath.length() - 1] != g_fileSeparator)
-			searchPath.append(std::string(1, g_fileSeparator));
-		searchPath.append(fileOpen);
-		if (stat(searchPath.c_str(), &statbuf) == 0 && (statbuf.st_mode & S_IFREG))
-			break;
-		searchDir = strtok(nullptr, ":");
+	std::string pathsStr(envPaths);
+	std::istringstream pathStream(pathsStr);
+	std::string token;
+
+	while (std::getline(pathStream, token, ':')) {
+		if (!token.empty()) {
+			searchPath = token;
+			if (searchPath.back() != g_fileSeparator)
+				searchPath.append(1, g_fileSeparator);
+			searchPath.append(fileOpen);
+
+			if (std::filesystem::exists(searchPath) &&
+				std::filesystem::is_regular_file(searchPath))
+				break;
+		}
+		searchPath.clear();
 	}
-	delete[] paths;
-	if (searchDir == nullptr)
+
+	if (searchPath.empty())
 		error(_("Command is not installed"), fileOpen);
 
 	// browser open will be bypassed in test programs

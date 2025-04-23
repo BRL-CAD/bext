@@ -14,6 +14,7 @@
 
 #include <ctime>
 #include <sstream>
+#include <filesystem>
 
 #if defined(__BORLANDC__) && __BORLANDC__ < 0x0650
 	// Embarcadero needs this for the following utime.h
@@ -335,6 +336,7 @@ private:	// functions
 	std::string getHtmlInstallPrefix() const;
 	std::string getParam(const std::string& arg, const char* op);
 	bool isHomeOrInvalidAbsPath(const std::string& absPath) const;
+	bool isWriteable(const std::filesystem::path& path) const;
 	void initializeOutputEOL(LineEndFormat lineEndFormat);
 	bool isOption(const std::string& arg, const char* op);
 	bool isOption(const std::string& arg, const char* a, const char* b);
