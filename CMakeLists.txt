@@ -102,6 +102,11 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND NOT DEFINED CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif (NOT CMAKE_CONFIGURATION_TYPES AND NOT DEFINED CMAKE_BUILD_TYPE)
 
+# If the user hasn't specified it otherwise, build the static libraries too
+if (NOT DEFINED BUILD_STATIC_LIBS)
+  set(BUILD_STATIC_LIBS ON)
+endif (NOT DEFINED BUILD_STATIC_LIBS)
+
 # Define some variables
 if(NOT DEFINED BIN_DIR)
   set(BIN_DIR bin)
