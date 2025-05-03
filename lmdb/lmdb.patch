@@ -1,7 +1,7 @@
 diff -Naur lmdb/CMakeLists.txt LMDB_BLD/CMakeLists.txt
 --- lmdb/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
 +++ LMDB_BLD/CMakeLists.txt	2024-07-12 10:57:50.320556893 -0400
-@@ -0,0 +1,118 @@
+@@ -0,0 +1,120 @@
 +#                     C M A K E L I S T S . T X T
 +# BRL-CAD
 +#
@@ -47,6 +47,8 @@ diff -Naur lmdb/CMakeLists.txt LMDB_BLD/CMakeLists.txt
 +
 +# Set CMake project name
 +project(LMDB)
++
++set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 +
 +include_directories(
 +  ${CMAKE_CURRENT_SOURCE_DIR}
