@@ -1,9 +1,8 @@
 # LIEF is a cross platform library which can parse, modify and abstract ELF, PE
 # and MachO binary formats.  We use it to define a tool for rpath manipulation.
 
-# We only need LIEF on some platforms - don't worry about trying to build it
-# everywhere
-if (NOT MSVC AND NOT APPLE)
+# Untested on Windows
+if (NOT MSVC)
 
   bext_enable(LIEF)
 
@@ -16,7 +15,8 @@ if (NOT MSVC AND NOT APPLE)
     ExternalProject_Add(LIEF_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/LIEF"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief.patch
+      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief.patch &&
+      ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/filestream.patch
       CMAKE_ARGS
       ${BUILD_TYPE_SPECIFIER}
       -DBIN_DIR=${BIN_DIR}
@@ -55,7 +55,7 @@ if (NOT MSVC AND NOT APPLE)
     TargetInstallDeps(LIEF LIEF_DEPENDS)
 
   endif (ENABLE_LIEF)
-endif (NOT MSVC AND NOT APPLE)
+endif (NOT MSVC)
 
 # Local Variables:
 # tab-width: 8
