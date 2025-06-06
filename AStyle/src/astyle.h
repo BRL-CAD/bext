@@ -602,7 +602,7 @@ private:  // variables
 // Class ASEnhancer
 //-----------------------------------------------------------------------------
 
-// TODO rewrite methods to return altered stings
+// TODO rewrite methods to return altered strings
 
 class ASEnhancer : protected ASBase
 {

@@ -3892,6 +3892,7 @@ bool ASFormatter::isPointerOrReferenceVariable(std::string_view word) const
 	        || word == "long"
 	        || word == "double"
 	        || word == "float"
+	        || word == "sizeof"
 	        || (word.length() >= 6     // check end of word for _t
 	            && word.compare(word.length() - 2, 2, "_t") == 0)
 	   )
