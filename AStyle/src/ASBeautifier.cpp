@@ -592,6 +592,10 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 	        && line.find("*INDENT-OFF*", 0) != std::string::npos)
 		isIndentModeOff = true;
 
+	// Handle git conflict markers - treat them as single line comments with no formatting
+	if (isGitConflictMarker(line))
+		return originalLine;
+
 	if (line.empty())
 	{
 		if (backslashEndsPrevLine)
@@ -2961,6 +2965,28 @@ bool ASBeautifier::lineStartsWithNumericType(std::string_view line) const
 		std::string_view word = line.substr(firstCharOfLine, endOfWord - firstCharOfLine);
 		return isNumericVariable(word);
 	}
+	return false;
+}
+
+bool ASBeautifier::isGitConflictMarker(std::string_view line) const
+{
+	size_t firstCharOfLine = line.find_first_not_of(" \t");
+	if (firstCharOfLine == std::string::npos)
+		return false;
+
+	std::string_view trimmedLine = line.substr(firstCharOfLine);
+
+	// Check for git conflict markers
+	if (trimmedLine.length() >= 7)
+	{
+		if (trimmedLine.substr(0, 7) == ASResource::AS_OPEN_CONFLICT ||
+		    trimmedLine.substr(0, 7) == ASResource::AS_MIDDLE_CONFLICT ||
+			trimmedLine.substr(0, 7) == ASResource::AS_CLOSE_CONFLICT)
+		{
+			return true;
+		}
+	}
+
 	return false;
 }
 

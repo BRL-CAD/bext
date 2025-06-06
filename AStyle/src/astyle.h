@@ -249,6 +249,7 @@ public:
 	static const std::string AS_OPEN_BRACE, AS_CLOSE_BRACE;
 	static const std::string AS_OPEN_LINE_COMMENT, AS_OPEN_COMMENT, AS_CLOSE_COMMENT;
 	static const std::string AS_GSC_OPEN_COMMENT, AS_GSC_CLOSE_COMMENT;
+	static const std::string AS_OPEN_CONFLICT, AS_MIDDLE_CONFLICT, AS_CLOSE_CONFLICT;
 	static const std::string AS_BAR_DEFINE, AS_BAR_INCLUDE, AS_BAR_IF, AS_BAR_EL, AS_BAR_ENDIF;
 	static const std::string AS_AUTO, AS_RETURN;
 	static const std::string AS_CIN, AS_COUT, AS_CERR, AS_MAPPING;
@@ -388,6 +389,7 @@ protected:
 	std::string trim(std::string_view str) const;
 	std::string rtrim(std::string_view str) const;
 	bool isNumericVariable(std::string_view word) const;
+	bool isGitConflictMarker(std::string_view line) const;
 	bool lineStartsWithNumericType(std::string_view line) const;
 
 
@@ -876,8 +878,6 @@ private:  // functions
 	std::string peekNextText(std::string_view firstLine,
 	                         bool endOnEmptyLine = false,
 	                         const std::shared_ptr<ASPeekStream>& streamArg = nullptr) const;
-
-
 
 	bool handleImmediatelyPostHeaderSection();
 	bool handlePassedSemicolonSection();

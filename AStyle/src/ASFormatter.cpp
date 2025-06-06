@@ -2098,7 +2098,8 @@ std::string ASFormatter::nextLine()
 		bool isPotentialOperator = isCharPotentialOperator(currentChar);
 		newHeader = nullptr;
 
-		if (isPotentialOperator)
+		// Skip operator detection for git conflict markers
+		if (isPotentialOperator && !isGitConflictMarker(currentLine))
 		{
 			newHeader = findOperator(operators);
 
@@ -8407,6 +8408,7 @@ bool ASFormatter::isArrayOperator() const
 		return true;
 	return false;
 }
+
 
 // Reset the flags that indicate various statement information.
 void ASFormatter::resetEndOfStatement()
