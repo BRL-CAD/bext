@@ -1,0 +1,13 @@
+--Building tcl debug with symbols--
+In order to build with symbols which allows tcl to be stepped through with a 
+debugger, we need to update the nmake lines in the build and install steps to
+include "DEBUG=1 symbols=all"
+
+i.e. in tcl_build.cmake.in & tcl_install.cmake.in
+"nmake -f makefile.vc install INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n" ->
+"nmake -f makefile.vc DEBUG=1 symbols=all install INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
+
+Note that this effect the build tree paths, which will likely break dependent
+builds (like tk). A quick, hacky way to get around this is to build only 
+TCL_BLD with the symbols on first, and then remove the edits to build 
+the rest of bext 'normally'.
