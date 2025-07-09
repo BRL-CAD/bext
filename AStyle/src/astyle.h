@@ -412,6 +412,7 @@ protected:
 	bool isInIndentableStruct;
 	bool isInIndentablePreproc;
 	bool lambdaIndicator;
+	int lambdaDepth;
 	bool preserveWhitespace;
 
 
@@ -486,6 +487,7 @@ private:  // variables
 	std::vector<size_t>* continuationIndentStackSizeStack;
 	std::vector<int>* parenIndentStack;
 	std::vector<std::pair<int, int> >* preprocIndentStack;
+	std::vector<int>* lambdaDepthStack;
 	std::vector<std::pair<size_t, size_t> > squeezeWSStack;
 
 	ASSourceIterator* sourceIterator;

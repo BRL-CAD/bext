@@ -49,6 +49,7 @@ ASBeautifier::ASBeautifier()
 	continuationIndentStackSizeStack = nullptr;
 	parenIndentStack = nullptr;
 	preprocIndentStack = nullptr;
+	lambdaDepthStack = nullptr;
 	sourceIterator = nullptr;
 	isModeManuallySet = false;
 	shouldForceTabIndentation = false;
@@ -136,6 +137,9 @@ ASBeautifier::ASBeautifier(const ASBeautifier& other) : ASBase(other)
 
 	preprocIndentStack = new std::vector<std::pair<int, int> >;
 	*preprocIndentStack = *other.preprocIndentStack;
+
+	lambdaDepthStack = new std::vector<int>;
+	*lambdaDepthStack = *other.lambdaDepthStack;
 
 	// Copy the pointers to std::vectors.
 	// This is ok because the original ASBeautifier object
@@ -252,6 +256,7 @@ ASBeautifier::ASBeautifier(const ASBeautifier& other) : ASBase(other)
 	shouldIndentPreprocDefine = other.shouldIndentPreprocDefine;
 	shouldIndentPreprocConditional = other.shouldIndentPreprocConditional;
 	lambdaIndicator = other.lambdaIndicator;
+	lambdaDepth = other.lambdaDepth;
 
 	indentCount = other.indentCount;
 	spaceIndentCount = other.spaceIndentCount;
@@ -346,6 +351,7 @@ void ASBeautifier::init(ASSourceIterator* iter)
 	continuationIndentStackSizeStack->emplace_back(0);
 	initContainer(parenIndentStack, new std::vector<int>);
 	initContainer(preprocIndentStack, new std::vector<std::pair<int, int> >);
+	initContainer(lambdaDepthStack, new std::vector<int>);
 
 	previousLastLineHeader = nullptr;
 	currentHeader = nullptr;
@@ -383,6 +389,7 @@ void ASBeautifier::init(ASSourceIterator* iter)
 	isInConditional = false;
 	isInTrailingReturnType = false;
 	lambdaIndicator = false;
+	lambdaDepth = 0;
 
 	indentCount = 0;
 	spaceIndentCount = 0;
@@ -3093,7 +3100,25 @@ void ASBeautifier::handleEndOfStatement(size_t i, bool *closingBraceReached, cha
 	quoteContinuationIndent = 0;
 	if (*ch == '}')
 	{
-		lambdaIndicator = false;
+		// Improved lambda end handling with depth tracking
+		if (lambdaDepth > 0 && !lambdaDepthStack->empty())
+		{
+			// Check if this brace ends a lambda body
+			if (braceBlockStateStack->size() > 1 && braceBlockStateStack->back())
+			{
+				// This was a lambda body, pop the lambda depth
+				lambdaDepthStack->pop_back();
+				lambdaDepth--;
+				if (lambdaDepth == 0)
+				{
+					lambdaIndicator = false;
+				}
+			}
+		}
+		else
+		{
+			lambdaIndicator = false;
+		}
 
 		// first check if this '}' closes a previous block, or a static array...
 		if (braceBlockStateStack->size() > 1)
@@ -3265,15 +3290,35 @@ void ASBeautifier::handleParens(std::string_view line, size_t i, bool tabIncreme
 				isInObjCMethodCallFirst = true;
 			}
 
-			// #121
-			if (   !isLegalNameChar(prevNonSpaceCh)
-			        && prevNonSpaceCh != ']'
-			        && prevNonSpaceCh != ')'
-			        && prevNonSpaceCh != '*'  // GL #11
-			        //&& line.find(ASResource::AS_AUTO, 0 ) == std::string::npos
-			   )
+			// #121 - Improved lambda detection
+			if (isCStyle())
 			{
-				lambdaIndicator = true;
+				// Check for lambda capture list patterns
+				bool isLambdaCapture = false;
+				
+				// More robust lambda detection conditions
+				if (prevNonSpaceCh == '=' || prevNonSpaceCh == '(' || prevNonSpaceCh == ','
+					|| prevNonSpaceCh == '{' || prevNonSpaceCh == ';' || prevNonSpaceCh == ':')
+				{
+					isLambdaCapture = true;
+				}
+				// Check for lambda after assignment operators
+				else if (!isLegalNameChar(prevNonSpaceCh) && prevNonSpaceCh != ']' && prevNonSpaceCh != ')')
+				{
+					isLambdaCapture = true;
+				}
+				// Check for lambda in return statements
+				else if (prevNonSpaceCh == 'n' && i >= 6 && line.substr(i-6, 6) == "return")
+				{
+					isLambdaCapture = true;
+				}
+				
+				if (isLambdaCapture)
+				{
+					lambdaIndicator = true;
+					lambdaDepth++;
+					lambdaDepthStack->push_back(lambdaDepth);
+				}
 			}
 		}
 
@@ -3380,10 +3425,25 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 			}
 	}
 
-	// #121 fix indent of lambda bodies, also GH #7
-	if (isCStyle() && lambdaIndicator && attemptLambdaIndentation )
+	// #121 fix indent of lambda bodies, also GH #7 - improved approach
+	// Lambda bodies should be treated as normal block openers for their internal content
+	// but need special positioning logic
+	if (isCStyle() && lambdaIndicator && attemptLambdaIndentation && lambdaDepth > 0)
 	{
-		isBlockOpener = false;
+		// Check if this is the start of a lambda body
+		if (prevNonSpaceCh == ')' || prevNonSpaceCh == ']' || 
+		    (prevNonSpaceCh == 'e' && i >= 7 && line.substr(i-7, 7) == "mutable") ||
+		    (prevNonSpaceCh == 't' && i >= 4 && line.substr(i-4, 4) == "auto"))
+		{
+			// Lambda body should be a block opener but also use continuation indent for positioning
+			// This allows proper indentation of internal blocks while maintaining lambda-specific positioning
+			if (isBlockOpener)
+			{
+				// Register continuation indent for lambda body positioning
+				continuationIndentStackSizeStack->emplace_back(continuationIndentStack->size());
+				registerContinuationIndent(line, i, spaceIndentCount, tabIncrementIn, 0, true);
+			}
+		}
 	}
 
 	// do not use emplace_back on vector<bool> until supported by macOS
