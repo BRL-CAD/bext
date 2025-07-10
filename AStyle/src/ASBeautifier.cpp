@@ -3046,13 +3046,15 @@ bool ASBeautifier::handleColonSection(std::string_view line, size_t* i, bool tab
 	{
 		// found a bit field - do nothing special
 	}
-	else if (isCStyle() && (isInClass || isInStruct) && prevNonSpaceCh != ')')
+	// SF585 + GL91
+	else if (isCStyle() && (isInClass || isInStruct) && prevNonSpaceCh != ')' && !isInCase)
 	{
 		// found a 'private:' or 'public:' inside a class definition
 		--indentCount;
 		if (modifierIndent)
 			spaceIndentCount += (indentLength / 2);
 	}
+	// SF585
 	else if (isCStyle() && !isInClass && !isInStruct
 	         && headerStack->size() >= 2
 	         && (*headerStack)[headerStack->size() - 2] == &ASResource::AS_CLASS
