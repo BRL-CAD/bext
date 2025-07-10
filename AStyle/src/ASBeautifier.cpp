@@ -309,6 +309,7 @@ ASBeautifier::~ASBeautifier()
 	deleteContainer(continuationIndentStackSizeStack);
 	deleteContainer(parenIndentStack);
 	deleteContainer(preprocIndentStack);
+	deleteContainer(lambdaDepthStack);
 }
 
 /**
@@ -3295,7 +3296,7 @@ void ASBeautifier::handleParens(std::string_view line, size_t i, bool tabIncreme
 			{
 				// Check for lambda capture list patterns
 				bool isLambdaCapture = false;
-				
+
 				// More robust lambda detection conditions
 				if (prevNonSpaceCh == '=' || prevNonSpaceCh == '(' || prevNonSpaceCh == ','
 					|| prevNonSpaceCh == '{' || prevNonSpaceCh == ';' || prevNonSpaceCh == ':')
@@ -3312,7 +3313,7 @@ void ASBeautifier::handleParens(std::string_view line, size_t i, bool tabIncreme
 				{
 					isLambdaCapture = true;
 				}
-				
+
 				if (isLambdaCapture)
 				{
 					lambdaIndicator = true;
@@ -3431,7 +3432,7 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 	if (isCStyle() && lambdaIndicator && attemptLambdaIndentation && lambdaDepth > 0)
 	{
 		// Check if this is the start of a lambda body
-		if (prevNonSpaceCh == ')' || prevNonSpaceCh == ']' || 
+		if (prevNonSpaceCh == ')' || prevNonSpaceCh == ']' ||
 		    (prevNonSpaceCh == 'e' && i >= 7 && line.substr(i-7, 7) == "mutable") ||
 		    (prevNonSpaceCh == 't' && i >= 4 && line.substr(i-4, 4) == "auto"))
 		{
