@@ -990,6 +990,72 @@ std::string ASConsole::getNumberFormat(int num, size_t /*lcid*/) const
 	return getNumberFormat(num, lc->grouping, lc->thousands_sep);
 }
 
+/**
+ * Helper function to check if a file is writable using C++17 filesystem.
+ *
+ * @param entry         The filesystem entry to check
+ * @return              true if the file is writable
+ */
+bool ASConsole::isWriteable(const std::filesystem::path& path) const
+{
+#ifdef _WIN32
+	// Windows implementation
+	DWORD attributes = GetFileAttributes(path.string().c_str());
+	return !(attributes & FILE_ATTRIBUTE_READONLY);
+#else
+	// Linux implementation
+	struct stat statbuf;
+	stat(path.c_str(), &statbuf);
+	return (statbuf.st_mode & S_IWUSR);
+#endif
+}
+
+/**
+ * Helper function to format a number according to the current locale.
+ * This formats positive integers only, no float.
+ *
+ * @param num            The number to be formatted.
+ * @param groupingArg    The grouping string from the locale.
+ * @param separator      The thousands group separator from the locale.
+ * @return               The formatted number.
+ */
+std::string ASConsole::getNumberFormat(int num, const char* groupingArg, const char* separator) const
+{
+	// convert num to a string
+	std::stringstream alphaNum;
+	alphaNum << num;
+	std::string number = alphaNum.str();
+	// format the number from right to left
+	std::string formattedNum;
+	size_t ig = 0;	// grouping index
+	int grouping = groupingArg[ig];
+	int i = number.length();
+	// check for no grouping
+	if (grouping == 0)
+		grouping = number.length();
+	while (i > 0)
+	{
+		// extract a group of numbers
+		std::string group;
+		if (i < grouping)
+			group = number;
+		else
+			group = number.substr(i - grouping);
+		// update formatted number
+		formattedNum.insert(0, group);
+		i -= grouping;
+		if (i < 0)
+			i = 0;
+		if (i > 0)
+			formattedNum.insert(0, separator);
+		number.erase(i);
+		// update grouping
+		if (groupingArg[ig] != '\0'
+			&& groupingArg[ig + 1] != '\0')
+			grouping = groupingArg[++ig];
+	}
+	return formattedNum;
+}
 
 #ifdef _WIN32  // Windows specific
 
@@ -1093,25 +1159,7 @@ void ASConsole::launchDefaultBrowser(const char* filePathIn /*nullptr*/) const
 
 // Linux implementation now uses the cross-platform version defined in the Windows section
 
-/**
- * Helper function to check if a file is writable using C++17 filesystem.
- *
- * @param entry         The filesystem entry to check
- * @return              true if the file is writable
- */
-bool ASConsole::isWriteable(const std::filesystem::path& path) const
-{
-#ifdef _WIN32
-	// Windows implementation
-	DWORD attributes = GetFileAttributes(path.string().c_str());
-	return !(attributes & FILE_ATTRIBUTE_READONLY);
-#else
-	// Linux implementation
-	struct stat statbuf;
-	stat(path.c_str(), &statbuf);
-	return (statbuf.st_mode & S_IWUSR);
-#endif
-}
+
 
 // Linux implementation now uses the cross-platform version defined in the Windows section
 
@@ -1130,53 +1178,6 @@ std::string ASConsole::getHtmlInstallPrefix() const
 }
 
 // Linux implementation now uses the cross-platform version defined earlier
-
-/**
- * Helper function to format a number according to the current locale.
- * This formats positive integers only, no float.
- *
- * @param num            The number to be formatted.
- * @param groupingArg    The grouping string from the locale.
- * @param separator      The thousands group separator from the locale.
- * @return               The formatted number.
- */
-std::string ASConsole::getNumberFormat(int num, const char* groupingArg, const char* separator) const
-{
-	// convert num to a string
-	std::stringstream alphaNum;
-	alphaNum << num;
-	std::string number = alphaNum.str();
-	// format the number from right to left
-	std::string formattedNum;
-	size_t ig = 0;	// grouping index
-	int grouping = groupingArg[ig];
-	int i = number.length();
-	// check for no grouping
-	if (grouping == 0)
-		grouping = number.length();
-	while (i > 0)
-	{
-		// extract a group of numbers
-		std::string group;
-		if (i < grouping)
-			group = number;
-		else
-			group = number.substr(i - grouping);
-		// update formatted number
-		formattedNum.insert(0, group);
-		i -= grouping;
-		if (i < 0)
-			i = 0;
-		if (i > 0)
-			formattedNum.insert(0, separator);
-		number.erase(i);
-		// update grouping
-		if (groupingArg[ig] != '\0'
-		        && groupingArg[ig + 1] != '\0')
-			grouping = groupingArg[++ig];
-	}
-	return formattedNum;
-}
 
 /**
  * LINUX function to check for a HOME directory
