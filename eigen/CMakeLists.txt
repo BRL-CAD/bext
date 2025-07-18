@@ -1,7 +1,7 @@
 # Decide if we're using Eigen
 cad_enable(EIGEN "libbg;libbn;librt")
 
-unset(ENGEN_BUNDLED CACHE)
+unset(EIGEN_BUNDLED CACHE)
 
 if (NOT ENABLE_EIGEN AND NOT DISABLE_EIGEN)
 

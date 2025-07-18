@@ -1,7 +1,7 @@
 # Decide if we're using tinygltf
 cad_enable(TINYGLTF "librt;libgcv")
 
-unset(ENGEN_BUNDLED CACHE)
+unset(TINYGLTF_BUNDLED CACHE)
 
 if (NOT ENABLE_TINYGLTF AND NOT DISABLE_TINYGLTF)
 
