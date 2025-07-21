@@ -2054,6 +2054,11 @@ bool ASBeautifier::isInPreprocessorUnterminatedComment(std::string_view line)
 		size_t startPos = line.find(ASResource::AS_OPEN_COMMENT);
 		if (startPos == std::string::npos)
 			return false;
+		// handle edge case #SF600
+		// #define Q 16 //*32 bit unsigned long
+		size_t startPosSingle = line.find(ASResource::AS_OPEN_LINE_COMMENT);
+		if (startPos == startPosSingle+1)
+			return false;
 	}
 	size_t endNum = line.find(ASResource::AS_CLOSE_COMMENT);
 	if (endNum != std::string::npos)
