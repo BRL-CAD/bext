@@ -76,6 +76,18 @@ mark_as_advanced(CMAKE_CONFIGURATION_TYPES)
 # Frameworks are deprecated in CMake, so avoid finding them
 set(CMAKE_FIND_FRAMEWORK NEVER)
 
+#------------------------------------------------------------------------------
+# Check if our working directory is in a symlinked path - that can cause some
+# serious problems for things like install and rpath updating when it comes
+# time to integrate into a build, so be loud.
+file(REAL_PATH "${PROJECT_SOURCE_DIR}" PROJECT_REAL_SOURCE_DIR)
+if (NOT "${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_REAL_SOURCE_DIR}")
+  message(WARNING "PROJECT_SOURCE_DIR is \"${PROJECT_SOURCE_DIR}\" but REAL_PATH is \"${PROJECT_REAL_SOURCE_DIR}\".  Working from within a symlinked alias path causes problems in subsequent file processing and is not recommended.")
+endif()
+find_program(SLEEP_EXEC sleep)
+if(SLEEP_EXEC)
+  execute_process(COMMAND ${SLEEP_EXEC} 15)
+endif(SLEEP_EXEC)
 
 #------------------------------------------------------------------------------
 # Once we do a run, we want our ENABLE_ALL setting to be consistent in
