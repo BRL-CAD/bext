@@ -1,0 +1,23 @@
+diff -Naur ASSETIMPORT_BLD/cmake-modules/assimp-plain-config.cmake.in ASSETIMPORT_BLD2/cmake-modules/assimp-plain-config.cmake.in
+--- ASSETIMPORT_BLD/cmake-modules/assimp-plain-config.cmake.in	2025-07-22 09:55:52.852083969 -0400
++++ ASSETIMPORT_BLD2/cmake-modules/assimp-plain-config.cmake.in	2025-07-22 09:52:08.623062769 -0400
+@@ -1,5 +1,7 @@
+ @PACKAGE_INIT@
+ 
++find_package(ZLIB REQUIRED)
++
+ include("${CMAKE_CURRENT_LIST_DIR}/@TARGETS_EXPORT_NAME@.cmake")
+ 
+ set(ASSIMP_ROOT_DIR ${PACKAGE_PREFIX_DIR})
+diff -Naur ASSETIMPORT_BLD/code/CMakeLists.txt ASSETIMPORT_BLD2/code/CMakeLists.txt
+--- ASSETIMPORT_BLD/code/CMakeLists.txt	2025-07-22 09:55:54.680075202 -0400
++++ ASSETIMPORT_BLD2/code/CMakeLists.txt	2025-07-22 09:52:36.490963845 -0400
+@@ -1440,7 +1440,7 @@
+     target_link_libraries(assimp PRIVATE ${draco_LIBRARIES})
+   endif()
+ ELSE()
+-  TARGET_LINK_LIBRARIES(assimp ${ZLIB_LIBRARIES} ${PUGIXML_LIBRARIES} ${OPENDDL_PARSER_LIBRARIES})
++  TARGET_LINK_LIBRARIES(assimp ZLIB::ZLIB ${PUGIXML_LIBRARIES} ${OPENDDL_PARSER_LIBRARIES})
+   if (ASSIMP_BUILD_DRACO)
+     target_link_libraries(assimp ${draco_LIBRARIES})
+   endif()
