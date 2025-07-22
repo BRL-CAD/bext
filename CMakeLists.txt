@@ -80,14 +80,23 @@ set(CMAKE_FIND_FRAMEWORK NEVER)
 # Check if our working directory is in a symlinked path - that can cause some
 # serious problems for things like install and rpath updating when it comes
 # time to integrate into a build, so be loud.
+set(PROBLEM_PATH 0)
 file(REAL_PATH "${PROJECT_SOURCE_DIR}" PROJECT_REAL_SOURCE_DIR)
 if (NOT "${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_REAL_SOURCE_DIR}")
-  message(WARNING "PROJECT_SOURCE_DIR is \"${PROJECT_SOURCE_DIR}\" but REAL_PATH is \"${PROJECT_REAL_SOURCE_DIR}\".  Working from within a symlinked alias path causes problems in subsequent file processing and is not recommended.")
+  message(WARNING "PROJECT_SOURCE_DIR is \"${PROJECT_SOURCE_DIR}\" but REAL_PATH is \"${PROJECT_REAL_SOURCE_DIR}\".  Working with a symlinked alias path causes problems in subsequent file processing and is NOT recommended.")
+  set(PROBLEM_PATH 1)
 endif()
-find_program(SLEEP_EXEC sleep)
-if(SLEEP_EXEC)
-  execute_process(COMMAND ${SLEEP_EXEC} 15)
-endif(SLEEP_EXEC)
+file(REAL_PATH "${PROJECT_BINARY_DIR}" PROJECT_REAL_BINARY_DIR)
+if (NOT "${PROJECT_BINARY_DIR}" STREQUAL "${PROJECT_REAL_BINARY_DIR}")
+  message(WARNING "PROJECT_BINARY_DIR is \"${PROJECT_BINARY_DIR}\" but REAL_PATH is \"${PROJECT_REAL_BINARY_DIR}\".  Working with a symlinked alias path causes problems in subsequent file processing and is NOT recommended.")
+  set(PROBLEM_PATH 1)
+endif()
+if (PROBLEM_PATH)
+  find_program(SLEEP_EXEC sleep)
+  if(SLEEP_EXEC)
+    execute_process(COMMAND ${SLEEP_EXEC} 15)
+  endif(SLEEP_EXEC)
+endif(PROBLEM_PATH)
 
 #------------------------------------------------------------------------------
 # Once we do a run, we want our ENABLE_ALL setting to be consistent in
