@@ -1,0 +1,11 @@
+--- assimp/include/assimp/ParsingUtils.h	2025-07-22 16:48:45.135335161 -0400
++++ ASSETIMPORT_BLD/include/assimp/ParsingUtils.h	2025-07-22 16:28:33.234268881 -0400
+@@ -167,7 +167,7 @@
+     }
+     *_out = (char_t)'\0';
+ 
+-    while (IsLineEnd(*buffer) && '\0' != *buffer) {
++    while (IsLineEnd(*buffer) && '\0' != *buffer && buffer != end) {
+         ++buffer;
+     }
+ 

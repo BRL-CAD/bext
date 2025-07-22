@@ -1,0 +1,11 @@
+--- assimp/code/AssetLib/MDL/MDLFileData.h	2025-07-22 16:48:44.380338144 -0400
++++ ASSETIMPORT_BLD/code/AssetLib/MDL/MDLFileData.h	2025-07-22 16:28:33.051269679 -0400
+@@ -876,7 +876,7 @@
+         : apcOutBones(),
+         iNum()
+     {
+-        abNeedMaterials.reserve(10);
++        //abNeedMaterials.reserve(10);
+     }
+ 
+     //! Destruction: properly delete all allocated resources
