@@ -2983,6 +2983,9 @@ bool ASBeautifier::lineStartsWithNumericType(std::string_view line) const
 
 bool ASBeautifier::isGitConflictMarker(std::string_view line) const
 {
+	if (isInComment || isInPreprocessorComment)
+		return false;
+
 	size_t firstCharOfLine = line.find_first_not_of(" \t");
 	if (firstCharOfLine == std::string::npos)
 		return false;
