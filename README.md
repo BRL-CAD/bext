@@ -11,7 +11,8 @@ git clone https://github.com/BRL-CAD/bext
 (This should be fast - by default most of the downloading happens during the configure process.)
 * Make a build directory
 ```sh
-mkdir bext_build && cd bext_build
+mkdir bext_build
+cd bext_build
 ```
 * Configure with CMake.  Individual components can be enabled or disabled, but the ENABLE_ALL flag is used to automatically turn on all the projects.  There are also USE_* variables that can enable or disable various groupings of components based on which specific application stacks the user wishes to support.
 ```sh
@@ -58,7 +59,8 @@ git clone https://github.com/BRL-CAD/brlcad
 ```
 * Make a build directory
 ```sh
-mkdir brlcad_build && cd brlcad_build
+mkdir brlcad_build
+cd brlcad_build
 ```
 * Configure with CMake, specifying the path holding the bext output directories via the BRLCAD_EXT_DIR variable. Unless you have overridden the CMAKE_INSTALL_PREFIX of the bext build, BRLCAD_EXT_DIR should be the same as your bext build directory.  (A valid BRLCAD_EXT_DIR target directory will contain install and noinstall folders, so look for those if you are unsure which directory to specify.)  If you also wish to test with Qt, you must currently enable that support in BRL-CAD as well.  (Note that the BRL-CAD configure process is responsible for staging the BRLCAD_EXT_DIR contents into the build directory, so it can take some time to complete...)
 ```sh
