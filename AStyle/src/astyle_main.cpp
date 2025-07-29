@@ -1737,7 +1737,7 @@ void ASConsole::printHelp() const
 	std::cout << "    Indent line comments that start in column one.\n";
 	std::cout << '\n';
 	std::cout << "    --indent-lambda\n";
-	std::cout << "    Indent C++ lambda functions (experimental, broken for complex fct bodies)\n";
+	std::cout << "    Indent C++ lambda functions (experimental)\n";
 	std::cout << '\n';
 	std::cout << "    --min-conditional-indent=#  OR  -m#\n";
 	std::cout << "    Indent a minimal # spaces in a continuous conditional\n";

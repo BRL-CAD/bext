@@ -413,6 +413,7 @@ protected:
 	bool isInIndentablePreproc;
 	bool lambdaIndicator;
 	int lambdaDepth;
+	int lastLambdaDepth;
 	bool preserveWhitespace;
 
 
@@ -448,7 +449,7 @@ private:  // functions
 	bool statementEndsWithComma(std::string_view line, int index) const;
 
 	std::string getIndentedSpaceEquivalent(std::string_view line_) const;
-	std::string preLineWS(int lineIndentCount, int lineSpaceIndentCount) const;
+	std::string preLineWS(int lineIndentCount, int lineSpaceIndentCount);
 	template<typename T> void deleteContainer(T& container);
 	template<typename T> void initContainer(T& container, T value);
 	std::vector<std::vector<const std::string*>*>* copyTempStacks(const ASBeautifier& other) const;
@@ -461,7 +462,6 @@ private:  // functions
 	void handleClosingParen(std::string_view line, size_t i, bool tabIncrementIn);
 	void handlePotentialHeaderSection(std::string_view line, size_t* i, bool tabIncrementIn, bool *isInOperator);
 	void handlePotentialOperatorSection(std::string_view line, size_t* i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator);
-
 
 private:  // variables
 	int beautifierFileType;
@@ -594,6 +594,8 @@ private:  // variables
 	int  prevFinalLineIndentCount;
 	int  defineIndentCount;
 	int  preprocBlockIndent;
+	int lambdaStartIndent;
+	int lambdaEndIndent;
 	size_t quoteContinuationIndent;
 	char quoteChar;
 	char prevNonSpaceCh;
