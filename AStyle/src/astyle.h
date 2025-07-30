@@ -28,7 +28,7 @@
 	#include <cstring>              // need both string and cstring for GCC
 #endif
 
-#define ASTYLE_VERSION "3.6.11"
+#define ASTYLE_VERSION "3.6.12"
 
 namespace astyle {
 
