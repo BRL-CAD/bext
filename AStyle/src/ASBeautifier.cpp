@@ -2855,10 +2855,11 @@ bool ASBeautifier::handleHeaderSection(std::string_view line, size_t* i, bool cl
 		// if a new block is opened, push a new stack into tempStacks to hold the
 		// future list of headers in the new block.
 
+		lastLambdaDepth = 0;
+
 		// take care of the special case: 'else if (...)'
 		if (newHeader == &ASResource::AS_IF && lastLineHeader == &ASResource::AS_ELSE)
 		{
-			lastLambdaDepth = 0;
 			if (!headerStack->empty())
 				headerStack->pop_back();
 		}
@@ -2951,10 +2952,6 @@ bool ASBeautifier::handleHeaderSection(std::string_view line, size_t* i, bool cl
 					--indentCount;
 					// logIndent(32);
 				}
-
-				//TODO https://sourceforge.net/p/astyle/bugs/589/
-				//if (isInStruct)
-				//	++indentCount;
 			}
 		}
 		else if (newHeader == &ASResource::AS_DEFAULT)
