@@ -17,6 +17,8 @@ set(ENABLE_QT "${ENABLE_QT}" CACHE BOOL "Enable Qt6 build")
 
 if (ENABLE_QT)
 
+  option(QT_ALLOW_HEADLESS "Allow building Qt without a window-capable platform plugin" OFF)
+
   git_submodule_init(qt qtbase/configure)
 
   RegisterDeps(Qt6)

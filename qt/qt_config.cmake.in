@@ -19,12 +19,6 @@ endif (NOT WIN32)
 # https://doc.qt.io/qt-6/configure-options.html
 set(CONFIG_EXTRA_OPTS ${CONFIG_EXTRA_OPTS} -qt-zlib -qt-libpng)
 
-# If we can't compile Qt with XCB on X11 platforms, we want a fatal error -
-# a non-GUI Qt build isn't helpful
-if (NOT APPLE AND NOT WIN32)
-  set(CONFIG_EXTRA_OPTS ${CONFIG_EXTRA_OPTS} -xcb)
-endif (NOT APPLE AND NOT WIN32)
-
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   set(QT_CONFIG_OPTS "-debug")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
@@ -38,6 +32,66 @@ execute_process(COMMAND @QT_SOURCE_DIR@/${CONFIG_FILE} ${CONFIG_EXTRA_OPTS} ${QT
 if (QT_RET)
   message(FATAL_ERROR "Qt configure failed: ${MSG}\n")
 endif (QT_RET)
+
+# See if we are building sans GUI, requires defining QT_ALLOW_HEADLESS
+#
+# Normalize: check cmake or env var for setting.
+if (NOT DEFINED QT_ALLOW_HEADLESS AND DEFINED ENV{QT_ALLOW_HEADLESS})
+  set(QT_ALLOW_HEADLESS "$ENV{QT_ALLOW_HEADLESS}")
+endif()
+
+# Read a cache bool from Qt's build cache
+set(qt_cache "@QT_BUILD_DIR@/CMakeCache.txt")
+macro(qt_cache_check NAME OUT)
+  if (EXISTS "${qt_cache}")
+    file(STRINGS "${qt_cache}" _line REGEX "^${NAME}:[^=]*=")
+    if (_line)
+      string(REGEX REPLACE "^[^=]*=" "" _val "${_line}")
+      set(${OUT} "${_val}")
+    else()
+      set(${OUT} "")
+    endif()
+  else()
+    set(${OUT} "")
+  endif()
+endmacro()
+
+# check GUI module + platform backends
+qt_cache_check("FEATURE_gui"            feature_gui)
+qt_cache_check("FEATURE_xcb"            feature_xcb)
+qt_cache_check("FEATURE_wayland_client" feature_wayland)
+qt_cache_check("FEATURE_windows"        feature_windows)
+qt_cache_check("FEATURE_cocoa"          feature_cocoa)
+
+# does a window-capable backend exists for this host OS?
+set(qt_has_window_gui OFF)
+if (feature_gui STREQUAL "ON")
+  if (WIN32 AND feature_windows STREQUAL "ON")
+    set(qt_has_window_gui ON)
+  elseif (APPLE AND feature_cocoa STREQUAL "ON")
+    set(qt_has_window_gui ON)
+  elseif (UNIX AND NOT APPLE AND (feature_xcb STREQUAL "ON" OR feature_wayland STREQUAL "ON"))
+    set(qt_has_window_gui ON)
+  endif()
+endif()
+
+# fail if no GUI by default; allow explicit override with the QT_ALLOW_HEADLESS switch.
+if (feature_gui STREQUAL "ON" AND NOT qt_has_window_gui AND NOT QT_ALLOW_HEADLESS)
+  message(FATAL_ERROR
+    "\nQt GUI configured (QT_FEATURE_gui=ON) but no window-capable platform plugin is enabled.\n"
+    "Detected:\n"
+    "  FEATURE_xcb=${feature_xcb}\n"
+    "  FEATURE_wayland_client=${feature_wayland}\n"
+    "  FEATURE_cocoa=${feature_cocoa}\n"
+    "  FEATURE_windows=${feature_windows}\n\n"
+    "To proceed headless (e.g., offscreen/minimal/vnc), set QT_ALLOW_HEADLESS=ON\n")
+elseif (feature_gui STREQUAL "ON" AND NOT qt_has_window_gui AND QT_ALLOW_HEADLESS)
+  message(WARNING
+    "Proceeding without a window-capable Qt backend (headless).\n"
+    "Only minimal/offscreen/eglfs/linuxfb/vnc are expected.")
+else()
+  message(STATUS "Qt platform backend check: OK (window-capable backend present).")
+endif()
 
 message("Qt configure succeeded: ${MSG}\n")
 
