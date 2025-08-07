@@ -82,7 +82,7 @@ if (feature_gui STREQUAL "ON" AND NOT qt_has_window_gui AND NOT QT_ALLOW_HEADLES
     "Detected:\n"
     "  FEATURE_xcb=${feature_xcb}\n"
     "  FEATURE_wayland_client=${feature_wayland_client}\n"
-    "  FEATURE_direct2d=${feature_direct2d}\n
+    "  FEATURE_direct2d=${feature_direct2d}\n"
     "  QT_QPA_DEFAULT_PLATFORM=${qpa_platform}\n\n"
     "To proceed headless (e.g., offscreen/minimal/vnc), set QT_ALLOW_HEADLESS=ON\n")
 elseif (feature_gui STREQUAL "ON" AND NOT qt_has_window_gui AND QT_ALLOW_HEADLESS)
