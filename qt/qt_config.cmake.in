@@ -57,19 +57,20 @@ macro(qt_cache_check NAME OUT)
 endmacro()
 
 # check GUI module + platform backends
-qt_cache_check("FEATURE_gui"            feature_gui)
-qt_cache_check("FEATURE_gtk3"		feature_gtk3)
-qt_cache_check("FEATURE_style_windows"  style_windows)
-qt_cache_check("FEATURE_style_mac"	style_mac)
+qt_cache_check("FEATURE_gui"             feature_gui)
+qt_cache_check("FEATURE_xcb"             feature_xcb)
+qt_cache_check("FEATURE_wayland_client"  feature_wayland_client)
+qt_cache_check("FEATURE_direct2d"        feature_direct2d)
+qt_cache_check("QT_QPA_DEFAULT_PLATFORM" qpa_platform)
 
 # does a window-capable backend exists for this host OS?
 set(qt_has_window_gui OFF)
 if (feature_gui STREQUAL "ON")
-  if (WIN32 AND style_windows STREQUAL "ON")
+  if (WIN32 AND feature_direct2d STREQUAL "ON")
     set(qt_has_window_gui ON)
-  elseif (APPLE AND style_mac STREQUAL "ON")
+  elseif (APPLE AND qpa_platform STREQUAL "cocoa")
     set(qt_has_window_gui ON)
-  elseif (UNIX AND NOT APPLE AND feature_gtk3 STREQUAL "ON")
+  elseif (UNIX AND NOT APPLE AND (feature_xcb STREQUAL "ON" OR feature_wayland_client STREQUAL "ON"))
     set(qt_has_window_gui ON)
   endif()
 endif()
@@ -79,9 +80,10 @@ if (feature_gui STREQUAL "ON" AND NOT qt_has_window_gui AND NOT QT_ALLOW_HEADLES
   message(FATAL_ERROR
     "\nQt GUI configured (QT_FEATURE_gui=ON) but no window-capable platform plugin is enabled.\n"
     "Detected:\n"
-    "  FEATURE_gtk3=${feature_gtk3}\n"
-    "  FEATURE_style_windows=${style_windows}\n"
-    "  FEATURE_style_mac=${style_mac}\n\n"
+    "  FEATURE_xcb=${feature_xcb}\n"
+    "  FEATURE_wayland_client=${feature_wayland_client}\n"
+    "  FEATURE_direct2d=${feature_direct2d}\n
+    "  QT_QPA_DEFAULT_PLATFORM=${qpa_platform}\n\n"
     "To proceed headless (e.g., offscreen/minimal/vnc), set QT_ALLOW_HEADLESS=ON\n")
 elseif (feature_gui STREQUAL "ON" AND NOT qt_has_window_gui AND QT_ALLOW_HEADLESS)
   message(WARNING
