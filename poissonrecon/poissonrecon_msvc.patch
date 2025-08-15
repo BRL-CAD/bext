@@ -1,21 +1,33 @@
-diff -Naur PoissonRecon/Src/Reconstructors.h PoissonRecon_MSVC/Src/Reconstructors.h
---- PoissonRecon/Src/Reconstructors.h	2025-08-15 16:13:00.418278346 -0400
-+++ PoissonRecon_MSVC/Src/Reconstructors.h	2025-08-15 16:23:55.500490215 -0400
-@@ -986,7 +986,9 @@
- 						{
- 							unsigned int derivatives1[Dim];
- 							for( int dd=0 ; dd<Dim ; dd++ ) derivatives1[dd] = dd==d ? 1 : 0;
--							F.weights[d][ TensorDerivatives< Derivatives1 >::Index( derivatives1 ) ][ TensorDerivatives< Derivatives2 >::Index( derivatives2 ) ] = 1;
-+							auto idx1 = TensorDerivatives< Derivatives1 >::Index( derivatives1 );
-+							auto idx2 = TensorDerivatives< Derivatives2 >::Index( derivatives2 );
-+							F.weights[d][ idx1 ][ idx2 ] = 1;
- 						}
- 						implicit.tree.addFEMConstraints( F , *normalInfo , constraints , solveDepth );
- 					}
-@@ -1311,4 +1313,4 @@
- }
+diff -Naur PoissonRecon/Src/JPEG.h PoissonRecon_MSVC/Src/JPEG.h
+--- PoissonRecon/Src/JPEG.h	2025-08-15 19:33:27.066472865 -0400
++++ PoissonRecon_MSVC/Src/JPEG.h	2025-08-15 19:34:52.203069863 -0400
+@@ -35,6 +35,7 @@
+ #include <setjmp.h>
  
+ #ifdef _WIN32
++#define NOMINMAX
+ #include <windows.h>
+ #include "JPEG/jpeglib.h"
+ #include "JPEG/jerror.h"
+diff -Naur PoissonRecon/Src/MyAtomic.h PoissonRecon_MSVC/Src/MyAtomic.h
+--- PoissonRecon/Src/MyAtomic.h	2025-08-15 19:33:27.067472849 -0400
++++ PoissonRecon_MSVC/Src/MyAtomic.h	2025-08-15 19:35:03.401885384 -0400
+@@ -29,6 +29,7 @@
+ #define MY_ATOMIC_INCLUDED
  
--#endif // RECONSTRUCTORS_INCLUDED
-\ No newline at end of file
-+#endif // RECONSTRUCTORS_INCLUDED
+ #if defined( _WIN32 ) || defined( _WIN64 )
++#define NOMINMAX
+ #include <io.h>
+ #include <Windows.h>
+ #include <Psapi.h>
+diff -Naur PoissonRecon/Src/MyMiscellany.h PoissonRecon_MSVC/Src/MyMiscellany.h
+--- PoissonRecon/Src/MyMiscellany.h	2025-08-15 19:33:27.067472849 -0400
++++ PoissonRecon_MSVC/Src/MyMiscellany.h	2025-08-15 19:35:11.907745277 -0400
+@@ -37,6 +37,7 @@
+ #include <ctime>
+ #include <chrono>
+ #if defined( _WIN32 ) || defined( _WIN64 )
++#define NOMINMAX
+ #include <io.h>
+ #include <Windows.h>
+ #include <Psapi.h>
