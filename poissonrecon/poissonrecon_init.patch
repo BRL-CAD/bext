@@ -1,0 +1,134 @@
+diff -Naur PoissonRecon/Src/Array.h PoissonRecon_Init/Src/Array.h
+--- PoissonRecon/Src/Array.h	2025-08-15 12:33:30.611697574 -0400
++++ PoissonRecon_Init/Src/Array.h	2025-08-15 12:33:26.563709221 -0400
+@@ -95,7 +95,11 @@
+ #define AlignedFreePointer( ... ) { if( __VA_ARGS__ ) aligned_free( __VA_ARGS__ ) ,                   __VA_ARGS__ = NULL; }
+ #define      DeletePointer( ... ) { if( __VA_ARGS__ )      delete[] __VA_ARGS__ ,                     __VA_ARGS__ = NULL; }
+ 
+-	template< class C > C*          NewPointer(        size_t size ,                    const char* name=NULL ){ return new C[size]; }
++	template< class C > C* NewPointer( size_t size , const char* name=NULL ) {
++		// Prevent allocation of zero elements or overflow
++		if (size == 0 || size > SIZE_MAX / sizeof(C)) return nullptr;
++		return new C[size](); // value-initialize array to help avoid uninitialized warnings
++	}
+ 	template< class C > C*        AllocPointer(        size_t size ,                    const char* name=NULL ){ return (C*)        malloc(        sizeof(C) * size             ); }
+ 	template< class C > C* AlignedAllocPointer(        size_t size , size_t alignment , const char* name=NULL ){ return (C*)aligned_malloc(        sizeof(C) * size , alignment ); }
+ 	template< class C > C*      ReAllocPointer( C* c , size_t size ,                    const char* name=NULL ){ return (C*)       realloc( c    , sizeof(C) * size             ); }
+diff -Naur PoissonRecon/Src/FEMTree.h PoissonRecon_Init/Src/FEMTree.h
+--- PoissonRecon/Src/FEMTree.h	2025-08-15 12:33:30.613697569 -0400
++++ PoissonRecon_Init/Src/FEMTree.h	2025-08-15 12:33:26.570709201 -0400
+@@ -544,7 +544,8 @@
+ 		void _remapIndices( ConstPointer( node_index_type )oldNodeIndices , size_t newNodeCount )
+ 		{
+ 			Pointer( Data ) newData = NewPointer< Data >( newNodeCount );
+-			memset( newData , 0 , sizeof(Data)*newNodeCount );
++			if (sizeof(Data)*newNodeCount > 0 && sizeof(Data)*newNodeCount < 200*1024*1024*1024) // Large upper limit (200G) - avoiding compiler warning
++				memset( newData , 0 , sizeof(Data)*newNodeCount );
+ 			for( size_t i=0 ; i<newNodeCount ; i++ ) if( oldNodeIndices[i]>=0 && oldNodeIndices[i]<(node_index_type)_sz ) newData[i] = _data[ oldNodeIndices[i] ];
+ 			DeletePointer( _data );
+ 			_data = newData;
+@@ -708,8 +709,8 @@
+ 	template< unsigned int Dim , class Real , typename Data , typename T , unsigned int D >
+ 	struct DualPointAndDataInfo
+ 	{
+-		DualPointInfo< Dim , Real , T , D > pointInfo;
+-		Data data;
++		DualPointInfo< Dim , Real , T , D > pointInfo = {};
++		Data data = {};
+ 		DualPointAndDataInfo  operator +  ( const DualPointAndDataInfo& p ) const { return DualPointAndDataInfo( pointInfo + p.pointInfo , data + p.data ); }
+ 		DualPointAndDataInfo  operator *  ( Real s )                        const { return DualPointAndDataInfo( pointInfo * s , data * s ); }
+ 		DualPointAndDataInfo  operator /  ( Real s )                        const { return DualPointAndDataInfo( pointInfo / s , data / s ); }
+diff -Naur PoissonRecon/Src/FEMTree.inl PoissonRecon_Init/Src/FEMTree.inl
+--- PoissonRecon/Src/FEMTree.inl	2025-08-15 12:33:30.614697566 -0400
++++ PoissonRecon_Init/Src/FEMTree.inl	2025-08-15 12:33:26.570709201 -0400
+@@ -1984,4 +1984,4 @@
+ 
+ 	MergeNodes( _tree , tree->_tree , map , nextIndex );
+ 	return map;
+-}
+\ No newline at end of file
++}
+diff -Naur PoissonRecon/Src/FEMTree.LevelSet.3D.inl PoissonRecon_Init/Src/FEMTree.LevelSet.3D.inl
+--- PoissonRecon/Src/FEMTree.LevelSet.3D.inl	2025-08-15 12:33:30.612697572 -0400
++++ PoissonRecon_Init/Src/FEMTree.LevelSet.3D.inl	2025-08-15 12:33:26.568709207 -0400
+@@ -606,7 +606,9 @@
+ 			{
+ 				if( !sliceNode->children )
+ 				{
+-					int d , off[Dim] , _d , _off[Dim-1];
++					int d = 0, _d = 0;
++					int off[Dim] = {0};
++					int _off[Dim-1] = {0};
+ 					Point< int , Dim > p;
+ 					Point< int , Dim-1 > _p;
+ 					for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = off[d];
+@@ -887,7 +889,7 @@
+ 		{
+ 			if( tree._isValidSpaceNode( tree._sNodes.treeNodes[i] ) )
+ 			{
+-				Real squareValues[ HyperCube::Cube< Dim-1 >::template ElementNum< 0 >() ];
++				Real squareValues[ HyperCube::Cube< Dim-1 >::template ElementNum< 0 >() ] = {Real(0)};
+ 				ConstPointSupportKey< UIntPack< FEMSignature< FEMSigs >::Degree ... > >& neighborKey = neighborKeys[ thread ];
+ 				ConstCornerSupportKey< UIntPack< FEMSignature< FEMSigs >::Degree ... > >& bNeighborKey = bNeighborKeys[ thread ];
+ 				TreeNode* leaf = tree._sNodes.treeNodes[i];
+@@ -977,7 +979,7 @@
+ 		bool useBoundaryEvaluation = false;
+ 		ThreadPool::ParallelFor( tree._sNodesBegin(depth,slice-(zDir==HyperCube::BACK ? 0 : 1)) , tree._sNodesEnd(depth,slice-(zDir==HyperCube::BACK ? 0 : 1)) , [&]( unsigned int thread , size_t i )
+ 			{
+-				Real squareValues[ HyperCube::Cube< Dim-1 >::template ElementNum< 0 >() ];
++				Real squareValues[ HyperCube::Cube< Dim-1 >::template ElementNum< 0 >() ] = {Real(0)};
+ 				TreeNode* leaf = tree._sNodes.treeNodes[i];
+ 
+ 				if( tree._isValidSpaceNode( leaf ) && !IsActiveNode< Dim >( leaf->children ) )
+@@ -1706,7 +1708,8 @@
+ 		Point< Real , 3 > dx0 , dx1;
+ 		if( gradientNormals ) dx0 = sValues.cornerGradients[idx[c0]] , dx1 = sValues.cornerGradients[idx[c1]];
+ 		Point< Real , Dim > s;
+-		Real start , width;
++		Real start = Real(0);
++		Real width = Real(0);
+ 		tree._startAndWidth( node , s , width );
+ 		int o;
+ 		{
+@@ -1924,7 +1927,7 @@
+ 					}
+ 			if( isCoplanar )
+ 			{
+-				Vertex c;
++				Vertex c = Vertex();
+ 				c *= 0;
+ 				for( unsigned int i=0 ; i<polygon.size() ; i++ ) c += polygon[i].second;
+ 				c /= ( typename Vertex::Real )polygon.size();
+diff -Naur PoissonRecon/Src/Geometry.h PoissonRecon_Init/Src/Geometry.h
+--- PoissonRecon/Src/Geometry.h	2025-08-15 12:33:30.615697563 -0400
++++ PoissonRecon_Init/Src/Geometry.h	2025-08-15 12:33:26.571709198 -0400
+@@ -112,7 +112,7 @@
+ 		}
+ 
+ 	protected:
+-		FirstType _first;
++		FirstType _first = {};
+ 		DirectSum< Real , RestTypes... > _rest;
+ 
+ 		void _write( std::ostream &os ) const
+@@ -195,7 +195,7 @@
+ 		}
+ 		static void _AddColumnVector( XForm< Real , Dim >& x , unsigned int c ){ ; }
+ 	public:
+-		Real coords[Dim];
++		Real coords[Dim] = {};
+ 		Point( void ) { memset( coords , 0 , sizeof(Real)*Dim ); }
+ 		Point( const Point& p ){ memcpy( coords , p.coords , sizeof(Real)*Dim ); }
+ 		template< class ... _Reals > Point( _Reals ... values ){ static_assert( sizeof...(values)==Dim || sizeof...(values)==0 , "[ERROR] Point::Point: Invalid number of coefficients" ) ; _init( 0 , values... ); }
+diff -Naur PoissonRecon/Src/RegularTree.inl PoissonRecon_Init/Src/RegularTree.inl
+--- PoissonRecon/Src/RegularTree.inl	2025-08-15 12:33:30.615697563 -0400
++++ PoissonRecon_Init/Src/RegularTree.inl	2025-08-15 12:33:26.587709152 -0400
+@@ -236,7 +236,7 @@
+ 	if( !children ) return 0;
+ 	else
+ 	{
+-		int c , d;
++		int c = 0, d = 0;
+ 		for( int i=0 ; i<(1<<Dim) ; i++ )
+ 		{
+ 			d = children[i].maxDepth();
