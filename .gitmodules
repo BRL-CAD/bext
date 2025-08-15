@@ -317,3 +317,8 @@
 	url = https://github.com/BRL-CAD/tinygltf.git
 	branch = release
         ignore = dirty
+[submodule "poissonrecon/PoissonRecon"]
+	path = poissonrecon/PoissonRecon
+	url = https://github.com/BRL-CAD/PoissonRecon
+	branch = RELEASE
+        ignore = dirty

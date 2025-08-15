@@ -548,7 +548,7 @@ add_project(gte GROUPS "BRLCAD")
 
 # Adaptive Multigrid Solvers - Poisson Surface Reconstruction code.
 # https://github.com/mkazhdan/PoissonRecon
-#add_project(poissonrecon GROUPS "BRLCAD")
+add_project(poissonrecon GROUPS "BRLCAD")
 
 # mmesh - mesh decimation and processing library.
 # https://github.com/BRL-CAD/mmesh
