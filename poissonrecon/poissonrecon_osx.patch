@@ -1,0 +1,18 @@
+diff -Naur PoissonRecon/Src/MyMiscellany.h PoissonRecon_Apple/Src/MyMiscellany.h
+--- PoissonRecon/Src/MyMiscellany.h	2025-08-15 16:13:00.408278373 -0400
++++ PoissonRecon_Apple/Src/MyMiscellany.h	2025-08-15 16:14:10.432091973 -0400
+@@ -309,7 +309,13 @@
+ 		struct rusage rusage;
+ 		getrusage( RUSAGE_SELF, &rusage );
+ #if defined(__APPLE__) && defined(__MACH__)
+-		return (size_t)rusage.ru_maxrss;
++		// macOS does not provide peak RSS, so return current RSS instead
++		struct mach_task_basic_info info;
++		mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
++		if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO,
++					(task_info_t)&info, &infoCount) != KERN_SUCCESS)
++			return (size_t)0L;
++		return (size_t)info.resident_size;
+ #else
+ 		return (size_t)(rusage.ru_maxrss * 1024L);
+ #endif
