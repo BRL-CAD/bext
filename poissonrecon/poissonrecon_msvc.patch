@@ -1,0 +1,21 @@
+diff -Naur PoissonRecon/Src/Reconstructors.h PoissonRecon_MSVC/Src/Reconstructors.h
+--- PoissonRecon/Src/Reconstructors.h	2025-08-15 16:13:00.418278346 -0400
++++ PoissonRecon_MSVC/Src/Reconstructors.h	2025-08-15 16:23:55.500490215 -0400
+@@ -986,7 +986,9 @@
+ 						{
+ 							unsigned int derivatives1[Dim];
+ 							for( int dd=0 ; dd<Dim ; dd++ ) derivatives1[dd] = dd==d ? 1 : 0;
+-							F.weights[d][ TensorDerivatives< Derivatives1 >::Index( derivatives1 ) ][ TensorDerivatives< Derivatives2 >::Index( derivatives2 ) ] = 1;
++							auto idx1 = TensorDerivatives< Derivatives1 >::Index( derivatives1 );
++							auto idx2 = TensorDerivatives< Derivatives2 >::Index( derivatives2 );
++							F.weights[d][ idx1 ][ idx2 ] = 1;
+ 						}
+ 						implicit.tree.addFEMConstraints( F , *normalInfo , constraints , solveDepth );
+ 					}
+@@ -1311,4 +1313,4 @@
+ }
+ 
+ 
+-#endif // RECONSTRUCTORS_INCLUDED
+\ No newline at end of file
++#endif // RECONSTRUCTORS_INCLUDED
