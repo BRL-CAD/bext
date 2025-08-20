@@ -20,8 +20,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Linux Soname Version
 set(MAJORVER 3)
-set(MINORVER 5)
-set(PATCHVER 0)
+set(MINORVER 6)
+set(PATCHVER 12)
 set(SOLIBVER ${MAJORVER}.${MINORVER}.${PATCHVER})
 
 # AStyle Source

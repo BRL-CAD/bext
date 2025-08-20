@@ -58,10 +58,10 @@ INSTALL=install -o $(USER) -g $(USER)
 MAJORVER = 3
 # Library's minor version number -- Increment when functionality is added in a
 # backward-compatible manner; reset to 0 when major number changes.
-MINORVER = 2
+MINORVER = 6
 # Library's patch version number -- Increment in case of backward-compatible
 # bug fixes or refactoring; reset to 0 when minor number changes.
-PATCHVER = 0
+PATCHVER = 12
 # Library's full version number.
 SOLIBVER = $(MAJORVER).$(MINORVER).$(PATCHVER)
 
