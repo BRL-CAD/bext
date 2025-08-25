@@ -3508,6 +3508,7 @@ void ASBeautifier::handleParens(std::string_view line, size_t i, bool tabIncreme
 void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabIncrementIn)
 {
 	// first, check if '{' is a block-opener or a static-array opener
+
 	bool isBlockOpener = ((prevNonSpaceCh == '{' && braceBlockStateStack->back())
 	                      || prevNonSpaceCh == '}'
 	                      || prevNonSpaceCh == ')'
@@ -3527,7 +3528,7 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 	                      || isInAsmBlock
 	                      //|| getNextWord(line, i) == ASResource::AS_NEW // #487
 	                      || (isInDefine
-	                          && (prevNonSpaceCh == '('
+	                          && (prevNonSpaceCh == '(' || prevNonSpaceCh == '='
 	                              || isLegalNameChar(prevNonSpaceCh))));
 
 	if (isInObjCMethodDefinition)
