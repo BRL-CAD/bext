@@ -14,10 +14,6 @@ if (ENABLE_OPENNURBS)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
 
-  # We need to know where the opennurbs sources will wind up for some of
-  # this logic
-  set(OPENNURBS_SRC_CPY_TGT "${CMAKE_CURRENT_BINARY_DIR}/OPENNURBS_BLD-prefix/src/OPENNURBS_BLD")
-
   ExternalProject_Add(OPENNURBS_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -42,12 +38,13 @@ if (ENABLE_OPENNURBS)
     COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_system_runtime.patch
     COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_uuid.patch
     COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_version_number.patch
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/opennurbs_x.cpp ${OPENNURBS_SRC_CPY_TGT}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/opennurbs_x.h ${OPENNURBS_SRC_CPY_TGT}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/opennurbs_x.cpp <SOURCE_DIR>
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/opennurbs_x.h <SOURCE_DIR>
     COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_x.patch
     COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_zlib.patch
     COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_post_effects.patch
     COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_3dm_attributes.patch
+    COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/CMake/FindZLIB.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>

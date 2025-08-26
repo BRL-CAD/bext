@@ -35,6 +35,7 @@ if (ENABLE_LLVM)
       SOURCE_SUBDIR llvm
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch"
+      COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/Modules/FindZLIB.cmake
       ${Z_BRL_PATCH_CMD}
       CMAKE_ARGS
       -C ${CMAKE_CURRENT_SOURCE_DIR}/llvm_targets.cmake
