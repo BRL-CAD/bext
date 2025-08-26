@@ -20,7 +20,7 @@ set(ENABLE_POISSONRECON "${ENABLE_POISSONRECON}" CACHE BOOL "Enable SPSR build")
 
 if (ENABLE_POISSONRECON)
 
-  git_submodule_init(PoissonRecon POISSONRECON/CMakeLists.txt)
+  git_submodule_init(PoissonRecon README.md)
 
   RegisterDeps(POISSONRECON)
 

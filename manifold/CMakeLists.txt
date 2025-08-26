@@ -7,7 +7,7 @@ bext_enable(MANIFOLD)
 
 if (ENABLE_MANIFOLD)
 
-  git_submodule_init(manifold src/manifold/include/manifold.h)
+  git_submodule_init(manifold include/manifold/manifold.h)
 
   RegisterDeps(MANIFOLD)
 

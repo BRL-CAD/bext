@@ -7,7 +7,7 @@ bext_enable(CLIPPER2)
 
 if (ENABLE_CLIPPER2)
 
-  git_submodule_init(Clipper2 readme.md)
+  git_submodule_init(Clipper2 README.md)
 
   RegisterDeps(CLIPPER2)
 
