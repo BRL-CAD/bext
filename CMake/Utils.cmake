@@ -127,6 +127,32 @@ function(git_submodule_init path checkfile)
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       )
     endif (NOT GIT_SHALLOW_CLONE)
+    execute_process(
+      COMMAND git log -1 --format=%H
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+      OUTPUT_VARIABLE GIT_SHA1
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_sha1.txt" ${GIT_SHA1})
+  else (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
+    execute_process(
+      COMMAND git log -1 --format=%H
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+      OUTPUT_VARIABLE GIT_SHA1
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (EXISTS "${CMAKE_CURRENT_BINARY_DIR}/build_sha1.txt" )
+      file(READ "${CMAKE_CURRENT_BINARY_DIR}/build_sha1.txt" BUILD_SHA1)
+      if (NOT "${BUILD_SHA1}" MATCHES "${GIT_SHA1}")
+	message("Outdated sha1 stamp found for ${path}: resetting build directory ${CMAKE_CURRENT_BINARY_DIR}")
+	execute_process(
+	  COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}
+	  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/..
+	)
+	file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+      endif (NOT "${BUILD_SHA1}" MATCHES "${GIT_SHA1}")
+    endif()
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_sha1.txt" ${GIT_SHA1})
   endif (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
 endfunction(git_submodule_init path)
 
