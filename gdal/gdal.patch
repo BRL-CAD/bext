@@ -7,6 +7,7 @@ diff -Naur gdal/cmake/modules/packages/FindSQLite3.cmake GDAL_BLD/cmake/modules/
    find_library(SQLite3_LIBRARY
 -               NAMES sqlite3 sqlite3_i
 +               NAMES sqlite3 sqlite3_i libsqlite3 libsqlite libsqlite3_i
+                NAMES_PER_DIR
                 HINTS ${PC_SQLITE3_LIBRARY_DIRS})
  endif()
  
