@@ -13,20 +13,23 @@ if (ENABLE_ZLIB)
 
   RegisterDeps(ZLIB)
 
+  find_program(GIT_EXECUTABLE git REQUIRED)
+
   set(Z_PREFIX_STR "brl_")
   mark_as_advanced(Z_PREFIX_STR)
 
-  # We need to know where the zlib sources will wind up for some of
-  # this logic
-  set(ZLIB_SRC_CPY_TGT "${CMAKE_CURRENT_BINARY_DIR}/ZLIB_BLD-prefix/src/ZLIB_BLD")
+  # Define a compact variable for the git repo path
+  set(SDIR ${CMAKE_CURRENT_SOURCE_DIR}/zlib)
 
   ExternalProject_Add(ZLIB_BLD
-    URL "${CMAKE_CURRENT_SOURCE_DIR}/zlib"
+    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/zlib"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/zlib.patch
-    COMMAND ${CMAKE_COMMAND} -E remove ${ZLIB_SRC_CPY_TGT}/zconf.h
-    COMMAND ${CMAKE_COMMAND} -E remove ${ZLIB_SRC_CPY_TGT}/zlib.h
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/zlib.h.in ${ZLIB_SRC_CPY_TGT}
+    PATCH_COMMAND ${GIT_EXECUTABLE};--git-dir;${SDIR}/.git;--work-tree;${SDIR};reset;--hard
+    COMMAND ${GIT_EXECUTABLE};--git-dir;${SDIR}/.git;--work-tree;${SDIR};clean;-fdx
+    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/zlib.patch
+    COMMAND ${CMAKE_COMMAND} -E remove ${SDIR}/zconf.h
+    COMMAND ${CMAKE_COMMAND} -E remove ${SDIR}/zlib.h
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/zlib.h.in ${SDIR}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DZ_PREFIX_STR=${Z_PREFIX_STR}
