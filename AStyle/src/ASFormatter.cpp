@@ -901,7 +901,7 @@ void ASFormatter::handleBreakLine()
 	}
 }
 
-bool ASFormatter::handlePotentialHeader(const std::string* newHeader)
+bool ASFormatter::handlePotentialHeader(const std::string *&newHeader)
 {
 	isNonParenHeader = false;
 	foundClosingHeader = false;
@@ -1374,7 +1374,7 @@ void ASFormatter::handlePotentialHeaderPart2()
 	}
 }
 
-void ASFormatter::handlePotentialOperator(const std::string *newHeader)
+void ASFormatter::handlePotentialOperator(const std::string *&newHeader)
 {
 
 	// check for Java ? wildcard

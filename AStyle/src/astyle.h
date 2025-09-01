@@ -889,11 +889,11 @@ private:  // functions
 	void handleClosedBracesOrParens();
 	void handleBraces();
 	void handleBreakLine();
-	bool handlePotentialHeader(const std::string*);
+	bool handlePotentialHeader(const std::string*&);
 	void handleEndOfBlock();
 	void handleColonSection();
 	void handlePotentialHeaderPart2();
-	void handlePotentialOperator(const std::string*);
+	void handlePotentialOperator(const std::string*&);
 	void handleParens();
 	void handleOpenParens();
 
