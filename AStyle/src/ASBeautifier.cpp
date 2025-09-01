@@ -645,6 +645,8 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 
 	if (isCStyle()
 	        && !isInComment
+	        && !parenDepth
+	        //&& line.find('(', 0) == std::string::npos
 	        && line.find('#', 0) == std::string::npos
 	        && line.find("//", 0) == std::string::npos
 	        && line.find("/*", 0) == std::string::npos
