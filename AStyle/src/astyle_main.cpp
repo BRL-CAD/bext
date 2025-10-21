@@ -288,6 +288,7 @@ ASConsole::ASConsole(ASFormatter& formatterArg) : formatter(formatterArg)
 	ignoreExcludeErrors = false;
 	ignoreExcludeErrorsDisplay = false;
 	useAscii = false;
+	isDiffMode = false;
 	// other variables
 	bypassBrowserOpen = false;
 	hasWildcard = false;
@@ -423,6 +424,269 @@ void ASConsole::formatCinToCout()
 		}
 	}
 	std::cout.flush();
+}
+
+/**
+ * Format git diff input from stdin.
+ * Parse the diff format and format only the changed lines.
+ */
+void ASConsole::formatDiffFromCin()
+{
+	// Parse diff from stdin
+	std::vector<DiffFileInfo> diffFiles = parseDiffFromStream(std::cin);
+
+	// Process each file in the diff
+	for (const auto& fileInfo : diffFiles)
+	{
+		if (!fileInfo.addedRanges.empty())
+		{
+			std::string formattedOutput = formatDiffLines(fileInfo);
+			if (!formattedOutput.empty())
+			{
+				std::cout << formattedOutput;
+			}
+		}
+	}
+}
+
+/**
+ * Parse git diff format from input stream.
+ * Extract file names and line ranges that need formatting.
+ */
+std::vector<DiffFileInfo> ASConsole::parseDiffFromStream(std::istream& diffStream)
+{
+	std::vector<DiffFileInfo> diffFiles;
+	std::string line;
+	DiffFileInfo currentFile;
+	bool inFile = false;
+	int currentLineNumber = 0;
+
+	while (std::getline(diffStream, line))
+	{
+		// Check for file header: diff --git a/file b/file
+		if (line.find("diff --git") == 0)
+		{
+			if (inFile && !currentFile.fileName.empty())
+			{
+				diffFiles.push_back(currentFile);
+			}
+			currentFile = DiffFileInfo();
+			inFile = true;
+			continue;
+		}
+
+		// Check for +++ b/filename to get the target file name
+		if (line.find("+++ b/") == 0)
+		{
+			currentFile.fileName = line.substr(6); // Remove "+++ b/"
+			continue;
+		}
+
+		// Check for hunk header: @@ -old_start,old_count +new_start,new_count @@
+		if (line.find("@@") == 0)
+		{
+			size_t plusPos = line.find('+');
+			if (plusPos != std::string::npos)
+			{
+				size_t commaPos = line.find(',', plusPos);
+				size_t endPos = line.find(' ', plusPos);
+				if (endPos == std::string::npos) endPos = line.find('@', plusPos);
+
+				if (commaPos != std::string::npos && commaPos < endPos)
+				{
+					// Format: +start,count
+					int startLine = std::stoi(line.substr(plusPos + 1, commaPos - plusPos - 1));
+					int lineCount = std::stoi(line.substr(commaPos + 1, endPos - commaPos - 1));
+					if (lineCount > 0)
+					{
+						currentFile.addedRanges.emplace_back(startLine, lineCount);
+					}
+					currentLineNumber = startLine;
+				}
+				else
+				{
+					// Format: +start (single line)
+					int startLine = std::stoi(line.substr(plusPos + 1, endPos - plusPos - 1));
+					currentFile.addedRanges.emplace_back(startLine, 1);
+					currentLineNumber = startLine;
+				}
+			}
+			continue;
+		}
+
+		// For diff mode, we only need to track the line ranges, not the actual content
+		// The actual file content will be read from disk
+		if (inFile && !line.empty())
+		{
+			if (line[0] == '+')
+			{
+				currentLineNumber++;
+			}
+			else if (line[0] == ' ')
+			{
+				currentLineNumber++;
+			}
+			// Skip lines that start with - (deleted lines)
+		}
+	}
+
+	// Add the last file if we were processing one
+	if (inFile && !currentFile.fileName.empty())
+	{
+		diffFiles.push_back(currentFile);
+	}
+
+	return diffFiles;
+}
+
+/**
+ * Format only the specific line ranges from a diff file and apply formatting changes to the file.
+ * Returns empty string if no changes were made, otherwise returns
+ * a description of the changes applied.
+ */
+std::string ASConsole::formatDiffLines(const DiffFileInfo& fileInfo)
+{
+	// Check if the file exists
+	if (!fileExists(fileInfo.fileName.c_str()))
+	{
+		return ""; // Skip files that don't exist (might be new files)
+	}
+
+	// Read the actual file from disk
+	std::stringstream originalContent;
+	FileEncoding encoding = readFile(fileInfo.fileName, originalContent);
+
+	// Read original file lines
+	originalContent.clear();
+	originalContent.seekg(0);
+	std::vector<std::string> originalLines;
+	std::string line;
+	while (std::getline(originalContent, line))
+	{
+		originalLines.push_back(line);
+	}
+
+	// Set language mode based on file extension
+	if (!formatter.getModeManuallySet())
+	{
+		if (stringEndsWith(fileInfo.fileName, std::string(".java")))
+			formatter.setJavaStyle();
+		else if (stringEndsWith(fileInfo.fileName, std::string(".cs")))
+			formatter.setSharpStyle();
+		else if (stringEndsWith(fileInfo.fileName, std::string(".gsc")) || stringEndsWith(fileInfo.fileName, std::string(".ghc")))
+			formatter.setGSCStyle();
+		else
+			formatter.setCStyle();
+	}
+
+	// Create a copy of original lines to modify
+	std::vector<std::string> finalLines = originalLines;
+	std::ostringstream changes;
+	bool hasChanges = false;
+
+	// Process each changed range
+	for (const auto& range : fileInfo.addedRanges)
+	{
+		int startLine = range.startLine - 1; // Convert to 0-based indexing
+		int endLine = std::min(startLine + range.lineCount, static_cast<int>(originalLines.size()));
+
+		if (startLine >= static_cast<int>(originalLines.size()) || startLine < 0)
+			continue;
+
+		// Extract the lines in this range
+		std::stringstream rangeContent;
+		for (int i = startLine; i < endLine; i++)
+		{
+			rangeContent << originalLines[i];
+			if (i < endLine - 1)
+			{
+				rangeContent << '\n';
+			}
+		}
+		rangeContent << '\n'; // Add final newline for formatting
+
+		// Format only this range
+		ASStreamIterator<std::stringstream> streamIterator(&rangeContent);
+		initializeOutputEOL(formatter.getLineEndFormat());
+		formatter.init(&streamIterator);
+
+		std::vector<std::string> formattedRangeLines;
+		while (formatter.hasMoreLines())
+		{
+			formattedRangeLines.push_back(formatter.nextLine());
+		}
+
+		// Check if this range needs formatting and apply changes
+		bool rangeChanged = false;
+
+		// Compare and replace lines in the range
+		for (int i = startLine; i < endLine && (i - startLine) < static_cast<int>(formattedRangeLines.size()); i++)
+		{
+			if (originalLines[i] != formattedRangeLines[i - startLine])
+			{
+				finalLines[i] = formattedRangeLines[i - startLine];
+				rangeChanged = true;
+				hasChanges = true;
+			}
+		}
+
+		// Handle case where formatting changes the number of lines in the range
+		if (formattedRangeLines.size() != static_cast<size_t>(endLine - startLine))
+		{
+			// Remove the original range
+			finalLines.erase(finalLines.begin() + startLine, finalLines.begin() + endLine);
+
+			// Insert the formatted lines
+			finalLines.insert(finalLines.begin() + startLine,
+			                 formattedRangeLines.begin(), formattedRangeLines.end());
+
+			rangeChanged = true;
+			hasChanges = true;
+		}
+
+		if (rangeChanged)
+		{
+			if (changes.tellp() == 0)
+			{
+				changes << "Formatted " << fileInfo.fileName << " (lines ";
+			}
+			else
+			{
+				changes << ", ";
+			}
+			changes << (startLine + 1) << "-" << endLine;
+		}
+	}
+
+	// Close the changes message if we started one
+	if (hasChanges && changes.tellp() > 0)
+	{
+		changes << ")\n";
+	}
+
+	// Write the file back if there were changes
+	if (hasChanges)
+	{
+		std::ostringstream formattedFile;
+		for (size_t i = 0; i < finalLines.size(); i++)
+		{
+			formattedFile << finalLines[i];
+			if (i < finalLines.size() - 1)
+			{
+				formattedFile << outputEOL;
+			}
+		}
+		// Add final newline if the original file had one
+		if (!finalLines.empty())
+		{
+			formattedFile << outputEOL;
+		}
+
+		// Write the formatted content back to the file
+		writeFile(fileInfo.fileName, encoding, formattedFile);
+	}
+
+	return changes.str();
 }
 
 /**
@@ -643,6 +907,10 @@ bool ASConsole::getIsDryRun() const
 { return isDryRun; }
 
 // for unit testing
+bool ASConsole::getIsDiffMode() const
+{ return isDiffMode; }
+
+// for unit testing
 bool ASConsole::getIsFormattedOnly() const
 { return isFormattedOnly; }
 
@@ -852,6 +1120,9 @@ void ASConsole::setIsRecursive(bool state)
 
 void ASConsole::setIsDryRun(bool state)
 { isDryRun = state; }
+
+void ASConsole::setIsDiffMode(bool state)
+{ isDiffMode = state; }
 
 void ASConsole::setRejectFormatWithDryRun(bool state)
 { rejectDryRunWithFormat = state; }
@@ -1979,6 +2250,10 @@ void ASConsole::printHelp() const
 	std::cout << '\n';
 	std::cout << "    --dry-run\n";
 	std::cout << "    Perform a trial run with no changes made to check for formatting.\n";
+	std::cout << '\n';
+	std::cout << "    --diff\n";
+	std::cout << "    Format only lines changed in git diff. Read git diff from stdin\n";
+	std::cout << "    and output formatted diff to stdout.\n";
 	std::cout << '\n';
 	std::cout << "    --error-on-changes\n";
 	std::cout << "    With --dry-run: Report any file reformat as error.\n";
@@ -3386,6 +3661,10 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 	{
 		console.setIsDryRun(true);
 	}
+	else if (isOption(arg, "diff"))
+	{
+		console.setIsDiffMode(true);
+	}
 	else if (isOption(arg, "error-on-changes"))
 	{
 		console.setRejectFormatWithDryRun(true);
@@ -4103,8 +4382,13 @@ int main(int argc, char** argv)
 	argvOptions = console->getArgvOptions(argc, argv);
 	console->processOptions(argvOptions);
 
+	// if diff mode is enabled, format diff from stdin
+	if (console->getIsDiffMode())
+	{
+		console->formatDiffFromCin();
+	}
 	// if no files have been given, use cin for input and cout for output
-	if (!console->fileNameVectorIsEmpty())
+	else if (!console->fileNameVectorIsEmpty())
 		console->processFiles();
 	else
 		console->formatCinToCout();
