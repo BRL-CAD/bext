@@ -2003,7 +2003,7 @@ void ASConsole::printHelp() const
 	std::cout << '\n';
 	std::cout << "    --preserve-date  OR  -Z\n";
 	std::cout << "    Preserve the original file's date and time modified. The time\n";
-	std::cout << "     modified will be changed a few micro seconds to force a compile.\n";
+	std::cout << "    modified will be changed a few micro seconds to force a compile.\n";
 	std::cout << '\n';
 	std::cout << "    --verbose  OR  -v\n";
 	std::cout << "    Verbose mode. Extra informational messages will be displayed.\n";

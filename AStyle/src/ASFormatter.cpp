@@ -7791,7 +7791,7 @@ void ASFormatter::checkIfTemplateOpener()
 					{
 						// this is a template!
 						// gl85 + sf585
-						isInTemplate = !isInStruct;
+						isInTemplate = true; //!isInStruct;
 						templateDepth = maxTemplateDepth;
 					}
 					return;
