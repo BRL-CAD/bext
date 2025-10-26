@@ -15,9 +15,6 @@
 #include <ctime>
 #include <sstream>
 #include <filesystem>
-#include <vector>
-#include <string>
-#include <map>
 
 #if defined(__BORLANDC__) && __BORLANDC__ < 0x0650
 	// Embarcadero needs this for the following utime.h
@@ -208,24 +205,6 @@ private:
 #ifndef	ASTYLE_LIB
 
 //----------------------------------------------------------------------------
-// DiffLineRange structure for diff mode
-//----------------------------------------------------------------------------
-
-struct DiffLineRange
-{
-	int startLine;
-	int lineCount;
-	DiffLineRange(int start, int count) : startLine(start), lineCount(count) {}
-};
-
-struct DiffFileInfo
-{
-	std::string fileName;
-	std::vector<DiffLineRange> addedRanges;
-	std::vector<std::string> fileLines;
-};
-
-//----------------------------------------------------------------------------
 // ASConsole class for console build
 //----------------------------------------------------------------------------
 
@@ -247,7 +226,6 @@ private:    // variables
 	bool ignoreExcludeErrors;           // don't abort on unmatched excludes
 	bool ignoreExcludeErrorsDisplay;    // don't display unmatched excludes
 	bool useAscii;                      // ascii option
-	bool isDiffMode;                    // diff mode option
 	// other variables
 	bool bypassBrowserOpen;             // don't open the browser on html options
 	bool hasWildcard;                   // file name includes a wildcard
@@ -288,7 +266,6 @@ public:     // functions
 	void error() const;
 	void error(const char* why, const char* what) const;
 	void formatCinToCout();
-	void formatDiffFromCin();
 	std::vector<std::string> getArgvOptions(int argc, char** argv);
 	bool fileExists(const char* file) const;
 	bool fileNameVectorIsEmpty() const;
@@ -298,7 +275,6 @@ public:     // functions
 	bool getIgnoreExcludeErrors() const;
 	bool getIgnoreExcludeErrorsDisplay() const;
 	bool getIsDryRun() const;
-	bool getIsDiffMode() const;
 	bool getIsFormattedOnly() const;
 	bool getIsQuiet() const;
 	bool getIsRecursive() const;
@@ -323,7 +299,6 @@ public:     // functions
 	void setIgnoreExcludeErrors(bool state);
 	void setIgnoreExcludeErrorsAndDisplay(bool state);
 	void setIsDryRun(bool state);
-	void setIsDiffMode(bool state);
 	void setRejectFormatWithDryRun(bool state);
 	void setIsFormattedOnly(bool state);
 	void setIsQuiet(bool state);
@@ -352,8 +327,6 @@ public:     // functions
 private:	// functions
 
 	void formatFile(const std::string& fileName_);
-	std::vector<DiffFileInfo> parseDiffFromStream(std::istream& diffStream);
-	std::string formatDiffLines(const DiffFileInfo& fileInfo);
 	std::string getParentDirectory(const std::string& absPath) const;
 	std::string findProjectOptionFilePath(const std::string& fileName_) const;
 	std::string getCurrentDirectory(const std::string& fileName_) const;

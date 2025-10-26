@@ -78,10 +78,6 @@ else
     LDFLAGSd   =
 endif
 
-# Add filesystem library for C++17 filesystem support
-LDFLAGSr += -lstdc++fs
-LDFLAGSd += -lstdc++fs
-
 # object files are built from the source list $(SRC)
 # a suffix is added for each build
 OBJ   = $(patsubst %.cpp,$(objdir)/%.o,$(SRC))
@@ -141,13 +137,13 @@ $(objdir)/%_sjd.o:  %.cpp  astyle.h
 release:  astyle
 astyle:  $(OBJ)
 	@ mkdir -p $(bindir)
-	$(CXX) -o $(bindir)/$@ $^ $(LDFLAGSr)
+	$(CXX) $(LDFLAGSr) -o $(bindir)/$@ $^
 	@ echo
 
 debug:  astyled
 astyled:  $(OBJd)
 	@ mkdir -p $(bindir)
-	$(CXX) -o $(bindir)/$@ $^ $(LDFLAGSd)
+	$(CXX) $(LDFLAGSd) -o $(bindir)/$@ $^
 	@ echo
 
 shared:  libastyle.so
