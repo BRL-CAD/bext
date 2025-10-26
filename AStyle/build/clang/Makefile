@@ -51,7 +51,7 @@ MAJORVER = 3
 MINORVER = 6
 # Library's patch version number -- Increment in case of backward-compatible
 # bug fixes or refactoring; reset to 0 when minor number changes.
-PATCHVER = 12
+PATCHVER = 13
 # Library's full version number.
 SOLIBVER = $(MAJORVER).$(MINORVER).$(PATCHVER)
 
