@@ -1,51 +1,28 @@
-diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
---- libpng/CMakeLists.txt	2024-03-06 10:43:33.593760600 -0500
-+++ PNG_BLD/CMakeLists.txt	2024-03-06 10:51:59.356989438 -0500
-@@ -30,6 +30,9 @@
+--- libpng/CMakeLists.txt	2025-12-04 15:29:05.405037672 -0500
++++ PNG_BLD/CMakeLists.txt	2025-12-04 15:33:31.997897361 -0500
+@@ -29,6 +29,9 @@
          VERSION ${PNGLIB_VERSION}
          LANGUAGES C ASM)
  
 +# Location of CMake modules
 +list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 +
- if(POLICY CMP0074)
-   # Allow find_package() to use the ZLIB_ROOT variable, if available.
-   cmake_policy(SET CMP0074 NEW)
-@@ -48,8 +51,10 @@
+ include(CheckCSourceCompiles)
+ include(CheckLibraryExists)
+ include(GNUInstallDirs)
+@@ -43,9 +46,11 @@
  # Previously, we used to set CMAKE_DEBUG_POSTFIX globally. That variable should
  # not be cached, however, because doing so would affect all projects processed
  # after libpng, in unexpected and undesirable ways.
--set(PNG_DEBUG_POSTFIX "d"
--    CACHE STRING "Postfix to append to library file names under the Debug configuration")
 +if(NOT PNG_NO_DEBUG_POSTFIX)
-+  set(PNG_DEBUG_POSTFIX "d"
-+      CACHE STRING "Postfix to append to library file names under the Debug configuration")
-+endif(NOT PNG_NO_DEBUG_POSTFIX)
+ set(PNG_DEBUG_POSTFIX
+     "d"
+     CACHE STRING "Postfix to append to library file names under the Debug configuration")
++endif()
  
  # Allow the users to import their own extra configuration settings.
- set(DFA_XTRA ""
-@@ -98,6 +103,7 @@
- option(PNG_BUILD_ZLIB "Custom zlib location, else find_package is used" OFF)
- if(NOT PNG_BUILD_ZLIB)
-   find_package(ZLIB REQUIRED)
-+  include_directories(${ZLIB_INCLUDE_DIRS})
- elseif(POLICY CMP0074)
-   if("x${ZLIB_ROOT}" STREQUAL "x")
-     message(DEPRECATION
-@@ -490,10 +496,9 @@
- 
-   if(PNG_PREFIX)
-     set(PNGLIBCONF_H_EXTRA_DEPENDS
--        "${CMAKE_CURRENT_BINARY_DIR}/scripts/prefix.out"
--        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/macro.lst")
-+        png_scripts_prefix_out)
-     set(PNGPREFIX_H_EXTRA_DEPENDS
--        "${CMAKE_CURRENT_BINARY_DIR}/scripts/intprefix.out")
-+        png_scripts_intprefix_out)
-   endif()
- 
-   generate_out(INPUT "${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.c"
-@@ -677,15 +682,15 @@
+ # Those settings can be either passed via DFA_XTRA if they are in DFA form
+@@ -649,15 +653,15 @@
    # We are on a Unix or Unix-like toolchain like the GNU toolchain on Windows.
    # Library file names are expected to have an implicit prefix such as "lib".
    # Let CMake prepend and append its usual prefixes and suffixes by default.
@@ -65,24 +42,24 @@ diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
  endif()
  
  if(PNG_SHARED)
-@@ -1068,16 +1073,16 @@
+@@ -1052,16 +1056,16 @@
    if(PNG_SHARED)
      # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
      if(NOT WIN32 OR CYGWIN OR MINGW)
 -      create_symlink(libpng${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
--      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}
+-      install(FILES "$<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}"
 +      create_symlink(libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
-+      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX}
-               DESTINATION ${CMAKE_INSTALL_LIBDIR})
++      install(FILES "$<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX}"
+               DESTINATION "${CMAKE_INSTALL_LIBDIR}")
      endif()
    endif()
  
    if(PNG_STATIC)
      if(NOT WIN32 OR CYGWIN OR MINGW)
 -      create_symlink(libpng${CMAKE_STATIC_LIBRARY_SUFFIX} TARGET png_static)
--      install(FILES $<TARGET_LINKER_FILE_DIR:png_static>/libpng${CMAKE_STATIC_LIBRARY_SUFFIX}
+-      install(FILES "$<TARGET_LINKER_FILE_DIR:png_static>/libpng${CMAKE_STATIC_LIBRARY_SUFFIX}"
 +      create_symlink(libpng_brl${CMAKE_STATIC_LIBRARY_SUFFIX} TARGET png_static)
-+      install(FILES $<TARGET_LINKER_FILE_DIR:png_static>/libpng_brl${CMAKE_STATIC_LIBRARY_SUFFIX}
-               DESTINATION ${CMAKE_INSTALL_LIBDIR})
++      install(FILES "$<TARGET_LINKER_FILE_DIR:png_static>/libpng_brl${CMAKE_STATIC_LIBRARY_SUFFIX}"
+               DESTINATION "${CMAKE_INSTALL_LIBDIR}")
      endif()
    endif()
