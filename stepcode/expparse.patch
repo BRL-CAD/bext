@@ -1,6 +1,6 @@
 diff -Naur stepcode/src/express/expparse.y STEPCODE_BLD/src/express/expparse.y
---- stepcode/src/express/expparse.y	2025-12-09 15:20:21.138910092 -0500
-+++ STEPCODE_BLD/src/express/expparse.y	2025-12-09 15:21:39.763568879 -0500
+--- stepcode/src/express/expparse.y	2025-12-10 09:26:26.867965963 -0500
++++ STEPCODE_BLD/src/express/expparse.y	2025-12-10 09:25:55.036122004 -0500
 @@ -1,9 +1,28 @@
  /** Lemon grammar for Express parser, based on SCL's expparse.y.  */
  %include {
@@ -30,24 +30,7 @@ diff -Naur stepcode/src/express/expparse.y STEPCODE_BLD/src/express/expparse.y
  int yyerrstatus = 0;
  #define yyerrok (yyerrstatus = 0)
  
-@@ -32,16 +51,6 @@
- #include "expscan.h"
- #include <float.h>
- 
--/* Override lemon memory macros to accept context and ignore it when using standard C funcs */
--#undef YYREALLOC
--#undef YYFREE
--#define YYREALLOC(PTR, SIZE, CTX) realloc((PTR), (SIZE))
--#define YYFREE(PTR, CTX) free((PTR))
--
--/* Optional: if you want to force dynamic stack growth even without custom funcs */
--#undef YYDYNSTACK
--#define YYDYNSTACK 1
--
-     extern int print_objects_while_running;
- 
-     int tag_count;    /**< use this to count tagged GENERIC types in the formal
-@@ -130,6 +139,8 @@
+@@ -120,6 +139,8 @@
  } /* include */
  
  %extra_argument { parse_data_t parseData }
