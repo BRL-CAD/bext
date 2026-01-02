@@ -107,10 +107,6 @@
 	path = osmesa/osmesa
 	url = https://github.com/BRL-CAD/osmesa
 	ignore = dirty
-[submodule "utahrle/utahrle"]
-	path = utahrle/utahrle
-	url = https://github.com/BRL-CAD/utahrle
-	ignore = dirty
 [submodule "tk/tk"]
 	path = tk/tk
 	url = https://github.com/BRL-CAD/tk

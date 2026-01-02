@@ -460,10 +460,6 @@ add_project(tiff GROUPS "APPLESEED;GDAL")
 # https://github.com/AcademySoftwareFoundation/openexr
 add_project(openexr GROUPS "APPLESEED")
 
-# UtahRLE - Raster Image library
-# https://github.com/BRL-CAD/utahrle
-add_project(utahrle GROUPS "BRLCAD")
-
 # OpenColorIO - color management
 # https://opencolorio.org
 # https://github.com/AcademySoftwareFoundation/OpenColorIO
