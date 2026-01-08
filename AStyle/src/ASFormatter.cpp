@@ -2107,11 +2107,17 @@ std::string ASFormatter::nextLine()
 		}
 
 		size_t lastNonWsChar = currentLine.find_last_not_of(" \t", charNum - 1);
+
 		if (lastNonWsChar != std::string::npos && pointerAlignment == PTR_ALIGN_TYPE && !isGSCStyle() && !preserveWhitespace && !isInPreprocessor)
 		{
 			char lastChar = currentLine[lastNonWsChar];
 
-			if (lastChar == ',')
+			//fix SF605, possibly more cases pending
+			char nextChar = 0;
+			size_t nextCharPos = currentLine.find_first_not_of(" \t", lastNonWsChar+1);
+			if (nextCharPos != std::string::npos) nextChar = currentLine[nextCharPos];
+
+			if (lastChar == ',' && nextChar != '+' && nextChar != '-')
 			{
 				formattedLine = rtrim(formattedLine);
 				formattedLine += ' ';
