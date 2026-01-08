@@ -2106,15 +2106,10 @@ std::string ASFormatter::nextLine()
 			handlePotentialOperator(newHeader);
 		}
 
-		// TODO check add flag to preserve space
 		size_t lastNonWsChar = currentLine.find_last_not_of(" \t", charNum - 1);
-		if (lastNonWsChar != std::string::npos && pointerAlignment == PTR_ALIGN_TYPE && !isGSCStyle() && !preserveWhitespace)
+		if (lastNonWsChar != std::string::npos && pointerAlignment == PTR_ALIGN_TYPE && !isGSCStyle() && !preserveWhitespace && !isInPreprocessor)
 		{
 			char lastChar = currentLine[lastNonWsChar];
-
-			//if (lastChar != '(' && !isalpha(lastChar)) {
-			//	formattedLine = rtrim(formattedLine);
-			//}
 
 			if (lastChar == ',')
 			{
