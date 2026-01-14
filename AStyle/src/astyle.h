@@ -1,5 +1,5 @@
 // astyle.h
-// Copyright (c) 2025 The Artistic Style Authors.
+// Copyright (c) 2026 The Artistic Style Authors.
 // This code is licensed under the MIT License.
 // License.md describes the conditions under which this software may be distributed.
 
@@ -28,7 +28,7 @@
 	#include <cstring>              // need both string and cstring for GCC
 #endif
 
-#define ASTYLE_VERSION "3.6.13"
+#define ASTYLE_VERSION "3.6.14"
 
 namespace astyle {
 
