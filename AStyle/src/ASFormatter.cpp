@@ -4493,7 +4493,7 @@ void ASFormatter::padOperators(const std::string* newOperator)
 	bool isSharpNullConditional = (newOperator == &ASResource::AS_QUESTION && isSharpStyle() &&
 	                               (nextNonWSChar == '.' || nextNonWSChar == '['));
 
-	bool isSpecialTemplateOperator = (isInTemplate || isImmediatelyPostTemplate) &&
+	bool isSpecialTemplateOperator = (isInTemplate || isImmediatelyPostTemplate || isSharpStyle()) &&
 	                                 (newOperator == &ASResource::AS_LS || newOperator == &ASResource::AS_GR);
 
 	std::string sBegin = currentLine.substr(0, charNum);
