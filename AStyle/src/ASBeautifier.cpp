@@ -4015,10 +4015,11 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 				char prevCh = i > 0 ? line[i - 1] : ' ';
 				char prevPrevCh = i > 1 ? line[i - 2] : ' ';
 
-				// GL 32
+				// https://gitlab.com/saalen/astyle/-/issues/32
 				// https://sourceforge.net/p/astyle/bugs/535/
 				// https://gitlab.com/saalen/astyle/-/issues/82
-				if (isCStyle() && prevCh == 'R' && !isalpha(prevPrevCh) && !isalpha(prevNonSpaceCh))
+				// https://sourceforge.net/p/astyle/bugs/596/
+				if (isCStyle() && prevCh == 'R' && !isalpha(prevPrevCh))
 				{
 					int parenPos = line.find('(', i);
 
