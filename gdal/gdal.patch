@@ -1,6 +1,47 @@
+diff -Naur gdal/apps/gdalalg_raster_tile.cpp GDAL_BLD/apps/gdalalg_raster_tile.cpp
+--- gdal/apps/gdalalg_raster_tile.cpp	2026-02-04 16:36:48.022371225 -0500
++++ GDAL_BLD/apps/gdalalg_raster_tile.cpp	2026-02-04 16:36:21.803485814 -0500
+@@ -326,37 +326,6 @@
+             .SetMaxValueIncluded(100)
+             .SetCategory(ADVANCED_RESAMPLING_CATEGORY);
+ 
+-    constexpr const char *ADVANCED_RESAMPLING_CATEGORY = "Advanced Resampling";
+-    auto &excludedValuesArg =
+-        AddArg("excluded-values", 0,
+-               _("Tuples of values (e.g. <R>,<G>,<B> or (<R1>,<G1>,<B1>),"
+-                 "(<R2>,<G2>,<B2>)) that must beignored as contributing source "
+-                 "pixels during (average) resampling"),
+-               &m_excludedValues)
+-            .SetCategory(ADVANCED_RESAMPLING_CATEGORY);
+-    auto &excludedValuesPctThresholdArg =
+-        AddArg(
+-            "excluded-values-pct-threshold", 0,
+-            _("Minimum percentage of source pixels that must be set at one of "
+-              "the --excluded-values to cause the excluded value to be used as "
+-              "the target pixel value"),
+-            &m_excludedValuesPctThreshold)
+-            .SetDefault(m_excludedValuesPctThreshold)
+-            .SetMinValueIncluded(0)
+-            .SetMaxValueIncluded(100)
+-            .SetCategory(ADVANCED_RESAMPLING_CATEGORY);
+-    auto &nodataValuesPctThresholdArg =
+-        AddArg(
+-            "nodata-values-pct-threshold", 0,
+-            _("Minimum percentage of source pixels that must be set at one of "
+-              "nodata (or alpha=0 or any other way to express transparent pixel"
+-              "to cause the target pixel value to be transparent"),
+-            &m_nodataValuesPctThreshold)
+-            .SetDefault(m_nodataValuesPctThreshold)
+-            .SetMinValueIncluded(0)
+-            .SetMaxValueIncluded(100)
+-            .SetCategory(ADVANCED_RESAMPLING_CATEGORY);
+-
+     constexpr const char *PUBLICATION_CATEGORY = "Publication";
+     AddArg("webviewer", 0, _("Web viewer to generate"), &m_webviewers)
+         .SetDefault("all")
 diff -Naur gdal/cmake/modules/packages/FindSQLite3.cmake GDAL_BLD/cmake/modules/packages/FindSQLite3.cmake
---- gdal/cmake/modules/packages/FindSQLite3.cmake	2024-06-25 09:56:45.835498631 -0400
-+++ GDAL_BLD/cmake/modules/packages/FindSQLite3.cmake	2024-06-25 09:59:46.365399374 -0400
+--- gdal/cmake/modules/packages/FindSQLite3.cmake	2026-02-04 16:36:47.818372116 -0500
++++ GDAL_BLD/cmake/modules/packages/FindSQLite3.cmake	2026-02-04 16:28:57.601427168 -0500
 @@ -57,7 +57,7 @@
              NAMES  sqlite3.h
              HINTS ${PC_SQLITE3_INCLUDE_DIRS})
@@ -10,29 +51,29 @@ diff -Naur gdal/cmake/modules/packages/FindSQLite3.cmake GDAL_BLD/cmake/modules/
                 NAMES_PER_DIR
                 HINTS ${PC_SQLITE3_LIBRARY_DIRS})
  endif()
+diff -Naur gdal/gcore/gdal_multidomainmetadata.h GDAL_BLD/gcore/gdal_multidomainmetadata.h
+--- gdal/gcore/gdal_multidomainmetadata.h	2026-02-05 09:46:40.132404369 -0500
++++ GDAL_BLD/gcore/gdal_multidomainmetadata.h	2026-02-05 09:48:20.477951010 -0500
+@@ -18,6 +18,15 @@
+ #include "cpl_port.h"
+ #include "cpl_string.h"
  
- # Extract version information from the header file
-diff -Naur gdal/gcore/gdal_priv.h GDAL_BLD/gcore/gdal_priv.h
---- gdal/gcore/gdal_priv.h	2024-06-26 17:01:06.199711566 -0400
-+++ GDAL_BLD/gcore/gdal_priv.h	2024-06-26 17:00:48.433037793 -0400
-@@ -96,6 +96,13 @@
- /*                       GDALMultiDomainMetadata                        */
- /************************************************************************/
- 
++#ifndef STRCASECMP
 +#if defined(_WIN32)
 +#define STRCASECMP(a, b) (_stricmp(a, b))
 +#else
 +/** Alias for strcasecmp() */
 +#define STRCASECMP(a, b) (strcasecmp(a, b))
 +#endif
++#endif
 +
- //! @cond Doxygen_Suppress
- class CPL_DLL GDALMultiDomainMetadata
- {
+ #include <map>
+ 
+ /*! @cond Doxygen_Suppress */
 diff -Naur gdal/gdal.cmake GDAL_BLD/gdal.cmake
---- gdal/gdal.cmake	2024-06-25 09:56:45.660500506 -0400
-+++ GDAL_BLD/gdal.cmake	2024-06-25 09:55:37.834206511 -0400
-@@ -379,12 +379,6 @@
+--- gdal/gdal.cmake	2026-02-04 16:36:47.825372086 -0500
++++ GDAL_BLD/gdal.cmake	2026-02-04 16:28:57.602427164 -0500
+@@ -238,12 +238,6 @@
  set_property(TARGET ${GDAL_LIB_TARGET_NAME} PROPERTY PLUGIN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/gdalplugins")
  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gdalplugins")
  
@@ -46,9 +87,9 @@ diff -Naur gdal/gdal.cmake GDAL_BLD/gdal.cmake
      set_target_properties(${GDAL_LIB_TARGET_NAME} PROPERTIES SUFFIX "-${GDAL_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
  endif ()
 diff -Naur gdal/port/cpl_port.h GDAL_BLD/port/cpl_port.h
---- gdal/port/cpl_port.h	2024-06-25 09:56:45.954497348 -0400
-+++ GDAL_BLD/port/cpl_port.h	2024-06-25 09:55:37.836206491 -0400
-@@ -1123,7 +1123,7 @@
+--- gdal/port/cpl_port.h	2026-02-04 16:36:47.823372095 -0500
++++ GDAL_BLD/port/cpl_port.h	2026-02-04 16:28:57.603427159 -0500
+@@ -1019,7 +1019,7 @@
  #define TRUE 1
  #endif
  
