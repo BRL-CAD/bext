@@ -1,178 +1,28 @@
-diff -Naur libpng/CMake/FindZLIB.cmake PNG_BLD/CMake/FindZLIB.cmake
---- libpng/CMake/FindZLIB.cmake	1969-12-31 19:00:00.000000000 -0500
-+++ PNG_BLD/CMake/FindZLIB.cmake	2024-03-06 10:42:37.366757148 -0500
-@@ -0,0 +1,123 @@
-+#.rst:
-+# FindZLIB
-+# --------
-+#
-+# Find the native ZLIB includes and library.
-+#
-+# IMPORTED Targets
-+# ^^^^^^^^^^^^^^^^
-+#
-+# This module defines :prop_tgt:`IMPORTED` target ``ZLIB::ZLIB``, if
-+# ZLIB has been found.
-+#
-+# Result Variables
-+# ^^^^^^^^^^^^^^^^
-+#
-+# This module defines the following variables:
-+#
-+# ::
-+#
-+#   ZLIB_INCLUDE_DIRS   - where to find zlib.h, etc.
-+#   ZLIB_LIBRARIES      - List of libraries when using zlib.
-+#   ZLIB_FOUND          - True if zlib found.
-+#
-+# ::
-+#
-+#   ZLIB_VERSION_STRING - The version of zlib found (x.y.z)
-+#   ZLIB_VERSION_MAJOR  - The major version of zlib
-+#   ZLIB_VERSION_MINOR  - The minor version of zlib
-+#   ZLIB_VERSION_PATCH  - The patch version of zlib
-+#   ZLIB_VERSION_TWEAK  - The tweak version of zlib
-+#
-+# Backward Compatibility
-+# ^^^^^^^^^^^^^^^^^^^^^^
-+#
-+# The following variable are provided for backward compatibility
-+#
-+# ::
-+#
-+#   ZLIB_MAJOR_VERSION  - The major version of zlib
-+#   ZLIB_MINOR_VERSION  - The minor version of zlib
-+#   ZLIB_PATCH_VERSION  - The patch version of zlib
-+#
-+# Hints
-+# ^^^^^
-+#
-+# A user may set ``ZLIB_ROOT`` to a zlib installation root to tell this
-+# module where to look.
-+
-+#=============================================================================
-+# Copyright 2001-2011 Kitware, Inc.
-+#
-+# Distributed under the OSI-approved BSD License (the "License");
-+# see accompanying file Copyright.txt for details.
-+#
-+# This software is distributed WITHOUT ANY WARRANTY; without even the
-+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-+# See the License for more information.
-+#=============================================================================
-+# (To distribute this file outside of CMake, substitute the full
-+#  License text for the above reference.)
-+
-+set(_ZLIB_SEARCHES)
-+
-+# Search ZLIB_ROOT first if it is set.
-+if(ZLIB_ROOT)
-+  set(_ZLIB_SEARCH_ROOT PATHS ${ZLIB_ROOT} NO_DEFAULT_PATH)
-+  list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_ROOT)
-+endif()
-+
-+# Normal search.
-+set(_ZLIB_SEARCH_NORMAL
-+  PATHS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\GnuWin32\\Zlib;InstallPath]"
-+        "$ENV{PROGRAMFILES}/zlib"
-+  )
-+list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_NORMAL)
-+
-+set(ZLIB_NAMES z_brl z zlib zdll zlib1 zlibd zlibd1)
-+
-+# Try each search configuration.
-+foreach(search ${_ZLIB_SEARCHES})
-+  find_path(ZLIB_INCLUDE_DIR NAMES zlib.h        ${${search}} PATH_SUFFIXES include)
-+  find_library(ZLIB_LIBRARY  NAMES ${ZLIB_NAMES} ${${search}} PATH_SUFFIXES lib)
-+endforeach()
-+
-+mark_as_advanced(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
-+
-+if(ZLIB_INCLUDE_DIR AND EXISTS "${ZLIB_INCLUDE_DIR}/zlib.h")
-+    file(STRINGS "${ZLIB_INCLUDE_DIR}/zlib.h" ZLIB_H REGEX "^#define ZLIB_VERSION \"[^\"]*\"$")
-+
-+    string(REGEX REPLACE "^.*ZLIB_VERSION \"([0-9]+).*$" "\\1" ZLIB_VERSION_MAJOR "${ZLIB_H}")
-+    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_MINOR  "${ZLIB_H}")
-+    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_PATCH "${ZLIB_H}")
-+    set(ZLIB_VERSION_STRING "${ZLIB_VERSION_MAJOR}.${ZLIB_VERSION_MINOR}.${ZLIB_VERSION_PATCH}")
-+
-+    # only append a TWEAK version if it exists:
-+    set(ZLIB_VERSION_TWEAK "")
-+    if( "${ZLIB_H}" MATCHES "ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.[0-9]+\\.([0-9]+)")
-+        set(ZLIB_VERSION_TWEAK "${CMAKE_MATCH_1}")
-+        set(ZLIB_VERSION_STRING "${ZLIB_VERSION_STRING}.${ZLIB_VERSION_TWEAK}")
-+    endif()
-+
-+    set(ZLIB_MAJOR_VERSION "${ZLIB_VERSION_MAJOR}")
-+    set(ZLIB_MINOR_VERSION "${ZLIB_VERSION_MINOR}")
-+    set(ZLIB_PATCH_VERSION "${ZLIB_VERSION_PATCH}")
-+endif()
-+
-+# handle the QUIETLY and REQUIRED arguments and set ZLIB_FOUND to TRUE if
-+# all listed variables are TRUE
-+include(FindPackageHandleStandardArgs)
-+FIND_PACKAGE_HANDLE_STANDARD_ARGS(ZLIB REQUIRED_VARS ZLIB_LIBRARY ZLIB_INCLUDE_DIR
-+                                       VERSION_VAR ZLIB_VERSION_STRING)
-+
-+if(ZLIB_FOUND)
-+    set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
-+    set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
-+
-+    if(NOT TARGET ZLIB::ZLIB)
-+      add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
-+      set_target_properties(ZLIB::ZLIB PROPERTIES
-+        IMPORTED_LOCATION "${ZLIB_LIBRARY}"
-+        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
-+    endif()
-+endif()
-diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
---- libpng/CMakeLists.txt	2024-03-06 10:43:33.593760600 -0500
-+++ PNG_BLD/CMakeLists.txt	2024-03-06 10:51:59.356989438 -0500
-@@ -30,6 +30,9 @@
+--- libpng/CMakeLists.txt	2025-12-04 15:29:05.405037672 -0500
++++ PNG_BLD/CMakeLists.txt	2025-12-04 15:33:31.997897361 -0500
+@@ -29,6 +29,9 @@
          VERSION ${PNGLIB_VERSION}
          LANGUAGES C ASM)
  
 +# Location of CMake modules
 +list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 +
- if(POLICY CMP0074)
-   # Allow find_package() to use the ZLIB_ROOT variable, if available.
-   cmake_policy(SET CMP0074 NEW)
-@@ -48,8 +51,10 @@
+ include(CheckCSourceCompiles)
+ include(CheckLibraryExists)
+ include(GNUInstallDirs)
+@@ -43,9 +46,11 @@
  # Previously, we used to set CMAKE_DEBUG_POSTFIX globally. That variable should
  # not be cached, however, because doing so would affect all projects processed
  # after libpng, in unexpected and undesirable ways.
--set(PNG_DEBUG_POSTFIX "d"
--    CACHE STRING "Postfix to append to library file names under the Debug configuration")
 +if(NOT PNG_NO_DEBUG_POSTFIX)
-+  set(PNG_DEBUG_POSTFIX "d"
-+      CACHE STRING "Postfix to append to library file names under the Debug configuration")
-+endif(NOT PNG_NO_DEBUG_POSTFIX)
+ set(PNG_DEBUG_POSTFIX
+     "d"
+     CACHE STRING "Postfix to append to library file names under the Debug configuration")
++endif()
  
  # Allow the users to import their own extra configuration settings.
- set(DFA_XTRA ""
-@@ -98,6 +103,7 @@
- option(PNG_BUILD_ZLIB "Custom zlib location, else find_package is used" OFF)
- if(NOT PNG_BUILD_ZLIB)
-   find_package(ZLIB REQUIRED)
-+  include_directories(${ZLIB_INCLUDE_DIRS})
- elseif(POLICY CMP0074)
-   if("x${ZLIB_ROOT}" STREQUAL "x")
-     message(DEPRECATION
-@@ -490,10 +496,9 @@
- 
-   if(PNG_PREFIX)
-     set(PNGLIBCONF_H_EXTRA_DEPENDS
--        "${CMAKE_CURRENT_BINARY_DIR}/scripts/prefix.out"
--        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/macro.lst")
-+        png_scripts_prefix_out)
-     set(PNGPREFIX_H_EXTRA_DEPENDS
--        "${CMAKE_CURRENT_BINARY_DIR}/scripts/intprefix.out")
-+        png_scripts_intprefix_out)
-   endif()
- 
-   generate_out(INPUT "${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.c"
-@@ -677,15 +682,15 @@
+ # Those settings can be either passed via DFA_XTRA if they are in DFA form
+@@ -649,15 +653,15 @@
    # We are on a Unix or Unix-like toolchain like the GNU toolchain on Windows.
    # Library file names are expected to have an implicit prefix such as "lib".
    # Let CMake prepend and append its usual prefixes and suffixes by default.
@@ -192,24 +42,24 @@ diff -Naur libpng/CMakeLists.txt PNG_BLD/CMakeLists.txt
  endif()
  
  if(PNG_SHARED)
-@@ -1068,16 +1073,16 @@
+@@ -1052,16 +1056,16 @@
    if(PNG_SHARED)
      # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
      if(NOT WIN32 OR CYGWIN OR MINGW)
 -      create_symlink(libpng${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
--      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}
+-      install(FILES "$<TARGET_LINKER_FILE_DIR:png_shared>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}"
 +      create_symlink(libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
-+      install(FILES $<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX}
-               DESTINATION ${CMAKE_INSTALL_LIBDIR})
++      install(FILES "$<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX}"
+               DESTINATION "${CMAKE_INSTALL_LIBDIR}")
      endif()
    endif()
  
    if(PNG_STATIC)
      if(NOT WIN32 OR CYGWIN OR MINGW)
 -      create_symlink(libpng${CMAKE_STATIC_LIBRARY_SUFFIX} TARGET png_static)
--      install(FILES $<TARGET_LINKER_FILE_DIR:png_static>/libpng${CMAKE_STATIC_LIBRARY_SUFFIX}
+-      install(FILES "$<TARGET_LINKER_FILE_DIR:png_static>/libpng${CMAKE_STATIC_LIBRARY_SUFFIX}"
 +      create_symlink(libpng_brl${CMAKE_STATIC_LIBRARY_SUFFIX} TARGET png_static)
-+      install(FILES $<TARGET_LINKER_FILE_DIR:png_static>/libpng_brl${CMAKE_STATIC_LIBRARY_SUFFIX}
-               DESTINATION ${CMAKE_INSTALL_LIBDIR})
++      install(FILES "$<TARGET_LINKER_FILE_DIR:png_static>/libpng_brl${CMAKE_STATIC_LIBRARY_SUFFIX}"
+               DESTINATION "${CMAKE_INSTALL_LIBDIR}")
      endif()
    endif()
