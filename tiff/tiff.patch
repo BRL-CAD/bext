@@ -172,20 +172,3 @@ diff -Naur tiff-4.6.0/cmake/FindZLIB.cmake tiff/cmake/FindZLIB.cmake
 +        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
 +    endif()
 +endif()
-diff -Naur tiff-4.6.0/CMakeLists.txt tiff/CMakeLists.txt
---- tiff-4.6.0/CMakeLists.txt	2023-09-13 11:45:24.678250700 -0400
-+++ tiff/CMakeLists.txt	2023-09-13 11:51:32.480189473 -0400
-@@ -24,10 +24,10 @@
- # LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
- # OF THIS SOFTWARE.
- 
--cmake_minimum_required(VERSION 3.9.0)
-+cmake_minimum_required(VERSION 3.18)
- 
--# Default policy is from 3.9.0
--cmake_policy(VERSION 3.9.0)
-+# Default policy is from 3.18
-+cmake_policy(VERSION 3.18)
- 
- # Find CMake modules in cmake/
- list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
