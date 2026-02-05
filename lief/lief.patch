@@ -1,20 +1,9 @@
 diff -Naur LIEF/CMakeLists.txt LIEF_BLD/CMakeLists.txt
---- LIEF/CMakeLists.txt	2024-09-09 14:00:50.787850311 -0400
-+++ LIEF_BLD/CMakeLists.txt	2024-09-09 14:01:39.566078344 -0400
+--- LIEF/CMakeLists.txt	2026-02-05 12:03:01.774599713 -0500
++++ LIEF_BLD/CMakeLists.txt	2026-02-05 12:03:42.945448427 -0500
 @@ -1,4 +1,4 @@
 -cmake_minimum_required(VERSION 3.24)
 +cmake_minimum_required(VERSION 3.18)
+ project(LIEF LANGUAGES C CXX)
+ 
  enable_language(C)
- enable_language(CXX)
- 
-diff -Naur LIEF/include/LIEF/Abstract/Header.hpp LIEF_BLD/include/LIEF/Abstract/Header.hpp
---- LIEF/include/LIEF/Abstract/Header.hpp	2024-09-09 14:00:50.813849896 -0400
-+++ LIEF_BLD/include/LIEF/Abstract/Header.hpp	2024-09-09 13:41:11.933077938 -0400
-@@ -16,6 +16,7 @@
- #ifndef LIEF_ABSTRACT_HEADER_H
- #define LIEF_ABSTRACT_HEADER_H
- 
-+#include <cstdint>
- #include <ostream>
- #include <set>
- 
