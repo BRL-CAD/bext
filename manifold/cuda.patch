@@ -1,20 +1,13 @@
-diff -Naur manifold/src/utilities/include/cuda/std/detail/libcxx/include/__config MANIFOLD_BLD/src/utilities/include/cuda/std/detail/libcxx/include/__config
---- manifold/src/utilities/include/cuda/std/detail/libcxx/include/__config	1969-12-31 19:00:00.000000000 -0500
-+++ MANIFOLD_BLD/src/utilities/include/cuda/std/detail/libcxx/include/__config	2026-02-06 15:43:20.384191787 -0500
-@@ -0,0 +1,16 @@
-+#pragma once
-+
-+// On Apple platforms we must not use libcudacxx's bundled libc++ __config,
-+// because it defines configuration macros (e.g. _NOEXCEPT_) that conflict with
-+// Apple's libc++ headers from the Xcode SDK.
-+//
-+// Thrust may include this path indirectly; redirect it to the system libc++
-+// configuration instead.
-+#if defined(__APPLE__) && defined(_LIBCPP_VERSION)
-+#include <__config>
-+#else
-+// Non-Apple (or non-libc++) builds should use libcudacxx's original header.
-+// We intentionally do not try to include it here to avoid include-path
-+// recursion; this shim should only be present/used on Apple builds.
-+#error "This shim __config is intended for Apple libc++ builds only."
-+#endif
+diff -Naur manifold/src/third_party/thrust/dependencies/libcudacxx/include/cuda/std/detail/libcxx/include/__config MANIFOLD_BLD/src/third_party/thrust/dependencies/libcudacxx/include/cuda/std/detail/libcxx/include/__config
+--- manifold/src/third_party/thrust/dependencies/libcudacxx/include/cuda/std/detail/libcxx/include/__config	2026-02-06 16:37:54.212137501 -0500
++++ MANIFOLD_BLD/src/third_party/thrust/dependencies/libcudacxx/include/cuda/std/detail/libcxx/include/__config	2026-02-06 16:37:30.245235005 -0500
+@@ -518,9 +518,7 @@
+ #define _LIBCUDACXX_HAS_NO_VARIABLE_TEMPLATES
+ #endif
+ 
+-#if !(__has_feature(cxx_noexcept))
+ #define _LIBCUDACXX_HAS_NO_NOEXCEPT
+-#endif
+ 
+ #if __has_feature(underlying_type)
+ #define _LIBCUDACXX_UNDERLYING_TYPE(...) __underlying_type(__VA_ARGS__)
