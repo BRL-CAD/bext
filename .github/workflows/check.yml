@@ -248,7 +248,7 @@ jobs:
 
   osx_release:
     name: macOS Clang Release Build
-    runs-on: macos-latest
+    runs-on: macos-14
     strategy:
       fail-fast: true
     steps:
@@ -276,7 +276,7 @@ jobs:
 
   osx_debug:
     name: macOS Clang Debug Build
-    runs-on: macos-latest
+    runs-on: macos-14
     strategy:
       fail-fast: true
     steps:
