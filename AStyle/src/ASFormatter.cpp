@@ -6534,7 +6534,7 @@ void ASFormatter::formatQuoteBody()
 		{
 			std::string delim = ')' + verbatimDelimiter;
 			int delimStart = charNum - delim.length();
-			if (delimStart > 0 && currentLine.substr(delimStart, delim.length()) == delim)
+			if (delimStart >= 0 && currentLine.substr(delimStart, delim.length()) == delim)
 			{
 				isInQuote = false;
 				isInVerbatimQuote = false;

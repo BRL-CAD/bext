@@ -4019,7 +4019,7 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 				// https://sourceforge.net/p/astyle/bugs/535/
 				// https://gitlab.com/saalen/astyle/-/issues/82
 				// https://sourceforge.net/p/astyle/bugs/596/
-				if (isCStyle() && prevCh == 'R' && !isalpha(prevPrevCh))
+				if (isCStyle() && prevCh == 'R' && !isalpha(prevPrevCh) /*&& !isalpha(prevNonSpaceCh)*/ )
 				{
 					int parenPos = line.find('(', i);
 
