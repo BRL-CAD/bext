@@ -7,10 +7,10 @@ diff -Naur qtsvg/CMakeLists.txt Qt6Svg_BLD/CMakeLists.txt
  
 +list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 +
- find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS BuildInternals Core)
- find_package(Qt6 ${PROJECT_VERSION} QUIET CONFIG OPTIONAL_COMPONENTS Gui Widgets Xml)
- qt_internal_project_setup()
-@@ -23,4 +25,19 @@
+ find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS BuildInternals)
+ 
+ # This should be called as early as possible, just after find_package(BuildInternals) where it is
+@@ -28,4 +30,19 @@
      find_package(Qt6 ${PROJECT_VERSION} QUIET CONFIG OPTIONAL_COMPONENTS ZlibPrivate)
  endif()
  
@@ -42,7 +42,7 @@ diff -Naur qtsvg/src/svg/CMakeLists.txt Qt6Svg_BLD/src/svg/CMakeLists.txt
  qt_internal_add_module(Svg
      SOURCES
          qsvgfont.cpp qsvgfont_p.h
-@@ -32,6 +34,7 @@
+@@ -43,6 +45,7 @@
      PUBLIC_LIBRARIES
          Qt::Core
          Qt::Gui
