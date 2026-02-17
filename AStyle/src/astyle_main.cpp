@@ -1329,8 +1329,7 @@ void ASConsole::getFilePaths(const std::string& filePath)
 	std::vector<std::string> targetFilenameVector;
 
 	// separate directory and file name
-	size_t separator = filePath.find_last_of(g_fileSeparator);
-	if (separator == std::string::npos)
+	if (size_t separator = filePath.find_last_of(g_fileSeparator); separator == std::string::npos)
 	{
 		// if no directory is present, use the currently active directory
 		targetDirectory = getCurrentDirectory(filePath);
@@ -1442,28 +1441,28 @@ void ASConsole::getFilePaths(const std::string& filePath)
 }
 
 // Check if a file exists
-bool ASConsole::fileExists(const char* file) const
+[[nodiscard]] bool ASConsole::fileExists(const char* file) const
 {
 	struct stat buf;
 	return (stat(file, &buf) == 0);
 }
 
-bool ASConsole::fileNameVectorIsEmpty() const
+[[nodiscard]] bool ASConsole::fileNameVectorIsEmpty() const
 {
 	return fileNameVector.empty();
 }
 
-bool ASConsole::isOption(const std::string& arg, const char* op)
+[[nodiscard]] bool ASConsole::isOption(const std::string& arg, const char* op)
 {
 	return arg == op;
 }
 
-bool ASConsole::isOption(const std::string& arg, const char* a, const char* b)
+[[nodiscard]] bool ASConsole::isOption(const std::string& arg, const char* a, const char* b)
 {
 	return (isOption(arg, a) || isOption(arg, b));
 }
 
-bool ASConsole::isParamOption(const std::string& arg, const char* option)
+[[nodiscard]] bool ASConsole::isParamOption(const std::string& arg, const char* option)
 {
 	bool retVal = arg.compare(0, strlen(option), option) == 0;
 	// if comparing for short option, 2nd char of arg must be numeric
@@ -1477,7 +1476,7 @@ bool ASConsole::isParamOption(const std::string& arg, const char* option)
 // used for both directories and filenames
 // updates the g_excludeHitsVector
 // return true if a match
-bool ASConsole::isPathExcluded(const std::string& subPath)
+[[nodiscard]] bool ASConsole::isPathExcluded(const std::string& subPath)
 {
 	for (size_t i = 0; i < excludeVector.size(); ++i)
 	{
@@ -2757,14 +2756,11 @@ ASOptions::ASOptions(ASFormatter& formatterArg, ASConsole& consoleArg)
 bool ASOptions::parseOptions(std::vector<std::string>& optionsVector)
 {
 	std::vector<std::string>::iterator option;
-	std::string arg;
 	std::string subArg;
 	optionErrors.clear();
 
-	for (option = optionsVector.begin(); option != optionsVector.end(); ++option)
+	for (const auto &arg : optionsVector)
 	{
-		arg = *option;
-
 		if (arg.compare(0, 2, "--") == 0)
 			parseOption(arg.substr(2));
 		else if (arg[0] == '-')
@@ -2774,8 +2770,8 @@ bool ASOptions::parseOptions(std::vector<std::string>& optionsVector)
 			for (i = 1; i < arg.length(); ++i)
 			{
 				if (i > 1
-				        && isalpha((unsigned char) arg[i])
-				        && arg[i - 1] != 'x')
+					&& isalpha((unsigned char) arg[i])
+					&& arg[i - 1] != 'x')
 				{
 					// parse the previous option in subArg
 					parseOption(subArg);

@@ -298,18 +298,18 @@ protected:  // inline functions
 	bool isGSCStyle() const { return baseFileType == GSC_TYPE; }
 
 protected:  // functions definitions are at the end of ASResource.cpp
-	const std::string* findHeader(std::string_view line, int i,
+	[[nodiscard]] const std::string* findHeader(std::string_view line, int i,
 	                              const std::vector<const std::string*>* possibleHeaders) const;
-	bool findKeyword(std::string_view  line, int i, std::string_view  keyword) const;
-	const std::string* findOperator(std::string_view  line, int i,
+	[[nodiscard]] bool findKeyword(std::string_view  line, int i, std::string_view  keyword) const;
+	[[nodiscard]] const std::string* findOperator(std::string_view  line, int i,
 	                                const std::vector<const std::string*>* possibleOperators) const;
-	std::string_view getCurrentWord(std::string_view, size_t index) const;
-	bool isDigit(char ch) const;
-	bool isLegalNameChar(char ch) const;
-	bool isCharPotentialHeader(std::string_view line, size_t i) const;
-	bool isCharPotentialOperator(char ch) const;
-	bool isDigitSeparator(std::string_view line, int i) const;
-	char peekNextChar(std::string_view line, int i) const;
+	[[nodiscard]] std::string_view getCurrentWord(std::string_view, size_t index) const;
+	[[nodiscard]] bool isDigit(char ch) const;
+	[[nodiscard]] bool isLegalNameChar(char ch) const;
+	[[nodiscard]] bool isCharPotentialHeader(std::string_view line, size_t i) const;
+	[[nodiscard]] bool isCharPotentialOperator(char ch) const;
+	[[nodiscard]] bool isDigitSeparator(std::string_view line, int i) const;
+	[[nodiscard]] char peekNextChar(std::string_view line, int i) const;
 };  // Class ASBase
 
 //-----------------------------------------------------------------------------
@@ -359,38 +359,38 @@ public:
 	void setSqueezeWhitespace(bool state);
 	void setPreserveWhitespace(bool state);
 	void setLambdaIndentation(bool state);
-	int  getBeautifierFileType() const;
-	int  getFileType() const;
-	int  getIndentLength() const;
-	int  getTabLength() const;
-	std::string getIndentString() const;
-	std::string getNextWord(const std::string& line, size_t currPos) const;
-	bool getAlignMethodColon() const;
-	bool getBraceIndent() const;
-	bool getBlockIndent() const;
-	bool getCaseIndent() const;
-	bool getClassIndent() const;
-	bool getEmptyLineFill() const;
-	bool getForceTabIndentation() const;
-	bool getModeManuallySet() const;
-	bool getModifierIndent() const;
-	bool getNamespaceIndent() const;
-	bool getPreprocDefineIndent() const;
-	bool getSwitchIndent() const;
+	[[nodiscard]] int getBeautifierFileType() const;
+	[[nodiscard]] int getFileType() const;
+	[[nodiscard]] int getIndentLength() const;
+	[[nodiscard]] int getTabLength() const;
+	[[nodiscard]] std::string getIndentString() const;
+	[[nodiscard]] std::string getNextWord(const std::string& line, size_t currPos) const;
+	[[nodiscard]] bool getAlignMethodColon() const;
+	[[nodiscard]] bool getBraceIndent() const;
+	[[nodiscard]] bool getBlockIndent() const;
+	[[nodiscard]] bool getCaseIndent() const;
+	[[nodiscard]] bool getClassIndent() const;
+	[[nodiscard]] bool getEmptyLineFill() const;
+	[[nodiscard]] bool getForceTabIndentation() const;
+	[[nodiscard]] bool getModeManuallySet() const;
+	[[nodiscard]] bool getModifierIndent() const;
+	[[nodiscard]] bool getNamespaceIndent() const;
+	[[nodiscard]] bool getPreprocDefineIndent() const;
+	[[nodiscard]] bool getSwitchIndent() const;
 
 protected:
 	void deleteBeautifierVectors();
-	int  getNextProgramCharDistance(std::string_view line, int i) const;
-	int  indexOf(const std::vector<const std::string*>& container, const std::string* element) const;
+	[[nodiscard]] int  getNextProgramCharDistance(std::string_view line, int i) const;
+	[[nodiscard]] int  indexOf(const std::vector<const std::string*>& container, const std::string* element) const;
 	void setBlockIndent(bool state);
 	void setBraceIndent(bool state);
 	void setBraceIndentVtk(bool state);
-	std::string extractPreprocessorStatement(std::string_view line) const;
-	std::string trim(std::string_view str) const;
-	std::string rtrim(std::string_view str) const;
-	bool isNumericVariable(std::string_view word) const;
-	bool isGitConflictMarker(std::string_view line) const;
-	bool lineStartsWithNumericType(std::string_view line) const;
+	[[nodiscard]] std::string extractPreprocessorStatement(std::string_view line) const;
+	[[nodiscard]] std::string trim(std::string_view str) const;
+	[[nodiscard]] std::string rtrim(std::string_view str) const;
+	[[nodiscard]] bool isNumericVariable(std::string_view word) const;
+	[[nodiscard]] bool isGitConflictMarker(std::string_view line) const;
+	[[nodiscard]] bool lineStartsWithNumericType(std::string_view line) const;
 
 
 	// variables set by ASFormatter - must be updated in activeBeautifierStack
@@ -434,25 +434,25 @@ private:  // functions
 	void clearObjCMethodDefinitionAlignment();
 	void deleteBeautifierContainer(std::vector<ASBeautifier*>*& container);
 	void deleteTempStacksContainer(std::vector<std::vector<const std::string*>*>*& container);
-	int  adjustIndentCountForBreakElseIfComments() const;
-	int  computeObjCColonAlignment(std::string_view line, int colonAlignPosition) const;
-	int  convertTabToSpaces(int i, int tabIncrementIn) const;
-	int  findObjCColonAlignment(std::string_view line) const;
-	int  getContinuationIndentAssign(std::string_view line, size_t currPos) const;
-	int  getContinuationIndentComma(std::string_view line, size_t currPos) const;
-	int  getObjCFollowingKeyword(std::string_view line, int bracePos) const;
-	bool isIndentedPreprocessor(std::string_view line, size_t currPos) const;
-	bool isLineEndComment(std::string_view line, int startPos) const;
-	bool isPreprocessorConditionalCplusplus(std::string_view line) const;
-	bool isInPreprocessorUnterminatedComment(std::string_view line);
-	bool isTopLevel() const;
-	bool statementEndsWithComma(std::string_view line, int index) const;
+	[[nodiscard]] int  adjustIndentCountForBreakElseIfComments() const;
+	[[nodiscard]] int  computeObjCColonAlignment(std::string_view line, int colonAlignPosition) const;
+	[[nodiscard]] int  convertTabToSpaces(int i, int tabIncrementIn) const;
+	[[nodiscard]] int  findObjCColonAlignment(std::string_view line) const;
+	[[nodiscard]] int  getContinuationIndentAssign(std::string_view line, size_t currPos) const;
+	[[nodiscard]] int  getContinuationIndentComma(std::string_view line, size_t currPos) const;
+	[[nodiscard]] int  getObjCFollowingKeyword(std::string_view line, int bracePos) const;
+	[[nodiscard]] bool isIndentedPreprocessor(std::string_view line, size_t currPos) const;
+	[[nodiscard]] bool isLineEndComment(std::string_view line, int startPos) const;
+	[[nodiscard]] bool isPreprocessorConditionalCplusplus(std::string_view line) const;
+	[[nodiscard]] bool isInPreprocessorUnterminatedComment(std::string_view line);
+	[[nodiscard]] bool isTopLevel() const;
+	[[nodiscard]] bool statementEndsWithComma(std::string_view line, int index) const;
 
-	std::string getIndentedSpaceEquivalent(std::string_view line_) const;
+	[[nodiscard]] std::string getIndentedSpaceEquivalent(std::string_view line_) const;
 	std::string preLineWS(int lineIndentCount, int lineSpaceIndentCount);
 	template<typename T> void deleteContainer(T& container);
 	template<typename T> void initContainer(T& container, T value);
-	std::vector<std::vector<const std::string*>*>* copyTempStacks(const ASBeautifier& other) const;
+	[[nodiscard]] std::vector<std::vector<const std::string*>*>* copyTempStacks(const ASBeautifier& other) const;
 	std::pair<int, int> computePreprocessorIndent();
 
 	bool handleHeaderSection(std::string_view line, size_t* i, bool closingBraceReached, bool *haveCaseIndent);
@@ -758,10 +758,10 @@ public:	// functions
 	void setReferenceAlignment(ReferenceAlign alignment);
 	void setStripCommentPrefix(bool state);
 	void setTabSpaceConversionMode(bool state);
-	size_t getChecksumIn() const;
-	size_t getChecksumOut() const;
-	int  getChecksumDiff() const;
-	int  getFormatterFileType() const;
+	[[nodiscard]] size_t getChecksumIn() const;
+	[[nodiscard]] size_t getChecksumOut() const;
+	[[nodiscard]] int  getChecksumDiff() const;
+	[[nodiscard]] int  getFormatterFileType() const;
 	// retained for compatibility with release 2.06
 	// "Brackets" have been changed to "Braces" in 3.0
 	// they are referenced only by the old "bracket" options
