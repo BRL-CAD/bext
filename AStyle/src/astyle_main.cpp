@@ -382,8 +382,8 @@ void ASConsole::formatCinToCout()
 
 	// enforce binary mode to avoid auto conversion of \n to \r\n
 #ifdef _WIN32
-	_setmode( _fileno( stdout ),  _O_BINARY );
-	_setmode( _fileno( stdin ),  _O_BINARY );
+	std::ignore = _setmode( _fileno( stdout ),  _O_BINARY );
+	std::ignore = _setmode( _fileno( stdin ),  _O_BINARY );
 #endif
 
 	std::stringstream outStream;
@@ -815,14 +815,17 @@ FileEncoding ASConsole::readFile(const std::string& fileName_, std::stringstream
 			// convert utf-16 to utf-8
 			size_t utf8Size = encode.utf8LengthFromUtf16(data, dataSize, isBigEndian);
 			char* utf8Out = new (std::nothrow) char[utf8Size];
-			if (utf8Out == nullptr)
+			if (utf8Out == nullptr) {
 				error("Cannot allocate memory for utf-8 conversion", fileName_.c_str());
-			size_t utf8Len = encode.utf16ToUtf8(data, dataSize, isBigEndian, firstBlock, utf8Out);
-			assert(utf8Len <= utf8Size);
-			in << std::string(utf8Out, utf8Len);
-			delete[] utf8Out;
+			}
+			else {
+				size_t utf8Len = encode.utf16ToUtf8(data, dataSize, isBigEndian, firstBlock, utf8Out);
+				assert(utf8Len <= utf8Size);
+				in << std::string(utf8Out, utf8Len);
+				delete[] utf8Out;
+			}
 		}
-		else
+		else if (data != nullptr) 
 			in << std::string(data, dataSize);
 		fin.read(data, blockSize);
 		if (fin.bad())
