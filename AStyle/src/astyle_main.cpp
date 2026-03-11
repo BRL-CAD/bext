@@ -825,7 +825,7 @@ FileEncoding ASConsole::readFile(const std::string& fileName_, std::stringstream
 				delete[] utf8Out;
 			}
 		}
-		else if (data != nullptr) 
+		else if (data != nullptr)
 			in << std::string(data, dataSize);
 		fin.read(data, blockSize);
 		if (fin.bad())
@@ -1497,8 +1497,8 @@ void ASConsole::getFilePaths(const std::string& filePath)
 
 		if (!g_isCaseSensitive)
 		{
-			std::transform(compare.begin(), compare.end(), compare.begin(), ::tolower);
-			std::transform(exclude.begin(), exclude.end(), exclude.begin(), ::tolower);
+			std::transform(compare.begin(), compare.end(), compare.begin(), [](char c) { return static_cast<char>(::tolower(static_cast<unsigned char>(c))); });
+			std::transform(exclude.begin(), exclude.end(), exclude.begin(), [](char c) { return static_cast<char>(::tolower(static_cast<unsigned char>(c))); });
 		}
 
 		if (compare == exclude)

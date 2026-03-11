@@ -4026,11 +4026,15 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 					if (parenPos != -1)
 					{
 						isInVerbatimQuote = true;
+						isInMultiLineString = false;
 						verbatimDelimiter = line.substr(i + 1, parenPos - i - 1);
 					}
 				}
 				else if (isSharpStyle() && prevCh == '@')
+				{
 					isInVerbatimQuote = true;
+					isInMultiLineString = false;
+				}
 				// check for "C" following "extern"
 				else if (g_preprocessorCppExternCBrace == 2 && line.compare(i, 3, "\"C\"") == 0)
 					++g_preprocessorCppExternCBrace;
