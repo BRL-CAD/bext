@@ -1393,6 +1393,28 @@ int ASBeautifier::getTabLength() const
 	return tabLength;
 }
 
+int ASBeautifier::getIndentCount() const
+{
+	return indentCount;
+}
+
+int ASBeautifier::getSpaceIndentCount() const
+{
+	return spaceIndentCount;
+}
+
+
+int ASBeautifier::getPrevFinalLineIndentCount() const
+{
+	return prevFinalLineIndentCount;
+}
+
+int ASBeautifier::getPrevFinalLineSpaceIndentCount() const
+{
+	return prevFinalLineSpaceIndentCount;
+}
+
+
 std::string ASBeautifier::preLineWS(int lineIndentCount, int lineSpaceIndentCount)
 {
 
@@ -1951,6 +1973,7 @@ int ASBeautifier::getContinuationIndentComma(std::string_view line, size_t currP
 		if (!isLegalNameChar(line[indent]))
 			break;
 	}
+
 	indent++;
 	if (indent >= currPos || indent < 4)
 		return 0;
