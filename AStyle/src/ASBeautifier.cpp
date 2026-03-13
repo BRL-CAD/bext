@@ -3572,8 +3572,9 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 	}
 
 	// GL28 fix initializer lists like x({a.x=0;})
-
-	isInInitializerList = isCStyle() && isBlockOpener && (prevNonSpaceCh == '(' || prevNonSpaceCh == '=');
+	// https://gitlab.com/saalen/astyle/-/work_items/108
+	bool isDirectBraceInit = isCStyle() && isBlockOpener && prevNonSpaceCh != ')' && prevNonSpaceCh != '}';
+	isInInitializerList = isCStyle() && isBlockOpener && (prevNonSpaceCh == '(' || prevNonSpaceCh == '=' || isDirectBraceInit);
 
 	if (!isBlockOpener && currentHeader != nullptr)
 	{
@@ -4343,7 +4344,8 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 
 		// handle commas
 		// previous "isInStatement" will be from an assignment operator or class initializer
-		if (ch == ',' && parenDepth == 0 && !isContinuation && !isNonInStatementArray)
+		// https://gitlab.com/saalen/astyle/-/work_items/108
+		if (ch == ',' && parenDepth == 0 && !isContinuation && !isNonInStatementArray && !isInInitializerList)
 		{
 			// is comma at end of line
 			size_t nextChar = line.find_first_not_of(" \t", i + 1);

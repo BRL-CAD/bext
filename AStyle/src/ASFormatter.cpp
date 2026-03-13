@@ -8262,7 +8262,6 @@ size_t ASFormatter::findFormattedLineSplitPoint() const
 
 size_t ASFormatter::getEffectiveLineLength() const
 {
-	assert(maxCodeLength != std::string::npos);
 	size_t lineLength = formattedLine.length();
 
 	if (maxCodeLengthMode == MAXCODELENGTH_TOTAL) {
