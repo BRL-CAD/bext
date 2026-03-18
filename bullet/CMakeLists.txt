@@ -1,0 +1,65 @@
+# Decide if we're using Bullet
+cad_enable(BULLET "libged")
+
+bext_enable(Bullet)
+
+# Decision made, start processing if we are enabled
+
+if (ENABLE_BULLET)
+
+  git_submodule_init(bullet3 CMakeLists.txt)
+
+  RegisterDeps(BULLET)
+
+  ExternalProject_Add(BULLET_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/bullet3"
+    BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/bullet_cmake.patch
+    CMAKE_ARGS
+    ${BUILD_TYPE_SPECIFIER}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
+    -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
+    -DUSE_DOUBLE_PRECISION=ON
+    -DUSE_GRAPHICAL_BENCHMARK=OFF
+    -DBUILD_BULLET3=OFF
+    -DBUILD_EXTRAS=OFF
+    -DENABLE_VHACD=OFF
+    -DBUILD_CPU_DEMOS=OFF
+    -DUSE_GLUT=OFF
+    -DBUILD_ENET=OFF
+    -DBUILD_CLSOCKET=OFF
+    -DBUILD_EGL=OFF
+    -DBUILD_OPENGL3_DEMOS=OFF
+    -DBUILD_BULLET2_DEMOS=OFF
+    -DBUILD_UNIT_TESTS=OFF
+    LOG_CONFIGURE ${EXT_BUILD_QUIET}
+    LOG_BUILD ${EXT_BUILD_QUIET}
+    LOG_INSTALL ${EXT_BUILD_QUIET}
+    LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
+    STEP_TARGETS install
+    )
+
+  TargetInstallDeps(BULLET BULLET_DEPENDS)
+
+  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/bullet3/LICENSE.txt
+    ${DOC_LICENSE_DIR}/bullet.txt
+    COPYONLY
+    )
+
+endif (ENABLE_BULLET)
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
+

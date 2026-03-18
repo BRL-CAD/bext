@@ -1,0 +1,12 @@
+diff -Naur bullet3/CMakeLists.txt BULLET_BLD/CMakeLists.txt
+--- bullet3/CMakeLists.txt	2026-03-18 12:04:48.152344880 -0400
++++ BULLET_BLD/CMakeLists.txt	2026-03-18 09:52:07.100507175 -0400
+@@ -23,6 +23,8 @@
+ SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
+ #MESSAGE("CMAKE_CXX_FLAGS_DEBUG="+${CMAKE_CXX_FLAGS_DEBUG})
+ 
++set(CMAKE_POSITION_INDEPENDENT_CODE ON)
++
+ OPTION(USE_DOUBLE_PRECISION "Use double precision"	OFF)
+ SET(CLAMP_VELOCITIES "0" CACHE STRING "Clamp rigid bodies' velocity to this value, if larger than zero. Useful to prevent floating point errors or in general runaway velocities in complex scenarios")
+ OPTION(USE_GRAPHICAL_BENCHMARK "Use Graphical Benchmark" ON)

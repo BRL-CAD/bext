@@ -566,6 +566,10 @@ add_project(osmesa GROUPS "BRLCAD")
 # https://github.com/BrunoLevy/geogram
 add_project(geogram GROUPS "BRLCAD")
 
+# Bullet3 - collision detection/multi-physics simulation library
+# https://github.com/bulletphysics/bullet3
+add_project(bullet GROUPS "BRLCAD_EXTRA")
+
 # Open Shading Language (OSL) - language for programmable shading
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 #
