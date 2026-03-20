@@ -1,5 +1,4 @@
-# jpeg is needed by GDAL, which is used by libgcv.  TODO: Probably ought to
-# wire this into libicv as well if we're going to have it along for the ride...
+# libgcv uses GDAL, which pulls in libjpeg
 cad_enable(JPEG "libgcv;libicv")
 
 bext_enable(JPEG)
