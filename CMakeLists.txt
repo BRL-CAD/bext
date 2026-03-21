@@ -550,10 +550,6 @@ add_project(poissonrecon GROUPS "BRLCAD")
 # https://github.com/BRL-CAD/mmesh
 add_project(mmesh GROUPS "BRLCAD")
 
-# OpenMesh Library - library for representing and manipulating polygonal meshes
-# https://www.graphics.rwth-aachen.de/software/openmesh/
-add_project(openmesh GROUPS "BRLCAD_EXTRA")
-
 # Manifold Library - used for performing boolean ops on meshes
 # https://github.com/elalish/manifold
 add_project(manifold GROUPS "BRLCAD")
