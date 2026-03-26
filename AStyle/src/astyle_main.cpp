@@ -825,7 +825,7 @@ FileEncoding ASConsole::readFile(const std::string& fileName_, std::stringstream
 				delete[] utf8Out;
 			}
 		}
-		else if (data != nullptr) 
+		else if (data != nullptr)
 			in << std::string(data, dataSize);
 		fin.read(data, blockSize);
 		if (fin.bad())
@@ -1497,8 +1497,8 @@ void ASConsole::getFilePaths(const std::string& filePath)
 
 		if (!g_isCaseSensitive)
 		{
-			std::transform(compare.begin(), compare.end(), compare.begin(), ::tolower);
-			std::transform(exclude.begin(), exclude.end(), exclude.begin(), ::tolower);
+			std::transform(compare.begin(), compare.end(), compare.begin(), [](char c) { return static_cast<char>(::tolower(static_cast<unsigned char>(c))); });
+			std::transform(exclude.begin(), exclude.end(), exclude.begin(), [](char c) { return static_cast<char>(::tolower(static_cast<unsigned char>(c))); });
 		}
 
 		if (compare == exclude)
@@ -1910,9 +1910,13 @@ void ASConsole::printHelp() const
 	std::cout << "    indent the comment text one indent.\n";
 	std::cout << '\n';
 	std::cout << "    --max-code-length=#    OR  -xC#\n";
+	std::cout << "    --max-code-length-mode=code|total\n";
 	std::cout << "    --break-after-logical  OR  -xL\n";
 	std::cout << "    max-code-length=# will break the line if it exceeds more than\n";
 	std::cout << "    # characters. The valid values are 50 thru 200.\n";
+	std::cout << "    max-code-length-mode determines how line length is measured:\n";
+	std::cout << "     'code': code only, excluding indentation (default)\n";
+	std::cout << "     'total': entire line, including indentation (experimental)\n";
 	std::cout << "    If the line contains logical conditionals they will be placed\n";
 	std::cout << "    first on the new line. The option break-after-logical will\n";
 	std::cout << "    cause the logical conditional to be placed last on the\n";
@@ -3247,6 +3251,17 @@ void ASOptions::parseOption(const std::string& arg)
 		else
 			formatter.setMaxCodeLength(maxLength);
 	}
+	else if (isParamOption(arg, "max-code-length-mode="))
+	{
+		std::string mode = getParam(arg, "max-code-length-mode=");
+		if (mode == "code" )
+			formatter.setMaxCodeLengthMode(MAXCODELENGTH_CODE);
+		else if (mode == "total" )
+			formatter.setMaxCodeLengthMode(MAXCODELENGTH_TOTAL);
+		else
+			isOptionError(arg);
+	}
+
 	else if (isOption(arg, "xL", "break-after-logical"))
 	{
 		formatter.setBreakAfterMode(true);

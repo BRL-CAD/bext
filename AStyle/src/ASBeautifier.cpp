@@ -1393,6 +1393,28 @@ int ASBeautifier::getTabLength() const
 	return tabLength;
 }
 
+int ASBeautifier::getIndentCount() const
+{
+	return indentCount;
+}
+
+int ASBeautifier::getSpaceIndentCount() const
+{
+	return spaceIndentCount;
+}
+
+
+int ASBeautifier::getPrevFinalLineIndentCount() const
+{
+	return prevFinalLineIndentCount;
+}
+
+int ASBeautifier::getPrevFinalLineSpaceIndentCount() const
+{
+	return prevFinalLineSpaceIndentCount;
+}
+
+
 std::string ASBeautifier::preLineWS(int lineIndentCount, int lineSpaceIndentCount)
 {
 
@@ -1951,6 +1973,7 @@ int ASBeautifier::getContinuationIndentComma(std::string_view line, size_t currP
 		if (!isLegalNameChar(line[indent]))
 			break;
 	}
+
 	indent++;
 	if (indent >= currPos || indent < 4)
 		return 0;
@@ -3549,8 +3572,9 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 	}
 
 	// GL28 fix initializer lists like x({a.x=0;})
-
-	isInInitializerList = isCStyle() && isBlockOpener && (prevNonSpaceCh == '(' || prevNonSpaceCh == '=');
+	// https://gitlab.com/saalen/astyle/-/work_items/108
+	bool isDirectBraceInit = isCStyle() && isBlockOpener && prevNonSpaceCh != ')' && prevNonSpaceCh != '}';
+	isInInitializerList = isCStyle() && isBlockOpener && (prevNonSpaceCh == '(' || prevNonSpaceCh == '=' || isDirectBraceInit);
 
 	if (!isBlockOpener && currentHeader != nullptr)
 	{
@@ -4026,11 +4050,15 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 					if (parenPos != -1)
 					{
 						isInVerbatimQuote = true;
+						isInMultiLineString = false;
 						verbatimDelimiter = line.substr(i + 1, parenPos - i - 1);
 					}
 				}
 				else if (isSharpStyle() && prevCh == '@')
+				{
 					isInVerbatimQuote = true;
+					isInMultiLineString = false;
+				}
 				// check for "C" following "extern"
 				else if (g_preprocessorCppExternCBrace == 2 && line.compare(i, 3, "\"C\"") == 0)
 					++g_preprocessorCppExternCBrace;
@@ -4316,7 +4344,8 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 
 		// handle commas
 		// previous "isInStatement" will be from an assignment operator or class initializer
-		if (ch == ',' && parenDepth == 0 && !isContinuation && !isNonInStatementArray)
+		// https://gitlab.com/saalen/astyle/-/work_items/108
+		if (ch == ',' && parenDepth == 0 && !isContinuation && !isNonInStatementArray && !isInInitializerList)
 		{
 			// is comma at end of line
 			size_t nextChar = line.find_first_not_of(" \t", i + 1);

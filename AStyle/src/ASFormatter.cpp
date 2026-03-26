@@ -47,6 +47,7 @@ ASFormatter::ASFormatter()
 	lineEnd = LINEEND_DEFAULT;
 	squeezeEmptyLineNum = std::string::npos;
 	maxCodeLength = std::string::npos;
+	maxCodeLengthMode = MAXCODELENGTH_CODE,
 	isInStruct = false;
 	shouldPadCommas = false;
 	shouldPadOperators = false;
@@ -2438,6 +2439,18 @@ void ASFormatter::setMaxCodeLength(int max)
 	maxCodeLength = max;
 }
 
+
+/**
+ * set maximum code length mode
+ *
+ * @param max         the maximum code length.
+ */
+void ASFormatter::setMaxCodeLengthMode(MaxCodeLengthMode mode)
+{
+	maxCodeLengthMode = mode;
+}
+
+
 /**
  * set operator padding mode.
  * options:
@@ -3279,7 +3292,7 @@ void ASFormatter::appendChar(char ch, bool canBreakLine)
 		// These compares reduce the frequency of function calls.
 		if (isOkToSplitFormattedLine())
 			updateFormattedLineSplitPoints(ch);
-		if (formattedLine.length() > maxCodeLength)
+		if (getEffectiveLineLength() > maxCodeLength)
 			testForTimeToSplitFormattedLine();
 	}
 }
@@ -3297,7 +3310,7 @@ void ASFormatter::appendSequence(std::string_view sequence, bool canBreakLine)
 	if (canBreakLine && isInLineBreak)
 		breakLine();
 	formattedLine.append(sequence);
-	if (formattedLine.length() > maxCodeLength)
+	if (getEffectiveLineLength() > maxCodeLength)
 		testForTimeToSplitFormattedLine();
 }
 
@@ -3318,7 +3331,7 @@ void ASFormatter::appendOperator(std::string_view sequence, bool canBreakLine)
 		// These compares reduce the frequency of function calls.
 		if (isOkToSplitFormattedLine())
 			updateFormattedLineSplitPointsOperator(sequence);
-		if (formattedLine.length() > maxCodeLength)
+		if (getEffectiveLineLength() > maxCodeLength)
 			testForTimeToSplitFormattedLine();
 	}
 }
@@ -3339,7 +3352,7 @@ void ASFormatter::appendSpacePad()
 			// These compares reduce the frequency of function calls.
 			if (isOkToSplitFormattedLine())
 				updateFormattedLineSplitPoints(' ');
-			if (formattedLine.length() > maxCodeLength)
+			if (getEffectiveLineLength() > maxCodeLength)
 				testForTimeToSplitFormattedLine();
 		}
 	}
@@ -3361,7 +3374,7 @@ void ASFormatter::appendSpaceAfter()
 			// These compares reduce the frequency of function calls.
 			if (isOkToSplitFormattedLine())
 				updateFormattedLineSplitPoints(' ');
-			if (formattedLine.length() > maxCodeLength)
+			if (getEffectiveLineLength() > maxCodeLength)
 				testForTimeToSplitFormattedLine();
 		}
 	}
@@ -7895,7 +7908,7 @@ void ASFormatter::updateFormattedLineSplitPoints(char appendedChar)
 		                 || (referenceAlignment == REF_SAME_AS_PTR && pointerAlignment == PTR_ALIGN_TYPE)))
 		   )
 		{
-			if (formattedLine.length() - 1 <= maxCodeLength)
+			if (getEffectiveLineLength() - 1 <= maxCodeLength)
 				maxWhiteSpace = formattedLine.length() - 1;
 			else
 				maxWhiteSpacePending = formattedLine.length() - 1;
@@ -7911,7 +7924,7 @@ void ASFormatter::updateFormattedLineSplitPoints(char appendedChar)
 		        && nextChar != '.'
 		        && !(nextChar == '-' && pointerSymbolFollows()))	// check for ->
 		{
-			if (formattedLine.length() <= maxCodeLength)
+			if (getEffectiveLineLength() <= maxCodeLength)
 				maxWhiteSpace = formattedLine.length();
 			else
 				maxWhiteSpacePending = formattedLine.length();
@@ -7920,7 +7933,7 @@ void ASFormatter::updateFormattedLineSplitPoints(char appendedChar)
 	// unpadded commas may split after the comma
 	else if (appendedChar == ',')
 	{
-		if (formattedLine.length() <= maxCodeLength)
+		if (getEffectiveLineLength() <= maxCodeLength)
 			maxComma = formattedLine.length();
 		else
 			maxCommaPending = formattedLine.length();
@@ -7935,7 +7948,7 @@ void ASFormatter::updateFormattedLineSplitPoints(char appendedChar)
 				parenNum = formattedLine.length() - 1;
 			else
 				parenNum = formattedLine.length();
-			if (formattedLine.length() <= maxCodeLength)
+			if (getEffectiveLineLength() <= maxCodeLength)
 				maxParen = parenNum;
 			else
 				maxParenPending = parenNum;
@@ -7945,7 +7958,7 @@ void ASFormatter::updateFormattedLineSplitPoints(char appendedChar)
 	{
 		if (nextChar != ' '  && nextChar != '}' && nextChar != '/')	// check for following comment
 		{
-			if (formattedLine.length() <= maxCodeLength)
+			if (getEffectiveLineLength() <= maxCodeLength)
 				maxSemi = formattedLine.length();
 			else
 				maxSemiPending = formattedLine.length();
@@ -7972,7 +7985,7 @@ void ASFormatter::updateFormattedLineSplitPointsOperator(std::string_view sequen
 	{
 		if (shouldBreakLineAfterLogical)
 		{
-			if (formattedLine.length() <= maxCodeLength)
+			if (getEffectiveLineLength() <= maxCodeLength)
 				maxAndOr = formattedLine.length();
 			else
 				maxAndOrPending = formattedLine.length();
@@ -7993,7 +8006,7 @@ void ASFormatter::updateFormattedLineSplitPointsOperator(std::string_view sequen
 	// comparison operators will split after the operator (counts as whitespace)
 	else if (sequence == "==" || sequence == "!=" || sequence == ">=" || sequence == "<=")
 	{
-		if (formattedLine.length() <= maxCodeLength)
+		if (getEffectiveLineLength() <= maxCodeLength)
 			maxWhiteSpace = formattedLine.length();
 		else
 			maxWhiteSpacePending = formattedLine.length();
@@ -8009,7 +8022,7 @@ void ASFormatter::updateFormattedLineSplitPointsOperator(std::string_view sequen
 		            || currentLine[charNum - 1] == ']'
 		            || currentLine[charNum - 1] == '\"'))
 		{
-			if (formattedLine.length() - 1 <= maxCodeLength)
+			if (getEffectiveLineLength() - 1 <= maxCodeLength)
 				maxWhiteSpace = formattedLine.length() - 1;
 			else
 				maxWhiteSpacePending = formattedLine.length() - 1;
@@ -8021,14 +8034,14 @@ void ASFormatter::updateFormattedLineSplitPointsOperator(std::string_view sequen
 		// split BEFORE if the line is too long
 		// do NOT use <= here, must allow for a brace attached to an array
 		size_t splitPoint = 0;
-		if (formattedLine.length() < maxCodeLength)
+		if (getEffectiveLineLength() < maxCodeLength)
 			splitPoint = formattedLine.length();
 		else
 			splitPoint = formattedLine.length() - 1;
 		// padded or unpadded arrays
 		if (previousNonWSChar == ']')
 		{
-			if (formattedLine.length() - 1 <= maxCodeLength)
+			if (getEffectiveLineLength() - 1 <= maxCodeLength)
 				maxWhiteSpace = splitPoint;
 			else
 				maxWhiteSpacePending = splitPoint;
@@ -8038,7 +8051,7 @@ void ASFormatter::updateFormattedLineSplitPointsOperator(std::string_view sequen
 		             || currentLine[charNum - 1] == ')'
 		             || currentLine[charNum - 1] == ']'))
 		{
-			if (formattedLine.length() <= maxCodeLength)
+			if (getEffectiveLineLength() <= maxCodeLength)
 				maxWhiteSpace = splitPoint;
 			else
 				maxWhiteSpacePending = splitPoint;
@@ -8105,7 +8118,7 @@ void ASFormatter::testForTimeToSplitFormattedLine()
 {
 	//	DO NOT ASSERT maxCodeLength HERE
 	// should the line be split
-	if (formattedLine.length() > maxCodeLength && !isLineReady)
+	if (getEffectiveLineLength() > maxCodeLength && !isLineReady)
 	{
 		size_t splitPoint = findFormattedLineSplitPoint();
 		if (splitPoint > 0 && splitPoint < formattedLine.length())
@@ -8225,7 +8238,7 @@ size_t ASFormatter::findFormattedLineSplitPoint() const
 			splitPoint = 0;
 	}
 	// if remaining line after split is too long
-	else if (formattedLine.length() - splitPoint > maxCodeLength)
+	else if (getEffectiveLineLength() - splitPoint > maxCodeLength)
 	{
 		// if end of the currentLine, find a new split point
 		size_t newCharNum;
@@ -8245,6 +8258,33 @@ size_t ASFormatter::findFormattedLineSplitPoint() const
 
 	return splitPoint;
 }
+
+
+size_t ASFormatter::getEffectiveLineLength() const
+{
+	size_t lineLength = formattedLine.length();
+
+	if (maxCodeLengthMode == MAXCODELENGTH_TOTAL) {
+		int predictedIndentCount = bracesNestingLevel;
+		int predictedSpaceIndent = 0;
+		if (getPrevFinalLineSpaceIndentCount()>0 && bracesNestingLevel == getPrevFinalLineIndentCount()){
+			predictedSpaceIndent = getPrevFinalLineSpaceIndentCount();
+		}
+
+		if (!formattedLine.empty()){
+			size_t firstChar = formattedLine.find_first_not_of(" \t");
+			if (firstChar != std::string::npos && formattedLine[firstChar] == '}'){
+				if (predictedIndentCount > 0)
+					predictedIndentCount--;
+				predictedSpaceIndent = 0;
+			}
+		}
+		size_t indentChars = getIndentLength() * predictedIndentCount + predictedSpaceIndent;
+		lineLength += indentChars;
+	}
+	return lineLength;
+}
+
 
 void ASFormatter::clearFormattedLineSplitPoints()
 {

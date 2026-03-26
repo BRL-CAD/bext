@@ -158,6 +158,12 @@ enum IncludeDirectivePaddingMode
 	INCLUDE_PAD_AFTER
 };
 
+enum MaxCodeLengthMode
+{
+	MAXCODELENGTH_CODE,
+	MAXCODELENGTH_TOTAL
+};
+
 //-----------------------------------------------------------------------------
 // Class ASSourceIterator
 // A pure virtual class is used by ASFormatter and ASBeautifier instead of
@@ -363,6 +369,12 @@ public:
 	[[nodiscard]] int getFileType() const;
 	[[nodiscard]] int getIndentLength() const;
 	[[nodiscard]] int getTabLength() const;
+
+	[[nodiscard]] int getIndentCount() const;
+	[[nodiscard]] int getSpaceIndentCount() const;
+	[[nodiscard]] int getPrevFinalLineIndentCount() const;
+	[[nodiscard]] int getPrevFinalLineSpaceIndentCount() const;
+
 	[[nodiscard]] std::string getIndentString() const;
 	[[nodiscard]] std::string getNextWord(const std::string& line, size_t currPos) const;
 	[[nodiscard]] bool getAlignMethodColon() const;
@@ -734,6 +746,7 @@ public:	// functions
 	void setIndentCol1CommentsMode(bool state);
 	void setLineEndFormat(LineEndFormat fmt);
 	void setMaxCodeLength(int max);
+	void setMaxCodeLengthMode(MaxCodeLengthMode mode);
 	void setObjCColonPaddingMode(ObjCColonPad mode);
 	void setOperatorPaddingMode(bool state);
 	void setNegationPaddingMode(NegationPaddingMode mode);
@@ -876,6 +889,7 @@ private:  // functions
 	void updateFormattedLineSplitPointsPointerOrReference(size_t index);
 	size_t findFormattedLineSplitPoint() const;
 	size_t findNextChar(std::string_view line, char searchChar, int searchStart = 0) const;
+	size_t getEffectiveLineLength() const;
 	const std::string* checkForHeaderFollowingComment(std::string_view firstLine) const;
 	const std::string* getFollowingOperator() const;
 	std::string getPreviousWord(const std::string& line, int currPos, bool allowDots = false) const;
@@ -981,6 +995,7 @@ private:  // variables
 	LineEndFormat lineEnd;
 	NegationPaddingMode negationPadMode;
 	IncludeDirectivePaddingMode includeDirectivePaddingMode;
+	MaxCodeLengthMode maxCodeLengthMode;
 
 	bool isVirgin;
 	bool isInVirginLine;
