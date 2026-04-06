@@ -107,6 +107,29 @@ endif (LEMON_EXECUTABLE AND NOT LEMON_TEMPLATE)
 
 mark_as_advanced(LEMON_TEMPLATE)
 
+# Verify lemon supports %realloc and %free directives (BRL-CAD extensions).
+# System lemon (from SQLite) does not support these, but stepcode requires them.
+if(LEMON_EXECUTABLE AND LEMON_TEMPLATE)
+  set(_lemon_test_dir "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/lemon_test")
+  file(MAKE_DIRECTORY "${_lemon_test_dir}")
+  file(WRITE "${_lemon_test_dir}/test.y"
+    "%token_type {int}\n%realloc realloc\n%free free\n%start_symbol start\nstart ::= .\n")
+  execute_process(
+    COMMAND ${LEMON_EXECUTABLE} -T${LEMON_TEMPLATE} -q test.y
+    WORKING_DIRECTORY "${_lemon_test_dir}"
+    RESULT_VARIABLE _lemon_test_result
+    OUTPUT_QUIET ERROR_QUIET
+    )
+  if(NOT _lemon_test_result EQUAL 0)
+    message(STATUS "Found lemon at ${LEMON_EXECUTABLE} but it lacks %realloc/%free support")
+    set(LEMON_EXECUTABLE "LEMON_EXECUTABLE-NOTFOUND" CACHE FILEPATH "Path to lemon" FORCE)
+    set(LEMON_TEMPLATE "LEMON_TEMPLATE-NOTFOUND" CACHE FILEPATH "Path to lempar.c" FORCE)
+  endif()
+  file(REMOVE_RECURSE "${_lemon_test_dir}")
+  unset(_lemon_test_dir)
+  unset(_lemon_test_result)
+endif()
+
 include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LEMON DEFAULT_MSG LEMON_EXECUTABLE LEMON_TEMPLATE)
 

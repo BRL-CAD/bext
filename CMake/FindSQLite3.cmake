@@ -42,6 +42,10 @@ if(SQLite3_ROOT)
   list(APPEND _SQLite3_SEARCHES _SQLite3_SEARCH_ROOT)
 endif()
 
+# Fall back to default system paths
+set(_SQLite3_SEARCH_NORMAL)
+list(APPEND _SQLite3_SEARCHES _SQLite3_SEARCH_NORMAL)
+
 set(SQLite3_NAMES sqlite3 sqlite libsqlite3 libsqlite)
 
 # Try each search configuration.
