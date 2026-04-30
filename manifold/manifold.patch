@@ -1,0 +1,78 @@
+diff -Naur MANIFOLD/CMakeLists.txt MANIFOLD_BLD/CMakeLists.txt
+--- MANIFOLD/CMakeLists.txt	2026-04-30 12:43:33.539859541 -0400
++++ MANIFOLD_BLD/CMakeLists.txt	2026-04-30 12:48:59.647836994 -0400
+@@ -36,6 +36,9 @@
+   "${MANIFOLD_VERSION_MAJOR}.${MANIFOLD_VERSION_MINOR}.${MANIFOLD_VERSION_PATCH}"
+ )
+ 
++# Toggle to also build a static library
++option(BUILD_STATIC_LIBS "Build a static library (manifold-static) alongside the shared library" OFF)
++
+ # Primary user facing options
+ option(MANIFOLD_CROSS_SECTION "Build CrossSection for 2D support" ON)
+ option(MANIFOLD_DEBUG "Enable debug tracing/timing" OFF)
+diff -Naur MANIFOLD/src/CMakeLists.txt MANIFOLD_BLD/src/CMakeLists.txt
+--- MANIFOLD/src/CMakeLists.txt	2026-04-30 12:43:33.531859567 -0400
++++ MANIFOLD_BLD/src/CMakeLists.txt	2026-04-30 12:53:50.548912999 -0400
+@@ -102,6 +102,60 @@
+   PRIVATE ${MANIFOLD_INCLUDE_DIRS}
+ )
+ 
++install(TARGETS manifold EXPORT manifoldTargets)
++
+ exportlib(manifold)
+ 
+-install(TARGETS manifold EXPORT manifoldTargets)
++# -----------------------------------------------------------------------
++# Optional static library target
++# -----------------------------------------------------------------------
++if(BUILD_STATIC_LIBS)
++  add_library(manifold_static STATIC
++    ${MANIFOLD_SRCS} ${MANIFOLD_PRIVATE_HDRS}
++  )
++
++  set_target_properties(manifold_static PROPERTIES
++    OUTPUT_NAME  manifold
++    EXPORT_NAME  manifold-static
++  )
++
++  target_compile_features(manifold_static PUBLIC cxx_std_17)
++  target_compile_options(manifold_static PRIVATE ${MANIFOLD_FLAGS})
++
++  # Reuse the OPTIONS list already set above for the shared target.
++  foreach(OPT IN LISTS OPTIONS)
++    if(${${OPT}})
++      target_compile_definitions(manifold_static PUBLIC ${OPT})
++    endif()
++  endforeach()
++  if(MANIFOLD_PAR)
++    target_compile_definitions(manifold_static PUBLIC MANIFOLD_PAR=1)
++  else()
++    target_compile_definitions(manifold_static PUBLIC MANIFOLD_PAR=-1)
++  endif()
++
++  target_include_directories(manifold_static
++    PUBLIC
++      $<INSTALL_INTERFACE:include>
++      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
++      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
++    PRIVATE
++      ${MANIFOLD_INCLUDE_DIRS}
++  )
++
++  target_link_libraries(manifold_static
++    PUBLIC
++      $<$<BOOL:${TRACY_ENABLE}>:TracyClient>
++    PRIVATE
++      $<$<BOOL:${MANIFOLD_CROSS_SECTION}>:Clipper2::Clipper2-static>
++      $<$<BOOL:${MANIFOLD_PAR}>:TBB::tbb>
++      $<$<BOOL:${MANIFOLD_EXPORT}>:assimp::assimp>
++  )
++
++  install(TARGETS manifold_static EXPORT manifoldTargets
++    ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
++  )
++
++endif()
++
