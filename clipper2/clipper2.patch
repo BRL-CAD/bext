@@ -1,0 +1,80 @@
+diff -Naur CLIPPER2_BLD/CMakeLists.txt CLIPPER2/CMakeLists.txt
+--- CLIPPER2_BLD/CMakeLists.txt	2026-04-30 12:34:52.299493949 -0400
++++ CLIPPER2/CMakeLists.txt	2026-04-30 12:38:11.412869621 -0400
+@@ -18,6 +18,7 @@
+ option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
+ option(USE_EXTERNAL_GBENCHMARK "Use the googlebenchmark" OFF)
+ option(BUILD_SHARED_LIBS "Build shared libs" OFF)
++option(BUILD_STATIC_LIBS "Also build static library archives (Clipper2-static / Clipper2Z-static) alongside the primary libraries" OFF)
+ set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
+ 
+ # CLIPPER2_MAX_DECIMAL_PRECISION: maximum decimal precision when scaling PathsD to Paths64.
+@@ -78,6 +79,68 @@
+   endif()
+ endif()
+ 
++# -----------------------------------------------------------------------
++# Optional static library targets (meaningful when BUILD_SHARED_LIBS=ON)
++# -----------------------------------------------------------------------
++if(BUILD_STATIC_LIBS)
++  set(CLIPPER2_STATIC_LIBS "")
++
++  if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
++    list(APPEND CLIPPER2_STATIC_LIBS Clipper2_static)
++    add_library(Clipper2_static STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
++
++    set_target_properties(Clipper2_static PROPERTIES
++      OUTPUT_NAME  Clipper2
++      EXPORT_NAME  Clipper2-static
++    )
++
++    target_compile_definitions(Clipper2_static PUBLIC
++      CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
++      $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
++    )
++
++    target_include_directories(Clipper2_static PUBLIC
++      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
++      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
++    )
++
++    if (NOT MSVC)
++      target_link_libraries(Clipper2_static PUBLIC m)
++    endif()
++  endif()
++
++  if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
++    list(APPEND CLIPPER2_STATIC_LIBS Clipper2Z_static)
++    add_library(Clipper2Z_static STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
++
++    set_target_properties(Clipper2Z_static PROPERTIES
++      OUTPUT_NAME  Clipper2Z
++      EXPORT_NAME  Clipper2Z-static
++    )
++
++    target_compile_definitions(Clipper2Z_static PUBLIC
++      USINGZ
++      CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
++      $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
++    )
++
++    target_include_directories(Clipper2Z_static PUBLIC
++      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
++      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
++    )
++
++    if (NOT MSVC)
++      target_link_libraries(Clipper2Z_static PUBLIC m)
++    endif()
++  endif()
++
++  install(TARGETS ${CLIPPER2_STATIC_LIBS} EXPORT Clipper2-targets
++    ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
++  )
++endif()
++
++
+ # secondary Clipper2 library with USINGZ defined (if required)
+ if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
+   list(APPEND CLIPPER2_LIBS Clipper2Z)
