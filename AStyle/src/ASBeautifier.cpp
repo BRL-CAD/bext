@@ -3823,7 +3823,7 @@ void ASBeautifier::handlePotentialHeaderSection(std::string_view line, size_t* i
 }
 
 
-void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t* i, bool tabIncrementIn, bool haveAssignmentThisLine, bool isInOperator)
+void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t* i, bool tabIncrementIn, bool* haveAssignmentThisLine, bool isInOperator)
 {
 	// Check if an operator has been reached.
 	const std::string* foundAssignmentOp = findOperator(line, *i, assignmentOperators);
@@ -3916,10 +3916,10 @@ void ASBeautifier::handlePotentialOperatorSection(std::string_view line, size_t*
 			        && statementEndsWithComma(line, *i))
 			{
 				// only one assignment indent per line + GH #10
-				if (!haveAssignmentThisLine && line.find(ASResource::AS_SCOPE_RESOLUTION) == std::string::npos)
+				if (!*haveAssignmentThisLine && line.find(ASResource::AS_SCOPE_RESOLUTION) == std::string::npos)
 				{
 					// register indent at previous word
-					haveAssignmentThisLine = true;
+					*haveAssignmentThisLine = true;
 					int prevWordIndex = getContinuationIndentAssign(line, *i);
 					int continuationIndentCount = prevWordIndex + spaceIndentCount + tabIncrementIn;
 					continuationIndentStack->emplace_back(continuationIndentCount);
@@ -4474,7 +4474,7 @@ void ASBeautifier::parseCurrentLine(std::string_view line)
 
 		if (isPotentialOperator)
 		{
-			handlePotentialOperatorSection(line, &i, tabIncrementIn, haveAssignmentThisLine, isInOperator);
+			handlePotentialOperatorSection(line, &i, tabIncrementIn, &haveAssignmentThisLine, isInOperator);
 		}
 	}	// end of for loop * end of for loop * end of for loop * end of for loop * end of for loop *
 }
