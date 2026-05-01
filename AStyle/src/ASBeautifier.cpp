@@ -3573,7 +3573,18 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 
 	// GL28 fix initializer lists like x({a.x=0;})
 	// https://gitlab.com/saalen/astyle/-/work_items/108
-	bool isDirectBraceInit = isCStyle() && isBlockOpener && prevNonSpaceCh != ')' && prevNonSpaceCh != '}';
+	// direct-list-init like 'A var_a { ... }': prev char ends an identifier
+	// or template/array close, and we are not inside a class/enum header, a
+	// control-flow header (do/try/else/...), or a class initializer.
+	bool isDirectBraceInit = isCStyle() && isBlockOpener
+	                         && (isLegalNameChar(prevNonSpaceCh)
+	                             || prevNonSpaceCh == '>'
+	                             || prevNonSpaceCh == ']')
+	                         && !isInClassHeader
+	                         && !isInClassInitializer
+	                         && !isInEnum
+	                         && currentHeader == nullptr;
+
 	isInInitializerList = isCStyle() && isBlockOpener && (prevNonSpaceCh == '(' || prevNonSpaceCh == '=' || isDirectBraceInit);
 
 	if (!isBlockOpener && currentHeader != nullptr)
