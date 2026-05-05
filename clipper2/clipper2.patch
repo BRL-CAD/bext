@@ -24,7 +24,7 @@ diff -Naur CLIPPER2_BLD/CMakeLists.txt CLIPPER2/CMakeLists.txt
 +    add_library(Clipper2_static STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
 +
 +    set_target_properties(Clipper2_static PROPERTIES
-+      OUTPUT_NAME  Clipper2
++      OUTPUT_NAME  Clipper2-static
 +      EXPORT_NAME  Clipper2-static
 +    )
 +
@@ -48,7 +48,7 @@ diff -Naur CLIPPER2_BLD/CMakeLists.txt CLIPPER2/CMakeLists.txt
 +    add_library(Clipper2Z_static STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
 +
 +    set_target_properties(Clipper2Z_static PROPERTIES
-+      OUTPUT_NAME  Clipper2Z
++      OUTPUT_NAME  Clipper2Z-static
 +      EXPORT_NAME  Clipper2Z-static
 +    )
 +
