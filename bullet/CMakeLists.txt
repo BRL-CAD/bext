@@ -39,6 +39,7 @@ if (ENABLE_BULLET)
 
   if(MSVC)
     list(APPEND BULLET_CMAKE_ARGS
+      -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON
       -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>DLL
       )
   endif()
