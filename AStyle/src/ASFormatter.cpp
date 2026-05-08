@@ -3972,15 +3972,15 @@ bool ASFormatter::isUnaryOperator() const
 		// find the matching '(' for the ')' at position end;
 		// if an identifier is directly before it, this is a function call,
 		// not a c-style cast, so the operator is binary, not unary.
-		int parenDepth = 1;
+		int lParenDepth = 1;
 		size_t openParen = std::string::npos;
 		for (size_t i = end; i-- > 0; )
 		{
 			if (currentLine[i] == ')')
-					++parenDepth;
+					++lParenDepth;
 			else if (currentLine[i] == '(')
 			{
-				if (--parenDepth == 0)
+				if (--lParenDepth == 0)
 				{
 					openParen = i;
 					break;
