@@ -17,7 +17,7 @@ if (ENABLE_BOOST)
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/boost_cmake.patch
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/libs/iostreams/cmake/FindZLIB.cmake
-    COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindICU.cmake;<SOURCE_DIR>/libs/locale/cmake/FindZLIB.cmake
+    COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/boost/FindICU.cmake;<SOURCE_DIR>/libs/locale/cmake/FindICU.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
@@ -59,4 +59,3 @@ endif (ENABLE_BOOST)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
