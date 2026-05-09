@@ -119,4 +119,5 @@ cmake ../brlcad \
   setup caveats
 * [DEPENDENCIES.md](DEPENDENCIES.md) - package-to-group reference and output
   classification
-* [NOTES.md](NOTES.md) - maintainer notes and submodule workflows
+* [NOTES.md](NOTES.md) - maintainer notes, dependency addition workflow, and
+  submodule procedures
