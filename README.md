@@ -117,7 +117,6 @@ cmake ../brlcad \
 
 * [INSTALL.md](INSTALL.md) - platform prerequisites, checkout options, and
   setup caveats
-* [DEPENDENCIES.md](DEPENDENCIES.md) - package-to-group reference and output
-  classification
-* [NOTES.md](NOTES.md) - maintainer notes, dependency addition workflow, and
-  submodule procedures
+* [DEPENDENCIES.md](DEPENDENCIES.md) - package-to-group reference, output
+  classification, and dependency addition workflow
+* [NOTES.md](NOTES.md) - maintainer notes and submodule procedures
