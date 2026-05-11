@@ -1,0 +1,45 @@
+--- a/src/thirdparty/bcd/bcd/Denoiser.cpp
++++ b/src/thirdparty/bcd/bcd/Denoiser.cpp
+@@ -125,7 +125,7 @@
+                 i,
+                 boost::ref(abortRequested)));
+ 
+-        denoiseThreads.push_back(move(t));
++        denoiseThreads.push_back(std::move(t));
+ 
+         startPixelIndexIt = endPixelIndexIt;
+     }
+--- a/cmake/FindOpenEXR.cmake
++++ b/cmake/FindOpenEXR.cmake
+@@ -55,12 +55,18 @@
+     # Mimic old style variables
+     set (OPENEXR_VERSION ${OpenEXR_VERSION})
+     get_target_property(IMATH_INCLUDES Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
++    set (IMATH_INCLUDE_DIRS ${IMATH_INCLUDES})
++    string (REGEX REPLACE "/Imath/?$" "" IMATH_INCLUDE_DIRS "${IMATH_INCLUDE_DIRS}")
++    set (IMATH_INCLUDE_DIR ${IMATH_INCLUDES})
+     get_target_property(ILMBASE_INCLUDES Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
+     get_target_property(ILMBASE_IMATH_LIBRARY Imath::Imath INTERFACE_LINK_LIBRARIES)
+     get_target_property(IMATH_LIBRARY Imath::Imath INTERFACE_LINK_LIBRARIES)
+     get_target_property(OPENEXR_IEX_LIBRARY OpenEXR::Iex INTERFACE_LINK_LIBRARIES)
+     get_target_property(OPENEXR_ILMTHREAD_LIBRARY OpenEXR::IlmThread INTERFACE_LINK_LIBRARIES)
+     set (ILMBASE_LIBRARIES ${ILMBASE_IMATH_LIBRARY})
+     set (ILMBASE_FOUND true)
+ 
+     get_target_property(OPENEXR_INCLUDES OpenEXR::OpenEXR INTERFACE_INCLUDE_DIRECTORIES)
++    set (OPENEXR_INCLUDE_DIRS ${OPENEXR_INCLUDES})
++    string (REGEX REPLACE "/OpenEXR/?$" "" OPENEXR_INCLUDE_DIRS "${OPENEXR_INCLUDE_DIRS}")
++    set (OPENEXR_INCLUDE_DIR ${OPENEXR_INCLUDES})
+     get_target_property(OPENEXR_ILMIMF_LIBRARY OpenEXR::OpenEXR INTERFACE_LINK_LIBRARIES)
+     set (OPENEXR_LIBRARIES ${OPENEXR_ILMIMF_LIBRARY} ${OPENEXR_IEX_LIBRARY} ${OPENEXR_ILMTHREAD_LIBRARY} ${ILMBASE_LIBRARIES})
+     set (OPENEXR_FOUND true)
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -274,7 +274,6 @@
+ 
+ include_directories(
+   ${IMATH_INCLUDE_DIRS}
+-  ${IMATH_INCLUDE_DIRS}/OpenEXR/
+   ${LZ4_INCLUDE_DIR}
+   ${OPENCOLORIO_INCLUDE_DIRS}
+   ${OPENEXR_INCLUDE_DIRS}
