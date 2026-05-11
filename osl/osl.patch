@@ -77,6 +77,31 @@ diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmak
  
  include(FindPackageHandleStandardArgs)
  find_package_handle_standard_args (LLVM
+diff -Naur OpenShadingLanguage/src/cmake/llvm_macros.cmake OSL_BLD/src/cmake/llvm_macros.cmake
+--- OpenShadingLanguage/src/cmake/llvm_macros.cmake	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/llvm_macros.cmake	2026-05-10 13:35:00.000000000 -0400
+@@ -40,6 +40,21 @@
+         endif ()
+         message (VERBOSE "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
+ 
++        if (APPLE)
++            execute_process (COMMAND xcrun --show-sdk-path
++                OUTPUT_VARIABLE OSL_MACOS_SDK_PATH
++                OUTPUT_STRIP_TRAILING_WHITESPACE)
++            if (OSL_MACOS_SDK_PATH)
++                list (APPEND LLVM_COMPILE_FLAGS
++                    "-isysroot" "${OSL_MACOS_SDK_PATH}"
++                    "-stdlib=libc++")
++                if (EXISTS "${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
++                    list (APPEND LLVM_COMPILE_FLAGS "-I${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
++                endif ()
++            endif ()
++        endif ()
++
++
+         if (NOT LLVM_AS_TOOL)
+             find_program (LLVM_AS_TOOL NAMES "llvm-as"
+                         PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
 diff -Naur OpenShadingLanguage/src/liboslcomp/CMakeLists.txt OSL_BLD/src/liboslcomp/CMakeLists.txt
 --- OpenShadingLanguage/src/liboslcomp/CMakeLists.txt	2024-06-26 16:05:10.536665401 -0400
 +++ OSL_BLD/src/liboslcomp/CMakeLists.txt	2024-06-26 16:00:29.387207292 -0400
