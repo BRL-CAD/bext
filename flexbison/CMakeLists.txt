@@ -84,9 +84,7 @@ if (NOT WIN32)
       BUILD_IN_SOURCE ON
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/bison.patch
-      CONFIGURE_COMMAND chmod +x ${BISON_SRC_DIR}/autogen.sh
-      COMMAND ${BISON_SRC_DIR}/autogen.sh
-      COMMAND ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+      CONFIGURE_COMMAND ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
       BUILD_COMMAND make -j${pcnt}
       INSTALL_COMMAND make -j1 install
       DEPENDS ${ZLIB_TARGET}
@@ -109,5 +107,4 @@ endif (NOT WIN32)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
 
