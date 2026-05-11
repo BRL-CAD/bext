@@ -260,13 +260,14 @@ diff -Naur oiio/src/heif.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/heif.imageio
 diff -Naur oiio/src/ico.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/ico.imageio/CMakeLists.txt
 --- oiio/src/ico.imageio/CMakeLists.txt	2024-03-27 14:37:58.988995597 -0400
 +++ OPENIMAGEIO_BLD/src/ico.imageio/CMakeLists.txt	2024-03-27 14:37:11.821764167 -0400
-@@ -2,7 +2,7 @@
+@@ -2,7 +2,8 @@
  # SPDX-License-Identifier: Apache-2.0
  # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (TARGET PNG::PNG)
 +if (TARGET PNG::PNG AND NOT OIIO_DISABLE_PNG)
      add_oiio_plugin (icoinput.cpp icooutput.cpp
++                     INCLUDE_DIRS ${PNG_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS}
                       LINK_LIBRARIES PNG::PNG ZLIB::ZLIB)
  else ()
 diff -Naur oiio/src/jpeg2000.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/jpeg2000.imageio/CMakeLists.txt
@@ -296,13 +297,14 @@ diff -Naur oiio/src/openvdb.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/openvdb.i
 diff -Naur oiio/src/png.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/png.imageio/CMakeLists.txt
 --- oiio/src/png.imageio/CMakeLists.txt	2024-03-27 14:37:59.008995272 -0400
 +++ OPENIMAGEIO_BLD/src/png.imageio/CMakeLists.txt	2024-03-27 14:37:11.837763906 -0400
-@@ -2,7 +2,7 @@
+@@ -2,7 +2,8 @@
  # SPDX-License-Identifier: Apache-2.0
  # https://github.com/AcademySoftwareFoundation/OpenImageIO
  
 -if (TARGET PNG::PNG)
 +if (TARGET PNG::PNG AND NOT OIIO_DISABLE_PNG)
      add_oiio_plugin (pnginput.cpp pngoutput.cpp
++                     INCLUDE_DIRS ${PNG_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS}
                       LINK_LIBRARIES PNG::PNG ZLIB::ZLIB)
  else ()
 diff -Naur oiio/src/ptex.imageio/CMakeLists.txt OPENIMAGEIO_BLD/src/ptex.imageio/CMakeLists.txt
