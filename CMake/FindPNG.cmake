@@ -55,6 +55,10 @@ find_package(ZLIB ${_FIND_ZLIB_ARG})
 
 if(ZLIB_FOUND)
   set(_PNG_SEARCHES)
+  if(APPLE)
+    set(_PNG_CMAKE_FIND_FRAMEWORK "${CMAKE_FIND_FRAMEWORK}")
+    set(CMAKE_FIND_FRAMEWORK LAST)
+  endif()
 
   # Search PNG_ROOT first if it is set.
   if(PNG_ROOT)
@@ -107,6 +111,10 @@ if(ZLIB_FOUND)
     select_library_configurations(PNG)
     mark_as_advanced(PNG_LIBRARY_RELEASE PNG_LIBRARY_DEBUG)
   endif()
+  if(APPLE)
+    set(CMAKE_FIND_FRAMEWORK "${_PNG_CMAKE_FIND_FRAMEWORK}")
+    unset(_PNG_CMAKE_FIND_FRAMEWORK)
+  endif()
   unset(PNG_NAMES)
   unset(PNG_NAMES_DEBUG)
 
@@ -136,6 +144,7 @@ if(ZLIB_FOUND)
     if(NOT TARGET PNG::PNG)
       add_library(PNG::PNG UNKNOWN IMPORTED)
       set_target_properties(PNG::PNG PROPERTIES
+        IMPORTED_NO_SYSTEM TRUE
 	INTERFACE_COMPILE_DEFINITIONS "${_PNG_COMPILE_DEFINITIONS}"
 	INTERFACE_INCLUDE_DIRECTORIES "${PNG_INCLUDE_DIRS}"
 	INTERFACE_LINK_LIBRARIES ZLIB::ZLIB)

@@ -118,6 +118,7 @@ if(ZLIB_FOUND)
       add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
       set_target_properties(ZLIB::ZLIB PROPERTIES
         IMPORTED_LOCATION "${ZLIB_LIBRARY}"
+        IMPORTED_NO_SYSTEM TRUE
         INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
     endif()
 endif()
