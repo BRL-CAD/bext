@@ -562,10 +562,6 @@ add_project(opennurbs GROUPS "BRLCAD")
 # https://github.com/starseeker/osmesa
 add_project(osmesa GROUPS "BRLCAD")
 
-# Geogram - a programming library with geometric algorithms
-# https://github.com/BrunoLevy/geogram
-add_project(geogram GROUPS "BRLCAD")
-
 # Bullet3 - collision detection/multi-physics simulation library
 # https://github.com/bulletphysics/bullet3
 add_project(bullet GROUPS "BRLCAD_EXTRA")

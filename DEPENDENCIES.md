@@ -33,7 +33,6 @@ selection further.
 | `expat` | `USE_APPLESEED` | `install` | XML parser. |
 | `fmt` | `USE_APPLESEED` | `install` | Formatting library. |
 | `gdal` | `USE_GDAL` | `install` | Top-level GDAL library. |
-| `geogram` | `USE_BRLCAD` | `install` | Geometry algorithm library. |
 | `gte` | `USE_BRLCAD` | `noinstall` | GeometricTools content used at build time. |
 | `icu` | `USE_APPLESEED` | `install` | Unicode support. |
 | `ispc` | `USE_OSPRAY` | `install` | ISPC compiler used by OSPRay-related builds. |

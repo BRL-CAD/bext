@@ -358,9 +358,10 @@ settings, as well as providing a convenient(ish) mechanism for updating
 submodule references as needed (see above).
 
 As an example, we document below the steps taken for the geogram library from
-https://github.com/BrunoLevy/geogram  After creating a full fork of the project
-via github and verifying actions were not enabled, we clone the new repository
-recursively to get the source code of all submodules:
+https://github.com/BrunoLevy/geogram  (which we're no longer actively bundling,
+but it still serves as a good illustration.)  After creating a full fork of the
+project via github and verifying actions were not enabled, we clone the new
+repository recursively to get the source code of all submodules:
 
 ```
 $ git clone --recursive git@github.com:BRL-CAD/geogram.git
