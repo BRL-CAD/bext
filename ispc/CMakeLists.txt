@@ -15,6 +15,12 @@ if (ENABLE_ISPC)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
+  set(ISPC_PROGRAM_PATH_ARGS)
+  if (FLEX_TARGET OR BISON_TARGET)
+    list(APPEND ISPC_PROGRAM_PATH_ARGS
+      -DCMAKE_PROGRAM_PATH=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}
+      )
+  endif ()
 
   # ispc depends on the clang compiler - its build will switch the compiler if
   # not already using clang.  Need to pass in the bundled LLVM clang compiler
@@ -22,14 +28,13 @@ if (ENABLE_ISPC)
   ExternalProject_Add(ISPC_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/ispc"
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/ispc.patch
-    COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/isprct/cmake/FindZLIB.cmake
+    COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/FindZLIB.cmake
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
-    -DFLEX_ROOT=$<$<BOOL:${FLEX_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
-    -DBISON_ROOT=$<$<BOOL:${BISON_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    ${ISPC_PROGRAM_PATH_ARGS}
     -DCurses_ROOT=$<$<BOOL:${NCURSES_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DLLVM_ROOT=$<$<BOOL:${LLVM_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
@@ -71,4 +76,3 @@ endif (ENABLE_ISPC)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
