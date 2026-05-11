@@ -39,6 +39,7 @@ if (ENABLE_PNG)
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     $<$<BOOL:${ZLIB_TARGET}>:-DPNG_BUILD_ZLIB=OFF>
     -DPNG_LIB_NAME=${PNG_LIB_NAME}
+    -DPNG_FRAMEWORK=OFF
     -DPNG_NO_DEBUG_POSTFIX=ON
     -DPNG_PREFIX=brl_
     -DPNG_STATIC=${BUILD_STATIC_LIBS}
@@ -76,4 +77,3 @@ endif (ENABLE_PNG)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
