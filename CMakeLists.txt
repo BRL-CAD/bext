@@ -602,6 +602,12 @@ add_project(appleseed GROUPS "APPLESEED")
 add_project(ospray GROUPS "OSPRAY")
 
 
+###############################################################################
+# Teach the built-in clean target how to reset generated ExternalProject state
+# while preserving the top-level configure metadata and install trees.
+###############################################################################
+register_external_project_clean_targets()
+
 
 ###############################################################################
 # Now that we have the dependencies specified, finish the dependencies DOT file
@@ -649,4 +655,3 @@ message("Output directory: ${CMAKE_INSTALL_PREFIX}")
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

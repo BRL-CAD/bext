@@ -263,6 +263,98 @@ function(add_project pname)
   endif (NOT is_added)
 endfunction(add_project pname)
 
+###############################################################################
+# Make the built-in clean target reset ExternalProject working state without
+# requiring a top-level CMake reconfigure.  We preserve the generated control
+# files in STAMP_DIR and TMP_DIR, but remove the step marker files and any
+# generated source/build directories that can be safely recreated by the next
+# build.
+###############################################################################
+function(_bext_collect_subdirs out dir)
+  set(dirs "${dir}")
+  get_property(subdirs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)
+  foreach(subdir ${subdirs})
+    _bext_collect_subdirs(child_dirs "${subdir}")
+    list(APPEND dirs ${child_dirs})
+  endforeach()
+  set(${out} "${dirs}" PARENT_SCOPE)
+endfunction(_bext_collect_subdirs out dir)
+
+function(_bext_path_is_in_build_tree out path)
+  if (NOT path)
+    set(${out} FALSE PARENT_SCOPE)
+    return()
+  endif()
+
+  file(RELATIVE_PATH rel "${CMAKE_BINARY_DIR}" "${path}")
+  if (IS_ABSOLUTE "${rel}" OR "${rel}" MATCHES "^\\.\\.")
+    set(${out} FALSE PARENT_SCOPE)
+  else()
+    set(${out} TRUE PARENT_SCOPE)
+  endif()
+endfunction(_bext_path_is_in_build_tree out path)
+
+function(_bext_register_extproject_clean ep_target)
+  if (NOT TARGET ${ep_target})
+    return()
+  endif()
+
+  ExternalProject_Get_Property(${ep_target} SOURCE_DIR)
+  set(ep_source_dir "${SOURCE_DIR}")
+  ExternalProject_Get_Property(${ep_target} BINARY_DIR)
+  set(ep_build_dir "${BINARY_DIR}")
+  ExternalProject_Get_Property(${ep_target} STAMP_DIR)
+  set(ep_stamp_dir "${STAMP_DIR}")
+
+  _bext_path_is_in_build_tree(ep_source_is_generated "${ep_source_dir}")
+  _bext_path_is_in_build_tree(ep_build_is_generated "${ep_build_dir}")
+
+  set(clean_files
+    "${ep_stamp_dir}/${ep_target}-mkdir"
+    "${ep_stamp_dir}/${ep_target}-configure"
+    "${ep_stamp_dir}/${ep_target}-build"
+    "${ep_stamp_dir}/${ep_target}-install"
+    "${ep_stamp_dir}/${ep_target}-done"
+    )
+
+  # If the source tree is a generated copy in the build directory, remove it
+  # and force the full download/update/patch pipeline to rerun on next build.
+  if (ep_source_is_generated)
+    list(APPEND clean_files
+      "${ep_stamp_dir}/${ep_target}-download"
+      "${ep_stamp_dir}/${ep_target}-update"
+      "${ep_stamp_dir}/${ep_target}-patch"
+      "${ep_source_dir}"
+      )
+  endif()
+
+  # Some wrappers use a separate generated binary directory outside the default
+  # *_BLD-prefix/src tree (Qt is the main case.)  If it lives in the build tree
+  # and isn't the same path as SOURCE_DIR, it is safe to remove here.
+  if (ep_build_is_generated AND NOT "${ep_build_dir}" STREQUAL "${ep_source_dir}")
+    list(APPEND clean_files "${ep_build_dir}")
+  endif()
+
+  list(REMOVE_DUPLICATES clean_files)
+  set_property(TARGET ${ep_target} APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${clean_files}")
+  if (TARGET ${ep_target}-install)
+    set_property(TARGET ${ep_target}-install APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${clean_files}")
+  endif()
+endfunction(_bext_register_extproject_clean ep_target)
+
+function(register_external_project_clean_targets)
+  _bext_collect_subdirs(all_dirs "${CMAKE_SOURCE_DIR}")
+  list(REMOVE_DUPLICATES all_dirs)
+  foreach(dir ${all_dirs})
+    get_property(dir_targets DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(dir_target ${dir_targets})
+      if ("${dir_target}" MATCHES "_BLD$")
+        _bext_register_extproject_clean("${dir_target}")
+      endif()
+    endforeach()
+  endforeach()
+endfunction(register_external_project_clean_targets)
+
 
 # Local Variables:
 # tab-width: 8
@@ -270,4 +362,3 @@ endfunction(add_project pname)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
