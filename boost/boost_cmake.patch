@@ -1,7 +1,8 @@
-diff -Naur boost/libs/iostreams/CMakeLists.txt BOOST_BLD/libs/iostreams/CMakeLists.txt
---- boost/libs/iostreams/CMakeLists.txt	2023-09-19 20:13:32.123188586 -0400
-+++ BOOST_BLD/libs/iostreams/CMakeLists.txt	2023-09-19 20:07:09.587847180 -0400
-@@ -6,6 +6,8 @@
+diff --git a/libs/iostreams/CMakeLists.txt b/libs/iostreams/CMakeLists.txt
+index 1d8352f5..11f8e584 100644
+--- a/libs/iostreams/CMakeLists.txt
++++ b/libs/iostreams/CMakeLists.txt
+@@ -6,6 +6,8 @@ cmake_minimum_required(VERSION 3.5...3.16)
  
  project(boost_iostreams VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
  
@@ -10,10 +11,11 @@ diff -Naur boost/libs/iostreams/CMakeLists.txt BOOST_BLD/libs/iostreams/CMakeLis
  add_library(boost_iostreams
    src/file_descriptor.cpp
    src/mapped_file.cpp
-diff -Naur boost/libs/locale/CMakeLists.txt BOOST_BLD/libs/locale/CMakeLists.txt
---- boost/libs/locale/CMakeLists.txt	2023-09-19 20:13:32.379183041 -0400
-+++ BOOST_BLD/libs/locale/CMakeLists.txt	2023-09-19 20:12:31.660513836 -0400
-@@ -6,6 +6,8 @@
+diff --git a/libs/locale/CMakeLists.txt b/libs/locale/CMakeLists.txt
+index f47ad394..21956d88 100644
+--- a/libs/locale/CMakeLists.txt
++++ b/libs/locale/CMakeLists.txt
+@@ -6,6 +6,8 @@ cmake_minimum_required(VERSION 3.11...3.20)
  
  project(boost_locale VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
  
