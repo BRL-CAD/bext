@@ -1528,18 +1528,29 @@ void ASBeautifier::registerContinuationIndent(std::string_view line, int i, int 
 
 	// this is not done for an in-statement array
 	int multiplier = isInAssignment ? 1 : 2; // GL16 - no multiply in assignments
-	if (continuationIndentCount > maxContinuationIndent
-	        && !(prevNonLegalCh == '=' && currentNonLegalCh == '{'))
-		continuationIndentCount = indentLength * multiplier + spaceIndentCount_;
 
-	if (!continuationIndentStack->empty()
-	        && continuationIndentCount < continuationIndentStack->back())
+	// when capped by max-continuation-indent, don't let the stack promote
+	// the value back up (e.g. to a prior '.' operator's column on the same line)
+	bool reducedToMax = false;
+
+	if (continuationIndentCount > maxContinuationIndent
+		&& !(prevNonLegalCh == '=' && currentNonLegalCh == '{')){
+		continuationIndentCount = indentLength * multiplier + spaceIndentCount_;
+			reducedToMax = true;
+	}
+
+	if (!reducedToMax && !continuationIndentStack->empty()
+		&& continuationIndentCount < continuationIndentStack->back()){
 		continuationIndentCount = continuationIndentStack->back();
+
+	}
 
 	// the block opener is not indented for a NonInStatementArray
 	if ((isNonInStatementArray && i >= 0 && line[i] == '{')
-	        && !isInEnum && !isInStruct && !braceBlockStateStack->empty() && braceBlockStateStack->back())
+		&& !isInEnum && !isInStruct && !braceBlockStateStack->empty() && braceBlockStateStack->back()){
 		continuationIndentCount = 0;
+	}
+
 	continuationIndentStack->emplace_back(continuationIndentCount);
 }
 
