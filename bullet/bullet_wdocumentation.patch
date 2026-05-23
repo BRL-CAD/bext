@@ -1,0 +1,197 @@
+diff --git a/src/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h b/src/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h
+index 1febc2b..e2b550c 100644
+--- a/src/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h
++++ b/src/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h
+@@ -240,7 +240,7 @@ This is accessible through btGeneric6DofConstraint.getLimitMotor method,
+ This brings support for limit parameters and motors. </li>
+ 
+ <li> Angulars limits have these possible ranges:
+-<table border=1 >
++<table border="1" >
+ <tr>
+ 	<td><b>AXIS</b></td>
+ 	<td><b>MIN ANGLE</b></td>
+diff --git a/src/LinearMath/btMatrix3x3.h b/src/LinearMath/btMatrix3x3.h
+index 4391a52..d43d51c 100644
+--- a/src/LinearMath/btMatrix3x3.h
++++ b/src/LinearMath/btMatrix3x3.h
+@@ -708,7 +708,7 @@ public:
+ 	* @param rot stores the rotation from the coordinate system in which the matrix is diagonal to the original
+ 	* coordinate system, i.e., old_this = rot * new_this * rot^T.
+ 	* @param threshold See iteration
+-	* @param iteration The iteration stops when all off-diagonal elements are less than the threshold multiplied
++	* @param maxSteps The iteration stops when all off-diagonal elements are less than the threshold multiplied
+ 	* by the sum of the absolute values of the diagonal, or when maxSteps have been executed.
+ 	*
+ 	* Note that this matrix is assumed to be symmetric.
+@@ -794,8 +794,8 @@ public:
+ 	/**@brief Calculate the matrix cofactor 
+ 	* @param r1 The first row to use for calculating the cofactor
+ 	* @param c1 The first column to use for calculating the cofactor
+-	* @param r1 The second row to use for calculating the cofactor
+-	* @param c1 The second column to use for calculating the cofactor
++	* @param r2 The second row to use for calculating the cofactor
++	* @param c2 The second column to use for calculating the cofactor
+ 	* See http://en.wikipedia.org/wiki/Cofactor_(linear_algebra) for more details
+ 	*/
+ 	btScalar cofac(int r1, int c1, int r2, int c2) const
+diff --git a/src/LinearMath/btQuadWord.h b/src/LinearMath/btQuadWord.h
+index 851596b..682a13c 100644
+--- a/src/LinearMath/btQuadWord.h
++++ b/src/LinearMath/btQuadWord.h
+@@ -142,9 +142,9 @@ public:
+ 	}
+ 
+ 	/**@brief Set x,y,z and zero w 
+-   * @param x Value of x
+-   * @param y Value of y
+-   * @param z Value of z
++   * @param _x Value of x
++   * @param _y Value of y
++   * @param _z Value of z
+    */
+ 	SIMD_FORCE_INLINE void setValue(const btScalar& _x, const btScalar& _y, const btScalar& _z)
+ 	{
+@@ -162,10 +162,10 @@ public:
+ 		}
+ */
+ 	/**@brief Set the values 
+-   * @param x Value of x
+-   * @param y Value of y
+-   * @param z Value of z
+-   * @param w Value of w
++   * @param _x Value of x
++   * @param _y Value of y
++   * @param _z Value of z
++   * @param _w Value of w
+    */
+ 	SIMD_FORCE_INLINE void setValue(const btScalar& _x, const btScalar& _y, const btScalar& _z, const btScalar& _w)
+ 	{
+@@ -181,9 +181,9 @@ public:
+ 	}
+ 
+ 	/**@brief Three argument constructor (zeros w)
+-   * @param x Value of x
+-   * @param y Value of y
+-   * @param z Value of z
++   * @param _x Value of x
++   * @param _y Value of y
++   * @param _z Value of z
+    */
+ 	SIMD_FORCE_INLINE btQuadWord(const btScalar& _x, const btScalar& _y, const btScalar& _z)
+ 	{
+@@ -191,10 +191,10 @@ public:
+ 	}
+ 
+ 	/**@brief Initializing constructor
+-   * @param x Value of x
+-   * @param y Value of y
+-   * @param z Value of z
+-   * @param w Value of w
++   * @param _x Value of x
++   * @param _y Value of y
++   * @param _z Value of z
++   * @param _w Value of w
+    */
+ 	SIMD_FORCE_INLINE btQuadWord(const btScalar& _x, const btScalar& _y, const btScalar& _z, const btScalar& _w)
+ 	{
+diff --git a/src/LinearMath/btQuaternion.h b/src/LinearMath/btQuaternion.h
+index 40d6e14..6c68fae 100644
+--- a/src/LinearMath/btQuaternion.h
++++ b/src/LinearMath/btQuaternion.h
+@@ -84,8 +84,8 @@ public:
+ 	{
+ 	}
+ 	/**@brief Axis angle Constructor
+-   * @param axis The axis which the rotation is around
+-   * @param angle The magnitude of the rotation around the angle (Radians) */
++   * @param _axis The axis which the rotation is around
++   * @param _angle The magnitude of the rotation around the angle (Radians) */
+ 	btQuaternion(const btVector3& _axis, const btScalar& _angle)
+ 	{
+ 		setRotation(_axis, _angle);
+@@ -104,7 +104,7 @@ public:
+ 	}
+ 	/**@brief Set the rotation using axis angle notation 
+    * @param axis The axis around which to rotate
+-   * @param angle The magnitude of the rotation in Radians */
++   * @param _angle The magnitude of the rotation in Radians */
+ 	void setRotation(const btVector3& axis, const btScalar& _angle)
+ 	{
+ 		btScalar d = axis.length();
+@@ -134,9 +134,9 @@ public:
+ 				 cosRoll * cosPitch * cosYaw + sinRoll * sinPitch * sinYaw);
+ 	}
+ 	/**@brief Set the quaternion using euler angles 
+-   * @param yaw Angle around Z
+-   * @param pitch Angle around Y
+-   * @param roll Angle around X */
++   * @param yawZ Angle around Z
++   * @param pitchY Angle around Y
++   * @param rollX Angle around X */
+ 	void setEulerZYX(const btScalar& yawZ, const btScalar& pitchY, const btScalar& rollX)
+ 	{
+ 		btScalar halfYaw = btScalar(yawZ) * btScalar(0.5);
+@@ -155,9 +155,9 @@ public:
+ 	}
+ 
+ 	/**@brief Get the euler angles from this quaternion
+-	   * @param yaw Angle around Z
+-	   * @param pitch Angle around Y
+-	   * @param roll Angle around X */
++	   * @param yawZ Angle around Z
++	   * @param pitchY Angle around Y
++	   * @param rollX Angle around X */
+ 	void getEulerZYX(btScalar& yawZ, btScalar& pitchY, btScalar& rollX) const
+ 	{
+ 		btScalar squ;
+diff --git a/src/LinearMath/btVector3.h b/src/LinearMath/btVector3.h
+index 9da1627..942f1a0 100644
+--- a/src/LinearMath/btVector3.h
++++ b/src/LinearMath/btVector3.h
+@@ -119,9 +119,9 @@ public:
+ 	}
+ 
+ 	/**@brief Constructor from scalars 
+-   * @param x X value
+-   * @param y Y value 
+-   * @param z Z value 
++   * @param _x X value
++   * @param _y Y value 
++   * @param _z Z value 
+    */
+ 	SIMD_FORCE_INLINE btVector3(const btScalar& _x, const btScalar& _y, const btScalar& _z)
+ 	{
+@@ -155,7 +155,7 @@ public:
+ #endif  // #if defined (BT_USE_SSE_IN_API) || defined (BT_USE_NEON)
+ 
+ 	/**@brief Add a vector to this one 
+- * @param The vector to add to this one */
++ * @param v The vector to add to this one */
+ 	SIMD_FORCE_INLINE btVector3& operator+=(const btVector3& v)
+ 	{
+ #if defined(BT_USE_SSE_IN_API) && defined(BT_USE_SSE)
+@@ -171,7 +171,7 @@ public:
+ 	}
+ 
+ 	/**@brief Subtract a vector from this one
+-   * @param The vector to subtract */
++   * @param v The vector to subtract */
+ 	SIMD_FORCE_INLINE btVector3& operator-=(const btVector3& v)
+ 	{
+ #if defined(BT_USE_SSE_IN_API) && defined(BT_USE_SSE)
+@@ -1190,10 +1190,10 @@ public:
+ 		}
+ */
+ 	/**@brief Set the values 
+-   * @param x Value of x
+-   * @param y Value of y
+-   * @param z Value of z
+-   * @param w Value of w
++   * @param _x Value of x
++   * @param _y Value of y
++   * @param _z Value of z
++   * @param _w Value of w
+    */
+ 	SIMD_FORCE_INLINE void setValue(const btScalar& _x, const btScalar& _y, const btScalar& _z, const btScalar& _w)
+ 	{
