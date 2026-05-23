@@ -369,6 +369,7 @@ public:
 	[[nodiscard]] int getFileType() const;
 	[[nodiscard]] int getIndentLength() const;
 	[[nodiscard]] int getTabLength() const;
+	[[nodiscard]] int getMinConditionalIndent() const;
 
 	[[nodiscard]] int getIndentCount() const;
 	[[nodiscard]] int getSpaceIndentCount() const;
@@ -1052,6 +1053,7 @@ private:  // variables
 	bool foundTrailingReturnType;
 	bool foundCastOperator;
 	bool isInLineBreak;
+	bool isLineContinuation;
 	bool endOfAsmReached;
 	bool endOfCodeReached;
 	bool lineCommentNoIndent;

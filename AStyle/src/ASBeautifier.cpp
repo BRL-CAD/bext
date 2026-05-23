@@ -1393,6 +1393,11 @@ int ASBeautifier::getTabLength() const
 	return tabLength;
 }
 
+int ASBeautifier::getMinConditionalIndent() const
+{
+	return minConditionalIndent;
+}
+
 int ASBeautifier::getIndentCount() const
 {
 	return indentCount;
@@ -1403,7 +1408,6 @@ int ASBeautifier::getSpaceIndentCount() const
 	return spaceIndentCount;
 }
 
-
 int ASBeautifier::getPrevFinalLineIndentCount() const
 {
 	return prevFinalLineIndentCount;
@@ -1413,7 +1417,6 @@ int ASBeautifier::getPrevFinalLineSpaceIndentCount() const
 {
 	return prevFinalLineSpaceIndentCount;
 }
-
 
 std::string ASBeautifier::preLineWS(int lineIndentCount, int lineSpaceIndentCount)
 {

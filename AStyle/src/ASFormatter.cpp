@@ -257,6 +257,7 @@ void ASFormatter::init(ASSourceIterator* si)
 	foundCastOperator = false;
 	foundQuestionMark = false;
 	isInLineBreak = false;
+	isLineContinuation = false;
 	endOfAsmReached = false;
 	endOfCodeReached = false;
 	isFormattingModeOff = false;
@@ -3055,6 +3056,12 @@ bool ASFormatter::getNextLine(bool emptyLineWasDeleted /*false*/)
 		currentLine = sourceIterator->nextLine(emptyLineWasDeleted);
 		assert(computeChecksumIn(currentLine));
 	}
+
+	// snapshot paren depth before this line's chars are parsed: if non-zero,
+	// this source line begins inside a paren that opened on a previous line,
+	// i.e. it is a continuation. Used by getEffectiveLineLength() so the
+	// first continuation line predicts the indent ASBeautifier will apply.
+	isLineContinuation = !parenStack->empty() && parenStack->back() > 0;
 
 	// reset variables for new line
 	inLineNumber++;
@@ -8270,6 +8277,14 @@ size_t ASFormatter::getEffectiveLineLength() const
 		int predictedSpaceIndent = 0;
 		if (getPrevFinalLineSpaceIndentCount()>0 && bracesNestingLevel == getPrevFinalLineIndentCount()){
 			predictedSpaceIndent = getPrevFinalLineSpaceIndentCount();
+		}
+		else if (isLineContinuation && bracesNestingLevel == getPrevFinalLineIndentCount()){
+			// First continuation line of a multi-line statement: the previous
+			// emitted line was the statement header (spaceIndentCount == 0),
+			// but ASBeautifier will indent this line by minConditionalIndent.
+			// Without this branch the predictor is one line behind and the
+			// first wrapped line escapes the max-code-length check.
+			predictedSpaceIndent = getMinConditionalIndent();
 		}
 
 		if (!formattedLine.empty()){
