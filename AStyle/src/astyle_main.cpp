@@ -1910,13 +1910,14 @@ void ASConsole::printHelp() const
 	std::cout << "    indent the comment text one indent.\n";
 	std::cout << '\n';
 	std::cout << "    --max-code-length=#    OR  -xC#\n";
-	std::cout << "    --max-code-length-mode=code|total\n";
+	std::cout << "    --max-code-length-mode=code|total|ignore-side-comments\n";
 	std::cout << "    --break-after-logical  OR  -xL\n";
 	std::cout << "    max-code-length=# will break the line if it exceeds more than\n";
 	std::cout << "    # characters. The valid values are 50 thru 200.\n";
 	std::cout << "    max-code-length-mode determines how line length is measured:\n";
 	std::cout << "     'code': code only, excluding indentation (default)\n";
 	std::cout << "     'total': entire line, including indentation (experimental)\n";
+	std::cout << "     'ignore-side-comments': ignore trailing side comments (experimental)\n";
 	std::cout << "    If the line contains logical conditionals they will be placed\n";
 	std::cout << "    first on the new line. The option break-after-logical will\n";
 	std::cout << "    cause the logical conditional to be placed last on the\n";
@@ -3258,6 +3259,8 @@ void ASOptions::parseOption(const std::string& arg)
 			formatter.setMaxCodeLengthMode(MAXCODELENGTH_CODE);
 		else if (mode == "total" )
 			formatter.setMaxCodeLengthMode(MAXCODELENGTH_TOTAL);
+		else if (mode == "ignore-side-comments" )
+			formatter.setIgnoreSideCommentLengths(true);
 		else
 			isOptionError(arg);
 	}

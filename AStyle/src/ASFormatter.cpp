@@ -48,6 +48,7 @@ ASFormatter::ASFormatter()
 	squeezeEmptyLineNum = std::string::npos;
 	maxCodeLength = std::string::npos;
 	maxCodeLengthMode = MAXCODELENGTH_CODE,
+	shouldIgnoreSideCommentLengths = false;
 	isInStruct = false;
 	shouldPadCommas = false;
 	shouldPadOperators = false;
@@ -2449,6 +2450,19 @@ void ASFormatter::setMaxCodeLength(int max)
 void ASFormatter::setMaxCodeLengthMode(MaxCodeLengthMode mode)
 {
 	maxCodeLengthMode = mode;
+}
+
+
+/**
+ * When true, trailing side comments are excluded from the line-length
+ * calculation used by max-code-length, so existing alignment of side
+ * comments is preserved instead of triggering a split.
+ *
+ * @param state         true to ignore side-comment lengths.
+ */
+void ASFormatter::setIgnoreSideCommentLengths(bool state)
+{
+	shouldIgnoreSideCommentLengths = state;
 }
 
 
@@ -8271,6 +8285,18 @@ size_t ASFormatter::findFormattedLineSplitPoint() const
 size_t ASFormatter::getEffectiveLineLength() const
 {
 	size_t lineLength = formattedLine.length();
+
+	// Exclude trailing side-comment text from the length used for split decisions.
+	// A side comment has non-whitespace code preceding it on the same line; a
+	// stand-alone comment line (no preceding code) is left alone.
+	if (shouldIgnoreSideCommentLengths
+		&& formattedLineCommentNum != std::string::npos
+		&& formattedLineCommentNum > 0
+		&& formattedLineCommentNum < lineLength) {
+			size_t firstNonWs = formattedLine.find_first_not_of(" \t");
+			if (firstNonWs != std::string::npos && firstNonWs < formattedLineCommentNum)
+				lineLength = formattedLineCommentNum;
+	}
 
 	if (maxCodeLengthMode == MAXCODELENGTH_TOTAL) {
 		int predictedIndentCount = bracesNestingLevel;

@@ -748,6 +748,7 @@ public:	// functions
 	void setLineEndFormat(LineEndFormat fmt);
 	void setMaxCodeLength(int max);
 	void setMaxCodeLengthMode(MaxCodeLengthMode mode);
+	void setIgnoreSideCommentLengths(bool state);
 	void setObjCColonPaddingMode(ObjCColonPad mode);
 	void setOperatorPaddingMode(bool state);
 	void setNegationPaddingMode(NegationPaddingMode mode);
@@ -1008,6 +1009,7 @@ private:  // variables
 	bool shouldPadParensInside;
 	bool shouldPadHeader;
 	bool shouldStripCommentPrefix;
+	bool shouldIgnoreSideCommentLengths;
 	bool shouldUnPadParens;
 	bool shouldConvertTabs;
 	bool shouldIndentCol1Comments;
