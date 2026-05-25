@@ -13,23 +13,16 @@ if (ENABLE_ZLIB)
 
   RegisterDeps(ZLIB)
 
-  find_program(GIT_EXECUTABLE git REQUIRED)
-
   set(Z_PREFIX_STR "brl_")
   mark_as_advanced(Z_PREFIX_STR)
 
-  # Define a compact variable for the git repo path
-  set(SDIR ${CMAKE_CURRENT_SOURCE_DIR}/zlib)
-
   ExternalProject_Add(ZLIB_BLD
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/zlib"
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/zlib"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${GIT_EXECUTABLE};--git-dir;${SDIR}/.git;--work-tree;${SDIR};reset;--hard
-    COMMAND ${GIT_EXECUTABLE};--git-dir;${SDIR}/.git;--work-tree;${SDIR};clean;-fdx
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/zlib.patch
-    COMMAND ${CMAKE_COMMAND} -E remove ${SDIR}/zconf.h
-    COMMAND ${CMAKE_COMMAND} -E remove ${SDIR}/zlib.h
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/zlib.h.in ${SDIR}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/zlib.patch
+    COMMAND ${CMAKE_COMMAND};-E;remove;<SOURCE_DIR>/zconf.h
+    COMMAND ${CMAKE_COMMAND};-E;remove;<SOURCE_DIR>/zlib.h
+    COMMAND ${CMAKE_COMMAND};-E;copy;${CMAKE_CURRENT_SOURCE_DIR}/addfiles/zlib.h.in;<SOURCE_DIR>/zlib.h.in
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DZ_PREFIX_STR=${Z_PREFIX_STR}
@@ -65,4 +58,3 @@ endif (ENABLE_ZLIB)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
