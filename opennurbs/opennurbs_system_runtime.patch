@@ -1,5 +1,5 @@
---- opennurbs/opennurbs_system_runtime.h	2024-09-24 11:09:52.628564406 -0400
-+++ OPENNURBS_BLD/opennurbs_system_runtime.h	2024-09-24 11:18:03.434592812 -0400
+--- opennurbs/opennurbs_system_runtime.h	2026-05-27 11:58:00.537525932 -0400
++++ OPENNURBS_BLD/opennurbs_system_runtime.h	2026-05-27 11:57:46.917568215 -0400
 @@ -61,6 +61,11 @@
  #define ON_RUNTIME_WASM
  #endif
@@ -39,13 +39,17 @@
  
  #if !defined(ON_SIZEOF_WCHAR_T)
  #define ON_SIZEOF_WCHAR_T 4
-@@ -164,7 +169,9 @@
+@@ -164,8 +169,12 @@
  #define ON_32BIT_RUNTIME
  #endif
  
-+#if !defined(ON_RUNTIME_BSD)
++#if defined(ON_RUNTIME_BSD)
++#include <sys/endian.h>
++#else
  #include <endian.h>
+-#if __BYTE_ORDER == __LITTLE_ENDIAN
 +#endif
- #if __BYTE_ORDER == __LITTLE_ENDIAN
++#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
  #define ON_LITTLE_ENDIAN
  #else
+ #define ON_BIG_ENDIAN
