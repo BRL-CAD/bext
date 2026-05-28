@@ -1097,6 +1097,312 @@ TEST(BreakElseIfs, WithMaxCodeLength)
 }
 
 //-------------------------------------------------------------------------
+// AStyle No Indent If After Else
+//-------------------------------------------------------------------------
+
+TEST(NoIndentIfAfterElse, LongOption)
+{
+	// test no-indent-if-after-else with break-elseifs
+	// the 'if' following 'else' should not be given extra indentation
+	char textIn[] =
+	    "\nvoid foo(bool a, bool b)\n"
+	    "{\n"
+	    "    if (a)\n"
+	    "        DoA();\n"
+	    "    else if (b)\n"
+	    "        DoB();\n"
+	    "    else\n"
+	    "        DoElse();\n"
+	    "}\n";
+	char text[] =
+	    "\nvoid foo(bool a, bool b)\n"
+	    "{\n"
+	    "    if (a)\n"
+	    "        DoA();\n"
+	    "    else\n"
+	    "    if (b)\n"
+	    "        DoB();\n"
+	    "    else\n"
+	    "        DoElse();\n"
+	    "}\n";
+	char options[] = "break-elseifs, no-indent-if-after-else";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(NoIndentIfAfterElse, WithoutBreakElseIfs)
+{
+	// no-indent-if-after-else has no effect when break-elseifs is not active
+	// (else if stays on one line, no indentation change needed)
+	char text[] =
+	    "\nvoid foo(bool a, bool b)\n"
+	    "{\n"
+	    "    if (a)\n"
+	    "        DoA();\n"
+	    "    else if (b)\n"
+	    "        DoB();\n"
+	    "}\n";
+	char options[] = "no-indent-if-after-else";
+	char* textOut = AStyleMain(text, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+//----------------------------------------------------------------------------
+// AStyle Line Between Members
+//----------------------------------------------------------------------------
+
+TEST(LineBetweenMembers, LongOption_MethodsInsideClass)
+{
+	// blank line inserted between two methods
+	char textIn[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    void MethodA()\n"
+	    "    {\n"
+	    "        DoA();\n"
+	    "    }\n"
+	    "    void MethodB()\n"
+	    "    {\n"
+	    "        DoB();\n"
+	    "    }\n"
+	    "};\n";
+	char text[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    void MethodA()\n"
+	    "    {\n"
+	    "        DoA();\n"
+	    "    }\n"
+	    "\n"
+	    "    void MethodB()\n"
+	    "    {\n"
+	    "        DoB();\n"
+	    "    }\n"
+	    "};\n";
+	char options[] = "line-between-members";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, NoInsertIfBlankExists)
+{
+	// blank line already present — no duplicate inserted
+	char text[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    void MethodA()\n"
+	    "    {\n"
+	    "        DoA();\n"
+	    "    }\n"
+	    "\n"
+	    "    void MethodB()\n"
+	    "    {\n"
+	    "        DoB();\n"
+	    "    }\n"
+	    "};\n";
+	char options[] = "line-between-members";
+	char* textOut = AStyleMain(text, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, FieldsNotSeparated)
+{
+	// consecutive fields: no blank inserted in default mode
+	char text[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    int x;\n"
+	    "    int y;\n"
+	    "    int z;\n"
+	    "};\n";
+	char options[] = "line-between-members";
+	char* textOut = AStyleMain(text, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, MethodBeforeField)
+{
+	// blank line inserted after method even when followed by a field
+	char textIn[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    void MethodA()\n"
+	    "    {\n"
+	    "        DoA();\n"
+	    "    }\n"
+	    "    int x;\n"
+	    "};\n";
+	char text[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    void MethodA()\n"
+	    "    {\n"
+	    "        DoA();\n"
+	    "    }\n"
+	    "\n"
+	    "    int x;\n"
+	    "};\n";
+	char options[] = "line-between-members";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, NoBlankAfterOpenBrace)
+{
+	// no blank line inserted between open brace and first method
+	char textIn[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    void MethodA()\n"
+	    "    {\n"
+	    "        DoA();\n"
+	    "    }\n"
+	    "    void MethodB()\n"
+	    "    {\n"
+	    "        DoB();\n"
+	    "    }\n"
+	    "};\n";
+	char text[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    void MethodA()\n"
+	    "    {\n"
+	    "        DoA();\n"
+	    "    }\n"
+	    "\n"
+	    "    void MethodB()\n"
+	    "    {\n"
+	    "        DoB();\n"
+	    "    }\n"
+	    "};\n";
+	char options[] = "line-between-members";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, NoBlankBeforeCloseBrace)
+{
+	// no blank line between last method and class closing brace
+	char text[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    void MethodA()\n"
+	    "    {\n"
+	    "        DoA();\n"
+	    "    }\n"
+	    "};\n";
+	char options[] = "line-between-members";
+	char* textOut = AStyleMain(text, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, AllOption_FieldsInsideClass)
+{
+	// =all: blank line inserted between consecutive fields
+	char textIn[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    int x;\n"
+	    "    int y;\n"
+	    "};\n";
+	char text[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    int x;\n"
+	    "\n"
+	    "    int y;\n"
+	    "};\n";
+	char options[] = "line-between-members=all";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, AllOption_NoBlankBeforeCloseBrace)
+{
+	// =all: no blank line inserted before class closing brace
+	char text[] =
+	    "\nclass Foo\n"
+	    "{\n"
+	    "    int x;\n"
+	    "};\n";
+	char options[] = "line-between-members=all";
+	char* textOut = AStyleMain(text, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, TopLevelFunctions)
+{
+	// blank line inserted between two top-level functions
+	char textIn[] =
+	    "\nvoid FuncA()\n"
+	    "{\n"
+	    "    DoA();\n"
+	    "}\n"
+	    "void FuncB()\n"
+	    "{\n"
+	    "    DoB();\n"
+	    "}\n";
+	char text[] =
+	    "\nvoid FuncA()\n"
+	    "{\n"
+	    "    DoA();\n"
+	    "}\n"
+	    "\n"
+	    "void FuncB()\n"
+	    "{\n"
+	    "    DoB();\n"
+	    "}\n";
+	char options[] = "line-between-members";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, TopLevelFunctions_NoInsertIfBlankExists)
+{
+	// blank already present between top-level functions — no duplicate
+	char text[] =
+	    "\nvoid FuncA()\n"
+	    "{\n"
+	    "    DoA();\n"
+	    "}\n"
+	    "\n"
+	    "void FuncB()\n"
+	    "{\n"
+	    "    DoB();\n"
+	    "}\n";
+	char options[] = "line-between-members";
+	char* textOut = AStyleMain(text, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(LineBetweenMembers, AllOption_NoBlankAtNamespaceScope)
+{
+	// =all: fields at namespace scope must not trigger blank insertion
+	char text[] =
+	    "\nnamespace N\n"
+	    "{\n"
+	    "int x;\n"
+	    "int y;\n"
+	    "}\n";
+	char options[] = "line-between-members=all";
+	char* textOut = AStyleMain(text, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+//-------------------------------------------------------------------------
 // AStyle Break One Line Headers
 //-------------------------------------------------------------------------
 

@@ -62,6 +62,7 @@ ASBeautifier::ASBeautifier()
 	setClassIndent(false);
 	setModifierIndent(false);
 	setSwitchIndent(false);
+	setNoIndentIfAfterElseMode(false);
 	setCaseIndent(false);
 	setSqueezeWhitespace(false);
 	setPreserveWhitespace(false);
@@ -216,6 +217,7 @@ ASBeautifier::ASBeautifier(const ASBeautifier& other) : ASBase(other)
 	isInTrailingReturnType = other.isInTrailingReturnType;
 	modifierIndent = other.modifierIndent;
 	switchIndent = other.switchIndent;
+	noIndentIfAfterElse = other.noIndentIfAfterElse;
 	caseIndent = other.caseIndent;
 	squeezeWhitespace = other.squeezeWhitespace;
 	preserveWhitespace = other.preserveWhitespace;
@@ -1109,6 +1111,18 @@ void ASBeautifier::setModifierIndent(bool state)
 void ASBeautifier::setSwitchIndent(bool state)
 {
 	switchIndent = state;
+}
+
+/**
+ * set the no-indent-if-after-else option. If true, an 'if' statement
+ * that follows an 'else' (when break-elseifs is active) will not
+ * receive the extra indentation normally applied to a broken else-if.
+ *
+ * @param   state             state of option.
+ */
+void ASBeautifier::setNoIndentIfAfterElseMode(bool state)
+{
+	noIndentIfAfterElse = state;
 }
 
 /**
@@ -2901,6 +2915,17 @@ bool ASBeautifier::handleHeaderSection(std::string_view line, size_t* i, bool cl
 		{
 			if (!headerStack->empty())
 				headerStack->pop_back();
+		}
+
+		// suppress extra indentation for 'if' that follows 'else' on the previous line
+		// (when break-elseifs has split them onto separate lines)
+		if (newHeader == &ASResource::AS_IF
+		        && previousLastLineHeader == &ASResource::AS_ELSE
+		        && noIndentIfAfterElse)
+		{
+			if (!headerStack->empty())
+				headerStack->pop_back();
+			--indentCount;
 		}
 
 		// take care of 'else'
