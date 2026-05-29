@@ -33,6 +33,10 @@ if (TK_DO_BUILD)
 
   RegisterDeps(TK)
 
+  if (NOT DEFINED TCL_VERSION)
+    set(TCL_VERSION "8.6")
+  endif (NOT DEFINED TCL_VERSION)
+
   if (TARGET TCL_BLD)
     # If we're building against a compiled Tcl and not a system Tcl,
     # set some vars accordingly
@@ -40,14 +44,17 @@ if (TK_DO_BUILD)
     set(WITH_TCL_DIR "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}")
   else (TARGET TCL_BLD)
     get_filename_component(TCLCONF_DIR "${TCL_LIBRARY}" DIRECTORY)
+    # Need the directory with tclConfig.sh
     set(WITH_TCL_DIR "${TCLCONF_DIR}")
+    if (NOT EXISTS "${WITH_TCL_DIR}/tclConfig.sh")
+      set(WITH_TCL_DIR "${TCLCONF_DIR}/tcl${TCL_VERSION}")
+      if (NOT EXISTS "${WITH_TCL_DIR}/tclConfig.sh")
+	message(WARNING "Trying to use system Tcl, but tclConfig.sh not found!")
+      endif ()
+    endif ()
   endif (TARGET TCL_BLD)
 
   set(TK_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD")
-
-  if (NOT DEFINED TCL_VERSION)
-    set(TCL_VERSION "8.6")
-  endif (NOT DEFINED TCL_VERSION)
 
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_configure.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_build.cmake @ONLY)
