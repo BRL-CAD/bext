@@ -1,0 +1,28 @@
+diff -Naur gdal/frmts/png/pngdataset.cpp GDAL_BLD/frmts/png/pngdataset.cpp
+--- gdal/frmts/png/pngdataset.cpp	2026-05-29 11:02:04.453453107 -0400
++++ GDAL_BLD/frmts/png/pngdataset.cpp	2026-05-29 11:02:51.019304367 -0400
+@@ -42,7 +42,9 @@
+ #pragma clang diagnostic pop
+ #endif
+ 
+-#include <csetjmp>
++extern "C" {
++#include <setjmp.h>
++}
+ 
+ #include <algorithm>
+ #include <limits>
+diff -Naur gdal/frmts/png/pngdataset.h GDAL_BLD/frmts/png/pngdataset.h
+--- gdal/frmts/png/pngdataset.h	2026-05-29 11:02:04.454453104 -0400
++++ GDAL_BLD/frmts/png/pngdataset.h	2026-05-29 11:02:42.415331850 -0400
+@@ -40,7 +40,9 @@
+ 
+ #include "png.h"
+ 
+-#include <csetjmp>
++extern "C" {
++#include <setjmp.h>
++}
+ 
+ #include <algorithm>
+ #include <array>
