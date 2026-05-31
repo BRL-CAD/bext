@@ -44,6 +44,54 @@ diff -Naur itk/generic/itk_cmds.c ITK_BLD/generic/itk_cmds.c
  {
      int result = TCL_OK;
  
+diff -Naur itk/generic/itk_archetype.c ITK_BLD/generic/itk_archetype.c
+--- itk/generic/itk_archetype.c	2026-05-31 11:06:17
++++ ITK_BLD/generic/itk_archetype.c	2026-05-31 11:06:17
+@@ -3974,6 +3974,8 @@
+     char **confv = NULL;
+     int optc;
+     char **optv = NULL;
++    const char **splitConfv = NULL;
++    const char **splitOptv = NULL;
+ 
+     int i, newEntry;
+     Tcl_HashTable *tPtr;
+@@ -3988,13 +3990,15 @@
+      *  Only consider options with all 5 required components.  Avoid
+      *  aliases like "-bg".
+      */
+-    if (Tcl_SplitList(interp, options, &confc, &confv) != TCL_OK) {
++    if (Tcl_SplitList(interp, options, &confc, &splitConfv) != TCL_OK) {
+         goto tableFail;
+     }
++    confv = (char **)splitConfv;
+     for (i=0; i < confc; i++) {
+-        if (Tcl_SplitList(interp, confv[i], &optc, &optv) != TCL_OK) {
++        if (Tcl_SplitList(interp, confv[i], &optc, &splitOptv) != TCL_OK) {
+             goto tableFail;
+         }
++        optv = (char **)splitOptv;
+         if (optc == 5) {    /* avoid aliased options */
+             entry = Tcl_CreateHashEntry(tPtr, optv[0], &newEntry);
+             if (newEntry) {
+@@ -4089,6 +4093,7 @@
+ 
+     int optc, result;
+     char **optv;
++    const char **splitOptv = NULL;
+     char *name, *info;
+     Tcl_Obj *resultPtr;
+ 
+@@ -4126,7 +4131,8 @@
+     Tcl_IncrRefCount(resultPtr);
+     info = Tcl_GetStringFromObj(resultPtr, (int*)NULL);
+ 
+-    result = Tcl_SplitList(interp, info, &optc, &optv);
++    result = Tcl_SplitList(interp, info, &optc, &splitOptv);
++    optv = (char **)splitOptv;
+ 
+     Tcl_DecrRefCount(resultPtr);
+ 
 diff -Naur itk/win/rc/itk.rc ITK_BLD/win/rc/itk.rc
 --- itk/win/rc/itk.rc	2024-07-10 10:44:13.334651538 -0400
 +++ ITK_BLD/win/rc/itk.rc	2024-07-10 10:32:07.734264686 -0400
