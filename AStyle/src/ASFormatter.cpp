@@ -76,6 +76,11 @@ ASFormatter::ASFormatter()
 	shouldAttachInline = false;
 	shouldBreakBlocks = false;
 	shouldBreakClosingHeaderBlocks = false;
+	shouldLineBetweenMembers = false;
+	shouldLineBetweenAllMembers = false;
+	needBlankBeforeNextMember = false;
+	lineBetweenMembersDoBlank = false;
+	lineBetweenMembersPassedClassClose = false;
 	shouldBreakClosingHeaderBraces = false;
 	shouldDeleteEmptyLines = false;
 	shouldBreakReturnType = false;
@@ -1148,6 +1153,15 @@ void ASFormatter::handleEndOfBlock()
 		   )
 		{
 			isAppendPostBlockEmptyLineRequested = true;
+		}
+
+		// line-between-members=all: insert blank after field at class scope
+		if (shouldLineBetweenAllMembers
+		        && isBraceType(braceTypeStack->back(), DEFINITION_TYPE)
+		        && !isBraceType(braceTypeStack->back(), NAMESPACE_TYPE)
+		        && parenStack->back() == 0)
+		{
+			needBlankBeforeNextMember = true;
 		}
 	}
 	if (currentChar != ';'
@@ -2226,6 +2240,14 @@ std::string ASFormatter::nextLine()
 	size_t readyFormattedLineLength = trim(readyFormattedLine).length();
 	bool isInNamespace = isBraceType(braceTypeStack->back(), NAMESPACE_TYPE);
 
+	// line-between-members=all: if a field line was just output, arm blank before the next member.
+	// This flag survives intermediate breakLine() calls (which can clear iPrependPostBlock).
+	if (lineBetweenMembersDoBlank)
+	{
+		prependEmptyLine = true;
+		lineBetweenMembersDoBlank = false;
+	}
+
 	if (prependEmptyLine		// prepend a blank line before this formatted line
 	        && readyFormattedLineLength > 0
 	        && previousReadyFormattedLineLength > 0)
@@ -2260,6 +2282,20 @@ std::string ASFormatter::nextLine()
 		}
 		isInPreprocessorBeautify = isInPreprocessor;	// used by ASEnhancer
 		isInBeautifySQL = isInExecSQL;					// used by ASEnhancer
+		// line-between-members=all: after outputting a field line, arm blank before next member.
+		// Skip if lineBetweenMembersPassedClassClose: the class scope just closed, meaning
+		// this is the last field before '}'. Arming doBlank here would produce a spurious
+		// blank before '}'.
+		if (needBlankBeforeNextMember && !lineBetweenMembersPassedClassClose)
+		{
+			lineBetweenMembersDoBlank = true;
+			needBlankBeforeNextMember = false;
+		}
+		else
+		{
+			needBlankBeforeNextMember = false;
+			lineBetweenMembersPassedClassClose = false;
+		}
 	}
 
 	prependEmptyLine = false;
@@ -2838,6 +2874,29 @@ void ASFormatter::setBreakClosingHeaderBlocksMode(bool state)
 }
 
 /**
+ * set option to insert an empty line between class members (methods/properties).
+ *
+ * @param state        true = insert, false = don't insert.
+ */
+void ASFormatter::setLineBetweenMembersMode(bool state)
+{
+	shouldLineBetweenMembers = state;
+}
+
+/**
+ * set option to insert an empty line between all class members including fields.
+ *
+ * @param state        true = insert, false = don't insert.
+ */
+void ASFormatter::setLineBetweenAllMembersMode(bool state)
+{
+	shouldLineBetweenAllMembers = state;
+	if (state)
+		shouldLineBetweenMembers = true;
+}
+
+
+/**
  * set option to delete empty lines.
  *
  * @param state        true = delete, false = don't delete.
@@ -3414,7 +3473,6 @@ void ASFormatter::breakLine(bool isSplitLine /*false*/)
 	formattedLine.erase();
 	// queue an empty line prepend request if one exists
 	prependEmptyLine = isPrependPostBlockEmptyLineRequested;
-
 	if (!isSplitLine)
 	{
 		formattedLineCommentNum = std::string::npos;
@@ -5580,6 +5638,25 @@ void ASFormatter::formatClosingBrace(BraceType braceType)
 	if (parenStack->size() > 1)
 		parenStack->pop_back();
 
+	// suppress pending blank before class/struct closing brace (e.g. from =all field)
+	if (isBraceType(braceType, DEFINITION_TYPE)
+	        && !isBraceType(braceType, NAMESPACE_TYPE))
+	{
+		// Only clear iPrepend when formattedLine has no pending content.
+		// If formattedLine already holds a member (e.g. "int x;"), the blank
+		// belongs BEFORE that member, not before the class brace — preserve it.
+		if (trim(formattedLine).empty())
+			isPrependPostBlockEmptyLineRequested = false;
+		needBlankBeforeNextMember = false;
+		// Signal that the class scope has closed. The output section uses this to avoid
+		// arming lineBetweenMembersDoBlank for the last field before '}' — that would
+		// produce an unwanted blank before '}'.
+		// We do NOT clear lineBetweenMembersDoBlank here because formatClosingBrace()
+		// is called (line 862) BEFORE breakLine() fires (line 2030) in the same loop
+		// iteration, so the blank for the previous member line hasn't been output yet.
+		lineBetweenMembersPassedClassClose = true;
+	}
+
 	// mark state of immediately after empty block
 	// this state will be used for locating braces that appear immediately AFTER an empty block (e.g. '{} \n}').
 	if (previousCommandChar == '{')
@@ -5649,6 +5726,22 @@ void ASFormatter::formatClosingBrace(BraceType braceType)
 	else if (shouldBreakClosingHeaderBlocks)
 	{
 		isAppendPostBlockEmptyLineRequested = !currentHeader && shouldBreakBlocks;
+	}
+
+	// line-between-members: insert blank after method/property close at class scope
+	if (shouldLineBetweenMembers
+	        && isBraceType(braceTypeStack->back(), DEFINITION_TYPE))
+	{
+		isAppendPostBlockEmptyLineRequested = true;
+	}
+	// line-between-members: insert blank after top-level function close
+	else if (shouldLineBetweenMembers
+	         && (isBraceType(braceTypeStack->back(), NULL_TYPE)
+	             || isBraceType(braceTypeStack->back(), NAMESPACE_TYPE))
+	         && !isBraceType(braceType, DEFINITION_TYPE)
+	         && !isBraceType(braceType, NAMESPACE_TYPE))
+	{
+		isAppendPostBlockEmptyLineRequested = true;
 	}
 }
 

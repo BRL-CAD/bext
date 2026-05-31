@@ -1868,6 +1868,18 @@ void ASConsole::printHelp() const
 	std::cout << "    --break-elseifs  OR  -e\n";
 	std::cout << "    Break 'else if()' statements into two different lines.\n";
 	std::cout << '\n';
+	std::cout << "    --no-indent-if-after-else\n";
+	std::cout << "    When used with --break-elseifs, do not add extra indentation\n";
+	std::cout << "    to an 'if' statement that immediately follows an 'else'.\n";
+	std::cout << '\n';
+	std::cout << "    --line-between-members\n";
+	std::cout << "    Insert an empty line between class/struct method definitions\n";
+	std::cout << "    and between top-level functions. Fields are not separated.\n";
+	std::cout << '\n';
+	std::cout << "    --line-between-members=all\n";
+	std::cout << "    Same as --line-between-members, but also inserts an empty\n";
+	std::cout << "    line between consecutive field declarations.\n";
+	std::cout << '\n';
 	std::cout << "    --break-one-line-headers  OR  -xb\n";
 	std::cout << "    Break one line headers (e.g. 'if', 'while', 'else', ...) from a\n";
 	std::cout << "    statement residing on the same line.\n";
@@ -3147,6 +3159,18 @@ void ASOptions::parseOption(const std::string& arg)
 	else if (isOption(arg, "e", "break-elseifs"))
 	{
 		formatter.setBreakElseIfsMode(true);
+	}
+	else if (isOption(arg, "no-indent-if-after-else"))
+	{
+		formatter.setNoIndentIfAfterElseMode(true);
+	}
+	else if (isOption(arg, "line-between-members=all"))
+	{
+		formatter.setLineBetweenAllMembersMode(true);
+	}
+	else if (isOption(arg, "line-between-members"))
+	{
+		formatter.setLineBetweenMembersMode(true);
 	}
 	else if (isOption(arg, "xb", "break-one-line-headers"))
 	{

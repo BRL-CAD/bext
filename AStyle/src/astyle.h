@@ -359,6 +359,7 @@ public:
 	void setAlignMethodColon(bool state);
 	void setSpaceIndentation(int length = 4);
 	void setSwitchIndent(bool state);
+	void setNoIndentIfAfterElseMode(bool state);
 	void setTabIndentation(int length = 4, bool forceTabs = false);
 	void setPreprocDefineIndent(bool state);
 	void setPreprocConditionalIndent(bool state);
@@ -546,6 +547,7 @@ private:  // variables
 	bool isInTrailingReturnType;
 	bool modifierIndent;
 	bool switchIndent;
+	bool noIndentIfAfterElse;
 	bool caseIndent;
 	bool namespaceIndent;
 	bool blockIndent;
@@ -727,6 +729,8 @@ public:	// functions
 	void setBreakClosingHeaderBracesMode(bool state);
 	void setBreakBlocksMode(bool state);
 	void setBreakClosingHeaderBlocksMode(bool state);
+	void setLineBetweenMembersMode(bool state);
+	void setLineBetweenAllMembersMode(bool state);
 	void setBreakElseIfsMode(bool state);
 	void setBreakOneLineBlocksMode(bool state);
 	void setBreakOneLineHeadersMode(bool state);
@@ -1139,6 +1143,11 @@ private:  // variables
 	bool isImmediatelyPostPointerOrReference;
 	bool shouldBreakBlocks;
 	bool shouldBreakClosingHeaderBlocks;
+	bool shouldLineBetweenMembers;
+	bool shouldLineBetweenAllMembers;
+	bool needBlankBeforeNextMember;
+	bool lineBetweenMembersDoBlank;
+	bool lineBetweenMembersPassedClassClose;
 	bool isPrependPostBlockEmptyLineRequested;
 	bool isAppendPostBlockEmptyLineRequested;
 	bool isIndentablePreprocessor;

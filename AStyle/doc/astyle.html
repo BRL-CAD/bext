@@ -140,6 +140,8 @@
                        <li><a href="#_min-conditional-indent">min-conditional-indent </a></li>
                        <li><a href="#_max-continuation-indent">max-continuation-indent </a></li>
                        <li><a href="#_indent_lambda">indent-lambda </a></li>
+                       <li><a href="#_no-indent-if-after-else">no-indent-if-after-else </a></li>
+                       
                   </ul>
              </li>
 
@@ -165,6 +167,7 @@
                    <li><a href="#_unpad-brackets">unpad-brackets </a><li>
                    <li><a href="#_delete-empty-lines">delete-empty-lines </a><li>
                    <li><a href="#_fill-empty-lines">fill-empty-lines </a><li>
+                   <li><a href="#_line-between-members">line-between-members </a><li>
                    <li><a href="#_squeeze-ws">squeeze-ws </a><li>
                    <li><a href="#_squeeze-lines">squeeze-lines </a><li>
                    <li><a href="#_align-pointer">align-pointer </a><li>
@@ -1532,6 +1535,44 @@ fooFunction(barArg1,
 }</pre>
 </div>
 
+<p id="_no-indent-if-after-else">
+    <code class="title">--no-indent-if-after-else</code><br />
+    This option removes extra indentation made by default when an "if" statement comes on the next line after "else".  
+</p>
+
+<div class="code">
+    <pre>if (x)
+{
+} 
+else
+  if (y)
+  {
+  }
+  else
+    if (z)
+    {
+    }
+</pre>
+</div>
+
+<p class="code">
+    becomes:</p>
+
+<div class="code">
+    <pre>if (x)
+{
+} 
+else
+if (y)
+{
+}
+else
+if (z)
+{
+}
+</pre>
+</div>
+
 
 
     <h3 id="_Padding_Options">Padding Options</h3>
@@ -1905,12 +1946,68 @@ isBar = false;
     </div>
     <p>
         &nbsp;</p>
+
     <p id="_fill-empty-lines">
         <code class="title">--fill-empty-lines / -E</code><br />
         Fill empty lines with the white space of the previous line.</p>
 
-        <p>
-            &nbsp;</p>
+    <p>
+        &nbsp;</p>
+    <p id="_line-between-members">
+        <code class="title">--line-between-members</code><br />
+        <code class="title">--line-between-members=all</code><br />
+        Ensures that there is at least one empty line between class members and, in C/C++, between functions.
+        When the "all" parameter is omitted, two or more class <i>fields</i> that are not separated by an empty line stay this way (so, multiple fields can be grouped in a compact way). 
+        If the "all" parameter is specified, an empty line is enforced for any combinations of class members. 
+        Existing empty lines are kept intact.
+    </p>
+    <div class="code">
+        <pre>int i;
+int j;
+void foo()
+<span class="brace">{</span>
+<span class="brace">}</span>
+void bar()
+<span class="brace">{</span>
+<span class="brace">}</span>
+</pre>
+        <p class="code">
+            becomes:</p>
+        <pre>int i;
+int j;
+        
+void foo()
+<span class="brace">{</span>
+<span class="brace">}</span>
+
+void bar()
+<span class="brace">{</span>
+<span class="brace">}</span>
+</pre>
+    </div>
+    <p>
+        With the "all" parameter, the code becomes
+    </p>
+    <div class="code">
+        <pre>int i;
+        
+int j;
+        
+void foo()
+<span class="brace">{</span>
+<span class="brace">}</span>
+
+void bar()
+<span class="brace">{</span>
+<span class="brace">}</span>
+</pre>
+    </div>
+    
+    
+    <p>
+        &nbsp;</p>
+
+
         <p id="_squeeze-lines">
             <code class="title">--squeeze-lines=#</code><br />
             Remove superfluous empty lines exceeding the given number.</p>
