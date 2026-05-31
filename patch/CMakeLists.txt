@@ -16,14 +16,22 @@ endif (ENABLE_ALL AND NOT DEFINED ENABLE_PATCH)
 # -N avoids attempting to reverse patch if the patching is already done.
 set(PATCH_OPTIONS "--ignore-whitespace;-N" CACHE STRING "Command line options to use when patching" FORCE)
 
+# Preserve any existing user-specified patch path before we replace the public
+# PATCH_EXECUTABLE variable with a wrapper command list.
+if (DEFINED PATCH_EXECUTABLE AND NOT DEFINED PATCH_NATIVE_EXECUTABLE)
+  set(PATCH_NATIVE_EXECUTABLE "${PATCH_EXECUTABLE}" CACHE FILEPATH "Underlying patch executable" FORCE)
+endif (DEFINED PATCH_EXECUTABLE AND NOT DEFINED PATCH_NATIVE_EXECUTABLE)
+
 if (NOT ENABLE_PATCH)
 
-  find_program(PATCH_EXECUTABLE patch)
-  mark_as_advanced(PATCH_EXECUTABLE)
+  if (NOT PATCH_NATIVE_EXECUTABLE)
+    find_program(PATCH_NATIVE_EXECUTABLE patch)
+  endif (NOT PATCH_NATIVE_EXECUTABLE)
+  mark_as_advanced(PATCH_NATIVE_EXECUTABLE)
 
-  if (NOT PATCH_EXECUTABLE AND NOT DEFINED ENABLE_PATCH)
+  if (NOT PATCH_NATIVE_EXECUTABLE AND NOT DEFINED ENABLE_PATCH)
     set(ENABLE_PATCH "ON" CACHE BOOL "Enable patch build")
-  endif (NOT PATCH_EXECUTABLE AND NOT DEFINED ENABLE_PATCH)
+  endif (NOT PATCH_NATIVE_EXECUTABLE AND NOT DEFINED ENABLE_PATCH)
 
 endif (NOT ENABLE_PATCH)
 set(ENABLE_PATCH "${ENABLE_PATCH}" CACHE BOOL "Enable patch build")
@@ -52,12 +60,20 @@ if (ENABLE_PATCH)
     STEP_TARGETS install
     )
 
-  set(PATCH_EXECUTABLE ${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/sb_patch${CMAKE_EXECUTABLE_SUFFIX} CACHE STRING "Patch executable" FORCE)
+  set(PATCH_NATIVE_EXECUTABLE ${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/sb_patch${CMAKE_EXECUTABLE_SUFFIX} CACHE FILEPATH "Underlying patch executable" FORCE)
  
   # If we're using sb_patch, add the newline-output option
   set(PATCH_OPTIONS "${PATCH_OPTIONS};--newline-output;preserve" CACHE STRING "Command line options to use when patching" FORCE)
 
 endif (ENABLE_PATCH)
+
+set(PATCH_EXECUTABLE
+  ${CMAKE_COMMAND}
+  -DBEXT_PATCH_NATIVE_EXECUTABLE:FILEPATH=${PATCH_NATIVE_EXECUTABLE}
+  -P
+  ${CMAKE_SOURCE_DIR}/CMake/PatchWrapper.cmake
+  --
+  CACHE INTERNAL "Patch command wrapper" FORCE)
 
 # Local Variables:
 # tab-width: 8
@@ -65,4 +81,3 @@ endif (ENABLE_PATCH)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
