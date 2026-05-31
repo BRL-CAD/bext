@@ -74,7 +74,7 @@ if (NOT WIN32)
 
     git_submodule_init(bison configure)
 
-    set(BISON_DEPENDS PATCH)
+    set(BISON_DEPENDS)
     TargetVars(BISON_DEPENDS)
 
     set(BISON_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/BISON_BLD-prefix/src/BISON_BLD")
@@ -83,8 +83,11 @@ if (NOT WIN32)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/bison"
       BUILD_IN_SOURCE ON
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/bison.patch
-      CONFIGURE_COMMAND ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+      # Bison ships pregenerated autotools files.  When ExternalProject copies
+      # the source tree, the mtimes can make make think it needs autoconf,
+      # autoheader, or automake.
+      CONFIGURE_COMMAND ${CMAKE_COMMAND};-E;touch_nocreate;${BISON_SRC_DIR}/configure;${BISON_SRC_DIR}/lib/config.in.h;${BISON_SRC_DIR}/Makefile.in
+      COMMAND ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
       BUILD_COMMAND make -j${pcnt}
       INSTALL_COMMAND make -j1 install
       DEPENDS ${ZLIB_TARGET}
@@ -107,4 +110,3 @@ endif (NOT WIN32)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
