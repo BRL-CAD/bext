@@ -3781,15 +3781,6 @@ bool ASFormatter::isDereferenceOrAddressOf() const
 		return false;
 	}
 
-	if ( currentChar == '*' && pointerAlignment == PTR_ALIGN_NAME )
-	{
-		size_t openParen = currentLine.rfind('(', charNum);
-		if (openParen != std::string::npos)
-		{
-			return true;
-		}
-	}
-
 	std::set<char> allowedChars = {'=', '.', '{', '>', '<', '?'};
 
 	if ( allowedChars.find(previousNonWSChar) != allowedChars.end()
