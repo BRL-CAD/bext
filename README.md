@@ -6,18 +6,20 @@ system packages and builds local copies only when they are needed.
 
 # Quick start
 
-Clone the repository, configure a build directory, and build:
+Clone the repository, configure with the official `auto` preset, and build:
 
 ```sh
 git clone https://github.com/BRL-CAD/bext
-mkdir bext_build
-cd bext_build
-cmake ../bext -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release --parallel 8
+cd bext
+cmake --preset auto
+cmake --build build/auto --config Release --parallel 8
 ```
 
 Submodules are populated on demand during configure.  For checkout and
 platform setup details, see [INSTALL.md](INSTALL.md).
+
+The preset workflow relies on CMake's newer preset support.  If you are using
+CMake 3.19 or 3.20, use the raw configure equivalents below.
 
 # How selection works
 
@@ -46,21 +48,49 @@ When `bext` is driven from a BRL-CAD build, `BRLCAD_COMPONENTS` can further
 narrow some BRL-CAD-related packages to only those needed by the requested
 component set.
 
-# Common recipes
+# Official profiles
 
-Default behavior:
+The supported configure entry points are:
+
+* `auto` - standard BRL-CAD-oriented profile using suitable system packages
+  when found
+* `bundled` - standard BRL-CAD-oriented profile with bundled/local builds
+  preferred for all active groups
+* `minimal` - core BRL-CAD profile without extras, GDAL, Qt, Tcl/Tk,
+  Appleseed, or OSPRay
+* `everything` - all current groups enabled with bundled/local builds
+  preferred throughout
+
+Use them like this:
+
+```sh
+cmake --preset auto
+cmake --preset bundled
+cmake --preset minimal
+cmake --preset everything
+```
+
+Build using the preset's build directory:
+
+```sh
+cmake --build build/auto --config Release --parallel 8
+```
+
+# Raw configure equivalents
+
+`auto`:
 
 ```sh
 cmake ../bext -DCMAKE_BUILD_TYPE=Release
 ```
 
-Bundled builds for the default active groups:
+`bundled`:
 
 ```sh
 cmake ../bext -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
 ```
 
-Minimal BRL-CAD-oriented build without extras, GDAL, Qt, or Tcl/Tk:
+`minimal`:
 
 ```sh
 cmake ../bext \
@@ -71,7 +101,7 @@ cmake ../bext \
   -DCMAKE_BUILD_TYPE=Release
 ```
 
-Everything on:
+`everything`:
 
 ```sh
 cmake ../bext \
@@ -94,7 +124,8 @@ parent directory containing both `install/` and `noinstall/`.
 
 # Using the build outputs with BRL-CAD
 
-If your `bext` build directory is `../bext_build`, configure BRL-CAD with:
+If you used the `auto` preset, `BRLCAD_EXT_DIR` should be `../bext/build/auto`.
+Configure BRL-CAD with:
 
 ```sh
 git clone https://github.com/BRL-CAD/brlcad

@@ -1,0 +1,76 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "auto",
+      "displayName": "Auto",
+      "description": "Standard BRL-CAD-oriented profile. Use suitable system packages when found and build local copies only when needed.",
+      "binaryDir": "${sourceDir}/build/auto",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "USE_APPLESEED": "OFF",
+        "USE_BRLCAD": "ON",
+        "USE_BRLCAD_EXTRA": "ON",
+        "USE_GDAL": "ON",
+        "USE_OSPRAY": "OFF",
+        "USE_QT": "ON",
+        "USE_TCL": "ON"
+      }
+    },
+    {
+      "name": "bundled",
+      "displayName": "Bundled",
+      "description": "Standard BRL-CAD-oriented profile with bundled/local builds preferred for all active dependency groups.",
+      "binaryDir": "${sourceDir}/build/bundled",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ENABLE_ALL": "ON",
+        "USE_APPLESEED": "OFF",
+        "USE_BRLCAD": "ON",
+        "USE_BRLCAD_EXTRA": "ON",
+        "USE_GDAL": "ON",
+        "USE_OSPRAY": "OFF",
+        "USE_QT": "ON",
+        "USE_TCL": "ON"
+      }
+    },
+    {
+      "name": "minimal",
+      "displayName": "Minimal",
+      "description": "Core BRL-CAD profile without extras, GDAL, Qt, Tcl/Tk, Appleseed, or OSPRay.",
+      "binaryDir": "${sourceDir}/build/minimal",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "USE_APPLESEED": "OFF",
+        "USE_BRLCAD": "ON",
+        "USE_BRLCAD_EXTRA": "OFF",
+        "USE_GDAL": "OFF",
+        "USE_OSPRAY": "OFF",
+        "USE_QT": "OFF",
+        "USE_TCL": "OFF"
+      }
+    },
+    {
+      "name": "everything",
+      "displayName": "Everything",
+      "description": "Enable all current dependency groups and prefer bundled/local builds for all of them.",
+      "binaryDir": "${sourceDir}/build/everything",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ENABLE_ALL": "ON",
+        "USE_APPLESEED": "ON",
+        "USE_BRLCAD": "ON",
+        "USE_BRLCAD_EXTRA": "ON",
+        "USE_GDAL": "ON",
+        "USE_OSPRAY": "ON",
+        "USE_QT": "ON",
+        "USE_TCL": "ON"
+      }
+    }
+  ]
+}
