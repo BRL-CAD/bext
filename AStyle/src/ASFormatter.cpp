@@ -2240,11 +2240,28 @@ std::string ASFormatter::nextLine()
 	size_t readyFormattedLineLength = trim(readyFormattedLine).length();
 	bool isInNamespace = isBraceType(braceTypeStack->back(), NAMESPACE_TYPE);
 
-	// line-between-members=all: if a field line was just output, arm blank before the next member.
+	// line-between-members: if a field line was just output, arm blank before the next member.
 	// This flag survives intermediate breakLine() calls (which can clear iPrependPostBlock).
 	if (lineBetweenMembersDoBlank)
 	{
-		prependEmptyLine = true;
+		bool doInsertBlank = true;
+		if (!shouldLineBetweenAllMembers)
+		{
+			// Non-all mode: insert blank only before methods/properties, not before data fields.
+			// A data field line ends with ';' but the character before ';' is not ')'.
+			// Method prototypes end with ');' and DO get a blank.
+			const std::string trimLine = trim(readyFormattedLine);
+			if (!trimLine.empty() && trimLine.back() == ';')
+			{
+				bool prevIsCloseParen = trimLine.size() >= 2
+										&& trimLine[trimLine.size() - 2] == ')';
+				if (!prevIsCloseParen)
+					doInsertBlank = false;
+			}
+		}
+		if (doInsertBlank)
+			prependEmptyLine = true;
+
 		lineBetweenMembersDoBlank = false;
 	}
 
