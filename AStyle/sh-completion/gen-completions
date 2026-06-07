@@ -89,11 +89,15 @@ parser:flag "--pad-oper"
 parser:flag "--pad-comma"
    :description "Insert space padding after commas"
 
-parser:flag "--pad-negation"
+parser:option "--pad-negation"
    :description "Insert space padding after negations"
+   :args "?"
+   :choices {"before"}
 
-parser:flag "--pad-include"
+parser:option "--pad-include"
    :description "Insert space padding after include directives"
+   :args "?"
+   :choices {"none"}
 
 parser:flag "--pad-paren"
    :description "Insert space padding around parenthesis on both the outside and the inside"
@@ -142,11 +146,18 @@ parser:option "--align-reference"
 parser:flag "--break-closing-braces"
    :description "Break braces before closing headers (e.g. 'else', 'catch', ...)"
 
-parser:flag "--break-elseifs"
+parser:option "--break-elseifs"
    :description "Break 'else if()' statements into two different lines"
+   :args "?"
+   :choices {"no-indent"}
 
 parser:flag "--break-one-line-headers"
    :description "Break one line headers (e.g. 'if', 'while', 'else', ...) from a statement residing on the same line"
+
+parser:option "--line-between-members"
+   :description "Insert an empty line between class/struct method definitions and between top-level functions."
+   :args "?"
+   :choices {"all"}
 
 parser:flag "--add-braces"
    :description "Add braces to unbraced one line conditional statements"
@@ -160,8 +171,14 @@ parser:flag "--remove-braces"
 parser:flag "--break-return-type"
    :description "Break the return type from the function name definitions"
 
-parser:flag "--attach-return-type-decl"
+parser:flag "--break-return-type-decl"
    :description "Break the return type from the function name declarations"
+
+parser:flag "--attach-return-type"
+   :description "Attach the return type to the function name definitions"
+
+parser:flag "--attach-return-type-decl"
+   :description "Attach the return type to the function name declarations"
 
 parser:flag "--keep-one-line-blocks"
    :description "Don't break blocks residing completely on one line"
@@ -181,12 +198,16 @@ parser:flag "--remove-comment-prefix"
 parser:option "--max-code-length"
    :description "Break the line if it exceeds more than # characters"
 
+parser:option "--max-code-length-mode"
+   :description "Determines how line length is measured"
+   :choices {"code", "total", "ignore-side-comments"}
+
 parser:flag "--break-after-logical"
    :description "After break line using --max-code-length, place logical conditional last on the previous line"
 
 parser:option "--mode"
    :description "Set input syntax mode"
-   :choices {"c", "java", "cs", "objc", "js"}
+   :choices {"c", "java", "cs", "objc", "js", "gsc", "ghc"}
 
 parser:flag "--pad-method-prefix"
    :description "Insert space padding after the '-' or '+' Objective-C method prefix"
@@ -222,6 +243,9 @@ parser:flag "--recursive"
 parser:flag "--dry-run"
    :description "Perform a trial run with no changes made to check for formatting"
 
+parser:flag "--error-on-changes"
+   :description "With --dry-run: Report any file reformat as error"
+
 parser:option "--exclude"
    :description "Specify a file or directory #### to be excluded from processing"
 
@@ -255,6 +279,7 @@ parser:option "--options"
 
 parser:option "--project"
    :description "Specify a project option file to read and use"
+   :args "?"
 
 parser:flag "--ascii"
    :description "The displayed output will be ASCII characters only"
@@ -265,8 +290,9 @@ parser:flag "--version"
 parser:flag "--help"
    :description "Print help message"
 
-parser:flag "--html"
+parser:option "--html"
    :description "Open the HTML help file astyle.html in the default browser"
+   :args "?"
 
 parser:option "--stdin"
    :description "Use the file path as input to single file formatting"

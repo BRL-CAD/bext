@@ -169,6 +169,7 @@
                    <li><a href="#_fill-empty-lines">fill-empty-lines </a><li>
                    <li><a href="#_line-between-members">line-between-members </a><li>
                    <li><a href="#_squeeze-ws">squeeze-ws </a><li>
+                   <li><a href="#_preserve-ws">preserve-ws </a><li>
                    <li><a href="#_squeeze-lines">squeeze-lines </a><li>
                    <li><a href="#_align-pointer">align-pointer </a><li>
                    <li><a href="#_align-reference">align-reference </a><li>
@@ -191,6 +192,7 @@
                <li><a href="#_close-templates">close-templates </a><li>
                <li><a href="#_remove-comment-prefix">remove-comment-prefix </a><li>
                <li><a href="#_max-code-length">max-code-length </a><li>
+               <li><a href="#_max-code-length-mode">max-code-length-mode </a><li>
                <li><a href="#_max-code-length">break-after-logical </a><li>
                <li><a href="#_mode">mode </a><li>
           </ul>
@@ -217,9 +219,11 @@
               <li><a href="#_suffix=none">suffix=none </a><li>
               <li><a href="#_recursive">recursive </a><li>
               <li><a href="#_dry-run">dry-run </a><li>
+              <li><a href="#_error-on-changes">error-on-changes </a><li>
               <li><a href="#_exclude">exclude </a><li>
               <li><a href="#_ignore-exclude-errors">ignore-exclude-errors </a><li>
               <li><a href="#_ignore-exclude-errors-x">ignore-exclude-errors-x </a><li>
+              <li><a href="#_accept-empty-list">accept-empty-list </a><li>
               <li><a href="#_errors-to-stdout">errors-to-stdout </a><li>
               <li><a href="#_preserve-date">preserve-date </a><li>
               <li><a href="#_verbose">verbose </a><li>
@@ -2059,6 +2063,12 @@ void Foo2()
 <span class="brace">}</span></pre>
         </div>
 
+    <p>
+        &nbsp;</p>
+    <p id="_preserve-ws">
+        <code class="title">--preserve-ws</code><br />
+        Preserve whitespace near comma operators if squeeze-ws is not set.</p>
+
 
     <p>
         &nbsp;</p>
@@ -2404,6 +2414,15 @@ Foo(bool isFoo);</pre>
         By default logical conditionals will be placed first in the new line. The option
         <strong>break-after-logical</strong> will cause the logical conditionals to be placed last on the
         previous line. This option has no effect without max-code-length.</p>
+    <p id="_max-code-length-mode">
+        <code class="title">--max-code-length-mode=<span class="option">####</span></code><br />
+        This option determines how line length is measured. Valid options are:
+    </p>
+    <ul>
+        <li><strong>code</strong> - code only, excluding indentation (default)</li>
+        <li><strong>total</strong> - entire line, including indentation (experimental)</li>
+        <li><strong>ignore-side-comments</strong> - ignore trailing side comments (experimental)</li>
+    </ul>
     <div class="code">
         <pre>if (thisVariable1 == thatVariable1 || thisVariable2 == thatVariable2 || thisVariable3 == thatVariable3)
     bar();</pre>
@@ -2625,6 +2644,12 @@ Foo(bool isFoo);</pre>
     <p id="_dry-run">
         <code class="title">--dry-run</code><br />
         Perform a trial run with no changes made to the files. The report will be output as usual.</p>
+    <p id="_error-on-changes">
+        <code class="title">--error-on-changes</code><br />
+        With --dry-run: Report any file reformat as error.</p>
+    <p id="_accept-empty-list">
+        <code class="title">--accept-empty-list</code><br />
+        With wildcard or -R: Do not report an empty input file list as error.</p>
     <p id="_exclude">
         <code class="title">--exclude=<span class="option">####</span></code><br />
         Specify a file or subdirectory #### to be excluded from processing.</p>

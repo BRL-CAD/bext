@@ -4,7 +4,7 @@ _astyle() {
     args=("${COMP_WORDS[@]}")
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="--style --indent --attach-namespaces --attach-classes --attach-inlines --attach-extern-c --attach-closing-while --indent-classes --indent-modifiers --indent-switches --indent-cases --indent-namespaces --indent-after-parens --indent-continuation --indent-labels --indent-preproc-block --indent-preproc-cond --indent-preproc-define --indent-col1-comments --min-conditional-indent --max-continuation-indent --break-blocks --pad-oper --pad-comma --pad-negation --pad-include --pad-paren --pad-paren-out --pad-first-paren-out --pad-paren-in --pad-header --unpad-paren --pad-brackets --pad-brackets-in --pad-brackets-out --unpad-brackets --delete-empty-lines --fill-empty-lines --align-pointer --align-reference --break-closing-braces --break-elseifs --break-one-line-headers --add-braces --add-one-line-braces --remove-braces --break-return-type --attach-return-type-decl --keep-one-line-blocks --keep-one-line-statements --convert-tabs --close-templates --remove-comment-prefix --max-code-length --break-after-logical --mode --pad-method-prefix --unpad-method-prefix --pad-return-type --unpad-return-type --pad-param-type --unpad-param-type --align-method-colon --pad-method-colon --suffix --recursive --dry-run --exclude --ignore-exclude-errors --ignore-exclude-errors-x --errors-to-stdout --preserve-date --verbose --formatted --quiet --lineend --options --project --ascii --version --help --html --stdin --stdout --squeeze-lines --squeeze-ws --preserve-ws --indent-lambda --accept-empty-list"
+    opts="--style --indent --attach-namespaces --attach-classes --attach-inlines --attach-extern-c --attach-closing-while --indent-classes --indent-modifiers --indent-switches --indent-cases --indent-namespaces --indent-after-parens --indent-continuation --indent-labels --indent-preproc-block --indent-preproc-cond --indent-preproc-define --indent-col1-comments --min-conditional-indent --max-continuation-indent --break-blocks --pad-oper --pad-comma --pad-negation --pad-include --pad-paren --pad-paren-out --pad-first-paren-out --pad-paren-in --pad-header --unpad-paren --pad-brackets --pad-brackets-in --pad-brackets-out --unpad-brackets --delete-empty-lines --fill-empty-lines --align-pointer --align-reference --break-closing-braces --break-elseifs --break-one-line-headers --add-braces --add-one-line-braces --remove-braces --break-return-type --break-return-type-decl --attach-return-type --attach-return-type-decl --keep-one-line-blocks --keep-one-line-statements --convert-tabs --close-templates --remove-comment-prefix --max-code-length --max-code-length-mode --break-after-logical --mode --line-between-members --pad-method-prefix --unpad-method-prefix --pad-return-type --unpad-return-type --pad-param-type --unpad-param-type --align-method-colon --pad-method-colon --suffix --recursive --dry-run --error-on-changes --exclude --ignore-exclude-errors --ignore-exclude-errors-x --errors-to-stdout --preserve-date --verbose --formatted --quiet --lineend --options --project --ascii --version --help --html --stdin --stdout --squeeze-lines --squeeze-ws --preserve-ws --indent-lambda --accept-empty-list"
 
     case "$prev" in
         --style)
@@ -31,6 +31,18 @@ _astyle() {
             COMPREPLY=($(compgen -W "all" -- "$cur"))
             return 0
             ;;
+        --break-elseifs)
+            COMPREPLY=($(compgen -W "no-indent" -- "$cur"))
+            return 0
+            ;;
+        --pad-negation)
+            COMPREPLY=($(compgen -W "before" -- "$cur"))
+            return 0
+            ;;
+        --pad-include)
+            COMPREPLY=($(compgen -W "none" -- "$cur"))
+            return 0
+            ;;
         --align-pointer)
             COMPREPLY=($(compgen -W "type middle name" -- "$cur"))
             return 0
@@ -43,8 +55,16 @@ _astyle() {
             COMPREPLY=($(compgen -f -- "$cur"))
             return 0
             ;;
+        --max-code-length-mode)
+            COMPREPLY=($(compgen -W "code total ignore-side-comments" -- "$cur"))
+            return 0
+            ;;
         --mode)
-            COMPREPLY=($(compgen -W "c java cs objc js" -- "$cur"))
+            COMPREPLY=($(compgen -W "c java cs objc js gsc ghc" -- "$cur"))
+            return 0
+            ;;
+        --line-between-members)
+            COMPREPLY=($(compgen -W "all" -- "$cur"))
             return 0
             ;;
         --pad-method-colon)
