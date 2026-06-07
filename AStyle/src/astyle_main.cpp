@@ -1868,8 +1868,8 @@ void ASConsole::printHelp() const
 	std::cout << "    --break-elseifs  OR  -e\n";
 	std::cout << "    Break 'else if()' statements into two different lines.\n";
 	std::cout << '\n';
-	std::cout << "    --no-indent-if-after-else\n";
-	std::cout << "    When used with --break-elseifs, do not add extra indentation\n";
+	std::cout << "    --break-elseifs=no-indent\n";
+	std::cout << "    Like --break-elseifs, but do not add extra indentation\n";
 	std::cout << "    to an 'if' statement that immediately follows an 'else'.\n";
 	std::cout << '\n';
 	std::cout << "    --line-between-members\n";
@@ -3156,13 +3156,14 @@ void ASOptions::parseOption(const std::string& arg)
 	{
 		formatter.setBreakBlocksMode(true);
 	}
+	else if (isOption(arg, "break-elseifs=no-indent"))
+	{
+		formatter.setBreakElseIfsMode(true);
+		formatter.setNoIndentIfAfterElseMode(true);
+	}
 	else if (isOption(arg, "e", "break-elseifs"))
 	{
 		formatter.setBreakElseIfsMode(true);
-	}
-	else if (isOption(arg, "no-indent-if-after-else"))
-	{
-		formatter.setNoIndentIfAfterElseMode(true);
 	}
 	else if (isOption(arg, "line-between-members=all"))
 	{
