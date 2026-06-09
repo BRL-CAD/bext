@@ -1,8 +1,6 @@
 # Astyle is not bundled with BRL-CAD - it is a source code formatting tool,
 # optionally used during compilation to validate our style guidelines.
-if (ENABLE_ALL AND NOT DEFINED ENABLE_ASTYLE)
-  set(ENABLE_ASTYLE ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_ASTYLE)
+bext_enable_all_default(ASTYLE astyle)
 
 if (NOT ENABLE_ASTYLE)
 
@@ -52,4 +50,3 @@ endif (ENABLE_ASTYLE)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

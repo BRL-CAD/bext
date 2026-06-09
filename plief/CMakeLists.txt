@@ -5,9 +5,7 @@ if (NOT MSVC AND NOT APPLE)
 
   # Unless we have ENABLE_ALL set, base the building of plief on
   # the system detection results
-  if (ENABLE_ALL AND NOT DEFINED ENABLE_PLIEF)
-    set(ENABLE_PLIEF ON)
-  endif (ENABLE_ALL AND NOT DEFINED ENABLE_PLIEF)
+  bext_enable_all_default(PLIEF plief)
 
   if (NOT ENABLE_PLIEF)
 
@@ -60,4 +58,3 @@ endif (NOT MSVC AND NOT APPLE)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

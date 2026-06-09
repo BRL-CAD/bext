@@ -3,9 +3,7 @@
 # tools are familiar with.  We include it here to support applying patches
 # during the build process even on platforms that don't normally supply this
 # tool by default.
-if (ENABLE_ALL AND NOT DEFINED ENABLE_PATCH)
-  set(ENABLE_PATCH ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_PATCH)
+bext_enable_all_default(PATCH patch)
 
 # Although individual projects may need their own patching options, there are
 # some common settings that will be used for most/all cases.  We define those

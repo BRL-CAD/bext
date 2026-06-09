@@ -7,9 +7,7 @@ else (USE_BRLCAD)
 
   # Unless we have ENABLE_ALL set, base the building of tcl on
   # the system detection results
-  if (ENABLE_ALL AND NOT DEFINED ENABLE_TCL)
-    set(ENABLE_TCL ON)
-  endif (ENABLE_ALL AND NOT DEFINED ENABLE_TCL)
+  bext_enable_all_default(TCL tcl)
 
 endif (USE_BRLCAD)
 

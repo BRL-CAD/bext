@@ -2,9 +2,7 @@
 # the system detection results
 if (NOT WIN32)
 
-  if (ENABLE_ALL AND NOT DEFINED ENABLE_NCURSES)
-    set(ENABLE_NCURSES ON)
-  endif (ENABLE_ALL AND NOT DEFINED ENABLE_NCURSES)
+  bext_enable_all_default(NCURSES ncurses)
 
   if (NOT ENABLE_NCURSES)
 
@@ -62,5 +60,4 @@ endif (NOT WIN32)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
 

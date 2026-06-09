@@ -1,8 +1,6 @@
 # Unless we have ENABLE_ALL set, based the building of oneTBB on
 # the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_ONETBB)
-  set(ENABLE_ONETBB ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_ONETBB)
+bext_enable_all_default(ONETBB onetbb)
 
 if (NOT ENABLE_ONETBB)
 
@@ -59,4 +57,3 @@ endif (ENABLE_ONETBB)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

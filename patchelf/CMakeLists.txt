@@ -7,9 +7,7 @@ if (NOT MSVC AND NOT APPLE)
   # bundles that can run successfully from locations other than their final
   # CMAKE_INSTALL_PREFIX target.
 
-  if (ENABLE_ALL AND NOT DEFINED ENABLE_PATCHELF)
-    set(ENABLE_PATCHELF ON)
-  endif (ENABLE_ALL AND NOT DEFINED ENABLE_PATCHELF)
+  bext_enable_all_default(PATCHELF patchelf)
 
   if (NOT ENABLE_PATCHELF)
 
@@ -53,4 +51,3 @@ endif (NOT MSVC AND NOT APPLE)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

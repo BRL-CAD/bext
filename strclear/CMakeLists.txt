@@ -1,8 +1,6 @@
 # Unless we have ENABLE_ALL set, base the building of strclear on
 # the system detection results
-if (ENABLE_ALL AND NOT DEFINED ENABLE_STRCLEAR)
-  set(ENABLE_STRCLEAR ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_STRCLEAR)
+bext_enable_all_default(STRCLEAR strclear)
 
 if (NOT ENABLE_STRCLEAR)
 
@@ -52,4 +50,3 @@ endif (ENABLE_STRCLEAR)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

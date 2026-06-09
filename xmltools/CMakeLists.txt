@@ -1,7 +1,5 @@
 # xmltools provides the xsltproc and xmllint tools for Docbook processing
-if (ENABLE_ALL AND NOT DEFINED ENABLE_XMLTOOLS)
-  set(ENABLE_XMLTOOLS ON)
-endif (ENABLE_ALL AND NOT DEFINED ENABLE_XMLTOOLS)
+bext_enable_all_default(XMLTOOLS xmltools)
 
 if (NOT ENABLE_XMLTOOLS)
 
@@ -56,4 +54,3 @@ endif (ENABLE_XMLTOOLS)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
