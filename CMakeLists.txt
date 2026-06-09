@@ -626,6 +626,8 @@ if (EXISTS "${CMAKE_BUNDLE_INSTALL_PREFIX}" AND STALE_INSTALL_WARN)
   endif (OFILES_BIN OR OFILES_LIB)
 endif (EXISTS "${CMAKE_BUNDLE_INSTALL_PREFIX}" AND STALE_INSTALL_WARN)
 
+bext_print_configure_summary()
+
 ###############################################################################
 # On Windows, if we get dlls built for the wrong configuration it can cause
 # problems.  Define a utility target to check
@@ -647,7 +649,7 @@ endif (WIN32)
 ###############################################################################
 # Report where we will be putting our output
 ###############################################################################
-message("Output directory: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "Output directory: ${CMAKE_INSTALL_PREFIX}")
 
 # Local Variables:
 # tab-width: 8
