@@ -21,7 +21,20 @@ platform setup details, see [INSTALL.md](INSTALL.md).
 The preset workflow relies on CMake's newer preset support.  If you are using
 CMake 3.19 or 3.20, use the raw configure equivalents below.
 
-# How selection works
+# Optional bootstrap
+
+If you want to fetch a given profile's source submodules up front
+instead of letting configure fetch them on demand:
+
+```sh
+cmake -DPROFILE=auto -P CMake/BextBootstrap.cmake
+cmake --preset auto
+```
+
+Use `LIST_ONLY=ON` to preview the selected submodules without fetching them,
+and `GIT_SHALLOW_CLONE=ON` to specify shallow clones during bootstrap.
+
+# How manual selection works
 
 Build selection happens in three layers:
 
