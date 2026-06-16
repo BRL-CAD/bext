@@ -619,6 +619,10 @@ std::vector<std::string> ASConsole::getFileNameVector() const
 { return fileNameVector; }
 
 // for unit testing
+std::vector<std::string> ASConsole::getIncludeVector() const
+{ return includeVector; }
+
+// for unit testing
 std::vector<std::string> ASConsole::getFileOptionsVector() const
 { return fileOptionsVector; }
 
@@ -2008,6 +2012,10 @@ void ASConsole::printHelp() const
 	std::cout << "    --error-on-changes\n";
 	std::cout << "    With --dry-run: Report any file reformat as error.\n";
 	std::cout << '\n';
+	std::cout << "    --include=####\n";
+	std::cout << "    Specify a file pattern #### to be formatted (from options file).\n";
+	std::cout << "    Used when no files are given on the command line.\n";
+	std::cout << '\n';
 	std::cout << "    --exclude=####\n";
 	std::cout << "    Specify a file or directory #### to be excluded from processing.\n";
 	std::cout << '\n';
@@ -2288,6 +2296,33 @@ void ASConsole::processOptions(const std::vector<std::string>& argvOptions)
 		}
 	}
 
+	// auto-detect local project options file from CWD when no --project was specified
+	if (shouldParseProjectOptionFile && projectOptionFileName.empty())
+	{
+		std::string cwd = getCurrentDirectory("");
+		// skip if CWD is the home directory to avoid double-loading the same file
+		const char* const homeEnv = getenv("HOME");
+		bool cwdIsHome = (homeEnv != nullptr && cwd == std::string(homeEnv));
+		if (!cwdIsHome)
+		{
+			std::string name = cwd + g_fileSeparator + ".astylerc";
+			if (fileExists(name.c_str()))
+			{
+				standardizePath(name);
+				setProjectOptionFileName(name);
+			}
+			else
+			{
+				name = cwd + g_fileSeparator + "_astylerc";
+				if (fileExists(name.c_str()))
+				{
+					standardizePath(name);
+					setProjectOptionFileName(name);
+				}
+			}
+		}
+	}
+
 	ASOptions options(formatter, *this);
 	if (!optionFileName.empty())
 	{
@@ -2347,6 +2382,10 @@ void ASConsole::processOptions(const std::vector<std::string>& argvOptions)
 		(*errorStream) << _("For help on options type 'astyle -h'") << '\n';
 		error();
 	}
+
+	// use --include patterns as file arguments when no files were given on the command line
+	if (fileNameVector.empty() && !includeVector.empty())
+		fileNameVector = includeVector;
 }
 
 // remove a file and check for an error
@@ -2503,6 +2542,11 @@ void ASConsole::updateExcludeVector(const std::string& suffixParam)
 	standardizePath(excludeVector.back(), true);
 	// do not use emplace_back on vector<bool> until supported by macOS
 	excludeHitsVector.push_back(false);
+}
+
+void ASConsole::addIncludePattern(const std::string& pattern)
+{
+	includeVector.emplace_back(pattern);
 }
 
 int ASConsole::waitForRemove(const char* newFileName) const
@@ -3434,6 +3478,14 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 		std::string suffixParam = getParam(arg, "exclude=");
 		if (!suffixParam.empty())
 			console.updateExcludeVector(suffixParam);
+	}
+	else if (isParamOption(arg, "include="))
+	{
+		std::string pattern = getParam(arg, "include=");
+		if (pattern.empty())
+			isOptionError(arg);
+		else
+			console.addIncludePattern(pattern);
 	}
 	else if (isOption(arg, "r", "R") || isOption(arg, "recursive"))
 	{
