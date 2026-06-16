@@ -98,6 +98,11 @@ Lisp style formatting/indenting.
 Attached opening braces and attached closing braces.
 Uses keep one line statements.
 
+.IP "--style=none"
+Preserve existing brace placement without reformatting.
+Braces in the output are byte-identical to the input.
+Other formatting options (e.g. --pad-comma) continue to work.
+
 .SH  Tab Options:
 
 If no indentation option is set, the default
@@ -121,6 +126,11 @@ AStyle would prefer to use spaces.
 Allows the tab length to be set to a length that is different
 from the indent length. This may cause the indentation to be
 a mix of both spaces and tabs. This option sets the tab length.
+
+.IP "--indent=none"
+Preserve existing indentation without recomputing indent depth.
+Both the beautifier and enhancer indent passes are bypassed.
+Other formatting options (e.g. --pad-comma) continue to work.
 
 .SH  Brace Modify Options:
 

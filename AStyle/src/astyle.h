@@ -340,6 +340,7 @@ public:
 	void setCStyle();
 	void setDefaultTabLength();
 	void setEmptyLineFill(bool state);
+	void setPreserveIndent(bool state);
 	void setForceTabXIndentation(int length);
 	void setAfterParenIndent(bool state);
 	void setJavaStyle();
@@ -429,6 +430,7 @@ protected:
 	int lambdaDepth;
 	int lastLambdaDepth;
 	bool preserveWhitespace;
+	bool shouldPreserveIndent;
 
 
 private:  // functions
@@ -630,7 +632,7 @@ class ASEnhancer : protected ASBase
 public:  // functions
 	ASEnhancer() = default;
 	void init(int, int, int, bool, bool, bool, bool, bool, bool, bool,
-	          std::vector<const std::pair<const std::string, const std::string>* >*);
+	          std::vector<const std::pair<const std::string, const std::string>* >*, bool);
 	void enhance(std::string& line, bool isInNamespace, bool isInPreprocessor, bool isInSQL);
 
 private:  // functions
@@ -692,6 +694,7 @@ private:
 	// SQL variables
 	bool nextLineIsDeclareIndent;           // begin declare section indent is reached
 	bool isInDeclareSection;                // need to indent a declare section
+	bool preserveIndent;
 
 };  // Class ASEnhancer
 
@@ -743,6 +746,7 @@ public:	// functions
 	void setParamTypeUnPaddingMode(bool state);
 	void setCloseTemplatesMode(bool state);
 	void setCommaPaddingMode(bool state);
+	void setPreserveBraceFormat(bool state);
 	void setDeleteEmptyLinesMode(bool state);
 	void setBreakReturnType(bool state);
 	void setBreakReturnTypeDecl(bool state);
@@ -1003,8 +1007,10 @@ private:  // variables
 	IncludeDirectivePaddingMode includeDirectivePaddingMode;
 	MaxCodeLengthMode maxCodeLengthMode;
 
+	std::string preserveIndentLeading;
 	bool isVirgin;
 	bool isInVirginLine;
+	bool shouldPreserveBraceFormat;
 	bool shouldPadCommas;
 	bool shouldPadOperators;
 	bool shouldPadParensOutside;

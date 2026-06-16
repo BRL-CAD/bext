@@ -50,6 +50,7 @@ ASFormatter::ASFormatter()
 	maxCodeLengthMode = MAXCODELENGTH_CODE,
 	shouldIgnoreSideCommentLengths = false;
 	isInStruct = false;
+	shouldPreserveBraceFormat = false;
 	shouldPadCommas = false;
 	shouldPadOperators = false;
 	negationPadMode = NEGATION_PAD_NO_CHANGE;
@@ -178,7 +179,8 @@ void ASFormatter::init(ASSourceIterator* si)
 	               shouldIndentPreprocBlock,
 	               getPreprocDefineIndent(),
 	               getEmptyLineFill(),
-	               indentableMacros);
+	               indentableMacros,
+	               shouldPreserveIndent);
 
 	initContainer(preBraceHeaderStack, new std::vector<const std::string*>);
 	initContainer(parenStack, new std::vector<int>);
@@ -375,7 +377,11 @@ void ASFormatter::buildLanguageVectors()
  */
 void ASFormatter::fixOptionVariableConflicts()
 {
-	if (formattingStyle == STYLE_ALLMAN)
+	if (shouldPreserveBraceFormat)
+	{
+		setBraceFormatMode(NONE_MODE);
+	}
+	else if (formattingStyle == STYLE_ALLMAN)
 	{
 		setBraceFormatMode(BREAK_MODE);
 	}
@@ -1485,6 +1491,12 @@ void ASFormatter::handleOpenParens()
 
 void ASFormatter::formatFirstOpenBrace(BraceType braceType)
 {
+	if (shouldPreserveBraceFormat)
+	{
+		appendCurrentChar();
+		return;
+	}
+
 	if (braceFormatMode == ATTACH_MODE || braceFormatMode == LINUX_MODE)
 	{
 		// break an enum if mozilla
@@ -1615,28 +1627,35 @@ void ASFormatter::formatFirstOpenBrace(BraceType braceType)
 
 void ASFormatter::formatOpenBrace()
 {
-	if (braceFormatMode == RUN_IN_MODE)
+	if (!shouldPreserveBraceFormat)
 	{
-		if (previousNonWSChar == '{'
-		        && braceTypeStack->size() > 2
-		        && !isBraceType((*braceTypeStack)[braceTypeStack->size() - 2],
-		                        SINGLE_LINE_TYPE))
+		if (braceFormatMode == RUN_IN_MODE)
+		{
+			if (previousNonWSChar == '{'
+			        && braceTypeStack->size() > 2
+			        && !isBraceType((*braceTypeStack)[braceTypeStack->size() - 2],
+			                        SINGLE_LINE_TYPE))
+				formatArrayRunIn();
+		}
+		else if (!isInLineBreak
+		         && !std::isblank(peekNextChar())
+		         && previousNonWSChar == '{'
+		         && braceTypeStack->size() > 2
+		         && !isBraceType((*braceTypeStack)[braceTypeStack->size() - 2],
+		                         SINGLE_LINE_TYPE))
 			formatArrayRunIn();
 	}
-	else if (!isInLineBreak
-	         && !std::isblank(peekNextChar())
-	         && previousNonWSChar == '{'
-	         && braceTypeStack->size() > 2
-	         && !isBraceType((*braceTypeStack)[braceTypeStack->size() - 2],
-	                         SINGLE_LINE_TYPE))
-		formatArrayRunIn();
 
 	appendCurrentChar();
 }
 
 void ASFormatter::formatCloseBrace(BraceType braceType)
 {
-	if (attachClosingBraceMode)
+	if (shouldPreserveBraceFormat)
+	{
+		appendCurrentChar();
+	}
+	else if (attachClosingBraceMode)
 	{
 		if (isEmptyLine(formattedLine)			// if a blank line precedes this
 		        || isImmediatelyPostPreprocessor
@@ -2484,6 +2503,11 @@ void ASFormatter::setCommaPaddingMode(bool state)
 	shouldPadCommas = state;
 }
 
+void ASFormatter::setPreserveBraceFormat(bool state)
+{
+	shouldPreserveBraceFormat = state;
+}
+
 /**
  * set maximum code length
  *
@@ -3255,6 +3279,9 @@ void ASFormatter::initNewLine()
 	size_t tabSize = getTabLength();
 	charNum = 0;
 
+	if (shouldPreserveIndent)
+		preserveIndentLeading = "";
+
 	// don't trim these
 	if (isInQuoteContinuation
 	        || (isInPreprocessor && !getPreprocDefineIndent()))
@@ -3315,6 +3342,8 @@ void ASFormatter::initNewLine()
 			tabIncrementIn += tabSize - 1 - ((tabIncrementIn + charNum) % tabSize);
 	}
 	leadingSpaces = charNum + tabIncrementIn;
+	if (shouldPreserveIndent)
+		preserveIndentLeading = currentLine.substr(0, charNum);
 
 	if (isSequenceReached(ASResource::AS_OPEN_COMMENT) || (isGSCStyle() && isSequenceReached(ASResource::AS_GSC_OPEN_COMMENT)))
 	{
@@ -3488,6 +3517,11 @@ void ASFormatter::breakLine(bool isSplitLine /*false*/)
 	nextLineSpacePadNum = 0;
 	readyFormattedLine = formattedLine;
 	formattedLine.erase();
+	if (shouldPreserveIndent && !preserveIndentLeading.empty())
+	{
+		formattedLine = preserveIndentLeading;
+		preserveIndentLeading = "";
+	}
 	// queue an empty line prepend request if one exists
 	prependEmptyLine = isPrependPostBlockEmptyLineRequested;
 	if (!isSplitLine)
@@ -5515,6 +5549,12 @@ void ASFormatter::formatOpeningBrace(BraceType braceType)
 
 	parenStack->emplace_back(0);
 
+	if (shouldPreserveBraceFormat)
+	{
+		appendCurrentChar();
+		return;
+	}
+
 	bool breakBrace = isCurrentBraceBroken();
 
 	//478
@@ -5654,6 +5694,12 @@ void ASFormatter::formatClosingBrace(BraceType braceType)
 	// parenStack must contain one entry
 	if (parenStack->size() > 1)
 		parenStack->pop_back();
+
+	if (shouldPreserveBraceFormat)
+	{
+		appendCurrentChar();
+		return;
+	}
 
 	// suppress pending blank before class/struct closing brace (e.g. from =all field)
 	if (isBraceType(braceType, DEFINITION_TYPE)
@@ -5801,6 +5847,9 @@ void ASFormatter::formatArrayBraces(BraceType braceType, bool isOpeningArrayBrac
  */
 void ASFormatter::formatRunIn()
 {
+	if (shouldPreserveBraceFormat)
+		return;
+
 	assert(braceFormatMode == RUN_IN_MODE || braceFormatMode == NONE_MODE);
 
 	// keep one line blocks returns true without indenting the run-in
@@ -6216,6 +6265,9 @@ bool ASFormatter::commentAndHeaderFollows()
 bool ASFormatter::isCurrentBraceBroken() const
 {
 	assert(braceTypeStack->size() > 1);
+
+	if (shouldPreserveBraceFormat)
+		return currentLineBeginsWithBrace;
 
 	bool breakBrace = false;
 	size_t stackEnd = braceTypeStack->size() - 1;
@@ -6871,6 +6923,9 @@ std::string ASFormatter::getPreviousWord(const std::string& line, int currPos, b
 void ASFormatter::isLineBreakBeforeClosingHeader()
 {
 	assert(foundClosingHeader && previousNonWSChar == '}');
+
+	if (shouldPreserveBraceFormat)
+		return;
 
 	if (currentHeader == &ASResource::AS_WHILE && shouldAttachClosingWhile)
 	{

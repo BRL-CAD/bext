@@ -8,11 +8,11 @@ _astyle() {
 
     case "$prev" in
         --style)
-            COMPREPLY=($(compgen -W "allman java kr stroustrup whitesmith vtk ratliff gnu linux horstmann 1tbs google mozilla webkit pico lisp" -- "$cur"))
+            COMPREPLY=($(compgen -W "allman java kr stroustrup whitesmith vtk ratliff gnu linux horstmann 1tbs google mozilla webkit pico lisp none" -- "$cur"))
             return 0
             ;;
         --indent)
-            COMPREPLY=($(compgen -W "spaces tab force-tab force-tab-x" -- "$cur"))
+            COMPREPLY=($(compgen -W "spaces tab force-tab force-tab-x none" -- "$cur"))
             return 0
             ;;
         --indent-continuation)

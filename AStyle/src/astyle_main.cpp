@@ -1647,6 +1647,9 @@ void ASConsole::printHelp() const
 	std::cout << "    Attached opening braces and attached closing braces.\n";
 	std::cout << "    Uses keep one line statements.\n";
 	std::cout << '\n';
+	std::cout << "    --style=none\n";
+	std::cout << "    Preserve existing braces; do not reformat brace placement.\n";
+	std::cout << '\n';
 	std::cout << "Tab Options:\n";
 	std::cout << "------------\n";
 	std::cout << "    default indent option\n";
@@ -1656,6 +1659,9 @@ void ASConsole::printHelp() const
 	std::cout << "    --indent=spaces=#  OR  -s#\n";
 	std::cout << "    Indent using # spaces per indent. Not specifying #\n";
 	std::cout << "    will result in a default of 4 spaces per indent.\n";
+	std::cout << '\n';
+	std::cout << "    --indent=none\n";
+	std::cout << "    Preserve existing indentation; do not recompute indent depth.\n";
 	std::cout << '\n';
 	std::cout << "    --indent=tab  OR  --indent=tab=#  OR  -t  OR  -t#\n";
 	std::cout << "    Indent using tab characters, assuming that each\n";
@@ -2881,6 +2887,11 @@ void ASOptions::parseOption(const std::string& arg)
 	{
 		formatter.setFormattingStyle(STYLE_LISP);
 	}
+	else if (isOption(arg, "style=none"))
+	{
+		formatter.setFormattingStyle(STYLE_NONE);
+		formatter.setPreserveBraceFormat(true);
+	}
 	// must check for mode=cs before mode=c !!!
 	else if (isOption(arg, "mode=cs"))
 	{
@@ -2979,6 +2990,10 @@ void ASOptions::parseOption(const std::string& arg)
 	else if (isOption(arg, "indent=spaces"))
 	{
 		formatter.setSpaceIndentation(4);
+	}
+	else if (isOption(arg, "indent=none"))
+	{
+		formatter.setPreserveIndent(true);
 	}
 	else if (isParamOption(arg, "xt", "indent-continuation="))
 	{

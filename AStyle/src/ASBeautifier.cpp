@@ -53,6 +53,7 @@ ASBeautifier::ASBeautifier()
 	sourceIterator = nullptr;
 	isModeManuallySet = false;
 	shouldForceTabIndentation = false;
+	shouldPreserveIndent = false;
 	setSpaceIndentation(4);
 	setContinuationIndentation(1);
 	setMinConditionalIndentOption(MINCOND_TWO);
@@ -199,6 +200,7 @@ ASBeautifier::ASBeautifier(const ASBeautifier& other) : ASBase(other)
 	isInDefineDefinition = other.isInDefineDefinition;
 	classIndent = other.classIndent;
 	isIndentModeOff = other.isIndentModeOff;
+	shouldPreserveIndent = other.shouldPreserveIndent;
 	isInClassHeader = other.isInClassHeader;
 	isInClassHeaderTab = other.isInClassHeaderTab;
 	isInClassInitializer = other.isInClassInitializer;
@@ -615,6 +617,10 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 
 	if (line.empty())
 	{
+		if (shouldPreserveIndent)
+			return "";
+
+
 		if (backslashEndsPrevLine)
 		{
 			backslashEndsPrevLine = false;
@@ -662,7 +668,7 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 	        && !line.empty()
 	        && line[0] != '#')
 	{
-		if (isIndentModeOff)
+		if (isIndentModeOff || shouldPreserveIndent)
 			return originalLine;
 
 		if (isInClassHeaderTab || isInClassInitializer)
@@ -707,7 +713,7 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 				else
 					indentedLine = preLineWS(preprocBlockIndent, 0) + line;
 
-				if (isIndentModeOff)
+				if (isIndentModeOff || shouldPreserveIndent)
 					return originalLine;
 				else
 					return indentedLine;
@@ -715,7 +721,7 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 			if (shouldIndentPreprocConditional && !preproc.empty())
 			{
 
-				if (isIndentModeOff)
+				if (isIndentModeOff || shouldPreserveIndent)
 					return originalLine;
 
 				std::string indentedLine;
@@ -768,7 +774,7 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 		{
 			isInDefineDefinition = false;
 			// this could happen with invalid input
-			if (activeBeautifierStack->empty() || isIndentModeOff)
+			if (activeBeautifierStack->empty() || isIndentModeOff || shouldPreserveIndent)
 				return originalLine;
 			ASBeautifier* defineBeautifier = activeBeautifierStack->back();
 			activeBeautifierStack->pop_back();
@@ -876,7 +882,7 @@ std::string ASBeautifier::beautify(const std::string& originalLine)
 
 	// finally, insert indentations into beginning of line
 
-	std::string indentedLine = isIndentModeOff ? originalLine : preLineWS(indentCount, spaceIndentCount) + line;
+	std::string indentedLine = (isIndentModeOff || shouldPreserveIndent) ? originalLine : preLineWS(indentCount, spaceIndentCount) + line;
 	prevFinalLineSpaceIndentCount = spaceIndentCount;
 	prevFinalLineIndentCount = indentCount;
 
@@ -989,6 +995,11 @@ void ASBeautifier::setSpaceIndentation(int length)
 {
 	indentString = std::string(length, ' ');
 	indentLength = length;
+}
+
+void ASBeautifier::setPreserveIndent(bool state)
+{
+	shouldPreserveIndent = state;
 }
 
 /**

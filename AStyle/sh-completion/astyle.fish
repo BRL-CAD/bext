@@ -1,6 +1,6 @@
 
-complete -c astyle -l style -xa 'allman java kr stroustrup whitesmith vtk ratliff gnu linux horstmann 1tbs google mozilla webkit pico lisp' -d 'Set a formatting and indenting style'
-complete -c astyle -l indent -xa 'spaces tab force-tab force-tab-x' -d 'Set indentation option'
+complete -c astyle -l style -xa 'allman java kr stroustrup whitesmith vtk ratliff gnu linux horstmann 1tbs google mozilla webkit pico lisp none' -d 'Set a formatting and indenting style'
+complete -c astyle -l indent -xa 'spaces tab force-tab force-tab-x none' -d 'Set indentation option'
 complete -c astyle -l attach-namespaces -d 'Attach braces to a namespace statement'
 complete -c astyle -l attach-classes -d 'Attach braces to a class statement'
 complete -c astyle -l attach-inlines -d 'Attach braces to class inline function definitions'

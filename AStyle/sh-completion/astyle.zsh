@@ -2,8 +2,8 @@
 
 _astyle() {
   local -a options=(
-    "--style[Set a formatting and indenting style]: :(allman java kr stroustrup whitesmith vtk ratliff gnu linux horstmann 1tbs google mozilla webkit pico lisp)"
-    "--indent[Set indentation option]: :(spaces tab force-tab force-tab-x)"
+    "--style[Set a formatting and indenting style]: :(allman java kr stroustrup whitesmith vtk ratliff gnu linux horstmann 1tbs google mozilla webkit pico lisp none)"
+    "--indent[Set indentation option]: :(spaces tab force-tab force-tab-x none)"
     "--attach-namespaces[Attach braces to a namespace statement]"
     "--attach-classes[Attach braces to a class statement]"
     "--attach-inlines[Attach braces to class inline function definitions]"
