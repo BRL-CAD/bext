@@ -273,6 +273,16 @@ std::streamoff ASStreamIterator<T>::tellg()
 
 #ifndef ASTYLE_LIB
 
+// Replace control characters that could be interpreted as terminal escape sequences.
+static std::string sanitizeForTerminal(const std::string& s)
+{
+	std::string out;
+	out.reserve(s.size());
+	for (unsigned char c : s)
+		out += (c < 0x20 && c != '\t') ? '?' : static_cast<char>(c);
+	return out;
+}
+
 ASConsole::ASConsole(ASFormatter& formatterArg) : formatter(formatterArg)
 {
 	errorStream = &std::cerr;
@@ -514,13 +524,13 @@ void ASConsole::formatFile(const std::string& fileName_)
 	{
 		if (!isDryRun)
 			writeFile(fileName_, encoding, out);
-		printMsg(_("Formatted  %s\n"), displayName);
+		printMsg(_("Formatted  %s\n"), sanitizeForTerminal(displayName));
 		filesFormatted++;
 	}
 	else
 	{
 		if (!isFormattedOnly)
-			printMsg(_("Unchanged  %s\n"), displayName);
+			printMsg(_("Unchanged  %s\n"), sanitizeForTerminal(displayName));
 		filesUnchanged++;
 	}
 
@@ -932,7 +942,7 @@ void ASConsole::getFileNames(const std::string& directory, const std::vector<std
 		// If it's a directory and recursive is enabled
 		if (std::filesystem::is_directory(entry) && isRecursive) {
 			if (isPathExcluded(entryPath))
-				printMsg(_("Exclude  %s\n"), entryPath.substr(mainDirectoryLength));
+				printMsg(_("Exclude  %s\n"), sanitizeForTerminal(entryPath.substr(mainDirectoryLength)));
 			else
 				subDirectory.emplace_back(entryPath);
 			continue;
@@ -946,7 +956,7 @@ void ASConsole::getFileNames(const std::string& directory, const std::vector<std
 			for (const std::string& wildcard : wildcards) {
 				if (wildcmp(wildcard.c_str(), entryName.c_str())) {
 					if (isExcluded)
-						printMsg(_("Exclude  %s\n"), entryPath.substr(mainDirectoryLength));
+						printMsg(_("Exclude  %s\n"), sanitizeForTerminal(entryPath.substr(mainDirectoryLength)));
 					else
 						fileName.emplace_back(entryPath);
 					break;
@@ -1380,7 +1390,7 @@ void ASConsole::getFilePaths(const std::string& filePath)
 	if (hasWildcard)
 	{
 		printSeparatingLine();
-		printMsg(_("Directory  %s\n"), targetDirectory + g_fileSeparator + targetFilename);
+		printMsg(_("Directory  %s\n"), sanitizeForTerminal(targetDirectory + g_fileSeparator + targetFilename));
 	}
 
 	// clear exclude hits vector
@@ -1415,14 +1425,14 @@ void ASConsole::getFilePaths(const std::string& filePath)
 			if (!ignoreExcludeErrorsDisplay)
 			{
 				if (ignoreExcludeErrors)
-					printMsg(_("Exclude (unmatched)  %s\n"), excludeVector[ix]);
+					printMsg(_("Exclude (unmatched)  %s\n"), sanitizeForTerminal(excludeVector[ix]));
 				else
-					fprintf(stderr, _("Exclude (unmatched)  %s\n"), excludeVector[ix].c_str());
+					fprintf(stderr, _("Exclude (unmatched)  %s\n"), sanitizeForTerminal(excludeVector[ix]).c_str());
 			}
 			else
 			{
 				if (!ignoreExcludeErrors)
-					fprintf(stderr, _("Exclude (unmatched)  %s\n"), excludeVector[ix].c_str());
+					fprintf(stderr, _("Exclude (unmatched)  %s\n"), sanitizeForTerminal(excludeVector[ix]).c_str());
 			}
 		}
 	}
@@ -1437,7 +1447,7 @@ void ASConsole::getFilePaths(const std::string& filePath)
 	// check if files were found (probably an input error if not)
 	if (fileName.empty() && !acceptEmptyFileList)
 	{
-		fprintf(stderr, _("No file to process %s\n"), filePath.c_str());
+		fprintf(stderr, _("No file to process %s\n"), sanitizeForTerminal(filePath).c_str());
 		if (hasWildcard && !isRecursive)
 			fprintf(stderr, "%s\n", _("Did you intend to use --recursive"));
 		error();
@@ -2479,10 +2489,10 @@ void ASConsole::printVerboseHeader() const
 	printf("%s", header.c_str());
 	// print option files
 	if (!optionFileName.empty())
-		printf(_("Default option file  %s\n"), optionFileName.c_str());
+		printf(_("Default option file  %s\n"), sanitizeForTerminal(optionFileName).c_str());
 
 	if (!projectOptionFileName.empty())
-		printf(_("Project option file  %s\n"), projectOptionFileName.c_str());
+		printf(_("Project option file  %s\n"), sanitizeForTerminal(projectOptionFileName).c_str());
 }
 
 void ASConsole::printVerboseStats(clock_t startTime) const
