@@ -73,7 +73,7 @@ if (LIST_ONLY)
   return()
 endif (LIST_ONLY)
 
-set(git_args submodule update --init --recursive)
+set(git_args submodule update --init --recursive --jobs 8)
 if (GIT_SHALLOW_CLONE)
   list(APPEND git_args --recommend-shallow)
 endif (GIT_SHALLOW_CLONE)
