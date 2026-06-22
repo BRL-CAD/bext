@@ -134,6 +134,13 @@ user@linux:~/bext (main) $ git commit -m "Update submodule references for AssetI
 user@linux:~/bext (main) $ git push
 ```
 
+# Parallelize updates
+
+git config submodule.fetchJobs 0  # 0 = one job per CPU core
+git config fetch.parallel 0
+git config fetch.recurseSubmodules on-demand  # only fetch the submodules that changed
+
+
 # Changing the branch of a submodule
 
 https://stackoverflow.com/questions/29882960/changing-an-existing-submodules-branch
