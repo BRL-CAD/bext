@@ -216,7 +216,13 @@ macro(bext_enable pname)
 
   if (NOT ENABLE_${upname} AND NOT DISABLE_${upname})
 
-    find_package(${pname})
+    # This is an optional probe: a "not found" result is the normal, expected
+    # path that simply turns on the local build below, and the configure
+    # summary already reports which packages are built locally vs. found on the
+    # system.  Pass QUIET so a missing package does not emit CMake's verbose
+    # "could not find a package configuration file" warning, which is noise
+    # here rather than something the developer needs to act on.
+    find_package(${pname} QUIET)
 
     if (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
       set(ENABLE_${upname} "ON" CACHE BOOL "Enable ${pname} build")

@@ -3,7 +3,9 @@ cad_enable(QT "libqtcad")
 
 if (NOT ENABLE_QT AND NOT DISABLE_QT)
 
-  find_package(Qt6 COMPONENTS Core Widgets Gui Svg OpenGL OpenGLWidgets Network)
+  # Optional probe: a missing Qt6 just turns on the local build below, so pass
+  # QUIET to avoid CMake's verbose "could not find Qt6 config file" warning.
+  find_package(Qt6 QUIET COMPONENTS Core Widgets Gui Svg OpenGL OpenGLWidgets Network)
 
   if (NOT Qt6Widgets_FOUND AND NOT DEFINED ENABLE_QT)
     set(ENABLE_QT "ON" CACHE BOOL "Enable Qt6 build")

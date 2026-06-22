@@ -4,7 +4,9 @@ bext_enable_all_default(ONETBB onetbb)
 
 if (NOT ENABLE_ONETBB)
 
-  find_package(TBB)
+  # Optional probe: a missing TBB just turns on the local build below, so pass
+  # QUIET to avoid CMake's verbose "could not find TBB config file" warning.
+  find_package(TBB QUIET)
 
   if (NOT TBB_FOUND AND NOT DEFINED ENABLE_ONETBB)
     set(ENABLE_ONETBB "ON" CACHE BOOL "Enable oneTBB build")
