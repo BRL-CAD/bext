@@ -1,0 +1,26 @@
+diff -Naur LIEF/src/ELF/Symbol.cpp LIEF_BLD/src/ELF/Symbol.cpp
+--- LIEF/src/ELF/Symbol.cpp	2026-07-01 09:26:59.559741917 -0400
++++ LIEF_BLD/src/ELF/Symbol.cpp	2026-07-01 09:28:31.414010111 -0400
+@@ -90,15 +90,20 @@
+   } else {
+ #if defined(__unix__)
+     int status;
+-    const std::string& name = this->name().c_str();
++    const std::string& name = this->name();
++    if (name.rfind("_Z", 0) != 0) {
++      return name;
++    }
++
+     char* demangled_name = abi::__cxa_demangle(name.c_str(), nullptr, nullptr, &status);
+ 
+-    if (status == 0) {
++    if (status == 0 && demangled_name != nullptr) {
+       std::string realname = demangled_name;
+       free(demangled_name);
+       return realname;
+     }
+ 
++    free(demangled_name); // NOLINT(cppcoreguidelines-no-malloc)
+     return name;
+ #else
+     return "";
