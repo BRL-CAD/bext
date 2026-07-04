@@ -3943,6 +3943,27 @@ bool ASFormatter::isDereferenceOrAddressOf() const
 	        || (previousNonWSChar == '*' && currentChar == '&'))
 		return false;
 
+	// check for address-of after a pointer cast like (int *)&var
+	// isImmediatelyPostCast() only handles *, so we inline equivalent logic here
+	if (currentChar == '&' && previousNonWSChar == ')')
+	{
+		std::string line;
+		size_t paren = currentLine.rfind(')', charNum);
+		if (paren != std::string::npos)
+			line = currentLine;
+		else
+		{
+			line = readyFormattedLine;
+			paren = line.rfind(')');
+		}
+		if (paren != std::string::npos && paren > 0)
+		{
+			size_t lastCh = line.find_last_not_of(" \t", paren - 1);
+			if (lastCh != std::string::npos && line[lastCh] == '*')
+				return true;
+		}
+	}
+
 	if (!isBraceType(braceTypeStack->back(), COMMAND_TYPE)
 	        && parenStack->back() == 0)
 		return false;
