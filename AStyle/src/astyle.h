@@ -722,6 +722,7 @@ public:	// functions
 	void setAddBracesMode(bool state);
 	void setAddOneLineBracesMode(bool state);
 	void setRemoveBracesMode(bool state);
+	void setRemoveOneLineBracesMode(bool state);
 	void setAttachClass(bool state);
 	void setAttachClosingWhile(bool state);
 	void setAttachExternC(bool state);
@@ -1113,6 +1114,7 @@ private:  // variables
 	int  shouldAddBraces;
 	bool shouldAddOneLineBraces;
 	bool shouldRemoveBraces;
+	bool shouldRemoveOneLineBraces;
 	bool shouldPadMethodColon;
 	bool shouldPadMethodPrefix;
 	bool shouldReparseCurrentChar;

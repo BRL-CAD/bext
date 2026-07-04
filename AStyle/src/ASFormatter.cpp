@@ -93,6 +93,7 @@ ASFormatter::ASFormatter()
 	shouldAddBraces = false;
 	shouldAddOneLineBraces = false;
 	shouldRemoveBraces = false;
+	shouldRemoveOneLineBraces = false;
 	shouldPadMethodColon = false;
 	shouldPadMethodPrefix = false;
 	shouldUnPadMethodPrefix = false;
@@ -490,7 +491,10 @@ void ASFormatter::fixOptionVariableConflicts()
 		setBreakOneLineBlocksMode(false);
 	// don't allow add-braces and remove-braces
 	if (shouldAddBraces || shouldAddOneLineBraces)
+	{
 		setRemoveBracesMode(false);
+		setRemoveOneLineBracesMode(false);
+	}
 	// don't allow break-return-type and attach-return-type
 	if (shouldBreakReturnType)
 		shouldAttachReturnType = false;
@@ -533,6 +537,19 @@ bool ASFormatter::handleImmediatelyPostHeaderSection()
 			             && currentLine.find_first_not_of(" \t") != std::string::npos))
 				shouldBreakLineAtNextChar = true;
 			return false;
+		}
+	}
+	// should one-line braces be removed (keep the statement on one line)
+	else if (currentChar == '{' && shouldRemoveOneLineBraces)
+	{
+		if (isOneLineBlockReached(currentLine, charNum) == 1)
+		{
+			bool bracesRemoved = removeBracesFromStatement();
+			if (bracesRemoved)
+			{
+				shouldRemoveNextClosingBrace = true;
+				return false;
+			}
 		}
 	}
 
@@ -2408,6 +2425,11 @@ void ASFormatter::setAddOneLineBracesMode(bool state)
 void ASFormatter::setRemoveBracesMode(bool state)
 {
 	shouldRemoveBraces = state;
+}
+
+void ASFormatter::setRemoveOneLineBracesMode(bool state)
+{
+	shouldRemoveOneLineBraces = state;
 }
 
 // retained for compatibility with release 2.06

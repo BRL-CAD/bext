@@ -1911,8 +1911,11 @@ void ASConsole::printHelp() const
 	std::cout << "    Add one line braces to unbraced one line conditional\n";
 	std::cout << "    statements.\n";
 	std::cout << '\n';
-	std::cout << "    --remove-braces  OR  -xj\n";
-	std::cout << "    Remove braces from a braced one line conditional statements.\n";
+	std::cout << "    --remove-braces           OR  -xj\n";
+	std::cout << "    --remove-braces=one-line  OR  -xk  [experimental]\n";
+	std::cout << "    Remove braces from braced conditional statements.\n";
+	std::cout << "    With =one-line only one-line blocks are affected;\n";
+	std::cout << "    multi-line braced blocks are left unchanged.\n";
 	std::cout << '\n';
 	std::cout << "    --break-return-type       OR  -xB\n";
 	std::cout << "    --break-return-type-decl  OR  -xD\n";
@@ -3257,6 +3260,10 @@ void ASOptions::parseOption(const std::string& arg)
 	else if (isOption(arg, "xj", "remove-braces"))
 	{
 		formatter.setRemoveBracesMode(true);
+	}
+	else if (isOption(arg, "xk", "remove-braces=one-line"))
+	{
+		formatter.setRemoveOneLineBracesMode(true);
 	}
 	else if (isOption(arg, "Y", "indent-col1-comments"))
 	{
