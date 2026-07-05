@@ -67,6 +67,23 @@
         <section class="release-notes">
 
             <article class="release">
+                <h3>Artistic Style 3.6.17 (July 2026)</h3>
+                <ul>
+                    <li>Added option remove-braces=one-line (https://gitlab.com/saalen/astyle/-/work_items/70)</li>
+                    <li>Fix address-of after a pointer cast padding (https://gitlab.com/saalen/astyle/-/work_items/14)</li>
+                    <li>Added sanitation of terminal output</li>
+                    <li>Added new file pattern option --include and auto-detect local project options (https://gitlab.com/saalen/astyle/-/work_items/64)</li>
+                    <li>Added new options --style=none --indent=none (https://gitlab.com/saalen/astyle/-/work_items/25)</li>
+                    <li>Added empty line before first method without all option (https://gitlab.com/saalen/astyle/-/merge_requests/20)</li>
+                    <li>Added the "no-indent-if-after-else" and "line-between-members" parameters</li>
+                    <li>Added new option --max-code-length-mode=ignore-side-comments (https://gitlab.com/saalen/astyle/-/work_items/93)</li>
+                    <li>Fix indent of upcoming long lines with total mode (https://gitlab.com/saalen/astyle/-/work_items/67)</li>
+                    <li>apply more consistent indentation after line wrap (https://gitlab.com/saalen/astyle/-/work_items/98)</li>
+                    <li>Fixed `--align-pointer=name` for Function Arguments.</li>
+                </ul>
+            </article>
+
+            <article class="release">
                 <h3>Artistic Style 3.6.16 (May 2026)</h3>
                 <ul>
                     <li>Fix regression: incorrect spacing for negative return literal with type cast (https://gitlab.com/saalen/astyle/-/work_items/110)</li>
@@ -74,7 +91,7 @@
                 </ul>
             </article>
 
-        <article class="release">
+            <article class="release">
                 <h3>Artistic Style 3.6.15 (May 2026)</h3>
                 <ul>
                     <li>Fix indent of consecutive variable assignments (https://gitlab.com/saalen/astyle/-/work_items/104)</li>
