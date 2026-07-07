@@ -22,9 +22,23 @@ if (ENABLE_ISPC)
       )
   endif ()
 
-  # ispc depends on the clang compiler - its build will switch the compiler if
-  # not already using clang.  Need to pass in the bundled LLVM clang compiler
-  # location, if we have it.
+  # Select the compiler used to build ispc itself.  ispc only forces clang on
+  # UNIX (see its CMakeLists.txt); on Windows it happily builds with MSVC, which
+  # is in fact the conventional Windows toolchain for ispc.  We therefore only
+  # switch to the bundled LLVM clang on non-Windows platforms.  This also avoids
+  # a hard incompatibility on Windows, where the bundled LLVM's clang can be too
+  # old for a newer MSVC STL (which requires clang builtins the older clang lacks).
+  if (LLVM_TARGET AND NOT WIN32)
+    set(ISPC_C_COMPILER "${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
+    set(ISPC_CXX_COMPILER "${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+  else ()
+    set(ISPC_C_COMPILER "${CMAKE_C_COMPILER}")
+    set(ISPC_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
+  endif ()
+
+  # ispc links against the bundled LLVM.  Pass the bundled LLVM clang compiler
+  # location when we are switching to it (non-Windows); otherwise ispc is built
+  # with the native compiler above.
   ExternalProject_Add(ISPC_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/ispc"
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/ispc.patch
@@ -38,17 +52,15 @@ if (ENABLE_ISPC)
     -DCurses_ROOT=$<$<BOOL:${NCURSES_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DLLVM_ROOT=$<$<BOOL:${LLVM_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
-    $<$<BOOL:${LLVM_TARGET}>:-DLLVM_CONFIG_EXECUTABLE=${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/llvm-config>
+    $<$<BOOL:${LLVM_TARGET}>:-DLLVM_CONFIG_EXECUTABLE=${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/llvm-config${CMAKE_EXECUTABLE_SUFFIX}>
     -DISPC_INCLUDE_EXAMPLES=OFF
     -DISPC_INCLUDE_DPCPP_EXAMPLES=OFF
     -DISPC_INCLUDE_TESTS=OFF
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
-    -DCMAKE_CXX_COMPILER=$<IF:${LLVM_TARGET},${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/clang++,${CMAKE_CXX_COMPILER}>
-    -DCMAKE_C_COMPILER=$<IF:${LLVM_TARGET},${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/clang,${CMAKE_C_COMPILER}>
-    #-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-    #-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_CXX_COMPILER=${ISPC_CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${ISPC_C_COMPILER}
     -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
     -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
