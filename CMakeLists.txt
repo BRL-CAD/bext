@@ -195,6 +195,45 @@ endif (EXT_BUILD_VERBOSE)
 # ExternalProject_Add feature to manage 3rd party builds
 include(ExternalProject)
 
+#---------------------------------------------------------------------
+# CMake 4.0 removed support for cmake_minimum_required(VERSION < 3.5), but a
+# number of our bundled third party projects still declare such old minimums.
+# Because each dependency is configured as an independent ExternalProject
+# sub-build (a separate cmake invocation), a top level CMAKE_POLICY_VERSION_MINIMUM
+# setting - whether on the command line or from a CMakePresets cache variable -
+# does NOT reach those sub-builds.  To make old dependencies configure regardless
+# of how bext itself is invoked, establish a default policy floor here and wrap
+# ExternalProject_Add so that every CMake-based sub-build is configured with it.
+#
+# The flag is inserted as the first CMAKE_ARGS value so it always lands inside
+# the CMAKE_ARGS group regardless of which ExternalProject keywords follow.
+# Sub-builds that drive a non-CMake configure (i.e. have no CMAKE_ARGS) are left
+# untouched.  Defining a command that already exists makes the original available
+# under the same name with a leading underscore, a documented CMake behavior.
+if (NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+  set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif (NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+
+function(ExternalProject_Add name)
+  # Rebuild the call as a string of bracket-quoted arguments so that empty
+  # arguments (e.g. CONFIGURE_COMMAND "") and values containing spaces,
+  # semicolons or generator expressions are all preserved exactly.  Inject the
+  # policy floor immediately after the CMAKE_ARGS token so it becomes the first
+  # CMAKE_ARGS value.
+  set(ep_call "_ExternalProject_Add([==[${name}]==]")
+  if (ARGC GREATER 1)
+    math(EXPR ep_last "${ARGC} - 1")
+    foreach(ep_i RANGE 1 ${ep_last})
+      string(APPEND ep_call " [==[${ARGV${ep_i}}]==]")
+      if ("${ARGV${ep_i}}" STREQUAL "CMAKE_ARGS")
+        string(APPEND ep_call " [==[-DCMAKE_POLICY_VERSION_MINIMUM=${CMAKE_POLICY_VERSION_MINIMUM}]==]")
+      endif ("${ARGV${ep_i}}" STREQUAL "CMAKE_ARGS")
+    endforeach(ep_i RANGE 1 ${ep_last})
+  endif (ARGC GREATER 1)
+  string(APPEND ep_call ")")
+  cmake_language(EVAL CODE "${ep_call}")
+endfunction(ExternalProject_Add name)
+
 # In case we need to pass some sort of reasonable parallel
 # flag to a build system, check our processor count
 include(ProcessorCount)
