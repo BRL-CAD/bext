@@ -195,6 +195,16 @@ endif (EXT_BUILD_VERBOSE)
 # ExternalProject_Add feature to manage 3rd party builds
 include(ExternalProject)
 
+# ExternalProject source convention:
+#   * Use SOURCE_DIR for an existing submodule built directly in place when no
+#     source patching or staging is needed.
+#   * Use a local URL when patching a submodule, so ExternalProject stages a
+#     build-tree copy before PATCH_COMMAND and other source modifications run.
+#   * A deliberate exception is a very large source tree such as Qt6, where the
+#     copy cost is significant and in-place patching/building is preferred.
+# Do not replace URL with SOURCE_DIR merely to avoid the local URL spelling;
+# that can cause patches or generated-file changes to modify the checkout.
+
 #---------------------------------------------------------------------
 # CMake 4.0 removed support for cmake_minimum_required(VERSION < 3.5), but a
 # number of our bundled third party projects still declare such old minimums.
