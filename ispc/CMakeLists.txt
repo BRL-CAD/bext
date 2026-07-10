@@ -21,6 +21,17 @@ if (ENABLE_ISPC)
       -DCMAKE_PROGRAM_PATH=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}
       )
   endif ()
+  set(ISPC_FLEXBISON_ARGS)
+  if (BISON_TARGET)
+    list(APPEND ISPC_FLEXBISON_ARGS
+      -DBISON_EXECUTABLE=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/bison
+      )
+  endif (BISON_TARGET)
+  if (FLEX_TARGET)
+    list(APPEND ISPC_FLEXBISON_ARGS
+      -DFLEX_EXECUTABLE=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/flex
+      )
+  endif (FLEX_TARGET)
 
   # Select the compiler used to build ispc itself.  ispc only forces clang on
   # UNIX (see its CMakeLists.txt); on Windows it happily builds with MSVC, which
@@ -49,6 +60,7 @@ if (ENABLE_ISPC)
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     ${ISPC_PROGRAM_PATH_ARGS}
+    ${ISPC_FLEXBISON_ARGS}
     -DCurses_ROOT=$<$<BOOL:${NCURSES_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DLLVM_ROOT=$<$<BOOL:${LLVM_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
