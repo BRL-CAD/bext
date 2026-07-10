@@ -132,6 +132,10 @@ output trees under that prefix:
 * `install/` - files intended to be bundled with downstream software
 * `noinstall/` - build-only tools and compile-time-only assets
 
+The normal build also generates a dependency graph in the build directory as
+`bext.dot`.  When Graphviz `dot` is available, the build also emits rendered
+forms such as `bext.svg`, `bext.png`, and `bext.pdf`.
+
 When BRL-CAD consumes a `bext` build, `BRLCAD_EXT_DIR` should point at the
 parent directory containing both `install/` and `noinstall/`.
 
