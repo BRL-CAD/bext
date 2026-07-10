@@ -293,8 +293,14 @@ add_custom_target(BuildStamp ALL COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_NOBUN
 # the user about this.
 set(STALE_INSTALL_WARN FALSE)
 
-# Stage the bext grapviz dot input file
-configure_file("${CMAKE_SOURCE_DIR}/dependencies.dot" "${CMAKE_BINARY_DIR}/bext.dot" COPYONLY)
+# Gather graph generation inputs from the existing source-of-truth files.
+file(GLOB BEXT_GRAPH_PROJECT_FILES
+  RELATIVE "${CMAKE_SOURCE_DIR}"
+  "*/*.deps"
+  "*/CMakeLists.txt"
+)
+list(REMOVE_DUPLICATES BEXT_GRAPH_PROJECT_FILES)
+list(SORT BEXT_GRAPH_PROJECT_FILES)
 
 
 ###############################################################################
@@ -366,16 +372,27 @@ add_project(patch)
 ###############################################################################
 if (USE_APPLESEED OR USE_OSPRAY)
 
-  find_package(FLEX)
+  if (ENABLE_ALL)
+    if (NOT DEFINED ENABLE_BISON)
+      set(ENABLE_BISON ON)
+    endif (NOT DEFINED ENABLE_BISON)
+  endif (ENABLE_ALL)
 
-  if (NOT FLEX_FOUND)
-    set(ENABLE_FLEX ON)
-  endif (NOT FLEX_FOUND)
-  find_package(BISON)
+  if (NOT ENABLE_FLEX)
+    find_package(FLEX 2.6)
 
-  if (NOT BISON_FOUND)
-    set(ENABLE_BISON ON)
-  endif (NOT BISON_FOUND)
+    if (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
+      set(ENABLE_FLEX ON)
+    endif (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
+  endif (NOT ENABLE_FLEX)
+
+  if (NOT ENABLE_BISON)
+    find_package(BISON 3.0)
+
+    if (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
+      set(ENABLE_BISON ON)
+    endif (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
+  endif (NOT ENABLE_BISON)
 
   if (ENABLE_FLEX OR ENABLE_BISON)
     add_project(flexbison GROUPS "APPLESEED;OSPRAY")
@@ -649,9 +666,45 @@ register_external_project_clean_targets()
 
 
 ###############################################################################
-# Now that we have the dependencies specified, finish the dependencies DOT file
+# Generate the dependency graph from the existing build metadata.  The DOT file
+# is always emitted during the normal build, and rendered forms are generated
+# too when Graphviz's dot tool is available.
 ###############################################################################
-file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\n}\n")
+find_program(GRAPHVIZ_DOT_EXECUTABLE dot)
+set(BEXT_GRAPH_OUTPUTS
+  "${CMAKE_BINARY_DIR}/bext.dot"
+  "${CMAKE_BINARY_DIR}/bext.svg"
+)
+if (GRAPHVIZ_DOT_EXECUTABLE)
+  list(APPEND BEXT_GRAPH_OUTPUTS
+    "${CMAKE_BINARY_DIR}/bext.png"
+    "${CMAKE_BINARY_DIR}/bext.pdf"
+  )
+endif ()
+
+set(BEXT_GRAPH_DEPENDS
+  "${CMAKE_SOURCE_DIR}/CMake/GenerateDepsGraph.cmake"
+  "${CMAKE_SOURCE_DIR}/CMakeLists.txt"
+  "${CMAKE_SOURCE_DIR}/.gitmodules"
+)
+foreach(graph_input ${BEXT_GRAPH_PROJECT_FILES})
+  list(APPEND BEXT_GRAPH_DEPENDS "${CMAKE_SOURCE_DIR}/${graph_input}")
+endforeach()
+
+add_custom_command(
+  OUTPUT ${BEXT_GRAPH_OUTPUTS}
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_BINARY_DIR=${CMAKE_BINARY_DIR}
+    -DGRAPHVIZ_DOT_EXECUTABLE=${GRAPHVIZ_DOT_EXECUTABLE}
+    -DBEXT_RENDER_png=$<BOOL:${GRAPHVIZ_DOT_EXECUTABLE}>
+    -DBEXT_RENDER_pdf=$<BOOL:${GRAPHVIZ_DOT_EXECUTABLE}>
+    -P ${CMAKE_SOURCE_DIR}/CMake/GenerateDepsGraph.cmake
+  DEPENDS ${BEXT_GRAPH_DEPENDS}
+  VERBATIM
+)
+
+add_custom_target(deps_graph ALL DEPENDS ${BEXT_GRAPH_OUTPUTS})
 
 ###############################################################################
 # Warn the user if the settings changed in a way the indicate there is a risk
