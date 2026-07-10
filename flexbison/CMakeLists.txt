@@ -83,14 +83,11 @@ if (NOT WIN32)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/bison"
       BUILD_IN_SOURCE ON
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      # Bison ships pregenerated autotools and documentation files.  When
-      # ExternalProject copies the source tree, the mtimes can make make think
-      # it needs autoconf, autoheader, automake, or makeinfo.
-      CONFIGURE_COMMAND ${CMAKE_COMMAND};-E;touch_nocreate;${BISON_SRC_DIR}/configure;${BISON_SRC_DIR}/lib/config.in.h;${BISON_SRC_DIR}/Makefile.in;${BISON_SRC_DIR}/doc/stamp-vti;${BISON_SRC_DIR}/doc/version.texi;${BISON_SRC_DIR}/doc/bison.info
+      # Preserve the shipped Autotools outputs when ExternalProject copies the
+      # source tree.  This prevents make from requiring Autoconf, Autoheader,
+      # or Automake from the host.
+      CONFIGURE_COMMAND ${CMAKE_COMMAND};-E;touch_nocreate;${BISON_SRC_DIR}/configure;${BISON_SRC_DIR}/lib/config.in.h;${BISON_SRC_DIR}/Makefile.in
       COMMAND ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
-      COMMAND ${CMAKE_COMMAND};-E;touch_nocreate;${BISON_SRC_DIR}/doc/stamp-vti
-      COMMAND ${CMAKE_COMMAND};-E;touch_nocreate;${BISON_SRC_DIR}/doc/version.texi
-      COMMAND ${CMAKE_COMMAND};-E;touch;${BISON_SRC_DIR}/doc/bison.info
       BUILD_COMMAND make -j${pcnt}
       INSTALL_COMMAND make -j1 install
       DEPENDS ${ZLIB_TARGET}
