@@ -60,9 +60,6 @@ endmacro(TargetVars root)
 # Loads dependencies from an in-src file named same as containing
 # directory with .deps suffix.  Dependencies are added to the
 # corresponding ${proot}_DEPENDS variable.
-#
-# FIXME: Dependencies are also added here to a .dot file dependency
-# graph file, but that shouldn't be intertwined here as side effect.
 ###
 macro(RegisterDeps proot)
   get_filename_component(dirname ${CMAKE_CURRENT_SOURCE_DIR} NAME)
@@ -87,14 +84,6 @@ macro(RegisterDeps proot)
   # Set the TARGET variables for CMake generator expression "if" tests
   TargetVars(${proot}_DEPENDS)
 
-  # Add each dependency to a global .dot file
-  foreach(dl ${DEP_LINES})
-    string(TOLOWER "${dl}" ldl)
-    if (NOT "${ldl}" STREQUAL "patch")
-      file(APPEND "${CMAKE_BINARY_DIR}/bext.dot" "\t${lr} -> ${ldl};\n")
-    endif (NOT "${ldl}" STREQUAL "patch")
-  endforeach(dl ${DEP_LINES})
-
 endmacro(RegisterDeps)
 
 macro(TargetInstallDeps croot roots)
@@ -111,6 +100,8 @@ endmacro(TargetInstallDeps root)
 # to use in the project to populate the submodule checkouts if needed.
 ###############################################################################
 function(git_submodule_init path checkfile)
+  string(REGEX REPLACE "[^A-Za-z0-9_+.-]" "_" stamp_name "${path}")
+  set(sha1_stamp "${CMAKE_CURRENT_BINARY_DIR}/build_sha1_${stamp_name}.txt")
   if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
     find_program(GIT_EXECUTABLE git)
     if (NOT GIT_EXECUTABLE)
@@ -133,7 +124,7 @@ function(git_submodule_init path checkfile)
       OUTPUT_VARIABLE GIT_SHA1
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_sha1.txt" ${GIT_SHA1})
+    file(WRITE "${sha1_stamp}" ${GIT_SHA1})
   else (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
     execute_process(
       COMMAND git log -1 --format=%H
@@ -141,8 +132,8 @@ function(git_submodule_init path checkfile)
       OUTPUT_VARIABLE GIT_SHA1
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    if (EXISTS "${CMAKE_CURRENT_BINARY_DIR}/build_sha1.txt" )
-      file(READ "${CMAKE_CURRENT_BINARY_DIR}/build_sha1.txt" BUILD_SHA1)
+    if (EXISTS "${sha1_stamp}" )
+      file(READ "${sha1_stamp}" BUILD_SHA1)
       if (NOT "${BUILD_SHA1}" MATCHES "${GIT_SHA1}")
 	message("Outdated sha1 stamp found for ${path}: resetting build directory ${CMAKE_CURRENT_BINARY_DIR}")
 	execute_process(
@@ -152,7 +143,7 @@ function(git_submodule_init path checkfile)
 	file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
       endif (NOT "${BUILD_SHA1}" MATCHES "${GIT_SHA1}")
     endif()
-    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_sha1.txt" ${GIT_SHA1})
+    file(WRITE "${sha1_stamp}" ${GIT_SHA1})
   endif (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile})
 endfunction(git_submodule_init path)
 
