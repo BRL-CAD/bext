@@ -20,6 +20,25 @@ name: BRL-CAD
 on: [push]
 
 jobs:
+  dependency_metadata:
+    name: Dependency metadata and supply-chain checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate dependency metadata and documentation
+        run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_DOC_MODE=CHECK -P CMake/GenerateDependencyDocs.cmake
+
+      - name: Generate SPDX SBOM
+        run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_SBOM_OUTPUT="$RUNNER_TEMP/bext.spdx.json" -P CMake/GenerateSbom.cmake
+
+      - name: Upload SPDX SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: bext-spdx-sbom
+          path: ${{ runner.temp }}/bext.spdx.json
+
   linux_configure_presets:
     name: Ubuntu Configure Preset - ${{ matrix.preset }}
     runs-on: ubuntu-latest
