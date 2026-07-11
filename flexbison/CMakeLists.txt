@@ -87,7 +87,10 @@ if (NOT WIN32)
       # source tree.  This prevents make from requiring Autoconf, Autoheader,
       # or Automake from the host.
       CONFIGURE_COMMAND ${CMAKE_COMMAND};-E;touch_nocreate;${BISON_SRC_DIR}/configure;${BISON_SRC_DIR}/lib/config.in.h;${BISON_SRC_DIR}/Makefile.in
-      COMMAND ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+      # The release checkout includes generated Info documentation.  Do not
+      # require host Texinfo when staging changes file timestamp ordering.
+      COMMAND ${CMAKE_COMMAND} -E env MAKEINFO=true ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+      COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${BISON_SRC_DIR}/doc/bison.info
       BUILD_COMMAND make -j${pcnt}
       INSTALL_COMMAND make -j1 install
       DEPENDS ${ZLIB_TARGET}
