@@ -51,6 +51,12 @@ if (ENABLE_TINYGLTF)
 
   set(TINYGLTF_BUNDLED TRUE CACHE BOOL "tinygltf bundle flag")
 
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/tinygltf/LICENSE
+    ${DOC_LICENSE_DIR}/tinygltf.txt
+    COPYONLY
+    )
+
 endif (ENABLE_TINYGLTF)
 
 # Local Variables:
@@ -59,4 +65,3 @@ endif (ENABLE_TINYGLTF)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
