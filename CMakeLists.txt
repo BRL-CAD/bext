@@ -716,6 +716,44 @@ add_custom_command(
 
 add_custom_target(deps_graph ALL DEPENDS ${BEXT_GRAPH_OUTPUTS})
 
+# Validate the derived dependency inventory and ensure the checked-in reference
+# table matches it.  Updating documentation is explicit because normal builds
+# must not modify the source tree.
+add_custom_target(check_dependency_metadata
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_DOC_MODE=CHECK
+    -P ${CMAKE_SOURCE_DIR}/CMake/GenerateDependencyDocs.cmake
+  VERBATIM
+)
+add_custom_target(update_dependency_docs
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_DOC_MODE=WRITE
+    -P ${CMAKE_SOURCE_DIR}/CMake/GenerateDependencyDocs.cmake
+  VERBATIM
+)
+
+set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
+add_custom_command(
+  OUTPUT "${BEXT_SBOM_OUTPUT}"
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_SBOM_OUTPUT=${BEXT_SBOM_OUTPUT}
+    -P ${CMAKE_SOURCE_DIR}/CMake/GenerateSbom.cmake
+  DEPENDS
+    ${CMAKE_SOURCE_DIR}/CMake/BextDependencyInventory.cmake
+    ${CMAKE_SOURCE_DIR}/CMake/GenerateSbom.cmake
+    ${CMAKE_SOURCE_DIR}/CMakeLists.txt
+    ${CMAKE_SOURCE_DIR}/.gitmodules
+    ${BEXT_GRAPH_DEPENDS}
+  VERBATIM
+)
+add_custom_target(sbom DEPENDS "${BEXT_SBOM_OUTPUT}")
+add_custom_target(supply_chain_check
+  DEPENDS check_dependency_metadata sbom
+)
+
 ###############################################################################
 # Warn the user if the settings changed in a way the indicate there is a risk
 # of now-disabled build products in the output directory
