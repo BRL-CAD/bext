@@ -15,15 +15,25 @@ if (ENABLE_OSL)
     set(BISON_TARGET 1)
   endif (MSVC AND FLEX_TARGET)
 
+  # winflexbison installs its binaries as win_flex.exe / win_bison.exe on
+  # Windows; the portable names are plain flex / bison elsewhere.
+  if (WIN32)
+    set(OSL_FLEX_NAME win_flex.exe)
+    set(OSL_BISON_NAME win_bison.exe)
+  else ()
+    set(OSL_FLEX_NAME flex)
+    set(OSL_BISON_NAME bison)
+  endif ()
+
   set(OSL_FLEXBISON_ARGS)
   if (BISON_TARGET)
     list(APPEND OSL_FLEXBISON_ARGS
-      -DBISON_EXECUTABLE=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/bison
+      -DBISON_EXECUTABLE=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/${OSL_BISON_NAME}
       )
   endif (BISON_TARGET)
   if (FLEX_TARGET)
     list(APPEND OSL_FLEXBISON_ARGS
-      -DFLEX_EXECUTABLE=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/flex
+      -DFLEX_EXECUTABLE=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/${OSL_FLEX_NAME}
       )
   endif (FLEX_TARGET)
 
