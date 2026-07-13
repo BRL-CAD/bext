@@ -145,6 +145,12 @@ set(_ZLIB_DEFAULT_SHARED_NAMES_DEBUG
 )
 
 set(_ZLIB_DEFAULT_STATIC_NAMES
+  # On Windows the import library for the shared zlib and the static library
+  # share the .lib suffix, so the static name must come first and be distinct
+  # from the shared import lib (z_brl.lib) or find_library would pick the import
+  # lib and keep the z_brl.dll runtime dependency.  BRL-CAD's static zlib is
+  # z_brl-static.lib.
+  z_brl-static
   z_brl
   z_brl_static
   z_brlstatic
