@@ -39,8 +39,16 @@ if (ENABLE_ISPC)
       )
   endif (BISON_TARGET)
   if (FLEX_TARGET)
+    # winflexbison installs the flex binary as win_flex.exe on Windows; the
+    # portable name is plain flex elsewhere.  (bison is found automatically via
+    # CMAKE_PROGRAM_PATH above, so only flex needs to be named explicitly here.)
+    if (WIN32)
+      set(ISPC_FLEX_NAME win_flex.exe)
+    else ()
+      set(ISPC_FLEX_NAME flex)
+    endif ()
     list(APPEND ISPC_FLEXBISON_ARGS
-      -DFLEX_EXECUTABLE=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/flex
+      -DFLEX_EXECUTABLE=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/${ISPC_FLEX_NAME}
       )
   endif (FLEX_TARGET)
 
