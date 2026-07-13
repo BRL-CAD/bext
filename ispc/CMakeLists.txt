@@ -22,8 +22,13 @@ if (ENABLE_ISPC)
       )
   endif ()
   if (M4_EXECUTABLE)
+    # Normalize to forward slashes.  M4_EXECUTABLE may arrive with native
+    # backslashes (e.g. set in CMakePresets as C:\...\m4.exe); passed verbatim
+    # through ExternalProject_Add's CMAKE_ARGS those backslashes are consumed as
+    # escapes and the ISPC sub-build sees a mangled, non-existent path.
+    file(TO_CMAKE_PATH "${M4_EXECUTABLE}" M4_EXECUTABLE_CMAKE)
     list(APPEND ISPC_PROGRAM_PATH_ARGS
-      -DM4_EXECUTABLE=${M4_EXECUTABLE}
+      -DM4_EXECUTABLE=${M4_EXECUTABLE_CMAKE}
     )
   endif ()
 
