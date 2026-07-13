@@ -80,6 +80,16 @@ if (ENABLE_ISPC)
     ${BUILD_TYPE_SPECIFIER}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
+    # On Windows ispc links itself with /DEPENDENTLOADFLAG:0x800, which limits
+    # the loader to %SystemRoot%\system32 when resolving the exe's imports.  The
+    # bundled zlib ships as z_brl.dll in the install tree (not system32), so a
+    # dynamically-linked ispc-slim.exe cannot start (exit 0xC0000135,
+    # STATUS_DLL_NOT_FOUND) either during the build (when it generates the stdlib
+    # bitcode) or once installed.  Link zlib statically so ispc-slim.exe has no
+    # non-system DLL dependency and satisfies its own hardening flag.  This is
+    # honored by our FindZLIB.cmake, including the find_package(ZLIB) that the
+    # bundled LLVM's config re-runs (LLVM is what pulls in the zlib dependency).
+    $<$<AND:$<BOOL:${WIN32}>,$<BOOL:${ZLIB_TARGET}>>:-DZLIB_USE_STATIC_LIBS=ON>
     ${ISPC_PROGRAM_PATH_ARGS}
     ${ISPC_FLEXBISON_ARGS}
     -DCurses_ROOT=$<$<BOOL:${NCURSES_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
