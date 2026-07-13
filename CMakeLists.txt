@@ -23,7 +23,7 @@
 # still possible to request a system library in individual cases.
 #------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.26)
 
 project(BEXT)
 
