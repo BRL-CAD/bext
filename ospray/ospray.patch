@@ -1,0 +1,13 @@
+diff --git a/cmake/ospray_options.cmake b/cmake/ospray_options.cmake
+index f2c547a3d..db1f2fd46 100644
+--- a/cmake/ospray_options.cmake
++++ b/cmake/ospray_options.cmake
+@@ -76,7 +76,7 @@ option(OSPRAY_ENABLE_VOLUMES "Enable volume rendering using OpenVKL." ON)
+ ###########################################################
+ 
+ # rkcommon
+-find_package(rkcommon ${RKCOMMON_VERSION_REQUIRED} EXACT REQUIRED)
++find_package(rkcommon ${RKCOMMON_VERSION_REQUIRED} REQUIRED)
+ get_target_property(RKCOMMON_INCLUDE_DIRS rkcommon::rkcommon
+   INTERFACE_INCLUDE_DIRECTORIES)
+ 

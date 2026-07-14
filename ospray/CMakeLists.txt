@@ -17,7 +17,12 @@ if (ENABLE_OSPRAY)
   ExternalProject_Add(OSPRAY_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/ospray"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/ospray.patch
+    # rkcommon is bundled at 1.15.2 but ospray pins rkcommon EXACT to
+    # RKCOMMON_VERSION_REQUIRED (1.14.0).  rkcommon's config uses SameMajorVersion
+    # compatibility, so a non-EXACT find accepts 1.15.2 for a 1.14.0 request (and
+    # ospray's own installed config already uses find_dependency without EXACT).
+    # The patch drops the EXACT keyword from the build-time find_package.
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/ospray.patch
     CMAKE_ARGS
     -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
     ${BUILD_TYPE_SPECIFIER}
