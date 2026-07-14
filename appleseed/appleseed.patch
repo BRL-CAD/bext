@@ -1,17 +1,61 @@
---- a/src/thirdparty/bcd/bcd/Denoiser.cpp
-+++ b/src/thirdparty/bcd/bcd/Denoiser.cpp
-@@ -125,7 +125,7 @@
-                 i,
-                 boost::ref(abortRequested)));
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 74ed663..ba8c28e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -224,9 +224,28 @@ if (USE_STATIC_BOOST)
+ endif ()
+ find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time filesystem regex system thread wave)
+ add_definitions(-DBOOST_FILESYSTEM_VERSION=3 -DBOOST_FILESYSTEM_NO_DEPRECATED -DBOOST_ALL_DYN_LINK)
++if (MSVC)
++    # Boost 1.85's auto_link.hpp caps its MSVC toolset tag at vc143 (VS2022), but
++    # the bundled Boost is built with the newer (VS2026) toolset and installed as
++    # vc145.  With BOOST_ALL_DYN_LINK the auto-link #pragma comment(lib, ...)
++    # directives would otherwise request boost_*-vc143-mt-x64-1_85.lib, which do
++    # not exist (LNK1104).  Override the tag to match the bundled libraries.
++    add_definitions(-DBOOST_LIB_TOOLSET="vc145")
++endif ()
+ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+ link_directories(${Boost_LIBRARY_DIRS})
+ find_package(OSL REQUIRED)
++# appleseed links OSL via the oslcomp/oslexec/oslquery_LIBRARY_IMP variables,
++# which are only populated by appleseed's module-mode FindOSL.cmake.  When OSL is
++# resolved in CONFIG mode instead (e.g. CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON with
++# a bundled OSLConfig.cmake), those variables stay empty and OSL is silently left
++# out of the link (unresolved OSL_v1_xx::ShadingSystem/RendererServices/... at
++# link time).  Fall back to the imported targets provided by OSLConfig.
++if (TARGET OSL::oslexec AND NOT oslexec_LIBRARY_IMP)
++    set(oslcomp_LIBRARY_IMP OSL::oslcomp)
++    set(oslexec_LIBRARY_IMP OSL::oslexec)
++    set(oslquery_LIBRARY_IMP OSL::oslquery)
++endif ()
+ find_package(OpenEXR REQUIRED)
+ find_package(OpenImageIO REQUIRED)
  
--        denoiseThreads.push_back(move(t));
-+        denoiseThreads.push_back(std::move(t));
+@@ -275,7 +294,6 @@ endif ()
  
-         startPixelIndexIt = endPixelIndexIt;
-     }
+ include_directories(
+   ${IMATH_INCLUDE_DIRS}
+-  ${IMATH_INCLUDE_DIRS}/OpenEXR/
+   ${LZ4_INCLUDE_DIR}
+   ${OPENCOLORIO_INCLUDE_DIRS}
+   ${OPENEXR_INCLUDE_DIRS}
+@@ -674,3 +692,11 @@ endif ()
+ # indent-tabs-mode: t
+ # End:
+ # ex: shiftwidth=2 tabstop=8
++find_package(OpenEXR REQUIRED)
++get_target_property(IMATH_INCLUDES Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
++if (APPLE)
++foreach (IMATH_INCLUDE_DIR IN LISTS IMATH_INCLUDES)
++  string (REGEX REPLACE "/Imath/?$" "" IMATH_INCLUDE_DIR "${IMATH_INCLUDE_DIR}")
++  add_compile_options("-Wp,-I${IMATH_INCLUDE_DIR}")
++endforeach ()
++endif ()
+diff --git a/cmake/FindOpenEXR.cmake b/cmake/FindOpenEXR.cmake
+index 00c769d..0f38a0d 100644
 --- a/cmake/FindOpenEXR.cmake
 +++ b/cmake/FindOpenEXR.cmake
-@@ -55,15 +55,21 @@
+@@ -56,16 +56,22 @@ if (TARGET OpenEXR::OpenEXR AND TARGET Imath::Imath)
      # Mimic old style variables
      set (OPENEXR_VERSION ${OpenEXR_VERSION})
      get_target_property(IMATH_INCLUDES Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
@@ -31,30 +75,24 @@
      set (ILMBASE_FOUND true)
  
      get_target_property(OPENEXR_INCLUDES OpenEXR::OpenEXR INTERFACE_INCLUDE_DIRECTORIES)
+-    get_target_property(OPENEXR_ILMIMF_LIBRARY OpenEXR::OpenEXR INTERFACE_LINK_LIBRARIES)
 +    set (OPENEXR_INCLUDE_DIRS ${OPENEXR_INCLUDES})
 +    string (REGEX REPLACE "/OpenEXR/?$" "" OPENEXR_INCLUDE_DIRS "${OPENEXR_INCLUDE_DIRS}")
 +    set (OPENEXR_INCLUDE_DIR ${OPENEXR_INCLUDES})
--    get_target_property(OPENEXR_ILMIMF_LIBRARY OpenEXR::OpenEXR INTERFACE_LINK_LIBRARIES)
 +    set (OPENEXR_ILMIMF_LIBRARY OpenEXR::OpenEXR)
      set (OPENEXR_LIBRARIES ${OPENEXR_ILMIMF_LIBRARY} ${OPENEXR_IEX_LIBRARY} ${OPENEXR_ILMTHREAD_LIBRARY} ${ILMBASE_LIBRARIES})
      set (OPENEXR_FOUND true)
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -228,0 +229 @@
-+find_package(OpenEXR REQUIRED)
-@@ -231,0 +233,7 @@
-+get_target_property(IMATH_INCLUDES Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
-+if (APPLE)
-+foreach (IMATH_INCLUDE_DIR IN LISTS IMATH_INCLUDES)
-+  string (REGEX REPLACE "/Imath/?$" "" IMATH_INCLUDE_DIR "${IMATH_INCLUDE_DIR}")
-+  add_compile_options("-Wp,-I${IMATH_INCLUDE_DIR}")
-+endforeach ()
-+endif ()
-@@ -275,7 +275,6 @@
  
- include_directories(
-   ${IMATH_INCLUDE_DIRS}
--  ${IMATH_INCLUDE_DIRS}/OpenEXR/
-   ${LZ4_INCLUDE_DIR}
-   ${OPENCOLORIO_INCLUDE_DIRS}
-   ${OPENEXR_INCLUDE_DIRS}
+diff --git a/src/thirdparty/bcd/bcd/Denoiser.cpp b/src/thirdparty/bcd/bcd/Denoiser.cpp
+index 109ec87..ef7ed8e 100644
+--- a/src/thirdparty/bcd/bcd/Denoiser.cpp
++++ b/src/thirdparty/bcd/bcd/Denoiser.cpp
+@@ -125,7 +125,7 @@ bool Denoiser::denoise()
+                 i,
+                 boost::ref(abortRequested)));
+ 
+-        denoiseThreads.push_back(move(t));
++        denoiseThreads.push_back(std::move(t));
+ 
+         startPixelIndexIt = endPixelIndexIt;
+     }
