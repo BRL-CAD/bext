@@ -44,6 +44,16 @@ if (ENABLE_APPLESEED)
     -DOPENEXR_ROOT=$<$<BOOL:${OPENEXR_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DOPENIMAGEIO_ROOT=$<$<BOOL:${OPENIMAGEIO_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DOSL_ROOT=$<$<BOOL:${OSL_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    # appleseed locates the OSL tools (oslc shader compiler, oslinfo query tool)
+    # via find_program() calls in its FindOSL.cmake that are malformed -- the
+    # path hint is parsed as an additional program name -- so the tools are only
+    # found if they happen to be on PATH, otherwise OSL_COMPILER / OSL_QUERY_INFO
+    # end up empty.  That breaks the .osl->.oso build (command degrades to just
+    # its flags, "'-O2' is not recognized") and the post-build copy of oslinfo
+    # into the sandbox (cmake -E copy with an empty source).  Pass both tools
+    # explicitly, as appleseed's own CI does; find_program() honors a pre-set var.
+    -DOSL_COMPILER=$<$<BOOL:${OSL_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/oslc${CMAKE_EXECUTABLE_SUFFIX}>
+    -DOSL_QUERY_INFO=$<$<BOOL:${OSL_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/oslinfo${CMAKE_EXECUTABLE_SUFFIX}>
     -DXERCES_C_ROOT=$<$<BOOL:${XERCES_C_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DZLIB_C_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DWITH_STUDIO=OFF
