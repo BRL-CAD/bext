@@ -78,6 +78,16 @@ if (NOT WIN32)
     TargetVars(BISON_DEPENDS)
 
     set(BISON_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/BISON_BLD-prefix/src/BISON_BLD")
+    set(BISON_CONFIGURE_ENV MAKEINFO=true)
+    if (APPLE)
+      # macOS 26 declares posix_spawn_file_actions_addchdir, but the symbol is
+      # unavailable when targeting older macOS releases.  Bison 3.8.2's older
+      # gnulib consequently fails its link check and then redeclares the SDK
+      # function with an incompatible replacement type.  The positive cache
+      # result makes gnulib select its rpl_ wrapper around the available _np
+      # function, avoiding both the new symbol and the conflicting declaration.
+      list(APPEND BISON_CONFIGURE_ENV ac_cv_func_posix_spawn_file_actions_addchdir=yes)
+    endif (APPLE)
 
     ExternalProject_Add(BISON_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/bison"
@@ -89,7 +99,7 @@ if (NOT WIN32)
       CONFIGURE_COMMAND ${CMAKE_COMMAND};-E;touch_nocreate;${BISON_SRC_DIR}/configure;${BISON_SRC_DIR}/lib/config.in.h;${BISON_SRC_DIR}/Makefile.in
       # The release checkout includes generated Info documentation.  Do not
       # require host Texinfo when staging changes file timestamp ordering.
-      COMMAND ${CMAKE_COMMAND} -E env MAKEINFO=true ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+      COMMAND ${CMAKE_COMMAND} -E env ${BISON_CONFIGURE_ENV} ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
       COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${BISON_SRC_DIR}/doc/bison.info
       BUILD_COMMAND make -j${pcnt}
       INSTALL_COMMAND make -j1 install
