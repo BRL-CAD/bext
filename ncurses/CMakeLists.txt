@@ -31,8 +31,8 @@ if (NOT WIN32)
       #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/ncurses.patch
       #CONFIGURE_COMMAND ${NCURSES_SRC_DIR}/autogen.sh
       CONFIGURE_COMMAND ${NCURSES_SRC_DIR}/configure --with-shared --enable-rpath --prefix=${CMAKE_BUNDLE_INSTALL_PREFIX}
-      BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make -j1 install
+      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
+      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 install
       DEPENDS ${ZLIB_TARGET}
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
@@ -60,4 +60,3 @@ endif (NOT WIN32)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

@@ -19,6 +19,15 @@ endif (NOT WIN32)
 # https://doc.qt.io/qt-6/configure-options.html
 set(CONFIG_EXTRA_OPTS ${CONFIG_EXTRA_OPTS} -qt-zlib -qt-libpng)
 
+# QFileSystemWatcher selects kqueue in its C++ platform dispatch on FreeBSD.
+# If the optional inotify compatibility headers are installed, however, Qt's
+# feature probe enables inotify and its CMake source list omits the kqueue
+# implementation.  Keep the feature result aligned with the backend Qt will
+# actually use.  Other platforms retain Qt's normal autodetection.
+if ("${BEXT_QT_TARGET_SYSTEM_NAME}" STREQUAL "FreeBSD")
+  list(APPEND CONFIG_EXTRA_OPTS -no-feature-inotify)
+endif ()
+
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   set(QT_CONFIG_OPTS "-debug")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
@@ -101,4 +110,3 @@ message("Qt configure succeeded: ${MSG}\n")
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

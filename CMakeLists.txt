@@ -253,6 +253,14 @@ if (NOT pcnt)
   set(pcnt 1)
 endif (NOT pcnt)
 
+# External projects driven by a direct make invocation set their own -j value
+# below.  Do not also pass down the top-level generator's jobserver state:
+# GNU make encodes it in MAKEFLAGS using options that other make variants
+# (notably FreeBSD make) do not understand.
+set(BEXT_MAKE_COMMAND
+  ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS --unset=MFLAGS make
+  )
+
 # We want to pass the build type option to CMake builds if we're not using a
 # multiconfig generator - define a variable that will either be empty or define
 # the desired CMake line based on GENERATOR_IS_MULTI_CONFIG (see

@@ -57,8 +57,8 @@ if (NOT WIN32)
       PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/flex.patch
       CONFIGURE_COMMAND ${FLEX_SRC_DIR}/autogen.sh
       COMMAND ${FLEX_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
-      BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make -j1 install
+      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
+      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 install
       DEPENDS ${ZLIB_TARGET}
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
@@ -101,8 +101,8 @@ if (NOT WIN32)
       # require host Texinfo when staging changes file timestamp ordering.
       COMMAND ${CMAKE_COMMAND} -E env ${BISON_CONFIGURE_ENV} ${BISON_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
       COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${BISON_SRC_DIR}/doc/bison.info
-      BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make -j1 install
+      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
+      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 install
       DEPENDS ${ZLIB_TARGET}
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}

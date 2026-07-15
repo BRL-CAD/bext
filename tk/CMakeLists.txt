@@ -81,8 +81,8 @@ if (TK_DO_BUILD)
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make
       # jobserver mode bug.
 
-      BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make -j1 install
+      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
+      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
@@ -154,4 +154,3 @@ mark_as_advanced(HAVE_TK)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

@@ -85,8 +85,8 @@ if (ENABLE_TCL)
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make
       # jobserver mode bug.  Tcl also seems to have a race fixed via genstubs.
 
-      BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make -j1 genstubs install
+      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
+      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 genstubs install
       ${RPATH_CMD}
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}

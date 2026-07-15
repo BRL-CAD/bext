@@ -15,8 +15,8 @@ if (NOT WIN32 AND NOT APPLE)
       BUILD_IN_SOURCE ON
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       CONFIGURE_COMMAND <SOURCE_DIR>/<SOURCE_SUBDIR>/configure --disable-extras --disable-tools --disable-tests --disable-samples --prefix=${CMAKE_BUNDLE_INSTALL_PREFIX}
-      BUILD_COMMAND make -j${pcnt}
-      INSTALL_COMMAND make -j1 install
+      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
+      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
@@ -43,4 +43,3 @@ endif (NOT WIN32 AND NOT APPLE)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
