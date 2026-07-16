@@ -7,12 +7,38 @@
   },
   "configurePresets": [
     {
-      "name": "auto",
-      "displayName": "Auto",
-      "description": "Standard BRL-CAD-oriented profile. Use suitable system packages when found and build local copies only when needed.",
-      "binaryDir": "${sourceDir}/build/auto",
+      "name": "layout",
+      "hidden": true,
+      "description": "Output layout for presets whose name already carries the config (e.g. auto/Release, auto/Debug): build/<profile>/<Config>. Release and Debug trees sit side by side so both configs can be kept and consumed at once.",
+      "binaryDir": "${sourceDir}/build/${presetName}"
+    },
+    {
+      "name": "layout-implicit-release",
+      "hidden": true,
+      "description": "Output layout for the unqualified convenience aliases (e.g. --preset=auto): build/<profile>/Release. Resolves to the same tree as <profile>/Release.",
+      "binaryDir": "${sourceDir}/build/${presetName}/Release"
+    },
+    {
+      "name": "type-release",
+      "hidden": true,
+      "description": "Single-config Release build type (matches a BRL-CAD Release build).",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "type-debug",
+      "hidden": true,
+      "description": "Single-config Debug build type (matches a BRL-CAD Debug build).",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "profile-auto",
+      "hidden": true,
+      "description": "Standard BRL-CAD-oriented profile. Use suitable system packages when found and build local copies only when needed.",
+      "cacheVariables": {
         "USE_APPLESEED": "OFF",
         "USE_BRLCAD": "ON",
         "USE_BRLCAD_EXTRA": "ON",
@@ -23,12 +49,10 @@
       }
     },
     {
-      "name": "bundled",
-      "displayName": "Bundled",
+      "name": "profile-bundled",
+      "hidden": true,
       "description": "Standard BRL-CAD-oriented profile with bundled/local builds preferred for all active dependency groups.",
-      "binaryDir": "${sourceDir}/build/bundled",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
         "ENABLE_ALL": "ON",
         "USE_APPLESEED": "OFF",
         "USE_BRLCAD": "ON",
@@ -40,12 +64,10 @@
       }
     },
     {
-      "name": "minimal",
-      "displayName": "Minimal",
+      "name": "profile-minimal",
+      "hidden": true,
       "description": "Core BRL-CAD profile without extras, GDAL, Qt, Tcl/Tk, Appleseed, or OSPRay.",
-      "binaryDir": "${sourceDir}/build/minimal",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
         "USE_APPLESEED": "OFF",
         "USE_BRLCAD": "ON",
         "USE_BRLCAD_EXTRA": "OFF",
@@ -56,12 +78,10 @@
       }
     },
     {
-      "name": "everything",
-      "displayName": "Everything",
+      "name": "profile-everything",
+      "hidden": true,
       "description": "Enable all current dependency groups and prefer bundled/local builds for all of them.",
-      "binaryDir": "${sourceDir}/build/everything",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
         "ENABLE_ALL": "ON",
         "USE_APPLESEED": "ON",
         "USE_BRLCAD": "ON",
@@ -69,8 +89,78 @@
         "USE_GDAL": "ON",
         "USE_OSPRAY": "ON",
         "USE_QT": "ON",
-        "USE_TCL": "ON"
+        "USE_TCL": "ON",
+        "M4_EXECUTABLE": "C:/devtools/GnuWin32/bin/m4.exe",
+        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
       }
+    },
+
+    {
+      "name": "auto",
+      "displayName": "Auto (Release)",
+      "description": "Convenience alias for auto/Release.",
+      "inherits": ["layout-implicit-release", "profile-auto", "type-release"]
+    },
+    {
+      "name": "auto/Release",
+      "displayName": "Auto (Release)",
+      "inherits": ["layout", "profile-auto", "type-release"]
+    },
+    {
+      "name": "auto/Debug",
+      "displayName": "Auto (Debug)",
+      "inherits": ["layout", "profile-auto", "type-debug"]
+    },
+
+    {
+      "name": "bundled",
+      "displayName": "Bundled (Release)",
+      "description": "Convenience alias for bundled/Release.",
+      "inherits": ["layout-implicit-release", "profile-bundled", "type-release"]
+    },
+    {
+      "name": "bundled/Release",
+      "displayName": "Bundled (Release)",
+      "inherits": ["layout", "profile-bundled", "type-release"]
+    },
+    {
+      "name": "bundled/Debug",
+      "displayName": "Bundled (Debug)",
+      "inherits": ["layout", "profile-bundled", "type-debug"]
+    },
+
+    {
+      "name": "minimal",
+      "displayName": "Minimal (Release)",
+      "description": "Convenience alias for minimal/Release.",
+      "inherits": ["layout-implicit-release", "profile-minimal", "type-release"]
+    },
+    {
+      "name": "minimal/Release",
+      "displayName": "Minimal (Release)",
+      "inherits": ["layout", "profile-minimal", "type-release"]
+    },
+    {
+      "name": "minimal/Debug",
+      "displayName": "Minimal (Debug)",
+      "inherits": ["layout", "profile-minimal", "type-debug"]
+    },
+
+    {
+      "name": "everything",
+      "displayName": "Everything (Release)",
+      "description": "Convenience alias for everything/Release.",
+      "inherits": ["layout-implicit-release", "profile-everything", "type-release"]
+    },
+    {
+      "name": "everything/Release",
+      "displayName": "Everything (Release)",
+      "inherits": ["layout", "profile-everything", "type-release"]
+    },
+    {
+      "name": "everything/Debug",
+      "displayName": "Everything (Debug)",
+      "inherits": ["layout", "profile-everything", "type-debug"]
     }
   ]
 }
