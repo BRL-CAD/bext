@@ -67,8 +67,14 @@ if (ENABLE_LLVM)
       -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
       -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
       # we don't need LLVM itself to be debuggable.  Prevents .pdb and .ilk bloat.
-      -DCMAKE_CXX_FLAGS_DEBUG="$<$<CONFIG:Debug>:/DEBUG:NONE>"
-      -DCMAKE_EXE_LINKER_FLAGS_DEBUG="$<$<CONFIG:Debug>:/DEBUG:NONE /INCREMENTAL:NO>"
+      # NOTE: the quotes must wrap the entire -D argument, not just the value.
+      # Writing -DVAR="..." leaves the double-quotes as literal characters in the
+      # generated configure command; on Windows Debug builds those literal quotes
+      # (plus the embedded space in the linker flags) corrupt child-process argv
+      # parsing and bleed a stray quote onto the following -B path.  Wrapping the
+      # whole argument lets CMake consume the quotes as delimiters.
+      "-DCMAKE_CXX_FLAGS_DEBUG=$<$<CONFIG:Debug>:/DEBUG:NONE>"
+      "-DCMAKE_EXE_LINKER_FLAGS_DEBUG=$<$<CONFIG:Debug>:/DEBUG:NONE /INCREMENTAL:NO>"
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}

@@ -107,6 +107,15 @@ if (ENABLE_ISPC)
     -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
     -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
+    # ispc is a build-time codegen tool we never need to debug, and (like LLVM)
+    # it statically links the large bundled LLVM.  In a Debug config MSVC links
+    # ispc.exe with the default "/debug /INCREMENTAL" and tries to emit a full
+    # PDB, which fails with LNK1201 (error writing to program database).  Suppress
+    # debug-info generation for the Debug config so ispc links cleanly; the CRT
+    # selection (and thus Debug/Release compatibility) is unaffected.  The quotes
+    # must wrap the whole -D argument, not just the value -- see llvm/CMakeLists.txt.
+    "-DCMAKE_CXX_FLAGS_DEBUG=$<$<CONFIG:Debug>:/DEBUG:NONE>"
+    "-DCMAKE_EXE_LINKER_FLAGS_DEBUG=$<$<CONFIG:Debug>:/DEBUG:NONE /INCREMENTAL:NO>"
     LOG_CONFIGURE ${EXT_BUILD_QUIET}
     LOG_BUILD ${EXT_BUILD_QUIET}
     LOG_INSTALL ${EXT_BUILD_QUIET}
