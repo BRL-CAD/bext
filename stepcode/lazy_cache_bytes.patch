@@ -1,0 +1,187 @@
+diff --git a/include/cllazyfile/lazySupport.h b/include/cllazyfile/lazySupport.h
+--- a/include/cllazyfile/lazySupport.h
++++ b/include/cllazyfile/lazySupport.h
+@@ -54,11 +54,14 @@ struct SC_LAZYFILE_EXPORT LazyCacheStatistics {
+     uint64_t evictions;
+     uint64_t activeBatches;
+     uint64_t dataSections;
++    uint64_t residentSourceBytes;
++    uint64_t sourceBytesHighWater;
+     bool cancelled;
+ 
+     LazyCacheStatistics(): instancesScanned( 0 ), instancesLoaded( 0 ), instancesPinned( 0 ),
+         cacheHighWater( 0 ), cacheHits( 0 ), cacheMisses( 0 ), materializations( 0 ),
+-        evictions( 0 ), activeBatches( 0 ), dataSections( 0 ), cancelled( false ) {}
++        evictions( 0 ), activeBatches( 0 ), dataSections( 0 ), residentSourceBytes( 0 ),
++        sourceBytesHighWater( 0 ), cancelled( false ) {}
+ };
+ 
+ typedef std::function<void ( const LazyScanProgress & )> LazyProgressCallback;
+diff --git a/include/cllazyfile/lazyTypes.h b/include/cllazyfile/lazyTypes.h
+--- a/include/cllazyfile/lazyTypes.h
++++ b/include/cllazyfile/lazyTypes.h
+@@ -61,6 +61,7 @@ typedef std::set< instanceID > instanceSet;
+  */
+ typedef struct {
+     lazyFileOffset begin; ///< byte offset before the instance ID; whitespace or comments may precede it.
++    lazyFileOffset end; ///< byte offset immediately after the terminating semicolon.
+     instanceID instance;
+     sectionID section;
+     /* bool modified; */ /* this will be useful when writing instances - if an instance is
+diff --git a/include/cllazyfile/lazyInstMgr.h b/include/cllazyfile/lazyInstMgr.h
+--- a/include/cllazyfile/lazyInstMgr.h
++++ b/include/cllazyfile/lazyInstMgr.h
+@@ -74,10 +74,12 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
+         unsigned long _lazyInstanceCount, _loadedInstanceCount;
+         uint64_t _cacheHighWater, _cacheHits, _cacheMisses, _materializations, _evictions;
+         uint64_t _activeBatches;
++        uint64_t _residentSourceBytes, _sourceBytesHighWater;
+         int _longestTypeNameLen;
+         std::string _longestTypeName;
+ 
+         std::map<instanceID, size_t> _pinCounts;
++        std::map<instanceID, uint64_t> _instanceSourceBytes;
+         std::set<instanceID> _batchOwnedInstances;
+         std::set<instanceID> _permanentlyLoadedInstances;
+         std::set<instanceID> _instancesLoading;
+@@ -222,8 +224,9 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
+         /** returns a pointer to an instance, loading it if necessary.
+          * \param id the instance number to look for
+          * \param reSeek if true, reset file position to current position when done. only necessary when loading an instance with dependencies; excessive use will cause a performance hit
++         * \param promoteCached if true, a cached instance requested outside a batch is retained for legacy callers
+          */
+-        SDAI_Application_instance * loadInstance( instanceID id, bool reSeek = false );
++        SDAI_Application_instance * loadInstance( instanceID id, bool reSeek = false, bool promoteCached = true );
+ 
+         LazyInstanceBatch loadBatch( instanceID root );
+         LazyInstanceBatch loadBatch( const std::vector<instanceID> & roots );
+diff --git a/include/cllazyfile/instMgrHelper.h b/include/cllazyfile/instMgrHelper.h
+--- a/include/cllazyfile/instMgrHelper.h
++++ b/include/cllazyfile/instMgrHelper.h
+@@ -31,7 +31,9 @@ class SC_LAZYFILE_EXPORT mgrNodeHelper: public MgrNodeBase {
+             _id = id;
+         }
+         inline SDAI_Application_instance * GetSTEPentity() {
+-            return _lim->loadInstance( _id, true );
++            /* Attribute resolution must not convert a batch-owned cache hit
++             * into a process-lifetime retained instance. */
++            return _lim->loadInstance( _id, true, false );
+         }
+ };
+ 
+diff --git a/src/cllazyfile/lazyP21DataSectionReader.cc b/src/cllazyfile/lazyP21DataSectionReader.cc
+--- a/src/cllazyfile/lazyP21DataSectionReader.cc
++++ b/src/cllazyfile/lazyP21DataSectionReader.cc
+@@ -98,6 +98,7 @@ const namedLazyInstance lazyP21DataSectionReader::nextInstance() {
+     i.refs = 0;
+     i.componentTypes = 0;
+     i.loc.section = 0;
++    i.loc.end = 0;
+     std::streampos start = _file.tellg();
+     i.loc.begin = start == std::streampos( -1 ) ? 0 :
+         static_cast<lazyFileOffset>( static_cast<std::streamoff>( start ) );
+@@ -109,6 +110,9 @@ const namedLazyInstance lazyP21DataSectionReader::nextInstance() {
+         if( _file.good() ) {
+             if( i.name[0] == '\0' ) i.componentTypes = new std::vector<std::string>;
+             end = seekInstanceEnd( & i.refs, i.componentTypes );
++            if( end != std::streampos( -1 ) ) {
++                i.loc.end = static_cast<lazyFileOffset>( static_cast<std::streamoff>( end ) );
++            }
+         }
+     }
+     if( ( i.loc.instance == 0 ) || ( !_file.good() ) || ( end == ( std::streampos ) - 1 ) ) {
+diff --git a/src/cllazyfile/p21HeaderSectionReader.cc b/src/cllazyfile/p21HeaderSectionReader.cc
+--- a/src/cllazyfile/p21HeaderSectionReader.cc
++++ b/src/cllazyfile/p21HeaderSectionReader.cc
+@@ -35,6 +35,7 @@ const namedLazyInstance p21HeaderSectionReader::nextInstance() {
+ 
+     i.refs = 0;
+     i.componentTypes = 0;
++    i.loc.end = 0;
+     std::streampos start = _file.tellg();
+     i.loc.begin = start == std::streampos( -1 ) ? 0 :
+         static_cast<lazyFileOffset>( static_cast<std::streamoff>( start ) );
+@@ -58,6 +59,9 @@ const namedLazyInstance p21HeaderSectionReader::nextInstance() {
+         assert( strlen( i.name ) > 0 );
+ 
+         std::streampos end = seekInstanceEnd( 0 ); //no references in file header
++        if( end != std::streampos( -1 ) ) {
++            i.loc.end = static_cast<lazyFileOffset>( static_cast<std::streamoff>( end ) );
++        }
+         if( ( (signed long int)end == -1 ) || ( end >= _sectionEnd ) ) {
+             //invalid instance, so clear everything
+             i.loc.begin = 0;
+diff --git a/src/cllazyfile/lazyInstMgr.cc b/src/cllazyfile/lazyInstMgr.cc
+--- a/src/cllazyfile/lazyInstMgr.cc
++++ b/src/cllazyfile/lazyInstMgr.cc
+@@ -23,6 +23,8 @@ lazyInstMgr::lazyInstMgr() {
+     _materializations = 0;
+     _evictions = 0;
+     _activeBatches = 0;
++    _residentSourceBytes = 0;
++    _sourceBytesHighWater = 0;
+     _batchLoadDepth = 0;
+     _cancelled = false;
+     _longestTypeNameLen = 0;
+@@ -91,6 +93,9 @@ void lazyInstMgr::addLazyInstance( namedLazyInstance inst ) {
+         emitDiagnostic( diagnostic );
+     }
+     _instanceStreamPos.insert( inst.loc.instance, pos );
++    if( !duplicate && inst.loc.end >= inst.loc.begin ) {
++        _instanceSourceBytes[inst.loc.instance] = inst.loc.end - inst.loc.begin;
++    }
+ 
+     if( inst.refs ) {
+         if( inst.refs->size() > 0 ) {
+@@ -173,6 +178,8 @@ LazyCacheStatistics lazyInstMgr::cacheStatistics() const {
+     stats.evictions = _evictions;
+     stats.activeBatches = _activeBatches;
+     stats.dataSections = _dataSections.size();
++    stats.residentSourceBytes = _residentSourceBytes;
++    stats.sourceBytesHighWater = _sourceBytesHighWater;
+     stats.cancelled = _cancelled;
+     return stats;
+ }
+@@ -235,14 +242,14 @@ void lazyInstMgr::validateReferences() {
+     }
+ }
+ 
+-SDAI_Application_instance * lazyInstMgr::loadInstance( instanceID id, bool reSeek ) {
++SDAI_Application_instance * lazyInstMgr::loadInstance( instanceID id, bool reSeek, bool promoteCached ) {
+     assert( _mainRegistry && "Main registry has not been initialized. Do so with initRegistry() or setRegistry()." );
+     std::streampos oldPos;
+-    instancePosition pos;
++    instancePosition pos = instancePosition();
+     SDAI_Application_instance * inst = _instancesLoaded.find( id );
+     if( inst ) {
+         ++_cacheHits;
+-        if( _batchLoadDepth == 0 ) _permanentlyLoadedInstances.insert( id );
++        if( promoteCached && _batchLoadDepth == 0 ) _permanentlyLoadedInstances.insert( id );
+         return inst;
+     }
+     ++_cacheMisses;
+@@ -314,6 +321,12 @@ SDAI_Application_instance * lazyInstMgr::loadInstance( instanceID id, bool reSee
+             _loadedInstanceCount++;
+             ++_materializations;
+             _cacheHighWater = std::max<uint64_t>( _cacheHighWater, _loadedInstanceCount );
++            std::map<instanceID, uint64_t>::const_iterator source_size = _instanceSourceBytes.find( id );
++            if( source_size != _instanceSourceBytes.end() ) {
++                _residentSourceBytes += source_size->second;
++                _sourceBytesHighWater = std::max<uint64_t>( _sourceBytesHighWater,
++                    _residentSourceBytes );
++            }
+             if( _batchLoadDepth ) {
+                 _batchOwnedInstances.insert( id );
+             } else {
+@@ -405,6 +418,11 @@ void lazyInstMgr::releaseBatch( const std::vector<instanceID> & instances ) {
+         _batchOwnedInstances.erase( *id );
+         deleted.push_back( inst );
+         --_loadedInstanceCount;
++        std::map<instanceID, uint64_t>::const_iterator source_size = _instanceSourceBytes.find( *id );
++        if( source_size != _instanceSourceBytes.end() ) {
++            _residentSourceBytes = source_size->second <= _residentSourceBytes ?
++                _residentSourceBytes - source_size->second : 0;
++        }
+         ++_evictions;
+     }
+     std::vector<SDAI_Application_instance *>::iterator inst = deleted.begin();
