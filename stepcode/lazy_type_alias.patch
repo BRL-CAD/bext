@@ -1,0 +1,55 @@
+diff --git a/include/cllazyfile/lazyInstMgr.h b/include/cllazyfile/lazyInstMgr.h
+index 3a6a7958..6a56a733 100644
+--- a/include/cllazyfile/lazyInstMgr.h
++++ b/include/cllazyfile/lazyInstMgr.h
+@@ -81,5 +81,6 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
+         std::map<instanceID, size_t> _pinCounts;
+         std::map<instanceID, uint64_t> _instanceSourceBytes;
++        std::map<std::string, std::string> _materializationTypeAliases;
+         std::set<instanceID> _batchOwnedInstances;
+         std::set<instanceID> _permanentlyLoadedInstances;
+         std::set<instanceID> _instancesLoading;
+@@ -114,6 +115,27 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
+         InstMgrBase * getAdapter() {
+             return ( InstMgrBase * ) _ima;
+         }
++
++        /** Register an explicit source-keyword substitution used only when
++         * materializing an SDAI object.  The lazy type index retains the
++         * original Part 21 keyword.  This is intended for known,
++         * attribute-compatible exporter aliases, not arbitrary recovery. */
++        void setMaterializationTypeAlias( std::string source, const std::string & target ) {
++            for( std::string::iterator c = source.begin(); c != source.end(); ++c ) {
++                *c = static_cast<char>( toupper( static_cast<unsigned char>( *c ) ) );
++            }
++            _materializationTypeAliases[source] = target;
++        }
++
++        std::string materializationType( std::string source ) const {
++            std::string key = source;
++            for( std::string::iterator c = key.begin(); c != key.end(); ++c ) {
++                *c = static_cast<char>( toupper( static_cast<unsigned char>( *c ) ) );
++            }
++            std::map<std::string, std::string>::const_iterator alias =
++                _materializationTypeAliases.find( key );
++            return alias == _materializationTypeAliases.end() ? source : alias->second;
++        }
+ 
+         instanceRefs_t * getFwdRefs() {
+             return & _fwdInstanceRefs;
+diff --git a/src/cllazyfile/sectionReader.cc b/src/cllazyfile/sectionReader.cc
+index 96202929..f9303324 100644
+--- a/src/cllazyfile/sectionReader.cc
++++ b/src/cllazyfile/sectionReader.cc
+@@ -328,6 +328,11 @@ SDAI_Application_instance * sectionReader::getRealInstance( const Registry * reg
+             if( ( !header ) && ( typeName.size() == 0 ) ) {
+                 tName = getDelimitedKeyword( ";( /\\\\" );
+             }
++            std::string materializationType;
++            if( !header && tName ) {
++                materializationType = _lazyFile->getInstMgr()->materializationType( tName );
++                tName = materializationType.c_str();
++            }
+             inst = reg->ObjCreate( tName, sName );
+             break;
+     }
