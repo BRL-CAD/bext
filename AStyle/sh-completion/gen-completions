@@ -99,35 +99,21 @@ parser:option "--pad-include"
    :args "?"
    :choices {"none"}
 
-parser:flag "--pad-paren"
-   :description "Insert space padding around parenthesis on both the outside and the inside"
-
-parser:flag "--pad-paren-out"
-   :description "Insert space padding around parenthesis on the outside only"
+parser:option "--pad-paren"
+   :description "Insert space padding around parenthesis on the outside, the inside, or both"
+   :args "?"
+   :choices {"in", "out", "none"}
 
 parser:flag "--pad-first-paren-out"
    :description "Insert space padding around first parenthesis in a series on the outside only"
 
-parser:flag "--pad-paren-in"
-   :description "Insert space padding around parenthesis on the inside only"
-
 parser:flag "--pad-header"
    :description "Insert space padding after paren headers (e.g. 'if', 'for'...)"
 
-parser:flag "--unpad-paren"
-   :description "Remove unnecessary space padding around parenthesis"
-
-parser:flag "--pad-brackets"
-   :description "Insert space padding around square brackets on both the outside and the inside."
-
-parser:flag "--pad-brackets-in"
-   :description "Insert space padding around square brackets on the inside only."
-
-parser:flag "--pad-brackets-out"
-   :description "Insert space padding around square brackets on the outside only."
-
-parser:flag "--unpad-brackets"
-   :description "Remove unnecessary space padding around square brackets (experimental)."
+parser:option "--pad-brackets"
+   :description "Insert space padding around square brackets on the outside, the inside, or both"
+   :args "?"
+   :choices {"in", "out", "none"}
 
 parser:flag "--delete-empty-lines"
    :description "Delete empty lines within a function or method"
@@ -168,17 +154,15 @@ parser:flag "--add-one-line-braces"
 parser:flag "--remove-braces"
    :description "Remove braces from a braced one line conditional statements"
 
-parser:flag "--break-return-type"
+parser:option "--break-return-type"
    :description "Break the return type from the function name definitions"
+   :args "?"
+   :choices {"decl"}
 
-parser:flag "--break-return-type-decl"
-   :description "Break the return type from the function name declarations"
-
-parser:flag "--attach-return-type"
+parser:option "--attach-return-type"
    :description "Attach the return type to the function name definitions"
-
-parser:flag "--attach-return-type-decl"
-   :description "Attach the return type to the function name declarations"
+   :args "?"
+   :choices {"decl"}
 
 parser:flag "--keep-one-line-blocks"
    :description "Don't break blocks residing completely on one line"
@@ -209,23 +193,20 @@ parser:option "--mode"
    :description "Set input syntax mode"
    :choices {"c", "java", "cs", "objc", "js", "gsc", "ghc"}
 
-parser:flag "--pad-method-prefix"
+parser:option "--pad-method-prefix"
    :description "Insert space padding after the '-' or '+' Objective-C method prefix"
+   :args "?"
+   :choices {"none"}
 
-parser:flag "--unpad-method-prefix"
-   :description "Remove all space padding after the '-' or '+' Objective-C method prefix"
-
-parser:flag "--pad-return-type"
+parser:option "--pad-return-type"
    :description "Insert space padding after the Objective-C return type"
+   :args "?"
+   :choices {"none"}
 
-parser:flag "--unpad-return-type"
-   :description "Remove all space padding after the Objective-C return type"
-
-parser:flag "--pad-param-type"
+parser:option "--pad-param-type"
    :description "Insert space padding after the Objective-C param type"
-
-parser:flag "--unpad-param-type"
-   :description "Remove all space padding after the Objective-C param type"
+   :args "?"
+   :choices {"none"}
 
 parser:flag "--align-method-colon"
    :description "Align the colons in an Objective-C method definition."

@@ -30,7 +30,7 @@ and NO formatting options.
 If no brace style is requested, the opening braces will not be
 changed and closing braces will be broken from the preceding line.
 
-.IP "--style=allman OR --style=bsd OR --style=break OR -A1"
+.IP "--style=allman OR -A1"
 Allman style formatting/indenting.
 Broken braces.
 
@@ -38,7 +38,7 @@ Broken braces.
 Java style formatting/indenting.
 Attached braces.
 
-.IP "--style=kr OR --style=k&r OR --style=k/r OR -A3"
+.IP "--style=kr OR -A3"
 Kernighan & Ritchie style formatting/indenting.
 Linux braces.
 
@@ -55,7 +55,7 @@ Indented class blocks and switch blocks.
 VTK style formatting/indenting.
 Broken, indented braces except for the opening braces.
 
-.IP "--style=ratliff OR --style=banner OR -A6"
+.IP "--style=ratliff OR -A6"
 Ratliff style formatting/indenting.
 Attached, indented braces.
 
@@ -63,15 +63,15 @@ Attached, indented braces.
 GNU style formatting/indenting.
 Broken braces, indented blocks.
 
-.IP "--style=linux OR --style=knf OR -A8"
+.IP "--style=linux OR -A8"
 Linux style formatting/indenting.
 Linux braces, minimum conditional indent is one-half indent.
 
-.IP "--style=horstmann OR --style=run-in OR -A9"
+.IP "--style=horstmann OR -A9"
 Horstmann style formatting/indenting.
 Run-in braces, indented switches.
 
-.IP "--style=1tbs OR --style=otbs OR -A10"
+.IP "--style=1tbs OR -A10"
 One True Brace Style formatting/indenting.
 Linux braces, add braces to all conditionals.
 
@@ -143,7 +143,7 @@ Attach braces to a class statement.
 .IP "--attach-inlines OR -xl"
 Attach braces to class inline function definitions.
 
-.IP "--attach-extern-c OR -xk"
+.IP "--attach-extern-c OR -xa"
 Attach braces to an extern "C" statement.
 
 .IP "--attach-closing-while OR -xV"
@@ -217,9 +217,7 @@ The minimum and default value is 40.
 
 .IP "--break-blocks OR -f"
 Insert empty lines around unrelated blocks, labels, classes, ...
-
-.IP "--break-blocks=all OR -F"
-Like --break-blocks, except also insert empty lines
+--break-blocks=all OR -F additionally inserts empty lines
 around closing headers (e.g. 'else', 'catch', ...).
 
 .IP "--pad-oper OR -p"
@@ -235,23 +233,23 @@ Insert space padding after negations.
 Insert space padding also before negations.
 
 .IP "--pad-paren OR -P"
-Insert space padding around parenthesis on both the outside
-and the inside.
+Insert space padding around parenthesis on both the outside and
+the inside.
 
-.IP "--pad-paren-out OR -d"
+.IP "--pad-paren=out OR -d"
 Insert space padding around parenthesis on the outside only.
 
 .IP "--pad-first-paren-out OR -xd"
 Insert space padding around first parenthesis in a series on
 the outside only.
 
-.IP "--pad-paren-in OR -D"
+.IP "--pad-paren=in OR -D"
 Insert space padding around parenthesis on the inside only.
 
 .IP "--pad-header OR -H"
 Insert space padding after paren headers (e.g. 'if', 'for'...).
 
-.IP "--unpad-paren OR -U"
+.IP "--pad-paren=none OR -U"
 Remove unnecessary space padding around parenthesis. This
 can be used in combination with the 'pad' options above.
 
@@ -260,16 +258,16 @@ Apply padding to empty pairs of parentheses; combine with other
 parenthesis padding options.
 
 .IP "--pad-brackets"
-Insert space padding around square brackets on both the outside
-and the inside.
+Insert space padding around square brackets on both the outside and
+the inside.
 
-.IP "--pad-brackets-in"
-Insert space padding around square brackets the inside only.
-
-.IP "--pad-brackets-out"
+.IP "--pad-brackets=out"
 Insert space padding around square brackets the outside only.
 
-.IP "--unpad-brackets"
+.IP "--pad-brackets=in"
+Insert space padding around square brackets the inside only.
+
+.IP "--pad-brackets=none"
 Remove unnecessary space padding around square brackets.
 
 .IP "--delete-empty-lines OR -xe"
@@ -328,12 +326,12 @@ Remove braces from braced conditional statements.
 With =one-line only one-line blocks are affected; multi-line braced blocks are left unchanged.
 
 .IP "--break-return-type      OR -xB"
-.IP "--break-return-type-decl OR -xD"
+.IP "--break-return-type=decl OR -xD"
 Break the return type from the function name. Options are
 for the function definitions and the function declarations.
 
 .IP "--attach-return-type      OR -xf"
-.IP "--attach-return-type-decl OR -xh"
+.IP "--attach-return-type=decl OR -xh"
 Attach the return type to the function name. Options are
 for the function definitions and the function declarations.
 
@@ -378,9 +376,6 @@ Indent an Objective-C source file.
 .IP "--mode=js"
 Indent a JavaScript source file (experimental).
 
-.IP "--mode=ghc"
-Indent a GHC source file (experimental).
-
 .IP "--mode=gsc"
 Indent a GSC source file (experimental).
 
@@ -390,20 +385,20 @@ Indent a GSC source file (experimental).
 Insert space padding after the '-' or '+' Objective-C
 method prefix.
 
-.IP "--unpad-method-prefix OR -xR"
+.IP "--pad-method-prefix=none OR -xR"
 Remove all space padding after the '-' or '+' Objective-C
 method prefix.
 
 .IP "--pad-return-type OR -xq"
 Insert space padding after the Objective-C return type.
 
-.IP "--unpad-return-type OR -xr"
+.IP "--pad-return-type=none OR -xr"
 Remove all space padding after the Objective-C return type.
 
 .IP "--pad-param-type OR -xS"
 Insert space padding after the Objective-C param type.
 
-.IP "--unpad-param-type OR -xs"
+.IP "--pad-param-type=none OR -xs"
 Remove all space padding after the Objective-C param type.
 
 .IP "--align-method-colon OR -xM"
@@ -424,7 +419,7 @@ Append the suffix #### instead of '.orig' to original filename.
 .IP "--suffix=none OR -n"
 Do not retain a backup of the original file.
 
-.IP "--recursive OR -r OR -R"
+.IP "--recursive OR -r"
 Process subdirectories recursively.
 
 .IP "--dry-run"
@@ -488,7 +483,7 @@ The displayed output will be ascii characters only.
 .IP "--version OR -V"
 Print version number.
 
-.IP "--help OR -h OR -?"
+.IP "--help OR -h"
 Print this help message.
 
 .IP "--html OR -!"

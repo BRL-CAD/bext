@@ -1593,7 +1593,7 @@ void ASConsole::printHelp() const
 	std::cout << "    If no brace style is requested, the opening braces will not be\n";
 	std::cout << "    changed and closing braces will be broken from the preceding line.\n";
 	std::cout << '\n';
-	std::cout << "    --style=allman  OR  --style=bsd  OR  --style=break  OR  -A1\n";
+	std::cout << "    --style=allman  OR  -A1\n";
 	std::cout << "    Allman style formatting/indenting.\n";
 	std::cout << "    Broken braces.\n";
 	std::cout << '\n';
@@ -1601,7 +1601,7 @@ void ASConsole::printHelp() const
 	std::cout << "    Java style formatting/indenting.\n";
 	std::cout << "    Attached braces.\n";
 	std::cout << '\n';
-	std::cout << "    --style=kr  OR  --style=k&r  OR  --style=k/r  OR  -A3\n";
+	std::cout << "    --style=kr  OR  -A3\n";
 	std::cout << "    Kernighan & Ritchie style formatting/indenting.\n";
 	std::cout << "    Linux braces.\n";
 	std::cout << '\n';
@@ -1618,7 +1618,7 @@ void ASConsole::printHelp() const
 	std::cout << "    VTK style formatting/indenting.\n";
 	std::cout << "    Broken, indented braces except for the opening braces.\n";
 	std::cout << '\n';
-	std::cout << "    --style=ratliff  OR  --style=banner  OR  -A6\n";
+	std::cout << "    --style=ratliff  OR  -A6\n";
 	std::cout << "    Ratliff style formatting/indenting.\n";
 	std::cout << "    Attached, indented braces.\n";
 	std::cout << '\n';
@@ -1626,15 +1626,15 @@ void ASConsole::printHelp() const
 	std::cout << "    GNU style formatting/indenting.\n";
 	std::cout << "    Broken braces, indented blocks.\n";
 	std::cout << '\n';
-	std::cout << "    --style=linux  OR  --style=knf  OR  -A8\n";
+	std::cout << "    --style=linux  OR  -A8\n";
 	std::cout << "    Linux style formatting/indenting.\n";
 	std::cout << "    Linux braces, minimum conditional indent is one-half indent.\n";
 	std::cout << '\n';
-	std::cout << "    --style=horstmann  OR  --style=run-in  OR  -A9\n";
+	std::cout << "    --style=horstmann  OR  -A9\n";
 	std::cout << "    Horstmann style formatting/indenting.\n";
 	std::cout << "    Run-in braces, indented switches.\n";
 	std::cout << '\n';
-	std::cout << "    --style=1tbs  OR  --style=otbs  OR  -A10\n";
+	std::cout << "    --style=1tbs  OR  -A10\n";
 	std::cout << "    One True Brace Style formatting/indenting.\n";
 	std::cout << "    Linux braces, add braces to all conditionals.\n";
 	std::cout << '\n';
@@ -1703,7 +1703,7 @@ void ASConsole::printHelp() const
 	std::cout << "    --attach-inlines  OR  -xl\n";
 	std::cout << "    Attach braces to class inline function definitions.\n";
 	std::cout << '\n';
-	std::cout << "    --attach-extern-c  OR  -xk\n";
+	std::cout << "    --attach-extern-c  OR  -xa\n";
 	std::cout << "    Attach braces to an extern \"C\" statement.\n";
 	std::cout << '\n';
 	std::cout << "    --attach-closing-while  OR  -xV\n";
@@ -1780,9 +1780,7 @@ void ASConsole::printHelp() const
 	std::cout << "----------------\n";
 	std::cout << "    --break-blocks  OR  -f\n";
 	std::cout << "    Insert empty lines around unrelated blocks, labels, classes, ...\n";
-	std::cout << '\n';
-	std::cout << "    --break-blocks=all  OR  -F\n";
-	std::cout << "    Like --break-blocks, except also insert empty lines\n";
+	std::cout << "    --break-blocks=all  OR  -F  additionally inserts empty lines\n";
 	std::cout << "    around closing headers (e.g. 'else', 'catch', ...), structs,\n";
 	std::cout << "    and functions.\n";
 	std::cout << '\n';
@@ -1810,14 +1808,14 @@ void ASConsole::printHelp() const
 	std::cout << "    Insert space padding around parenthesis on both the outside\n";
 	std::cout << "    and the inside.\n";
 	std::cout << '\n';
-	std::cout << "    --pad-paren-out  OR  -d\n";
+	std::cout << "    --pad-paren=out  OR  -d\n";
 	std::cout << "    Insert space padding around parenthesis on the outside only.\n";
 	std::cout << '\n';
 	std::cout << "    --pad-first-paren-out  OR  -xd\n";
 	std::cout << "    Insert space padding around first parenthesis in a series on\n";
 	std::cout << "    the outside only.\n";
 	std::cout << '\n';
-	std::cout << "    --pad-paren-in  OR  -D\n";
+	std::cout << "    --pad-paren=in  OR  -D\n";
 	std::cout << "    Insert space padding around parenthesis on the inside only.\n";
 	std::cout << '\n';
 	std::cout << "    --pad-empty-paren  OR  -xo\n";
@@ -1827,22 +1825,22 @@ void ASConsole::printHelp() const
 	std::cout << "    --pad-header  OR  -H\n";
 	std::cout << "    Insert space padding after paren headers (e.g. 'if', 'for'...).\n";
 	std::cout << '\n';
-	std::cout << "    --unpad-paren  OR  -U\n";
+	std::cout << "    --pad-paren=none  OR  -U\n";
 	std::cout << "    Remove unnecessary space padding around parenthesis. This\n";
 	std::cout << "    can be used in combination with the 'pad' options above.\n";
 	std::cout << '\n';
 
 	std::cout << "    --pad-brackets\n";
-	std::cout << "    Insert space padding around square brackets on both the outside\n";
-	std::cout << "    and the inside.\n";
+	std::cout << "    Insert space padding around square brackets on both the\n";
+	std::cout << "    outside and the inside.\n";
 	std::cout << '\n';
-	std::cout << "    --pad-brackets-in\n";
-	std::cout << "    Insert space padding around square brackets on the inside only.\n";
-	std::cout << '\n';
-	std::cout << "    --pad-brackets-out\n";
+	std::cout << "    --pad-brackets=out\n";
 	std::cout << "    Insert space padding around square brackets on the outside only.\n";
 	std::cout << '\n';
-	std::cout << "    --unpad-brackets\n";
+	std::cout << "    --pad-brackets=in\n";
+	std::cout << "    Insert space padding around square brackets on the inside only.\n";
+	std::cout << '\n';
+	std::cout << "    --pad-brackets=none\n";
 	std::cout << "    Remove unnecessary space padding around square brackets.\n";
 	std::cout << '\n';
 
@@ -1918,12 +1916,12 @@ void ASConsole::printHelp() const
 	std::cout << "    multi-line braced blocks are left unchanged.\n";
 	std::cout << '\n';
 	std::cout << "    --break-return-type       OR  -xB\n";
-	std::cout << "    --break-return-type-decl  OR  -xD\n";
+	std::cout << "    --break-return-type=decl  OR  -xD\n";
 	std::cout << "    Break the return type from the function name. Options are\n";
 	std::cout << "    for the function definitions and the function declarations.\n";
 	std::cout << '\n';
 	std::cout << "    --attach-return-type       OR  -xf\n";
-	std::cout << "    --attach-return-type-decl  OR  -xh\n";
+	std::cout << "    --attach-return-type=decl  OR  -xh\n";
 	std::cout << "    Attach the return type to the function name. Options are\n";
 	std::cout << "    for the function definitions and the function declarations.\n";
 	std::cout << '\n';
@@ -1982,20 +1980,20 @@ void ASConsole::printHelp() const
 	std::cout << "    Insert space padding after the '-' or '+' Objective-C\n";
 	std::cout << "    method prefix.\n";
 	std::cout << '\n';
-	std::cout << "    --unpad-method-prefix  OR  -xR\n";
+	std::cout << "    --pad-method-prefix=none  OR  -xR\n";
 	std::cout << "    Remove all space padding after the '-' or '+' Objective-C\n";
 	std::cout << "    method prefix.\n";
 	std::cout << '\n';
 	std::cout << "    --pad-return-type  OR  -xq\n";
 	std::cout << "    Insert space padding after the Objective-C return type.\n";
 	std::cout << '\n';
-	std::cout << "    --unpad-return-type  OR  -xr\n";
+	std::cout << "    --pad-return-type=none  OR  -xr\n";
 	std::cout << "    Remove all space padding after the Objective-C return type.\n";
 	std::cout << '\n';
 	std::cout << "    --pad-param-type  OR  -xS\n";
 	std::cout << "    Insert space padding after the Objective-C param type.\n";
 	std::cout << '\n';
-	std::cout << "    --unpad-param-type  OR  -xs\n";
+	std::cout << "    --pad-param-type=none  OR  -xs\n";
 	std::cout << "    Remove all space padding after the Objective-C param type.\n";
 	std::cout << '\n';
 	std::cout << "    --align-method-colon  OR  -xM\n";
@@ -2016,7 +2014,7 @@ void ASConsole::printHelp() const
 	std::cout << "    --suffix=none  OR  -n\n";
 	std::cout << "    Do not retain a backup of the original file.\n";
 	std::cout << '\n';
-	std::cout << "    --recursive  OR  -r  OR  -R\n";
+	std::cout << "    --recursive  OR  -r\n";
 	std::cout << "    Process subdirectories recursively.\n";
 	std::cout << '\n';
 	std::cout << "    --dry-run\n";
@@ -2090,7 +2088,7 @@ void ASConsole::printHelp() const
 	std::cout << "    --version  OR  -V\n";
 	std::cout << "    Print version number.\n";
 	std::cout << '\n';
-	std::cout << "    --help  OR  -h  OR  -?\n";
+	std::cout << "    --help  OR  -h\n";
 	std::cout << "    Print this help message.\n";
 	std::cout << '\n';
 	std::cout << "    --html  OR  -! (deprecated)\n";
@@ -3144,7 +3142,7 @@ void ASOptions::parseOption(const std::string& arg)
 		formatter.setParensOutsidePaddingMode(true);
 		formatter.setParensInsidePaddingMode(true);
 	}
-	else if (isOption(arg, "d", "pad-paren-out"))
+	else if (isOption(arg, "d", "pad-paren-out") || isOption(arg, "pad-paren=out"))
 	{
 		formatter.setParensOutsidePaddingMode(true);
 	}
@@ -3156,7 +3154,7 @@ void ASOptions::parseOption(const std::string& arg)
 	{
 		formatter.setEmptyParensPaddingMode(true);
 	}
-	else if (isOption(arg, "D", "pad-paren-in"))
+	else if (isOption(arg, "D", "pad-paren-in") || isOption(arg, "pad-paren=in"))
 	{
 		formatter.setParensInsidePaddingMode(true);
 	}
@@ -3164,7 +3162,7 @@ void ASOptions::parseOption(const std::string& arg)
 	{
 		formatter.setParensHeaderPaddingMode(true);
 	}
-	else if (isOption(arg, "U", "unpad-paren"))
+	else if (isOption(arg, "U", "unpad-paren") || isOption(arg, "pad-paren=none"))
 	{
 		formatter.setParensUnPaddingMode(true);
 	}
@@ -3378,7 +3376,7 @@ void ASOptions::parseOption(const std::string& arg)
 	{
 		formatter.setAttachClosingWhile(true);
 	}
-	else if (isOption(arg, "xk", "attach-extern-c"))
+	else if (isOption(arg, "xa", "attach-extern-c"))
 	{
 		formatter.setAttachExternC(true);
 	}
@@ -3398,7 +3396,7 @@ void ASOptions::parseOption(const std::string& arg)
 	{
 		formatter.setBreakReturnType(true);
 	}
-	else if (isOption(arg, "xD", "break-return-type-decl"))
+	else if (isOption(arg, "xD", "break-return-type-decl") || isOption(arg, "break-return-type=decl"))
 	{
 		formatter.setBreakReturnTypeDecl(true);
 	}
@@ -3406,7 +3404,7 @@ void ASOptions::parseOption(const std::string& arg)
 	{
 		formatter.setAttachReturnType(true);
 	}
-	else if (isOption(arg, "xh", "attach-return-type-decl"))
+	else if (isOption(arg, "xh", "attach-return-type-decl") || isOption(arg, "attach-return-type=decl"))
 	{
 		formatter.setAttachReturnTypeDecl(true);
 	}
@@ -3428,7 +3426,7 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 	{
 		formatter.setMethodPrefixPaddingMode(true);
 	}
-	else if (isOption(arg, "xR", "unpad-method-prefix"))
+	else if (isOption(arg, "xR", "unpad-method-prefix") || isOption(arg, "pad-method-prefix=none"))
 	{
 		formatter.setMethodPrefixUnPaddingMode(true);
 	}
@@ -3436,7 +3434,7 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 	{
 		formatter.setReturnTypePaddingMode(true);
 	}
-	else if (isOption(arg, "xr", "unpad-return-type"))
+	else if (isOption(arg, "xr", "unpad-return-type") || isOption(arg, "pad-return-type=none"))
 	{
 		formatter.setReturnTypeUnPaddingMode(true);
 	}
@@ -3444,7 +3442,7 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 	{
 		formatter.setParamTypePaddingMode(true);
 	}
-	else if (isOption(arg, "xs", "unpad-param-type"))
+	else if (isOption(arg, "xs", "unpad-param-type") || isOption(arg, "pad-param-type=none"))
 	{
 		formatter.setParamTypeUnPaddingMode(true);
 	}
@@ -3588,15 +3586,15 @@ bool ASOptions::parseOptionContinued(const std::string& arg)
 		formatter.setBracketsOutsidePaddingMode(true);
 		formatter.setBracketsInsidePaddingMode(true);
 	}
-	else if (isOption(arg, "pad-brackets-in"))
+	else if (isOption(arg, "pad-brackets-in") || isOption(arg, "pad-brackets=in"))
 	{
 		formatter.setBracketsInsidePaddingMode(true);
 	}
-	else if (isOption(arg, "pad-brackets-out"))
+	else if (isOption(arg, "pad-brackets-out") || isOption(arg, "pad-brackets=out"))
 	{
 		formatter.setBracketsOutsidePaddingMode(true);
 	}
-	else if (isOption(arg, "unpad-brackets"))
+	else if (isOption(arg, "unpad-brackets") || isOption(arg, "pad-brackets=none"))
 	{
 		formatter.setBracketsUnPaddingMode(true);
 	}
