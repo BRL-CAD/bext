@@ -338,6 +338,7 @@ private:	// functions
 	std::string getFullPathName(const std::string& relativePath) const;
 	std::string getHtmlInstallPrefix() const;
 	std::string getParam(const std::string& arg, const char* op);
+	bool isBomlessUtf16(const char* data, size_t dataSize) const;
 	bool isHomeOrInvalidAbsPath(const std::string& absPath) const;
 	bool isWriteable(const std::filesystem::path& path) const;
 	void initializeOutputEOL(LineEndFormat lineEndFormat);

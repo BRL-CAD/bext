@@ -53,6 +53,7 @@
 
 #else
 	#include <unistd.h>
+	#include <fcntl.h>		// open, O_NOFOLLOW for writeFile
 
 #endif
 
@@ -266,14 +267,9 @@ std::streamoff ASStreamIterator<T>::tellg()
 }
 
 
-//-----------------------------------------------------------------------------
-// ASConsole class
-// main function will be included only in the console build
-//-----------------------------------------------------------------------------
-
-#ifndef ASTYLE_LIB
-
 // Replace control characters that could be interpreted as terminal escape sequences.
+// Defined at file scope (not inside the console-only block) so option-error
+// reporting can use it in the library and JNI builds as well.
 static std::string sanitizeForTerminal(const std::string& s)
 {
 	std::string out;
@@ -282,6 +278,13 @@ static std::string sanitizeForTerminal(const std::string& s)
 		out += (c < 0x20 && c != '\t') ? '?' : static_cast<char>(c);
 	return out;
 }
+
+//-----------------------------------------------------------------------------
+// ASConsole class
+// main function will be included only in the console build
+//-----------------------------------------------------------------------------
+
+#ifndef ASTYLE_LIB
 
 ASConsole::ASConsole(ASFormatter& formatterArg) : formatter(formatterArg)
 {
@@ -348,6 +351,33 @@ FileEncoding ASConsole::detectEncoding(const char* data, size_t dataSize) const
 	return ENCODING_8BIT;
 }
 
+// Detect a UTF-16 file that has no byte-order mark. detectEncoding() recognizes
+// UTF-16 only by its BOM, so a BOM-less UTF-16 file is classified as 8-bit text
+// and silently corrupted by the formatter. UTF-16-encoded text keeps a 0x00 byte
+// in every other position (odd offsets for little-endian, even offsets for
+// big-endian); plain 8-bit source contains no 0x00 bytes. Requiring all nulls on
+// a single parity, with none on the other, avoids misclassifying 8-bit files.
+bool ASConsole::isBomlessUtf16(const char* data, size_t dataSize) const
+{
+	if (dataSize < 2)
+		return false;
+	// BOM-tagged files are already handled by detectEncoding().
+	if (memcmp(data, "\xFE\xFF", 2) == 0 || memcmp(data, "\xFF\xFE", 2) == 0)
+		return false;
+
+	const size_t sample = dataSize < 64 ? dataSize : 64;
+	size_t evenNulls = 0;
+	size_t oddNulls = 0;
+	for (size_t i = 0; i < sample; i++)
+	{
+		if (data[i] == '\0')
+			(i % 2 == 0 ? evenNulls : oddNulls)++;
+	}
+	bool looksLittleEndian = oddNulls > 0 && evenNulls == 0;
+	bool looksBigEndian = evenNulls > 0 && oddNulls == 0;
+	return looksLittleEndian || looksBigEndian;
+}
+
 // error exit without a message
 void ASConsole::error() const
 {
@@ -358,7 +388,9 @@ void ASConsole::error() const
 // error exit with a message
 void ASConsole::error(const char* why, const char* what) const
 {
-	(*errorStream) << why << ' ' << what << '\n';
+	// 'what' is often an untrusted file path or option string; strip control
+	// characters so it cannot inject terminal escape sequences.
+	(*errorStream) << why << ' ' << sanitizeForTerminal(what) << '\n';
 	error();
 }
 
@@ -442,6 +474,23 @@ void ASConsole::formatCinToCout()
  */
 void ASConsole::formatFile(const std::string& fileName_)
 {
+	// Skip a UTF-16 file that has no byte-order mark. Encoding detection is
+	// BOM-based, so such a file would be treated as 8-bit text and silently
+	// corrupted. Peek at the header and leave the file untouched instead.
+	{
+		std::ifstream fin(fileName_.c_str(), std::ios::binary);
+		char header[64];
+		fin.read(header, sizeof(header));
+		if (isBomlessUtf16(header, static_cast<size_t>(fin.gcount())))
+		{
+			std::string displayName(fileName_);
+			if (hasWildcard)
+				displayName = fileName_.substr(targetDirectory.length() + 1);
+			printMsg(_("Skipped (UTF-16 without BOM)  %s\n"), sanitizeForTerminal(displayName));
+			return;
+		}
+	}
+
 	std::stringstream in;
 	std::ostringstream out;
 	FileEncoding encoding = readFile(fileName_, in);
@@ -934,6 +983,13 @@ void ASConsole::getFileNames(const std::string& directory, const std::vector<std
 	for (const auto& entry : std::filesystem::directory_iterator(directory)) {
 		const std::string entryPath = entry.path().string();
 		const std::string entryName = entry.path().filename().string();
+
+		// Skip symlinks. is_directory()/is_regular_file() below follow symlinks,
+		// so descending into a symlinked directory can escape the target tree or
+		// loop forever on a symlink cycle. entry.is_symlink() uses symlink_status
+		// and does not follow the link.
+		if (entry.is_symlink())
+			continue;
 
 		// Skip hidden or read-only files
 		if (entryName[0] == '.' || !isWriteable(entry.path()))
@@ -2653,26 +2709,59 @@ void ASConsole::writeFile(const std::string& fileName_, FileEncoding encoding, s
 		renameFile(fileName_.c_str(), origFileName.c_str(), "Cannot create backup file");
 	}
 
-	// write the output file
-	std::ofstream fout(fileName_.c_str(), std::ios::binary | std::ios::trunc);
-	if (!fout)
-		error("Cannot open output file", fileName_.c_str());
+	// build the output bytes, converting to utf-16 if required
+	std::string outStr = out.str();
 	if (encoding == UTF_16LE || encoding == UTF_16BE)
 	{
 		// convert utf-8 to utf-16
 		bool isBigEndian = (encoding == UTF_16BE);
-		size_t utf16Size = encode.utf16LengthFromUtf8(out.str().c_str(), out.str().length());
+		size_t utf16Size = encode.utf16LengthFromUtf8(outStr.c_str(), outStr.length());
 		char* utf16Out = new char[utf16Size];
-		size_t utf16Len = encode.utf8ToUtf16(const_cast<char*>(out.str().c_str()),
-		                                     out.str().length(), isBigEndian, utf16Out);
+		size_t utf16Len = encode.utf8ToUtf16(const_cast<char*>(outStr.c_str()),
+		                                     outStr.length(), isBigEndian, utf16Out);
 		assert(utf16Len <= utf16Size);
-		fout << std::string(utf16Out, utf16Len);
+		outStr.assign(utf16Out, utf16Len);
 		delete[] utf16Out;
 	}
-	else
-		fout << out.str();
 
+	// Write the output file without following a symbolic link. A crafted symlink
+	// at fileName_ could otherwise redirect this truncating write to an arbitrary
+	// file the user can write to. This is exploitable with --suffix=none, where no
+	// backup rename first moves the link aside.
+#ifdef _WIN32
+	if (std::filesystem::is_symlink(std::filesystem::symlink_status(fileName_)))
+		error("Will not write through a symbolic link", fileName_.c_str());
+	std::ofstream fout(fileName_.c_str(), std::ios::binary | std::ios::trunc);
+	if (!fout)
+		error("Cannot open output file", fileName_.c_str());
+	fout.write(outStr.data(), static_cast<std::streamsize>(outStr.length()));
+	if (!fout)
+		error("Cannot write output file", fileName_.c_str());
 	fout.close();
+#else
+	// O_NOFOLLOW makes the refusal atomic with the open, closing the TOCTOU race:
+	// if fileName_ is a symlink the open fails (errno ELOOP) instead of following it.
+	mode_t createMode = statErr ? 0644 : (stBuf.st_mode & 0777);
+	int fd = open(fileName_.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, createMode);
+	if (fd == -1)
+		error("Cannot open output file", fileName_.c_str());
+	const char* writePtr = outStr.data();
+	size_t remaining = outStr.length();
+	while (remaining != 0)
+	{
+		ssize_t written = write(fd, writePtr, remaining);
+		if (written < 0)
+		{
+			if (errno == EINTR)
+				continue;
+			close(fd);
+			error("Cannot write output file", fileName_.c_str());
+		}
+		writePtr += written;
+		remaining -= static_cast<size_t>(written);
+	}
+	close(fd);
+#endif
 
 	// change date modified to original file date
 	// Embarcadero must be linked with cw32mt not cw32
@@ -3688,7 +3777,9 @@ void ASOptions::isOptionError(const std::string& arg)
 {
 	if (optionErrors.str().empty())
 		optionErrors << "Invalid Artistic Style options:" << '\n';   // need main error message
-	optionErrors << "\t" << arg << '\n';
+	// arg is the raw user-supplied option string; strip control characters so a
+	// malicious option cannot inject terminal escape sequences when displayed.
+	optionErrors << "\t" << sanitizeForTerminal(arg) << '\n';
 }
 
 bool ASOptions::isParamOption(const std::string& arg, const char* option)
@@ -4182,7 +4273,8 @@ extern "C" EXPORT char* STDCALL AStyleMain(const char* pSourceIn,		// the source
 		}
 	}
 
-	size_t textSizeOut = out.str().length();
+	std::string textOut = out.str();
+	size_t textSizeOut = textOut.length();
 	char* pTextOut = fpMemoryAlloc((long) textSizeOut + 1);     // call memory allocation function
 	if (pTextOut == nullptr)
 	{
@@ -4190,7 +4282,9 @@ extern "C" EXPORT char* STDCALL AStyleMain(const char* pSourceIn,		// the source
 		return nullptr;
 	}
 
-	strcpy(pTextOut, out.str().c_str());
+	// memcpy with the known length so any embedded NUL bytes are preserved;
+	// strcpy would truncate the output at the first NUL.
+	memcpy(pTextOut, textOut.c_str(), textSizeOut + 1);
 #ifndef NDEBUG
 	// The checksum is an assert in the console build and ASFormatter.
 	// This error returns the incorrectly formatted file to the editor.
