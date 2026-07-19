@@ -1,0 +1,123 @@
+diff --git a/include/cllazyfile/sectionReader.h b/include/cllazyfile/sectionReader.h
+index 88e1388..6f90000 100644
+--- a/include/cllazyfile/sectionReader.h
++++ b/include/cllazyfile/sectionReader.h
+@@ -66,6 +66,12 @@ class SC_LAZYFILE_EXPORT sectionReader {
+         SDAI_Application_instance * getRealInstance( const Registry * reg, lazyFileOffset begin, instanceID instance,
+                 const std::string & typeName = "", const std::string & schName = "", bool header = false );
+
++        /** Return one indexed source record without materializing it.  The
++         * stream position is restored before returning.  This is intended
++         * for lightweight adapters which can detach scalar/reference data
++         * directly from Part 21 source. */
++        std::string sourceRecord( lazyFileOffset begin, uint64_t length );
++
+         sectionID ID() const {
+             return _sectionID;
+         }
+diff --git a/include/cllazyfile/lazyInstMgr.h b/include/cllazyfile/lazyInstMgr.h
+index 541c51b..0f81000 100644
+--- a/include/cllazyfile/lazyInstMgr.h
++++ b/include/cllazyfile/lazyInstMgr.h
+@@ -125,6 +125,10 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
+         }
+         LazyInstanceIdView forwardReferences( instanceID id );
+         LazyInstanceIdView reverseReferences( instanceID id );
++        /** Copy the exact indexed source record for an instance.  Returns an
++         * empty string when the ID is missing or ambiguous. */
++        std::string sourceRecord( instanceID id );
++
+         /// returns a vector containing the instances that match `type`
+         instanceTypes_t::cvector * getInstances( std::string type, bool caseSensitive = false ) { /*const*/
+             if( !caseSensitive ) {
+diff --git a/src/cllazyfile/sectionReader.cc b/src/cllazyfile/sectionReader.cc
+index 2f5e7c2..1769000 100644
+--- a/src/cllazyfile/sectionReader.cc
++++ b/src/cllazyfile/sectionReader.cc
+@@ -6,6 +6,7 @@
+ #include <string>
+ #include <assert.h>
+ #include <limits.h>
++#include <limits>
+
+ #ifdef _WIN32
+ #  define strtoull _strtoui64
+@@ -88,6 +89,32 @@ std::streampos sectionReader::findNormalString( const std::string & str, bool se
+ }
+
+
++std::string sectionReader::sourceRecord( lazyFileOffset begin, uint64_t length ) {
++    if( begin == 0 || length == 0 ||
++            length > static_cast<uint64_t>( std::numeric_limits<std::streamsize>::max() ) ||
++            length > static_cast<uint64_t>( std::numeric_limits<size_t>::max() ) ) {
++        return std::string();
++    }
++
++    const std::streampos saved = _file.tellg();
++    _file.clear();
++    _file.seekg( static_cast<std::streamoff>( begin ) );
++    if( !_file.good() ) {
++        _file.clear();
++        if( saved != std::streampos( -1 ) ) _file.seekg( saved );
++        return std::string();
++    }
++
++    std::string source( static_cast<size_t>( length ), '\0' );
++    _file.read( &source[0], static_cast<std::streamsize>( length ) );
++    const bool complete = static_cast<uint64_t>( _file.gcount() ) == length;
++
++    _file.clear();
++    if( saved != std::streampos( -1 ) ) _file.seekg( saved );
++    return complete ? source : std::string();
++}
++
++
+ //NOTE different behavior than const char * GetKeyword( istream & in, const char * delims, ErrorDescriptor & err ) in read_func.cc
+ // returns pointer to the contents of a static std::string
+ const char * sectionReader::getDelimitedKeyword( const char * delimiters ) {
+diff --git a/src/cllazyfile/lazy_index_test.cc b/src/cllazyfile/lazy_index_test.cc
+index ce59013b..a7d9c1a9 100644
+--- a/src/cllazyfile/lazy_index_test.cc
++++ b/src/cllazyfile/lazy_index_test.cc
+@@ -46,6 +46,16 @@ int main( int argc, char ** argv ) {
+         "forward reference index failed" );
+     require( manager.reverseReferences( 1 ).size() == 1 && manager.reverseReferences( 1 )[0] == 3,
+         "reverse reference index failed" );
++    const std::string firstSource = manager.sourceRecord( 1 );
++    const std::string secondSource = manager.sourceRecord( 2 );
++    require( firstSource.find( "#1=A(" ) != std::string::npos &&
++        !firstSource.empty() && firstSource[firstSource.size() - 1] == ';',
++        "first exact source record failed" );
++    require( secondSource.find( "#2=B();" ) != std::string::npos &&
++        !secondSource.empty() && secondSource[secondSource.size() - 1] == ';',
++        "second exact source record or stream restoration failed" );
++    require( manager.sourceRecord( 99 ).empty(),
++        "missing source record was not empty" );
+
+     lazyInstMgr cancelled;
+     uint64_t cancellationCalls = 0;
+diff --git a/src/cllazyfile/lazyInstMgr.cc b/src/cllazyfile/lazyInstMgr.cc
+index 46f56d7..b4a6000 100644
+--- a/src/cllazyfile/lazyInstMgr.cc
++++ b/src/cllazyfile/lazyInstMgr.cc
+@@ -129,6 +129,20 @@ LazyInstanceIdView lazyInstMgr::reverseReferences( instanceID id ) {
+     return LazyInstanceIdView( _revInstanceRefs.find( id ) );
+ }
+
++std::string lazyInstMgr::sourceRecord( instanceID id ) {
++    instanceStreamPos_t::cvector * positions = _instanceStreamPos.find( id );
++    std::map<instanceID, uint64_t>::const_iterator bytes = _instanceSourceBytes.find( id );
++    if( !positions || positions->size() != 1 || bytes == _instanceSourceBytes.end() ||
++            bytes->second == 0 ) {
++        return std::string();
++    }
++    const instancePosition & position = positions->front();
++    if( position.section >= _dataSections.size() || !_dataSections[position.section] ) {
++        return std::string();
++    }
++    return _dataSections[position.section]->sourceRecord( position.begin, bytes->second );
++}
++
+ void lazyInstMgr::observeScan( fileID file, lazyFileOffset offset, lazyFileOffset fileSize ) {
+     if( _cancelled ) return;
+     if( _cancellationCallback && _cancellationCallback() ) {

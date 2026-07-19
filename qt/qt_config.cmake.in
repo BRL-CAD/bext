@@ -29,12 +29,48 @@ if ("${BEXT_QT_TARGET_SYSTEM_NAME}" STREQUAL "FreeBSD")
 endif ()
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+  set(QT_EXPECTED_BUILD_TYPE "Debug")
+  set(QT_EXPECTED_DEBUG "ON")
   set(QT_CONFIG_OPTS "-debug")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+  set(QT_EXPECTED_BUILD_TYPE "Release")
+  set(QT_EXPECTED_DEBUG "OFF")
   set(QT_CONFIG_OPTS "-release")
 else ()
   message(WARNING "Unexpected CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} preparing Qt6")
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+
+# Qt caches command-line feature choices separately from CMAKE_BUILD_TYPE.  If
+# a build directory previously configured for the other build type is reused,
+# FEATURE_debug can remain forced to a value whose condition is now false.
+# Clear only Qt's generated CMake configuration state when the two disagree;
+# compiled objects can still be reused whenever they remain compatible.
+set(qt_cache "@QT_BUILD_DIR@/CMakeCache.txt")
+set(qt_cache_stale OFF)
+if (EXISTS "${qt_cache}" AND DEFINED QT_EXPECTED_BUILD_TYPE)
+  file(STRINGS "${qt_cache}" qt_cached_build_type_line REGEX "^CMAKE_BUILD_TYPE:[^=]*=")
+  if (qt_cached_build_type_line)
+    string(REGEX REPLACE "^[^=]*=" "" qt_cached_build_type "${qt_cached_build_type_line}")
+    if (NOT qt_cached_build_type STREQUAL QT_EXPECTED_BUILD_TYPE)
+      set(qt_cache_stale ON)
+    endif ()
+  endif ()
+
+  file(STRINGS "${qt_cache}" qt_cached_debug_line REGEX "^FEATURE_debug:[^=]*=")
+  if (qt_cached_debug_line)
+    string(REGEX REPLACE "^[^=]*=" "" qt_cached_debug "${qt_cached_debug_line}")
+    if (NOT qt_cached_debug STREQUAL QT_EXPECTED_DEBUG)
+      set(qt_cache_stale ON)
+    endif ()
+  endif ()
+endif ()
+
+if (qt_cache_stale)
+  message(STATUS
+    "Resetting stale Qt configuration for CMAKE_BUILD_TYPE=${QT_EXPECTED_BUILD_TYPE}")
+  file(REMOVE "${qt_cache}")
+  file(REMOVE_RECURSE "@QT_BUILD_DIR@/CMakeFiles")
+endif ()
 
 execute_process(COMMAND @QT_SOURCE_DIR@/${CONFIG_FILE} ${CONFIG_EXTRA_OPTS} ${QT_CONFIG_OPTS} --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@ RESULT_VARIABLE QT_RET WORKING_DIRECTORY @QT_BUILD_DIR@ OUTPUT_VARIABLE MSG ERROR_VARIABLE MSG)
 
@@ -50,7 +86,6 @@ if (NOT DEFINED QT_ALLOW_HEADLESS AND DEFINED ENV{QT_ALLOW_HEADLESS})
 endif()
 
 # Read a cache bool from Qt's build cache
-set(qt_cache "@QT_BUILD_DIR@/CMakeCache.txt")
 macro(qt_cache_check NAME OUT)
   if (EXISTS "${qt_cache}")
     file(STRINGS "${qt_cache}" _line REGEX "^${NAME}:[^=]*=")

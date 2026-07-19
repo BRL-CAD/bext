@@ -1,7 +1,15 @@
 diff --git a/include/cllazyfile/lazyInstMgr.h b/include/cllazyfile/lazyInstMgr.h
-index 3a6a7958..6a56a733 100644
+index 3a6a7958..e5208040 100644
 --- a/include/cllazyfile/lazyInstMgr.h
 +++ b/include/cllazyfile/lazyInstMgr.h
+@@ -1,6 +1,7 @@
+ #ifndef LAZYINSTMGR_H
+ #define LAZYINSTMGR_H
+
++#include <cctype>
+ #include <map>
+ #include <set>
+ #include <string>
 @@ -81,5 +81,6 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
          std::map<instanceID, size_t> _pinCounts;
          std::map<instanceID, uint64_t> _instanceSourceBytes;
@@ -9,7 +17,7 @@ index 3a6a7958..6a56a733 100644
          std::set<instanceID> _batchOwnedInstances;
          std::set<instanceID> _permanentlyLoadedInstances;
          std::set<instanceID> _instancesLoading;
-@@ -114,6 +115,27 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
+@@ -111,6 +112,27 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
          InstMgrBase * getAdapter() {
              return ( InstMgrBase * ) _ima;
          }
@@ -34,16 +42,16 @@ index 3a6a7958..6a56a733 100644
 +                _materializationTypeAliases.find( key );
 +            return alias == _materializationTypeAliases.end() ? source : alias->second;
 +        }
- 
+
          instanceRefs_t * getFwdRefs() {
              return & _fwdInstanceRefs;
 diff --git a/src/cllazyfile/sectionReader.cc b/src/cllazyfile/sectionReader.cc
 index 96202929..f9303324 100644
 --- a/src/cllazyfile/sectionReader.cc
 +++ b/src/cllazyfile/sectionReader.cc
-@@ -328,6 +328,11 @@ SDAI_Application_instance * sectionReader::getRealInstance( const Registry * reg
+@@ -357,6 +357,11 @@ SDAI_Application_instance * sectionReader::getRealInstance( const Registry * reg
              if( ( !header ) && ( typeName.size() == 0 ) ) {
-                 tName = getDelimitedKeyword( ";( /\\\\" );
+                 tName = getDelimitedKeyword( ";( /\\" );
              }
 +            std::string materializationType;
 +            if( !header && tName ) {

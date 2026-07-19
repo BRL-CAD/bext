@@ -1,7 +1,9 @@
-# This is less elegant than setting the RPATH, but if it works it's
-# simpler than trying to inject the former into Qt's build logic
+# Build-time Qt tools must load the Qt libraries from this build first.  The
+# install prefix may contain an older Qt from a previous superbuild run, and
+# putting that directory first makes tools such as qtwaylandscanner fail with
+# missing Qt symbol versions while a newer Qt is being built.
 if (NOT WIN32)
-  set(ENV{LD_LIBRARY_PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(ENV{LD_LIBRARY_PATH} "@QT_BUILD_DIR@/@LIB_DIR@:@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
 endif (NOT WIN32)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
@@ -26,4 +28,3 @@ message("Qt build succeeded: ${MSG}\n")
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-
