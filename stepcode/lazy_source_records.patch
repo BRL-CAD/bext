@@ -1,5 +1,3 @@
-diff --git a/include/cllazyfile/sectionReader.h b/include/cllazyfile/sectionReader.h
-index 88e1388..6f90000 100644
 --- a/include/cllazyfile/sectionReader.h
 +++ b/include/cllazyfile/sectionReader.h
 @@ -66,6 +66,12 @@ class SC_LAZYFILE_EXPORT sectionReader {
@@ -15,8 +13,6 @@ index 88e1388..6f90000 100644
          sectionID ID() const {
              return _sectionID;
          }
-diff --git a/include/cllazyfile/lazyInstMgr.h b/include/cllazyfile/lazyInstMgr.h
-index 541c51b..0f81000 100644
 --- a/include/cllazyfile/lazyInstMgr.h
 +++ b/include/cllazyfile/lazyInstMgr.h
 @@ -125,6 +125,10 @@ class SC_LAZYFILE_EXPORT lazyInstMgr {
@@ -30,8 +26,6 @@ index 541c51b..0f81000 100644
          /// returns a vector containing the instances that match `type`
          instanceTypes_t::cvector * getInstances( std::string type, bool caseSensitive = false ) { /*const*/
              if( !caseSensitive ) {
-diff --git a/src/cllazyfile/sectionReader.cc b/src/cllazyfile/sectionReader.cc
-index 2f5e7c2..1769000 100644
 --- a/src/cllazyfile/sectionReader.cc
 +++ b/src/cllazyfile/sectionReader.cc
 @@ -6,6 +6,7 @@
@@ -75,8 +69,6 @@ index 2f5e7c2..1769000 100644
  //NOTE different behavior than const char * GetKeyword( istream & in, const char * delims, ErrorDescriptor & err ) in read_func.cc
  // returns pointer to the contents of a static std::string
  const char * sectionReader::getDelimitedKeyword( const char * delimiters ) {
-diff --git a/src/cllazyfile/lazy_index_test.cc b/src/cllazyfile/lazy_index_test.cc
-index ce59013b..a7d9c1a9 100644
 --- a/src/cllazyfile/lazy_index_test.cc
 +++ b/src/cllazyfile/lazy_index_test.cc
 @@ -46,6 +46,16 @@ int main( int argc, char ** argv ) {
@@ -96,8 +88,6 @@ index ce59013b..a7d9c1a9 100644
 
      lazyInstMgr cancelled;
      uint64_t cancellationCalls = 0;
-diff --git a/src/cllazyfile/lazyInstMgr.cc b/src/cllazyfile/lazyInstMgr.cc
-index 46f56d7..b4a6000 100644
 --- a/src/cllazyfile/lazyInstMgr.cc
 +++ b/src/cllazyfile/lazyInstMgr.cc
 @@ -129,6 +129,20 @@ LazyInstanceIdView lazyInstMgr::reverseReferences( instanceID id ) {

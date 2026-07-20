@@ -1,5 +1,3 @@
-diff --git a/cmake/SC_CXX_schema_macros.cmake b/cmake/SC_CXX_schema_macros.cmake
-index 54e252c8..2a2d7201 100644
 --- a/cmake/SC_CXX_schema_macros.cmake
 +++ b/cmake/SC_CXX_schema_macros.cmake
 @@ -77,25 +77,35 @@ macro(SCHEMA_TARGETS expFile schemaName sourceFiles)
@@ -62,8 +60,6 @@ index 54e252c8..2a2d7201 100644
  # End:
  # ex: shiftwidth=2 tabstop=8
 -
-diff --git a/cmake/SC_Run_exp2cxx.cmake b/cmake/SC_Run_exp2cxx.cmake
-index dc4111f0..04adec26 100644
 --- a/cmake/SC_Run_exp2cxx.cmake
 +++ b/cmake/SC_Run_exp2cxx.cmake
 @@ -4,7 +4,7 @@ if(ONESHOT AND EXISTS "${SDIR}/schema.cc")
@@ -80,8 +76,6 @@ index dc4111f0..04adec26 100644
  # End:
  # ex: shiftwidth=2 tabstop=8
 -
-diff --git a/cmake/schema_scanner/schemaScanner.cc b/cmake/schema_scanner/schemaScanner.cc
-index e3723841..12d80dda 100644
 --- a/cmake/schema_scanner/schemaScanner.cc
 +++ b/cmake/schema_scanner/schemaScanner.cc
 @@ -35,6 +35,7 @@ extern "C" {
@@ -174,8 +168,6 @@ index e3723841..12d80dda 100644
  
      EXPRESSinitialize();
  
-diff --git a/cmake/schema_scanner/schemaScanner.cmake b/cmake/schema_scanner/schemaScanner.cmake
-index affe5c5c..95174c9d 100644
 --- a/cmake/schema_scanner/schemaScanner.cmake
 +++ b/cmake/schema_scanner/schemaScanner.cmake
 @@ -18,6 +18,10 @@ else(NOT DEFINED SC_UNITY_BUILD)
@@ -211,8 +203,6 @@ index affe5c5c..95174c9d 100644
    endforeach(_dir ${_ss_out})
    # configure_file forces cmake to run again if the schema has been modified
    #if multiple schemas in one file, _schema is the last one printed.
-diff --git a/include/cllazyfile/CMakeLists.txt b/include/cllazyfile/CMakeLists.txt
-index 853aa98b..488e6135 100644
 --- a/include/cllazyfile/CMakeLists.txt
 +++ b/include/cllazyfile/CMakeLists.txt
 @@ -5,6 +5,7 @@ set(LAZY_HDRS
@@ -228,8 +218,6 @@ index 853aa98b..488e6135 100644
  # End:
  # ex: shiftwidth=2 tabstop=8
 -
-diff --git a/include/cllazyfile/headerSectionReader.h b/include/cllazyfile/headerSectionReader.h
-index e3a9f572..2453503b 100644
 --- a/include/cllazyfile/headerSectionReader.h
 +++ b/include/cllazyfile/headerSectionReader.h
 @@ -27,12 +27,9 @@ class SC_LAZYFILE_EXPORT headerSectionReader: public sectionReader {
@@ -246,8 +234,6 @@ index e3a9f572..2453503b 100644
  
  #endif  //HEADERSECTIONREADER_H
 -
-diff --git a/include/cllazyfile/instMgrHelper.h b/include/cllazyfile/instMgrHelper.h
-index 1af69816..daa046eb 100644
 --- a/include/cllazyfile/instMgrHelper.h
 +++ b/include/cllazyfile/instMgrHelper.h
 @@ -58,4 +58,3 @@ class SC_LAZYFILE_EXPORT instMgrAdapter: public InstMgrBase {
@@ -255,8 +241,6 @@ index 1af69816..daa046eb 100644
  
  #endif //INSTMGRHELPER_H
 -
-diff --git a/include/cllazyfile/judyLArray.h b/include/cllazyfile/judyLArray.h
-index b78dc0bb..87742054 100644
 --- a/include/cllazyfile/judyLArray.h
 +++ b/include/cllazyfile/judyLArray.h
 @@ -159,8 +159,8 @@ class judyLArray {
@@ -270,8 +254,6 @@ index b78dc0bb..87742054 100644
                  _lastSlot = ( JudyValue * ) judy_del( _judyarray );
                  return true;
              } else {
-diff --git a/include/cllazyfile/lazyFileReader.h b/include/cllazyfile/lazyFileReader.h
-index 9a5fccb5..97b53f1e 100644
 --- a/include/cllazyfile/lazyFileReader.h
 +++ b/include/cllazyfile/lazyFileReader.h
 @@ -37,6 +37,8 @@ class SC_LAZYFILE_EXPORT lazyFileReader {
@@ -301,8 +283,6 @@ index 9a5fccb5..97b53f1e 100644
  
  #endif //LAZYFILEREADER_H
 -
-diff --git a/include/cllazyfile/lazyInstMgr.h b/include/cllazyfile/lazyInstMgr.h
-index e3445660..f6008c8e 100644
 --- a/include/cllazyfile/lazyInstMgr.h
 +++ b/include/cllazyfile/lazyInstMgr.h
 @@ -2,12 +2,15 @@
@@ -473,8 +453,6 @@ index e3445660..f6008c8e 100644
  
  #endif //LAZYINSTMGR_H
 -
-diff --git a/include/cllazyfile/lazyP21DataSectionReader.h b/include/cllazyfile/lazyP21DataSectionReader.h
-index c14376fc..9086630e 100644
 --- a/include/cllazyfile/lazyP21DataSectionReader.h
 +++ b/include/cllazyfile/lazyP21DataSectionReader.h
 @@ -10,9 +10,7 @@ class SC_LAZYFILE_EXPORT lazyP21DataSectionReader: public lazyDataSectionReader
@@ -493,9 +471,6 @@ index c14376fc..9086630e 100644
  
  #endif //LAZYP21DATASECTIONREADER_H
 -
-diff --git a/include/cllazyfile/lazySupport.h b/include/cllazyfile/lazySupport.h
-new file mode 100644
-index 00000000..ce398fea
 --- /dev/null
 +++ b/include/cllazyfile/lazySupport.h
 @@ -0,0 +1,128 @@
@@ -627,8 +602,6 @@ index 00000000..ce398fea
 +};
 +
 +#endif // LAZYSUPPORT_H
-diff --git a/include/cllazyfile/lazyTypes.h b/include/cllazyfile/lazyTypes.h
-index f1fdbd78..df8c7c63 100644
 --- a/include/cllazyfile/lazyTypes.h
 +++ b/include/cllazyfile/lazyTypes.h
 @@ -6,6 +6,7 @@
@@ -690,8 +663,6 @@ index f1fdbd78..df8c7c63 100644
  
  #endif //LAZYTYPES_H
 -
-diff --git a/include/cllazyfile/sectionReader.h b/include/cllazyfile/sectionReader.h
-index 74f1fa5b..575fd96d 100644
 --- a/include/cllazyfile/sectionReader.h
 +++ b/include/cllazyfile/sectionReader.h
 @@ -51,7 +51,7 @@ class SC_LAZYFILE_EXPORT sectionReader {
@@ -731,8 +702,6 @@ index 74f1fa5b..575fd96d 100644
  
  #endif //SECTIONREADER_H
 -
-diff --git a/src/cllazyfile/CMakeLists.txt b/src/cllazyfile/CMakeLists.txt
-index c56e8dbb..65d91c0a 100644
 --- a/src/cllazyfile/CMakeLists.txt
 +++ b/src/cllazyfile/CMakeLists.txt
 @@ -2,6 +2,7 @@ set(LAZY_SRCS
@@ -760,8 +729,6 @@ index c56e8dbb..65d91c0a 100644
  # End:
  # ex: shiftwidth=2 tabstop=8
 -
-diff --git a/src/cllazyfile/lazyDataSectionReader.cc b/src/cllazyfile/lazyDataSectionReader.cc
-index 6de006fe..3fbb802f 100644
 --- a/src/cllazyfile/lazyDataSectionReader.cc
 +++ b/src/cllazyfile/lazyDataSectionReader.cc
 @@ -6,7 +6,7 @@
@@ -774,8 +741,6 @@ index 6de006fe..3fbb802f 100644
 +    _completelyLoaded = false;
  }
 -
-diff --git a/src/cllazyfile/lazyFileReader.cc b/src/cllazyfile/lazyFileReader.cc
-index fed35c6f..3705b551 100644
 --- a/src/cllazyfile/lazyFileReader.cc
 +++ b/src/cllazyfile/lazyFileReader.cc
 @@ -19,20 +19,44 @@ void lazyFileReader::initP21() {
@@ -876,8 +841,6 @@ index fed35c6f..3705b551 100644
      delete _header;
  }
 -
-diff --git a/src/cllazyfile/lazyInstMgr.cc b/src/cllazyfile/lazyInstMgr.cc
-index 65f3e755..df3e32f8 100644
 --- a/src/cllazyfile/lazyInstMgr.cc
 +++ b/src/cllazyfile/lazyInstMgr.cc
 @@ -8,22 +8,33 @@
@@ -1278,8 +1241,6 @@ index 65f3e755..df3e32f8 100644
      return checkedDependencies;
  }
 -
-diff --git a/src/cllazyfile/lazyP21DataSectionReader.cc b/src/cllazyfile/lazyP21DataSectionReader.cc
-index 0716f5c5..b768c613 100644
 --- a/src/cllazyfile/lazyP21DataSectionReader.cc
 +++ b/src/cllazyfile/lazyP21DataSectionReader.cc
 @@ -3,13 +3,60 @@
@@ -1381,9 +1342,6 @@ index 0716f5c5..b768c613 100644
      return i;
  }
 -
-diff --git a/src/cllazyfile/lazySupport.cc b/src/cllazyfile/lazySupport.cc
-new file mode 100644
-index 00000000..ebebe7b0
 --- /dev/null
 +++ b/src/cllazyfile/lazySupport.cc
 @@ -0,0 +1,106 @@
@@ -1493,9 +1451,6 @@ index 00000000..ebebe7b0
 +    if( diagnostic.occurrences > 1 ) ( *_stream ) << " (" << diagnostic.occurrences << " occurrences)";
 +    ( *_stream ) << std::endl;
 +}
-diff --git a/src/cllazyfile/lazy_index_test.cc b/src/cllazyfile/lazy_index_test.cc
-new file mode 100644
-index 00000000..0ae2aa2b
 --- /dev/null
 +++ b/src/cllazyfile/lazy_index_test.cc
 @@ -0,0 +1,60 @@
@@ -1559,8 +1514,6 @@ index 00000000..0ae2aa2b
 +    require( stats.instancesScanned == 2, "scan did not stop at cancellation boundary" );
 +    return EXIT_SUCCESS;
 +}
-diff --git a/src/cllazyfile/lazy_test.cc b/src/cllazyfile/lazy_test.cc
-index d5ce6081..246f7429 100644
 --- a/src/cllazyfile/lazy_test.cc
 +++ b/src/cllazyfile/lazy_test.cc
 @@ -171,6 +171,34 @@ int main( int argc, char ** argv ) {
@@ -1603,8 +1556,6 @@ index d5ce6081..246f7429 100644
      //stats will print from its destructor
  }
 -
-diff --git a/src/cllazyfile/p21HeaderSectionReader.cc b/src/cllazyfile/p21HeaderSectionReader.cc
-index 037604fc..e11f1b14 100644
 --- a/src/cllazyfile/p21HeaderSectionReader.cc
 +++ b/src/cllazyfile/p21HeaderSectionReader.cc
 @@ -34,7 +34,10 @@ const namedLazyInstance p21HeaderSectionReader::nextInstance() {
@@ -1631,8 +1582,6 @@ index 037604fc..e11f1b14 100644
      return i;
  }
 -
-diff --git a/src/cllazyfile/sectionReader.cc b/src/cllazyfile/sectionReader.cc
-index bfa8a2a1..d2bcad9e 100644
 --- a/src/cllazyfile/sectionReader.cc
 +++ b/src/cllazyfile/sectionReader.cc
 @@ -111,7 +111,7 @@ const char * sectionReader::getDelimitedKeyword( const char * delimiters ) {
@@ -1747,9 +1696,6 @@ index bfa8a2a1..d2bcad9e 100644
      return sc;
  }
 -
-diff --git a/src/cllazyfile/test/lazy_index.exp b/src/cllazyfile/test/lazy_index.exp
-new file mode 100644
-index 00000000..241a8873
 --- /dev/null
 +++ b/src/cllazyfile/test/lazy_index.exp
 @@ -0,0 +1,25 @@
@@ -1778,9 +1724,6 @@ index 00000000..241a8873
 +END_ENTITY;
 +
 +END_SCHEMA;
-diff --git a/src/cllazyfile/test/lazy_index.stp b/src/cllazyfile/test/lazy_index.stp
-new file mode 100644
-index 00000000..7d3cc862
 --- /dev/null
 +++ b/src/cllazyfile/test/lazy_index.stp
 @@ -0,0 +1,17 @@
@@ -1801,8 +1744,6 @@ index 00000000..7d3cc862
 +#5=E(#99,$);
 +ENDSEC;
 +END-ISO-10303-21;
-diff --git a/src/exp2cxx/classes.c b/src/exp2cxx/classes.c
-index 42f6c02c..0c133c2c 100644
 --- a/src/exp2cxx/classes.c
 +++ b/src/exp2cxx/classes.c
 @@ -35,6 +35,7 @@ N350 ( August 31, 1993 ) of ISO 10303 TC184/SC4/WG7.
@@ -1837,8 +1778,6 @@ index 42f6c02c..0c133c2c 100644
      return 0;
  }
  
-diff --git a/src/exp2cxx/classes.h b/src/exp2cxx/classes.h
-index 462e2268..ccb8fa57 100644
 --- a/src/exp2cxx/classes.h
 +++ b/src/exp2cxx/classes.h
 @@ -71,7 +71,13 @@ typedef  struct file_holder  {
@@ -1875,8 +1814,6 @@ index 462e2268..ccb8fa57 100644
  
  #endif
 -
-diff --git a/src/exp2cxx/classes_entity.c b/src/exp2cxx/classes_entity.c
-index fe8b8e11..6f796bbc 100644
 --- a/src/exp2cxx/classes_entity.c
 +++ b/src/exp2cxx/classes_entity.c
 @@ -1114,7 +1114,7 @@ void ENTITYPrint( Entity entity, FILES * files, Schema schema, bool externMap )
@@ -1888,8 +1825,6 @@ index fe8b8e11..6f796bbc 100644
  
      ENTITYPrint_h( entity, hdr, remaining, schema );
      ENTITYPrint_cc( entity, files->create, hdr, impl, remaining, schema, externMap );
-diff --git a/src/exp2cxx/classes_type.c b/src/exp2cxx/classes_type.c
-index b4abdb03..d90eb4c4 100644
 --- a/src/exp2cxx/classes_type.c
 +++ b/src/exp2cxx/classes_type.c
 @@ -412,7 +412,7 @@ void TYPEPrint( const Type type, FILES *files, Schema schema ) {
@@ -1901,8 +1836,6 @@ index b4abdb03..d90eb4c4 100644
  
      TYPEPrint_h( type, hdr );
      TYPEPrint_cc( type, &names, hdr, impl, schema );
-diff --git a/src/exp2cxx/classes_wrapper.cc b/src/exp2cxx/classes_wrapper.cc
-index e99f27e3..a6030f9d 100644
 --- a/src/exp2cxx/classes_wrapper.cc
 +++ b/src/exp2cxx/classes_wrapper.cc
 @@ -1,12 +1,17 @@
@@ -2041,8 +1974,6 @@ index e99f27e3..a6030f9d 100644
  }
  
  ///write tail of initfile, close it
-diff --git a/src/exp2cxx/fedex_main.c b/src/exp2cxx/fedex_main.c
-index b83976da..4d645d68 100644
 --- a/src/exp2cxx/fedex_main.c
 +++ b/src/exp2cxx/fedex_main.c
 @@ -83,10 +83,11 @@ extern void print_fedex_version( void );
@@ -2067,8 +1998,6 @@ index b83976da..4d645d68 100644
      ERRORusage_function = exp2cxx_usage;
  }
 -
-diff --git a/src/exp2cxx/test/CMakeLists.txt b/src/exp2cxx/test/CMakeLists.txt
-index 51053757..59c0fab2 100644
 --- a/src/exp2cxx/test/CMakeLists.txt
 +++ b/src/exp2cxx/test/CMakeLists.txt
 @@ -22,7 +22,13 @@ add_test(NAME test_exp2cxx_inverse_qualifiers
@@ -2091,9 +2020,6 @@ index 51053757..59c0fab2 100644
  # End:
  # ex: shiftwidth=2 tabstop=8
 -
-diff --git a/src/exp2cxx/test/chunked_output.cmake b/src/exp2cxx/test/chunked_output.cmake
-new file mode 100644
-index 00000000..9cf66c83
 --- /dev/null
 +++ b/src/exp2cxx/test/chunked_output.cmake
 @@ -0,0 +1,54 @@
