@@ -17,11 +17,20 @@ if (NOT dest_name STREQUAL "STEPCODE_BLD")
   message(FATAL_ERROR "Refusing to remove unexpected destination: ${dest_abs}")
 endif ()
 
-# ExternalProject may rerun PATCH_COMMAND without rerunning its local-directory
-# download step.  Recreate the generated source copy so overlapping patches and
-# patches which add files are always applied to pristine input.
-file(REMOVE_RECURSE "${dest_abs}")
-file(MAKE_DIRECTORY "${dest_abs}")
+# ExternalProject runs PATCH_COMMAND with DEST_DIR as its current working
+# directory.  Removing DEST_DIR itself invalidates that working directory and
+# causes the next patch command to fail.  Keep the directory inode, but remove
+# all of its contents so overlapping patches and patches which add files are
+# always applied to pristine input when PATCH_COMMAND is rerun without the
+# local-directory download step.
+file(GLOB dest_entries LIST_DIRECTORIES TRUE
+  "${dest_abs}/*"
+  "${dest_abs}/.[!.]*"
+  "${dest_abs}/..?*"
+)
+if (dest_entries)
+  file(REMOVE_RECURSE ${dest_entries})
+endif ()
 file(COPY "${source_abs}/" DESTINATION "${dest_abs}"
   PATTERN ".git" EXCLUDE
 )
