@@ -33,7 +33,7 @@
          {
            if ( text_log )
            {
-@@ -5311,24 +5321,10 @@
+@@ -5309,22 +5319,9 @@
  
      if ( ON_BrepTrim::seam == trim.m_type )
      {
