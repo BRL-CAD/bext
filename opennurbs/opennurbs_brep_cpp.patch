@@ -24,38 +24,3 @@
        if ( xtol < ON_ZERO_TOLERANCE )
          xtol = ON_ZERO_TOLERANCE;
        if ( ytol < ON_ZERO_TOLERANCE )
-@@ -5244,7 +5254,7 @@
-         // likely set opposite of what it should be.
- 
-         // check start tangent to see if m_bRev3d is set correctly
--        if ( d0 < 0.0 || d1 < 0.0)
-+        if ( d0 < 0.0 && d1 < 0.0)
-         {
-           if ( text_log )
-           {
-@@ -5311,24 +5321,10 @@
- 
-     if ( ON_BrepTrim::seam == trim.m_type )
-     {
--      // trim must be on a surface edge
--      switch ( trim.m_iso )
--      {
--      case ON_Surface::S_iso:
--        break;
--      case ON_Surface::E_iso:
--        break;
--      case ON_Surface::N_iso:
--        break;
--      case ON_Surface::W_iso:
--        break;
--      default:
--        if ( text_log )
--          text_log->Print("ON_Brep.m_T[%d].m_type = ON_BrepTrim::seam but m_iso is not N/E/W/S_iso.\n",ti);
--        return ON_BrepIsNotValid();
--      }
-+      // IsValidTrim() verifies the two-use seam topology.  A seam may be an
-+      // interior keyhole/slit edge and is not necessarily isoparametric on a
-+      // surface boundary.
-       seam_trim_count++;
-     }
-   }
