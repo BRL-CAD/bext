@@ -10,6 +10,26 @@ index 042e6dd..0d3a2ca 100644
  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ispcrt/cmake)
  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
+@@ -805,9 +806,18 @@
+     list(APPEND LINK_OPTIONS_PRIVATE /DYNAMICBASE)
+     # Control flow guard
+     list(APPEND LINK_OPTIONS_PRIVATE /GUARD:CF)
+     # When resolving statically linked import dependencies of the module, limit
+     # the module search path to %windows%\system32 directory only.
+-    list(APPEND LINK_OPTIONS_PRIVATE /DEPENDENTLOADFLAG:0x800)
++    # bext: apply this loader hardening only to non-Debug builds.  A Debug ispc
++    # depends on the debug CRT DLLs (ucrtbased/msvcp140d/vcruntime140d/
++    # vcruntime140_1d), which are never present in system32.  Under
++    # /DEPENDENTLOADFLAG:0x800 the loader searches only system32 and cannot find
++    # them, so ispc-slim.exe fails to start (exit 0xC0000135) when it is run
++    # during the build to generate the stdlib bitcode.
++    string(TOUPPER "${CMAKE_BUILD_TYPE}" ISPC_BEXT_BUILD_TYPE_UC)
++    if (NOT ISPC_BEXT_BUILD_TYPE_UC STREQUAL "DEBUG")
++        list(APPEND LINK_OPTIONS_PRIVATE /DEPENDENTLOADFLAG:0x800)
++    endif()
+     if (MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
+         list(APPEND LINK_OPTIONS_PUBLIC /OPT:REF /OPT:ICF)
+     endif()
 @@ -846,6 +847,10 @@ if (NOT WIN32 AND NOT APPLE)
      list(APPEND LINK_LIBRARIES "-Wl,--start-group")
  endif()
