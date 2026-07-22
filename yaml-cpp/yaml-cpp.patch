@@ -1,0 +1,12 @@
+diff -Naur yaml-cpp/src/emitterutils.cpp YAML_CPP_BLD/src/emitterutils.cpp
+--- yaml-cpp/src/emitterutils.cpp
++++ YAML_CPP_BLD/src/emitterutils.cpp
+@@ -1,6 +1,8 @@
+ #include <algorithm>
++#include <cstdint>
+ #include <iomanip>
+ #include <sstream>
++#include <utility>
+ 
+ #include "emitterutils.h"
+ #include "exp.h"
