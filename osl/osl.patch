@@ -102,6 +102,18 @@ diff -Naur OpenShadingLanguage/src/cmake/llvm_macros.cmake OSL_BLD/src/cmake/llv
          if (NOT LLVM_AS_TOOL)
              find_program (LLVM_AS_TOOL NAMES "llvm-as"
                          PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
+diff -Naur OpenShadingLanguage/src/include/OSL/dual.h OSL_BLD/src/include/OSL/dual.h
+--- OpenShadingLanguage/src/include/OSL/dual.h	2026-07-23 09:11:10
++++ OSL_BLD/src/include/OSL/dual.h	2026-07-23 06:42:08
+@@ -204,7 +204,7 @@
+     : m_val(other.m_val)
+     , m_dx(other.m_dx)
+     , m_dy(other.m_dy)
+-    , m_dz(other.dz)
++    , m_dz(other.m_dz)
+     {}
+ 
+     OSL_HOSTDEVICE constexpr const T& elem (ConstIndex<0>) const { return m_val; }
 diff -Naur OpenShadingLanguage/src/liboslcomp/CMakeLists.txt OSL_BLD/src/liboslcomp/CMakeLists.txt
 --- OpenShadingLanguage/src/liboslcomp/CMakeLists.txt	2024-06-26 16:05:10.536665401 -0400
 +++ OSL_BLD/src/liboslcomp/CMakeLists.txt	2024-06-26 16:00:29.387207292 -0400
