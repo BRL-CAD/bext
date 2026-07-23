@@ -96,3 +96,56 @@ index 109ec87..ef7ed8e 100644
  
          startPixelIndexIt = endPixelIndexIt;
      }
+diff --git a/src/appleseed/main/allocator.cpp b/src/appleseed/main/allocator.cpp
+--- a/src/appleseed/main/allocator.cpp
++++ b/src/appleseed/main/allocator.cpp
+@@ -58,6 +58,7 @@
+ #include <cassert>
+ #include <cstdint>
+ #include <cstdio>
++#include <cstdlib>
+ #include <cstring>
+ #include <ctime>
+ #include <exception>
+@@ -501,7 +502,14 @@
+         if (size < 1)
+             size = 1;
+ 
+-        void* ptr = aligned_malloc(size, MemoryAlignment);
++        /* BRL-CAD PATCH: use plain malloc (already 16-byte aligned on x64)
++         * instead of aligned_malloc.  This operator new/delete override only
++         * applies inside appleseed.dll, so std::strings/objects allocated by the
++         * default CRT allocator in other modules (art.exe, brl-cad DLLs,
++         * msvcp140d) and freed here would hit aligned_free() on a non-aligned
++         * block and crash (seen in foundation::SearchPaths::do_to_string at
++         * render start).  malloc/free keep every module on one shared CRT heap. */
++        void* ptr = malloc(size);
+ 
+         if (!ptr)
+             throw std::bad_alloc();
+@@ -514,7 +522,7 @@
+         if (!ptr)
+             return;
+ 
+-        aligned_free(ptr);
++        free(ptr);
+     }
+ }
+ 
+diff --git a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp b/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
+--- a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
++++ b/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
+@@ -86,7 +86,12 @@
+             m_texture_system,
+             m_error_handler);
+     m_shading_system->attribute("lockgeom", 1);
+-    m_shading_system->attribute("colorspace", "Linear");
++    /* BRL-CAD PATCH: OSL's working color space must be a name OSL knows (its
++     * default is "Rec709", the linear-Rec709 working space).  The upstream
++     * "Linear" is not a recognized OSL color space, so OSL logged
++     * "Unknown color space \"Linear\"" on every color transform and flagged an
++     * error (nonzero process exit) even though rendering succeeded. */
++    m_shading_system->attribute("colorspace", "Rec709");
+     m_shading_system->attribute("commonspace", "world");
+     m_shading_system->attribute("statistics:level", 1);
+     m_shading_system->attribute(
