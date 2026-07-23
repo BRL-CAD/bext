@@ -380,3 +380,6 @@
 	branch = RELEASE
         ignore = dirty
         shallow = true
+[submodule "oidn/oidn"]
+	path = oidn/oidn
+	url = https://github.com/BRL-CAD/oidn
