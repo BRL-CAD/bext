@@ -671,6 +671,10 @@ add_project(qt GROUPS "QT")
 # https://github.com/appleseedhq/appleseed
 add_project(appleseed GROUPS "APPLESEED")
 
+# Open Image Denoise - AI denoiser used by OSPRay's denoiser module
+# https://github.com/RenderKit/oidn
+add_project(oidn GROUPS "OSPRAY")
+
 # OSPRay - ray tracing engine
 # https://github.com/ospray/OSPRay
 add_project(ospray GROUPS "OSPRAY")
