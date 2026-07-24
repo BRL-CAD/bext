@@ -560,7 +560,7 @@ add_project(eigen GROUPS "BRLCAD;APPLESEED")
 
 # oneTBB - Threading Building Blocks
 # https://github.com/oneapi-src/oneTBB
-add_project(onetbb GROUPS "APPLESEED;OSPRAY")
+add_project(onetbb GROUPS "APPLESEED;OSPRAY;BRLCAD")
 
 # rkcommon -  C++ infrastructure and CMake utilities
 # https://github.com/ospray/rkcommon
@@ -590,6 +590,11 @@ add_project(proj GROUPS "GDAL")
 # GDAL -  translator library for raster and vector geospatial data formats
 # https://gdal.org
 add_project(gdal GROUPS "GDAL")
+
+# OpenVDB - storage and manipulation of sparse volumetric data discretized on
+# three-dimensional grids
+# https://github.com/AcademySoftwareFoundation/openvdb
+#add_project(openvdb GROUPS "BRLCAD_EXTRA")
 
 # tinygltf - tiny glTF library(loader/saver)
 # https://github.com/syoyo/tinygltf
