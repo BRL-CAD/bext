@@ -80,24 +80,98 @@ diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmak
 diff -Naur OpenShadingLanguage/src/cmake/llvm_macros.cmake OSL_BLD/src/cmake/llvm_macros.cmake
 --- OpenShadingLanguage/src/cmake/llvm_macros.cmake	2024-06-26 16:05:10.532665479 -0400
 +++ OSL_BLD/src/cmake/llvm_macros.cmake	2026-05-10 13:35:00.000000000 -0400
-@@ -40,6 +40,21 @@
+@@ -40,6 +40,95 @@
          endif ()
          message (VERBOSE "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
  
 +        if (APPLE)
-+            execute_process (COMMAND xcrun --show-sdk-path
-+                OUTPUT_VARIABLE OSL_MACOS_SDK_PATH
-+                OUTPUT_STRIP_TRAILING_WHITESPACE)
-+            if (OSL_MACOS_SDK_PATH)
-+                list (APPEND LLVM_COMPILE_FLAGS
-+                    "-isysroot" "${OSL_MACOS_SDK_PATH}"
-+                    "-stdlib=libc++")
-+                if (EXISTS "${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
-+                    list (APPEND LLVM_COMPILE_FLAGS "-I${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
-+                endif ()
++            get_property (OSL_MACOS_SDK_CHECKED GLOBAL
++                PROPERTY OSL_MACOS_SDK_CHECKED SET)
++            if (OSL_MACOS_SDK_CHECKED)
++                get_property (OSL_MACOS_SDK_PATH GLOBAL
++                    PROPERTY OSL_MACOS_SDK_PATH)
 +            endif ()
-+        endif ()
++            if (NOT OSL_MACOS_SDK_CHECKED)
++            # CMAKE_OSX_SYSROOT is the standard caller override. It may be
++            # either an SDK path or an SDK name understood by xcrun. If it is
++            # unset, use the SDK selected by the active Apple developer tools.
++            if (CMAKE_OSX_SYSROOT)
++                if (IS_ABSOLUTE "${CMAKE_OSX_SYSROOT}")
++                    set (OSL_MACOS_SDK_PATH "${CMAKE_OSX_SYSROOT}")
++                else ()
++                    execute_process (
++                        COMMAND xcrun --sdk "${CMAKE_OSX_SYSROOT}" --show-sdk-path
++                        RESULT_VARIABLE OSL_MACOS_SDK_RESULT
++                        OUTPUT_VARIABLE OSL_MACOS_SDK_PATH
++                        ERROR_VARIABLE OSL_MACOS_SDK_ERROR
++                        OUTPUT_STRIP_TRAILING_WHITESPACE)
++                endif ()
++            else ()
++                execute_process (
++                    COMMAND xcrun --show-sdk-path
++                    RESULT_VARIABLE OSL_MACOS_SDK_RESULT
++                    OUTPUT_VARIABLE OSL_MACOS_SDK_PATH
++                    ERROR_VARIABLE OSL_MACOS_SDK_ERROR
++                    OUTPUT_STRIP_TRAILING_WHITESPACE)
++            endif ()
 +
++            if ((DEFINED OSL_MACOS_SDK_RESULT AND OSL_MACOS_SDK_RESULT)
++                    OR NOT IS_DIRECTORY "${OSL_MACOS_SDK_PATH}")
++                message (FATAL_ERROR
++                    "Could not resolve the macOS SDK '${CMAKE_OSX_SYSROOT}'. "
++                    "Configure with CMAKE_OSX_SYSROOT set to a valid SDK name "
++                    "or path. xcrun reported: ${OSL_MACOS_SDK_ERROR}")
++            endif ()
++
++            set (OSL_MACOS_SDK_FLAGS
++                "-isysroot" "${OSL_MACOS_SDK_PATH}"
++                "-stdlib=libc++")
++            if (EXISTS "${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
++                list (APPEND OSL_MACOS_SDK_FLAGS
++                    "-I${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
++            endif ()
++
++            # OSL must use the clang paired with LLVM to generate compatible
++            # bitcode. New Apple SDK libc++ headers may require compiler
++            # builtins that an older bundled clang does not provide, so catch
++            # that mismatch during configuration rather than deep in the build.
++            set (OSL_MACOS_SDK_PROBE
++                "${CMAKE_CURRENT_BINARY_DIR}/osl_macos_sdk_probe.cpp")
++            file (WRITE "${OSL_MACOS_SDK_PROBE}"
++                "#include <algorithm>\nint main() { return 0; }\n")
++            execute_process (
++                COMMAND ${LLVM_BC_GENERATOR}
++                    ${OSL_MACOS_SDK_FLAGS}
++                    "-std=c++${CMAKE_CXX_STANDARD}"
++                    -x c++ -fsyntax-only "${OSL_MACOS_SDK_PROBE}"
++                RESULT_VARIABLE OSL_MACOS_SDK_PROBE_RESULT
++                ERROR_VARIABLE OSL_MACOS_SDK_PROBE_ERROR
++                OUTPUT_QUIET)
++            if (OSL_MACOS_SDK_PROBE_RESULT)
++                message (FATAL_ERROR
++                    "The selected macOS SDK '${OSL_MACOS_SDK_PATH}' is not "
++                    "compatible with the LLVM bitcode compiler "
++                    "'${LLVM_BC_GENERATOR}'. Configure with "
++                    "CMAKE_OSX_SYSROOT set to a compatible installed SDK. "
++                    "Compiler output:\n${OSL_MACOS_SDK_PROBE_ERROR}")
++            endif ()
++
++            set_property (GLOBAL PROPERTY OSL_MACOS_SDK_PATH
++                "${OSL_MACOS_SDK_PATH}")
++            set_property (GLOBAL PROPERTY OSL_MACOS_SDK_CHECKED TRUE)
++            message (STATUS
++                "Using macOS SDK ${OSL_MACOS_SDK_PATH} for OSL LLVM bitcode")
++            endif ()
++
++            set (OSL_MACOS_SDK_FLAGS
++                "-isysroot" "${OSL_MACOS_SDK_PATH}"
++                "-stdlib=libc++")
++            if (EXISTS "${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
++                list (APPEND OSL_MACOS_SDK_FLAGS
++                    "-I${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
++            endif ()
++            list (APPEND LLVM_COMPILE_FLAGS ${OSL_MACOS_SDK_FLAGS})
++        endif ()
 +
          if (NOT LLVM_AS_TOOL)
              find_program (LLVM_AS_TOOL NAMES "llvm-as"
