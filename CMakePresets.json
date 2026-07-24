@@ -90,7 +90,6 @@
         "USE_OSPRAY": "ON",
         "USE_QT": "ON",
         "USE_TCL": "ON",
-        "M4_EXECUTABLE": "C:/devtools/GnuWin32/bin/m4.exe",
         "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
       }
     },
