@@ -28,7 +28,8 @@ index 74ed663..ba8c28e 100644
 +    set(oslexec_LIBRARY_IMP OSL::oslexec)
 +    set(oslquery_LIBRARY_IMP OSL::oslquery)
 +endif ()
- find_package(OpenEXR REQUIRED)
+-find_package(OpenEXR REQUIRED)
++find_package(OpenEXR MODULE REQUIRED)
  find_package(OpenImageIO REQUIRED)
  
 @@ -275,7 +294,6 @@ endif ()
