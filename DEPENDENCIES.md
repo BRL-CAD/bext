@@ -51,15 +51,16 @@ selection further.
 | `mmesh` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/mmesh.git) |
 | `ncurses` | `USE_OSPRAY` | `install` | `patch` | [repository](https://github.com/BRL-CAD/ncurses) |
 | `netpbm` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/netpbm) |
-| `onetbb` | `USE_APPLESEED`, `USE_OSPRAY` | `install` | `patch` | [repository](https://github.com/BRL-CAD/oneTBB) |
+| `oidn` | `USE_OSPRAY` | `install` | `ispc`, `onetbb` | [repository](https://github.com/BRL-CAD/oidn) |
+| `onetbb` | `USE_APPLESEED`, `USE_OSPRAY`, `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/oneTBB) |
 | `opencolorio` | `USE_APPLESEED` | `install` | `expat`, `minizip-ng`, `openexr`, `patch`, `pystring`, `yaml-cpp`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/OpenColorIO) |
 | `opencv` | `USE_BRLCAD_EXTRA` | `install` | `patch`, `png`, `zlib` | [repository](https://github.com/BRL-CAD/opencv) |
 | `openexr` | `USE_APPLESEED` | `install` | `deflate`, `patch` | [repository](https://github.com/BRL-CAD/openexr) |
 | `openimageio` | `USE_APPLESEED` | `install` | `boost`, `fmt`, `jpeg`, `opencolorio`, `openexr`, `patch`, `png`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/oiio) |
 | `opennurbs` | `USE_BRLCAD` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/opennurbs) |
-| `osl` | `USE_APPLESEED` | `install` | `bison`, `boost`, `flex`, `llvm`, `openimageio`, `patch`, `pugixml`, `zlib` | [repository](https://github.com/BRL-CAD/OpenShadingLanguage) |
+| `osl` | `USE_APPLESEED` | `install` | `bison`, `boost`, `flex`, `llvm`, `openexr`, `openimageio`, `patch`, `pugixml`, `zlib` | [repository](https://github.com/BRL-CAD/OpenShadingLanguage) |
 | `osmesa` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/osmesa) |
-| `ospray` | `USE_OSPRAY` | `install` | `embree`, `ispc`, `onetbb`, `patch`, `rkcommon` | [repository](https://github.com/BRL-CAD/ospray) |
+| `ospray` | `USE_OSPRAY` | `install` | `embree`, `ispc`, `oidn`, `onetbb`, `patch`, `rkcommon` | [repository](https://github.com/BRL-CAD/ospray) |
 | `patch` | always considered | `noinstall` | — | [repository](https://github.com/BRL-CAD/patch) |
 | `perplex` | `USE_BRLCAD` | `noinstall` | `patch`, `lemon`, `re2c` | [repository](https://github.com/BRL-CAD/perplex) |
 | `plief` | `USE_BRLCAD` | `noinstall` | `lief`, `patch` | [repository](https://github.com/BRL-CAD/plief) |
