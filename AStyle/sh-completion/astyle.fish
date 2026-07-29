@@ -29,6 +29,7 @@ complete -c astyle -l pad-paren -xa 'in out none' -d 'Insert space padding aroun
 complete -c astyle -l pad-first-paren-out -d 'Insert space padding around first parenthesis in a series on the outside only'
 complete -c astyle -l pad-header -d 'Insert space padding after paren headers (e.g'
 complete -c astyle -l pad-brackets -xa 'in out none' -d 'Insert space padding around square brackets on the outside, the inside, or both'
+complete -c astyle -l pad-semicolon -xa 'none' -d 'Remove space padding before a semicolon'
 complete -c astyle -l delete-empty-lines -d 'Delete empty lines within a function or method'
 complete -c astyle -l fill-empty-lines -d 'Fill empty lines with the white space of their previous lines'
 complete -c astyle -l align-pointer -xa 'type middle name' -d 'Attach a pointer or reference operator (*, &, or ^) to either the operator type (left), middle, or operator name (right)'

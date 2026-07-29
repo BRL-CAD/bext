@@ -4183,6 +4183,158 @@ TEST(UnpadParen, NewDelete)
 }
 
 //-------------------------------------------------------------------------
+// AStyle Unpad Semicolon
+//-------------------------------------------------------------------------
+
+TEST(UnpadSemicolon, LongOption)
+{
+	// test unpad semicolon
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar() ;\n"
+	    "    x = 1 ;\n"
+	    "    for (i = 0 ; i < 10 ; i++)\n"
+	    "        baz() ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar();\n"
+	    "    x = 1;\n"
+	    "    for (i = 0; i < 10; i++)\n"
+	    "        baz();\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, PadSemicolonNone)
+{
+	// the documented "pad-semicolon=none" spelling
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar() ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar();\n"
+	    "}";
+	char options[] = "pad-semicolon=none";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, Sans)
+{
+	// semicolons are not unpadded without the option
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar() ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar() ;\n"
+	    "}";
+	char options[] = "";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, Tabs)
+{
+	// tabs preceding a semicolon are removed
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    x = 1\t;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    x = 1;\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, EmptyStatement)
+{
+	// an empty statement on a line of its own keeps its indent
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    while (bar())\n"
+	    "        ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    while (bar())\n"
+	    "        ;\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, ForHeaderSans)
+{
+	// empty expressions in a 'for' header are left alone,
+	// their spacing belongs to the paren options
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    for ( ; ; )\n"
+	    "        bar() ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    for ( ; ; )\n"
+	    "        bar();\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, QuotesAndComments)
+{
+	// semicolons within quotes and comments are not changed
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    const char* s = \"a ; b\" ;\n"
+	    "    // comment x ; y\n"
+	    "    /* block ; comment */\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    const char* s = \"a ; b\";\n"
+	    "    // comment x ; y\n"
+	    "    /* block ; comment */\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+//-------------------------------------------------------------------------
 // AStyle Delete Empty Lines
 //-------------------------------------------------------------------------
 

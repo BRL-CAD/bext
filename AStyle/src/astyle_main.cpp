@@ -1900,6 +1900,10 @@ void ASConsole::printHelp() const
 	std::cout << "    Remove unnecessary space padding around square brackets.\n";
 	std::cout << '\n';
 
+	std::cout << "    --pad-semicolon=none\n";
+	std::cout << "    Remove space padding before a semicolon.\n";
+	std::cout << '\n';
+
 	std::cout << "    --delete-empty-lines  OR  -xe\n";
 	std::cout << "    Delete empty lines within a function or method.\n";
 	std::cout << "    It will NOT delete lines added by the break-blocks options.\n";
@@ -3250,6 +3254,10 @@ void ASOptions::parseOption(const std::string& arg)
 	else if (isOption(arg, "H", "pad-header"))
 	{
 		formatter.setParensHeaderPaddingMode(true);
+	}
+	else if (isOption(arg, "unpad-semicolon") || isOption(arg, "pad-semicolon=none"))
+	{
+		formatter.setSemicolonUnPaddingMode(true);
 	}
 	else if (isOption(arg, "U", "unpad-paren") || isOption(arg, "pad-paren=none"))
 	{
