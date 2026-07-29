@@ -1172,6 +1172,9 @@ private:  // variables
 	bool isInAllocator;
 	bool isInMultlineStatement;
 	int isInExplicitBlock;
+	// brace nesting level at which isInStruct was set, so the flag can be
+	// cleared again when the struct body is closed
+	int structNestingLevel;
 
 private:  // inline functions
 	// append the CURRENT character (currentChar) to the current formatted line.
