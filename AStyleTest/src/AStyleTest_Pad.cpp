@@ -4182,6 +4182,91 @@ TEST(UnpadParen, NewDelete)
 	delete[] textOut;
 }
 
+TEST(UnpadParen, StructSans)
+{
+	// Padding used for alignment inside a struct is not removed (issue #80).
+	char textIn[] =
+	    "\ntypedef struct {\n"
+	    "    int             a;\n"
+	    "    void          (*cb)(int);\n"
+	    "    unsigned long (*handler)(void*, int);\n"
+	    "} Ops_t;";
+	char text[] =
+	    "\ntypedef struct {\n"
+	    "    int             a;\n"
+	    "    void          (*cb)(int);\n"
+	    "    unsigned long (*handler)(void*, int);\n"
+	    "} Ops_t;";
+	char options[] = "unpad-paren";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadParen, AfterStruct)
+{
+	// The struct exemption must end with the struct body. Code following a
+	// 'typedef struct' is unpadded normally.
+	char textIn[] =
+	    "\ntypedef struct {\n"
+	    "    int a;\n"
+	    "} S_t;\n"
+	    "\n"
+	    "void foo (bool isFoo)\n"
+	    "{\n"
+	    "    bar (a, b);\n"
+	    "}";
+	char text[] =
+	    "\ntypedef struct {\n"
+	    "    int a;\n"
+	    "} S_t;\n"
+	    "\n"
+	    "void foo(bool isFoo)\n"
+	    "{\n"
+	    "    bar(a, b);\n"
+	    "}";
+	char options[] = "unpad-paren";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadParen, AfterNestedStruct)
+{
+	// A nested struct must not end the exemption early, but the outer
+	// struct closing brace must.
+	char textIn[] =
+	    "\ntypedef struct {\n"
+	    "    struct {\n"
+	    "        int       b;\n"
+	    "        void    (*cb)(int);\n"
+	    "    } inner;\n"
+	    "    void        (*outer_cb)(int);\n"
+	    "} S_t;\n"
+	    "\n"
+	    "void foo (bool isFoo)\n"
+	    "{\n"
+	    "    bar (a, b);\n"
+	    "}";
+	char text[] =
+	    "\ntypedef struct {\n"
+	    "    struct {\n"
+	    "        int       b;\n"
+	    "        void    (*cb)(int);\n"
+	    "    } inner;\n"
+	    "    void        (*outer_cb)(int);\n"
+	    "} S_t;\n"
+	    "\n"
+	    "void foo(bool isFoo)\n"
+	    "{\n"
+	    "    bar(a, b);\n"
+	    "}";
+	char options[] = "unpad-paren";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
 //-------------------------------------------------------------------------
 // AStyle Delete Empty Lines
 //-------------------------------------------------------------------------
