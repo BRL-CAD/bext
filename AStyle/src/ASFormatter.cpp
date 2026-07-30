@@ -50,6 +50,7 @@ ASFormatter::ASFormatter()
 	maxCodeLengthMode = MAXCODELENGTH_CODE,
 	shouldIgnoreSideCommentLengths = false;
 	isInStruct = false;
+	structNestingLevel = 0;
 	shouldPreserveBraceFormat = false;
 	shouldPadCommas = false;
 	shouldPadOperators = false;
@@ -274,6 +275,7 @@ void ASFormatter::init(ASSourceIterator* si)
 	isInEnum = false;
 	isInContinuedPreProc = false;
 	isInStruct = false;
+	structNestingLevel = 0;
 	isInExecSQL = false;
 	isInAsm = false;
 	isInAsmOneLine = false;
@@ -872,6 +874,14 @@ void ASFormatter::handleBraces()
 				shouldBreakLineAtNextChar = true;
 		}
 		bracesNestingLevel--;
+
+		// the struct body has been closed, so options that are suppressed
+		// inside a struct (e.g. unpad-paren) apply again to the code that follows
+		if (isInStruct && bracesNestingLevel <= structNestingLevel)
+		{
+			isInStruct = false;
+			structNestingLevel = 0;
+		}
 	}
 
 	// format braces
@@ -1303,6 +1313,7 @@ void ASFormatter::handlePotentialHeaderPart2()
 		        || currentLine[firstNum] == '/')
 		{
 			isInStruct = true;
+			structNestingLevel = bracesNestingLevel;
 		}
 	}
 
