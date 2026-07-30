@@ -777,6 +777,8 @@ public:	// functions
 	void setBracketsInsidePaddingMode(bool state);
 	void setBracketsUnPaddingMode(bool state);
 
+	void setSemicolonUnPaddingMode(bool state);
+
 	void setPointerAlignment(PointerAlign alignment);
 	void setPreprocBlockIndent(bool state);
 	void setReferenceAlignment(ReferenceAlign alignment);
@@ -1131,6 +1133,7 @@ private:  // variables
 	bool shouldPadBracketsOutside;
 	bool shouldPadBracketsInside;
 	bool shouldUnPadBrackets;
+	bool shouldUnPadSemicolon;
 	bool needHeaderOpeningBrace;
 	bool shouldBreakLineAtNextChar;
 	bool shouldKeepLineUnbroken;

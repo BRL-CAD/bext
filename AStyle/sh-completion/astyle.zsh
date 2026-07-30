@@ -32,6 +32,7 @@ _astyle() {
     "--pad-first-paren-out[Insert space padding around first parenthesis in a series on the outside only]"
     "--pad-header[Insert space padding after paren headers (e.g]"
     "--pad-brackets[Insert space padding around square brackets on the outside, the inside, or both]: :(in out none)"
+    "--pad-semicolon[Remove space padding before a semicolon]: :(none)"
     "--delete-empty-lines[Delete empty lines within a function or method]"
     "--fill-empty-lines[Fill empty lines with the white space of their previous lines]"
     "--align-pointer[Attach a pointer or reference operator (*, &, or ^) to either the operator type (left), middle, or operator name (right)]: :(type middle name)"

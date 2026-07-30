@@ -105,6 +105,7 @@ ASFormatter::ASFormatter()
 	shouldPadBracketsOutside = false;
 	shouldPadBracketsInside = false;
 	shouldUnPadBrackets = false;
+	shouldUnPadSemicolon = false;
 	isInMultlineStatement = false;
 	isInExplicitBlock = 0;
 
@@ -2231,6 +2232,27 @@ std::string ASFormatter::nextLine()
 			}
 		}
 
+		// remove whitespace before semicolons
+		if (currentChar == ';' && shouldUnPadSemicolon)
+		{
+			const size_t len = formattedLine.length();
+			size_t lastText = formattedLine.find_last_not_of(" \t");
+			// npos means the line holds only the indent, so this is an empty
+			// statement on a line of its own and the indent must be kept.
+			// A preceding '(' or ';' is an empty expression in a 'for' header,
+			// e.g. "for ( ; ; )", where the spacing is owned by the paren
+			// options and is left unchanged.
+			if (lastText != std::string::npos
+			        && lastText < len - 1
+			        && formattedLine[lastText] != '('
+			        && formattedLine[lastText] != ';')
+			{
+				formattedLine.resize(lastText + 1);
+				int size_diff = len - (lastText + 1);
+				spacePadNum -= size_diff;
+			}
+		}
+
 		// pad commas and semi-colons
 		if (currentChar == ';'
 		        || (currentChar == ',' && (shouldPadOperators || shouldPadCommas)))
@@ -2722,6 +2744,19 @@ void ASFormatter::setParensUnPaddingMode(bool state)
 void ASFormatter::setBracketsUnPaddingMode(bool state)
 {
 	shouldUnPadBrackets = state;
+}
+
+/**
+ * set semicolon unpadding mode.
+ * options:
+ *    true     whitespace preceding a semicolon will be removed.
+ *    false    whitespace preceding a semicolon will not be changed.
+ *
+ * @param state         the padding mode.
+ */
+void ASFormatter::setSemicolonUnPaddingMode(bool state)
+{
+	shouldUnPadSemicolon = state;
 }
 
 /**

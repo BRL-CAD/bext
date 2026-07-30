@@ -115,6 +115,11 @@ parser:option "--pad-brackets"
    :args "?"
    :choices {"in", "out", "none"}
 
+parser:option "--pad-semicolon"
+   :description "Remove space padding before a semicolon"
+   :args 1
+   :choices {"none"}
+
 parser:flag "--delete-empty-lines"
    :description "Delete empty lines within a function or method"
 
