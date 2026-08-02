@@ -56,11 +56,10 @@ if (ENABLE_ISPC)
 
   # Select the compiler used to build ispc itself.  ispc only forces clang on
   # UNIX (see its CMakeLists.txt); on Windows it happily builds with MSVC, which
-  # is in fact the conventional Windows toolchain for ispc.  We therefore only
-  # switch to the bundled LLVM clang on non-Windows platforms.  This also avoids
-  # a hard incompatibility on Windows, where the bundled LLVM's clang can be too
-  # old for a newer MSVC STL (which requires clang builtins the older clang lacks).
-  if (LLVM_TARGET AND NOT WIN32)
+  # is in fact the conventional Windows toolchain for ispc.  We therefore switch
+  # to the bundled LLVM clang only where the platform SDK is expected to be
+  # compatible with that bundled compiler.
+  if (LLVM_TARGET AND NOT WIN32 AND NOT APPLE)
     set(ISPC_C_COMPILER "${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
     set(ISPC_CXX_COMPILER "${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
   else ()
