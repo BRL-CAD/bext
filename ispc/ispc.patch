@@ -41,3 +41,13 @@ index 042e6dd..0d3a2ca 100644
  # Link against Clang libraries
  foreach(clangLib ${CLANG_LIBRARY_LIST})
      # Preferred way to build ISPC is to link it with individual clang static
+
+diff --git a/src/util.cpp b/src/util.cpp
+--- a/src/util.cpp
++++ b/src/util.cpp
+@@ -51,6 +51,6 @@
+ void std::__libcpp_verbose_abort(char const *format, ...)
+-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
++#if defined(__APPLE__) || ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+     noexcept
+ #endif
