@@ -1,20 +1,19 @@
-diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
---- opennurbs/CMakeLists.txt	2025-06-25 09:11:59.869998909 -0400
-+++ OPENNURBS_BLD/CMakeLists.txt	2025-06-23 21:34:18.813402896 -0400
+--- opennurbs/CMakeLists.txt
++++ OPENNURBS_BLD/CMakeLists.txt
 @@ -1,16 +1,57 @@
  cmake_minimum_required (VERSION 3.16)
  #set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
 -project(opennurbs CXX)
 +project(opennurbs C CXX)
-+
+
 +# Where to look for CMake modules
 +list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
- 
++
  # specify the C++ standard
 +set(CMAKE_CXX_EXTENSIONS OFF)
  set(CMAKE_CXX_STANDARD 17)
  set(CMAKE_CXX_STANDARD_REQUIRED True)
- 
+
 +# Generate position independent code by default (i.e. -fPIC)
 +set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 +
@@ -34,7 +33,7 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
  if (UNIX AND NOT APPLE)
      set(LINUX TRUE)
  endif()
- 
+
 +# these are files no longer in upstream openNURBS but retained for reference
 +set(OPENNURBS_REF
 +  #opennurbs_basic.cpp
@@ -78,24 +77,27 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
      opennurbs_xform.h
 @@ -183,6 +226,7 @@
      )
- 
+
  set( OPENNURBS_PUBLIC_SOURCES
 +    ${OPENNURBS_REF}
      opennurbs_3dm_attributes.cpp
      opennurbs_3dm_properties.cpp
      opennurbs_3dm_settings.cpp
-@@ -378,6 +422,7 @@
+@@ -378,6 +422,10 @@
      opennurbs_zlib_memory.cpp
      )
- 
+
++list(REMOVE_ITEM OPENNURBS_PUBLIC_HEADERS ${OPENNURBS_OFF})
++list(REMOVE_ITEM OPENNURBS_PUBLIC_SOURCES ${OPENNURBS_OFF})
++
 +
  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_plus.h)
  set( OPENNURBS_PLUS_HEADERS
      opennurbsRhino.pch
-@@ -406,6 +451,10 @@
+@@ -406,6 +454,10 @@
      opennurbs_plus_x.h
      )
- 
+
 +if (NOT HAVE_UUID_GENERATE AND NOT MSVC)
 +  install(FILES android_uuid/uuid.h DESTINATION include/OpenNURBS/android_uuid)
 +endif (NOT HAVE_UUID_GENERATE AND NOT MSVC)
@@ -103,10 +105,10 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
  if (BUILD_TESTING)
      LIST(APPEND OPENNURBS_PLUS_HEADERS opennurbs_plus_testheader.h)
  endif(BUILD_TESTING)
-@@ -469,12 +518,57 @@
+@@ -469,13 +521,75 @@
     )
  endif() #OpenNURBS plus source files
- 
+
 -if (ANDROID OR LINUX)
 -  add_subdirectory(android_uuid)
 -  add_subdirectory(freetype263)
@@ -125,8 +127,25 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 +endif(HAVE_SYS_STAT_H)
 +
 +find_package(ZLIB REQUIRED)
-+set(OPENNURBS_LINKLIBRARIES ${ZLIB_LIBRARIES})
-+
++if(TARGET ZLIB::ZLIB_SHARED)
++  set(OPENNURBS_LINKLIBRARIES ZLIB::ZLIB_SHARED)
++elseif(TARGET ZLIB::ZLIB)
++  set(OPENNURBS_LINKLIBRARIES ZLIB::ZLIB)
++else()
++  set(OPENNURBS_LINKLIBRARIES ${ZLIB_LIBRARIES})
+ endif()
++if(TARGET ZLIB::ZLIB_STATIC)
++  set(OPENNURBS_STATIC_LINKLIBRARIES ZLIB::ZLIB_STATIC)
++elseif(ZLIB_STATIC_LIBRARIES)
++  set(OPENNURBS_STATIC_LINKLIBRARIES ${ZLIB_STATIC_LIBRARIES})
++else()
++  set(OPENNURBS_STATIC_LINKLIBRARIES ${ZLIB_LIBRARIES})
++endif()
++find_package(Threads REQUIRED)
++list(APPEND OPENNURBS_LINKLIBRARIES Threads::Threads)
++list(APPEND OPENNURBS_STATIC_LINKLIBRARIES Threads::Threads)
+
+-add_subdirectory(zlib)
 +if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 +  include(CheckCXXCompilerFlag)
 +  check_cxx_compiler_flag(-O3 HAVE_O3)
@@ -134,17 +153,17 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 +    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 +  endif(HAVE_O3)
 +endif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-+
+
 +if (MSVC)
 +  # opennurbs_brep.cpp requires this flag when compiling with Visual C++
 +  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 +  #add_compile_options(\bigobj)
 +  add_definitions(-DUNICODE)
 +  add_definitions(-D_UNICODE)
-+  set(OPENNURBS_LINKLIBRARIES ${OPENNURBS_LINKLIBRARIES} Rpcrt4 Shlwapi Usp10)
- endif()
- 
--add_subdirectory(zlib)
++  list(APPEND OPENNURBS_LINKLIBRARIES Rpcrt4 Shlwapi Usp10)
++  list(APPEND OPENNURBS_STATIC_LINKLIBRARIES Rpcrt4 Shlwapi Usp10)
++endif()
++
 +add_definitions(-DON_CMAKE_BUILD)
 +
 +if (MSVC)
@@ -162,13 +181,14 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 +    add_compile_options(-Wno-writable-strings)
 +    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch")
 +endif()
- 
++
  ## opennurbs static library
  add_library( opennurbsStatic STATIC
-@@ -495,34 +589,37 @@
+     ${OPENNURBS_PUBLIC_HEADERS}
+@@ -495,34 +609,38 @@
      opennurbs_dll.cpp
      )
- 
+
 -if (MSVC)
 -  # opennurbs_brep.cpp requires this flag when compiling with Visual C++
 -  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
@@ -199,36 +219,37 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 +      android_uuid/uuid_time.c
 +      )
 +  endif (WIN32)
-+
+
+-if (ANDROID)
+-  include_directories("freetype263/include")
+-endif()
 +  add_library(uuid_fallback OBJECT
 +    ${UUID_SOURCES}
 +  )
 +  target_include_directories(uuid_fallback PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 +  target_sources(OpenNURBS PRIVATE $<TARGET_OBJECTS:uuid_fallback>)
- 
--if (ANDROID)
--  include_directories("freetype263/include")
--endif()
-+endif (NOT HAVE_UUID_GENERATE AND NOT MSVC)
- 
- if( APPLE)
++  target_sources(opennurbsStatic PRIVATE $<TARGET_OBJECTS:uuid_fallback>)
+
+-if( APPLE)
 -   find_library( CORE_GRAPHICS_LIBRARY CoreGraphics)
 -   message( STATUS "CORE_GRAPHICS_LIBRARY is ${CORE_GRAPHICS_LIBRARY}")
 -   find_library( CORE_TEXT_LIBRARY CoreText)
 -   message( STATUS "CORE_TEXT_LIBRARY is ${CORE_TEXT_LIBRARY}")
 -   find_library( FOUNDATION_LIBRARY Foundation)
 -   message( STATUS "FOUNDATION_LIBRARY is ${FOUNDATION_LIBRARY}")
--
++endif (NOT HAVE_UUID_GENERATE AND NOT MSVC)
+
 -   set( OPENNURBS_APPLE_DEPENDENCIES
 -           ${CORE_GRAPHICS_LIBRARY}
 -           ${CORE_TEXT_LIBRARY}
 -           ${FOUNDATION_LIBRARY}
 -           )
 -
++if( APPLE)
      set( OPENNURBS_APPLE_DEFINES
          ON_COMPILER_CLANG
          ON_RUNTIME_APPLE
-@@ -531,98 +628,36 @@
+@@ -531,98 +649,39 @@
      )
      target_compile_definitions(opennurbsStatic PRIVATE ${OPENNURBS_APPLE_DEFINES})
      target_compile_definitions(OpenNURBS PRIVATE ${OPENNURBS_APPLE_DEFINES})
@@ -257,9 +278,9 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 -        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES"
 -        XCODE_ATTRIBUTE_ENABLE_STRICT_OBJC_MSGSEND "YES"
 -    )
--endif()
--
--
+ endif()
+
+
 -if (MSVC)
 -    # warning level 4 and all warnings as errors
 -    add_compile_options(/W4)
@@ -274,19 +295,19 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 -    add_compile_options(-Wno-parentheses)
 -    add_compile_options(-Wno-writable-strings)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch")
- endif()
- 
- 
--target_compile_definitions(opennurbsStatic PRIVATE ON_COMPILING_OPENNURBS Z_PREFIX MY_ZCALLOC)
--target_compile_definitions(OpenNURBS PRIVATE OPENNURBS_EXPORTS Z_PREFIX MY_ZCALLOC)
+-endif()
 +target_compile_definitions(opennurbsStatic PRIVATE ON_COMPILING_OPENNURBS)
 +target_compile_definitions(OpenNURBS PRIVATE OPENNURBS_EXPORTS ON_COMPILING_OPENNURBS)
- 
--target_include_directories(opennurbsStatic PUBLIC .)
--target_include_directories(OpenNURBS PUBLIC .)
+
 +target_include_directories(opennurbsStatic PUBLIC . ${ZLIB_INCLUDE_DIRS})
 +target_include_directories(OpenNURBS PUBLIC . ${ZLIB_INCLUDE_DIRS})
- 
+
+-target_compile_definitions(opennurbsStatic PRIVATE ON_COMPILING_OPENNURBS Z_PREFIX MY_ZCALLOC)
+-target_compile_definitions(OpenNURBS PRIVATE OPENNURBS_EXPORTS Z_PREFIX MY_ZCALLOC)
+-
+-target_include_directories(opennurbsStatic PUBLIC .)
+-target_include_directories(OpenNURBS PUBLIC .)
+-
  set(PRECOMPILED_HEADERS opennurbs.h)
 -if (BUILD_TESTING)
 -    LIST(APPEND PRECOMPILED_HEADERS opennurbs_plus_testheader.h)
@@ -294,7 +315,7 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 -
  target_precompile_headers(opennurbsStatic PRIVATE ${PRECOMPILED_HEADERS})
  target_precompile_headers(OpenNURBS PRIVATE ${PRECOMPILED_HEADERS})
- 
+
 -install( TARGETS opennurbsStatic DESTINATION "lib")
 -install( FILES ${OPENNURBS_PUBLIC_HEADERS} DESTINATION "include/opennurbsStatic")
 -
@@ -302,24 +323,27 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 -if (ANDROID)
 -target_link_libraries( OpenNURBS zlib opennurbs_public_freetype android_uuid android)
 -target_link_libraries( opennurbsStatic zlib opennurbs_public_freetype android_uuid android)
--endif()
++if (OPENNURBS_LINKLIBRARIES)
++  target_link_libraries(OpenNURBS PRIVATE ${OPENNURBS_LINKLIBRARIES})
+ endif()
 -if (LINUX AND NOT ANDROID)
 -target_link_libraries( OpenNURBS zlib opennurbs_public_freetype android_uuid)
 -target_link_libraries( opennurbsStatic zlib opennurbs_public_freetype android_uuid)
--endif()
++if (OPENNURBS_STATIC_LINKLIBRARIES)
++  target_link_libraries(opennurbsStatic PUBLIC ${OPENNURBS_STATIC_LINKLIBRARIES})
+ endif()
 -if (APPLE)
 -target_link_libraries( OpenNURBS ${OPENNURBS_APPLE_DEPENDENCIES} zlib)
 -target_link_libraries( opennurbsStatic ${OPENNURBS_APPLE_DEPENDENCIES} zlib)
-+if (OPENNURBS_LINKLIBRARIES)
-+  target_link_libraries( OpenNURBS ${OPENNURBS_LINKLIBRARIES})
++if (UUID_LIBRARY AND HAVE_UUID_GENERATE)
++  target_link_libraries(OpenNURBS PRIVATE ${UUID_LIBRARY})
++  target_link_libraries(opennurbsStatic PUBLIC ${UUID_LIBRARY})
  endif()
 -if (WIN32)
 -target_link_libraries( OpenNURBS Shlwapi Usp10 zlib)
 -target_link_libraries( opennurbsStatic Shlwapi Usp10 zlib)
-+if (UUID_LBIRARY)
-+  target_link_libraries(OpenNURBS ${UUID_LIBRARY})
- endif()
- 
+-endif()
+
 -if (APPLE)
 -   set_target_properties( OpenNURBS PROPERTIES
 -FRAMEWORK TRUE
@@ -333,7 +357,12 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 +    RUNTIME DESTINATION ${BIN_DIR}
 +    LIBRARY DESTINATION ${LIB_DIR}
 +    ARCHIVE DESTINATION ${LIB_DIR})
-+
+
+-   install( TARGETS OpenNURBS DESTINATION "Frameworks")
+-else()
+-   install( TARGETS OpenNURBS DESTINATION "lib" )
+-   install( FILES ${OPENNURBS_PUBLIC_HEADERS} DESTINATION "include/OpenNURBS")
+-endif()
 +install(TARGETS opennurbsStatic
 +    RUNTIME DESTINATION ${BIN_DIR}
 +    LIBRARY DESTINATION ${LIB_DIR}
@@ -341,9 +370,3 @@ diff -Naur opennurbs/CMakeLists.txt OPENNURBS_BLD/CMakeLists.txt
 +
 +install( FILES ${OPENNURBS_PUBLIC_HEADERS} DESTINATION "include/OpenNURBS")
 +install( FILES android_uuid/uuid.h DESTINATION "include/OpenNURBS/android_uuid")
- 
--   install( TARGETS OpenNURBS DESTINATION "Frameworks")
--else()
--   install( TARGETS OpenNURBS DESTINATION "lib" )
--   install( FILES ${OPENNURBS_PUBLIC_HEADERS} DESTINATION "include/OpenNURBS")
--endif()
