@@ -21,6 +21,17 @@ if (ENABLE_ONETBB)
 
   RegisterDeps(ONETBB)
 
+  # lld treats undefined symbols named by a version script as an error.  The
+  # oneTBB scripts include optional Intel runtime symbols that are not emitted
+  # by Clang builds, so retain the scripts while allowing those entries to be
+  # absent.
+  set(ONETBB_LINKER_ARGS)
+  if (CMAKE_CXX_COMPILER_LINKER_ID STREQUAL "LLD" OR
+      CMAKE_LINKER MATCHES "(^|/)ld\\.lld$")
+    list(APPEND ONETBB_LINKER_ARGS
+      -DCMAKE_SHARED_LINKER_FLAGS:STRING=-Wl,--undefined-version)
+  endif ()
+
   ExternalProject_Add(ONETBB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oneTBB"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -30,6 +41,7 @@ if (ENABLE_ONETBB)
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    ${ONETBB_LINKER_ARGS}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
