@@ -1,7 +1,8 @@
-diff -Naur OpenShadingLanguage/CMakeLists.txt OSL_BLD/CMakeLists.txt
---- OpenShadingLanguage/CMakeLists.txt	2024-06-26 16:05:10.530665518 -0400
-+++ OSL_BLD/CMakeLists.txt	2024-06-26 16:00:29.386207307 -0400
-@@ -15,6 +15,11 @@
+﻿diff --git OpenShadingLanguage/CMakeLists.txt OSL_BLD/CMakeLists.txt
+index e7c0382..0729c57 100644
+--- OpenShadingLanguage/CMakeLists.txt
++++ OSL_BLD/CMakeLists.txt
+@@ -15,6 +15,11 @@ endif ()
  project (OSL VERSION ${OSL_VERSION}
           LANGUAGES CXX C
           HOMEPAGE_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage")
@@ -13,10 +14,11 @@ diff -Naur OpenShadingLanguage/CMakeLists.txt OSL_BLD/CMakeLists.txt
  set (PROJ_NAME ${PROJECT_NAME})    # short name
  string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
  string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
-diff -Naur OpenShadingLanguage/src/cmake/Config.cmake.in OSL_BLD/src/cmake/Config.cmake.in
---- OpenShadingLanguage/src/cmake/Config.cmake.in	2024-06-26 16:05:10.532665479 -0400
-+++ OSL_BLD/src/cmake/Config.cmake.in	2024-06-26 16:00:29.386207307 -0400
-@@ -8,7 +8,7 @@
+diff --git OpenShadingLanguage/src/cmake/Config.cmake.in OSL_BLD/src/cmake/Config.cmake.in
+index 6803bc8..21ce05b 100644
+--- OpenShadingLanguage/src/cmake/Config.cmake.in
++++ OSL_BLD/src/cmake/Config.cmake.in
+@@ -8,7 +8,7 @@ include(CMakeFindDependencyMacro)
  
  # add here all the find_dependency() whenever switching to config based dependencies
  if (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 3.0)
@@ -25,10 +27,11 @@ diff -Naur OpenShadingLanguage/src/cmake/Config.cmake.in OSL_BLD/src/cmake/Confi
  elseif (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 2.4 AND @FOUND_OPENEXR_WITH_CONFIG@)
      find_dependency(IlmBase @OpenEXR_VERSION@)
      find_dependency(OpenEXR @OpenEXR_VERSION@)
-diff -Naur OpenShadingLanguage/src/cmake/externalpackages.cmake OSL_BLD/src/cmake/externalpackages.cmake
---- OpenShadingLanguage/src/cmake/externalpackages.cmake	2024-06-26 16:05:10.532665479 -0400
-+++ OSL_BLD/src/cmake/externalpackages.cmake	2024-06-26 16:00:29.387207292 -0400
-@@ -49,13 +49,6 @@
+diff --git OpenShadingLanguage/src/cmake/externalpackages.cmake OSL_BLD/src/cmake/externalpackages.cmake
+index 721343a..02906fa 100644
+--- OpenShadingLanguage/src/cmake/externalpackages.cmake
++++ OSL_BLD/src/cmake/externalpackages.cmake
+@@ -49,13 +49,6 @@ if (BOOST_CUSTOM)
      # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
  else ()
      set (Boost_COMPONENTS filesystem system thread)
@@ -42,10 +45,11 @@ diff -Naur OpenShadingLanguage/src/cmake/externalpackages.cmake OSL_BLD/src/cmak
      checked_find_package (Boost REQUIRED
                         VERSION_MIN 1.55
                         COMPONENTS ${Boost_COMPONENTS}
-diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OSL_BLD/src/cmake/flexbison.cmake
---- OpenShadingLanguage/src/cmake/flexbison.cmake	2024-06-26 16:05:10.532665479 -0400
-+++ OSL_BLD/src/cmake/flexbison.cmake	2024-06-26 16:00:29.387207292 -0400
-@@ -27,6 +27,11 @@
+diff --git OpenShadingLanguage/src/cmake/flexbison.cmake OSL_BLD/src/cmake/flexbison.cmake
+index 9959cfa..70dcd6b 100644
+--- OpenShadingLanguage/src/cmake/flexbison.cmake
++++ OSL_BLD/src/cmake/flexbison.cmake
+@@ -27,6 +27,11 @@ if (APPLE AND EXISTS /usr/local/opt
                   DOC "path to the bison executable")
  endif()
  
@@ -57,10 +61,11 @@ diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OSL_BLD/src/cmake/flexb
  checked_find_package (BISON 2.7 REQUIRED
                        PRINT BISON_EXECUTABLE)
  checked_find_package (FLEX 2.3.35 REQUIRED
-diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmake/modules/FindLLVM.cmake
---- OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake	2024-06-26 16:05:10.532665479 -0400
-+++ OSL_BLD/src/cmake/modules/FindLLVM.cmake	2024-06-26 16:22:10.337491211 -0400
-@@ -128,7 +128,7 @@
+diff --git OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmake/modules/FindLLVM.cmake
+index 7b6c97f..0926a8f 100644
+--- OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake
++++ OSL_BLD/src/cmake/modules/FindLLVM.cmake
+@@ -128,7 +128,7 @@ endif ()
  foreach (COMPONENT clangFrontend clangDriver clangSerialization
                     clangParse clangSema clangAnalysis clangAST
                     clangASTMatchers clangBasic clangEdit clangLex
@@ -69,7 +74,7 @@ diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmak
      find_library ( _CLANG_${COMPONENT}_LIBRARY
                    NAMES ${COMPONENT}
                    PATHS ${LLVM_LIB_DIR})
-@@ -156,6 +156,7 @@
+@@ -156,6 +156,7 @@ if ((LLVM_LIBRARY OR LLVM_LIBRARIES OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_D
    endif ()
  endif ()
  
@@ -77,10 +82,10 @@ diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmak
  
  include(FindPackageHandleStandardArgs)
  find_package_handle_standard_args (LLVM
-diff -Naur OpenShadingLanguage/src/cmake/llvm_macros.cmake OSL_BLD/src/cmake/llvm_macros.cmake
---- OpenShadingLanguage/src/cmake/llvm_macros.cmake	2024-06-26 16:05:10.532665479 -0400
-+++ OSL_BLD/src/cmake/llvm_macros.cmake	2026-05-10 13:35:00.000000000 -0400
-@@ -40,6 +40,95 @@
+diff --git OpenShadingLanguage/src/cmake/llvm_macros.cmake OSL_BLD/src/cmake/llvm_macros.cmake
+--- OpenShadingLanguage/src/cmake/llvm_macros.cmake
++++ OSL_BLD/src/cmake/llvm_macros.cmake
+@@ -40,6 +40,95 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
          endif ()
          message (VERBOSE "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
  
@@ -191,7 +196,7 @@ diff -Naur OpenShadingLanguage/src/include/OSL/dual.h OSL_BLD/src/include/OSL/du
 diff -Naur OpenShadingLanguage/src/liboslcomp/CMakeLists.txt OSL_BLD/src/liboslcomp/CMakeLists.txt
 --- OpenShadingLanguage/src/liboslcomp/CMakeLists.txt	2024-06-26 16:05:10.536665401 -0400
 +++ OSL_BLD/src/liboslcomp/CMakeLists.txt	2024-06-26 16:00:29.387207292 -0400
-@@ -60,6 +60,7 @@
+@@ -60,8 +60,20 @@
          SOVERSION   ${SOVERSION}
          OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
          LINK_FLAGS  ${link_flags}
@@ -199,10 +204,24 @@ diff -Naur OpenShadingLanguage/src/liboslcomp/CMakeLists.txt OSL_BLD/src/liboslc
          POSITION_INDEPENDENT_CODE ON
      )
  
-diff -Naur OpenShadingLanguage/src/liboslexec/CMakeLists.txt OSL_BLD/src/liboslexec/CMakeLists.txt
---- OpenShadingLanguage/src/liboslexec/CMakeLists.txt	2024-06-26 16:05:10.537665382 -0400
-+++ OSL_BLD/src/liboslexec/CMakeLists.txt	2024-06-26 16:02:50.189463356 -0400
-@@ -583,6 +583,7 @@
+ install_targets (${local_lib})
+ 
++
++# bext: MinGW/clang-mingw need Version.dll's imports too -- clangDriver's
++# MSVC.cpp calls GetFileVersionInfoSizeW/GetFileVersionInfoW/VerQueryValueW.
++# MSVC's link.exe accepts "Version.lib" as a positional lib name; GNU ld does
++# not -- it needs a -l flag.  Appended here (rather than in the original
++# MSVC-only block above) so that on GNU ld single-pass link, -lversion is
++# processed AFTER libclangDriver.a, whose MSVC.cpp.obj emits the undefined
++# references.  Ordering matters for ld; MSVC link.exe is unaffected by order.
++if (WIN32 AND NOT MSVC)
++    target_link_libraries (${local_lib} PRIVATE "-lversion")
++endif()
+diff --git OpenShadingLanguage/src/liboslexec/CMakeLists.txt OSL_BLD/src/liboslexec/CMakeLists.txt
+index d3dc3b4..e667ed1 100644
+--- OpenShadingLanguage/src/liboslexec/CMakeLists.txt
++++ OSL_BLD/src/liboslexec/CMakeLists.txt
+@@ -583,6 +583,7 @@ target_link_libraries (${local_lib}
          ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
          ${CLANG_LIBRARIES}
          ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
@@ -210,7 +229,7 @@ diff -Naur OpenShadingLanguage/src/liboslexec/CMakeLists.txt OSL_BLD/src/libosle
      )
  
  target_compile_features (${local_lib}
-@@ -599,6 +600,7 @@
+@@ -599,6 +600,7 @@ set_target_properties (${local_lib}
          VERSION     ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
          SOVERSION   ${SOVERSION}
          OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
@@ -218,7 +237,7 @@ diff -Naur OpenShadingLanguage/src/liboslexec/CMakeLists.txt OSL_BLD/src/libosle
          LINK_FLAGS  ${link_flags}
      )
  
-@@ -613,17 +615,17 @@
+@@ -613,17 +615,28 @@ install_targets (${local_lib})
  # Unit tests
  if (OSL_BUILD_TESTS AND BUILD_TESTING)
      add_executable (accum_test accum_test.cpp)
@@ -239,10 +258,22 @@ diff -Naur OpenShadingLanguage/src/liboslexec/CMakeLists.txt OSL_BLD/src/libosle
      set_target_properties (llvmutil_test PROPERTIES FOLDER "Unit Tests")
      add_test (unit_llvmutil ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvmutil_test)
  endif ()
-diff -Naur OpenShadingLanguage/src/liboslexec/llvm_util.cpp OSL_BLD/src/liboslexec/llvm_util.cpp
---- OpenShadingLanguage/src/liboslexec/llvm_util.cpp	2024-06-26 16:05:10.538665362 -0400
-+++ OSL_BLD/src/liboslexec/llvm_util.cpp	2024-06-26 16:04:03.078993987 -0400
-@@ -3266,12 +3266,6 @@
++
++# bext: MinGW/clang-mingw need Version.dll's imports too -- clangDriver's
++# MSVC.cpp calls GetFileVersionInfoSizeW/GetFileVersionInfoW/VerQueryValueW.
++# MSVC's link.exe accepts "Version.lib" as a positional lib name; GNU ld does
++# not -- it needs a -l flag.  Appended here (rather than in the original
++# MSVC-only block above) so that on GNU ld single-pass link, -lversion is
++# processed AFTER libclangDriver.a, whose MSVC.cpp.obj emits the undefined
++# references.  Ordering matters for ld; MSVC link.exe is unaffected by order.
++if (WIN32 AND NOT MSVC)
++    target_link_libraries (${local_lib} PRIVATE "-lversion")
++endif()
+diff --git OpenShadingLanguage/src/liboslexec/llvm_util.cpp OSL_BLD/src/liboslexec/llvm_util.cpp
+index eaa2d05..38a98e6 100644
+--- OpenShadingLanguage/src/liboslexec/llvm_util.cpp
++++ OSL_BLD/src/liboslexec/llvm_util.cpp
+@@ -3266,12 +3266,6 @@ LLVM_Util::type_wide(llvm::Type* type)
      }
  }
  
@@ -255,20 +286,22 @@ diff -Naur OpenShadingLanguage/src/liboslexec/llvm_util.cpp OSL_BLD/src/liboslex
  llvm::Type*
  LLVM_Util::type_array(llvm::Type* type, int n)
  {
-diff -Naur OpenShadingLanguage/src/oslc/CMakeLists.txt OSL_BLD/src/oslc/CMakeLists.txt
---- OpenShadingLanguage/src/oslc/CMakeLists.txt	2024-06-26 16:05:10.542665284 -0400
-+++ OSL_BLD/src/oslc/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
-@@ -12,5 +12,5 @@
+diff --git OpenShadingLanguage/src/oslc/CMakeLists.txt OSL_BLD/src/oslc/CMakeLists.txt
+index 2905324..b7c20e9 100644
+--- OpenShadingLanguage/src/oslc/CMakeLists.txt
++++ OSL_BLD/src/oslc/CMakeLists.txt
+@@ -12,5 +12,5 @@ if (NOT BUILD_SHARED_LIBS)
  endif ()
  
  add_executable ( oslc ${oslc_srcs} )
 -target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 +target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
  install_targets (oslc)
-diff -Naur OpenShadingLanguage/src/testrender/CMakeLists.txt OSL_BLD/src/testrender/CMakeLists.txt
---- OpenShadingLanguage/src/testrender/CMakeLists.txt	2024-06-26 16:05:10.542665284 -0400
-+++ OSL_BLD/src/testrender/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
-@@ -69,7 +69,10 @@
+diff --git OpenShadingLanguage/src/testrender/CMakeLists.txt OSL_BLD/src/testrender/CMakeLists.txt
+index 5f72bfb..4898226 100644
+--- OpenShadingLanguage/src/testrender/CMakeLists.txt
++++ OSL_BLD/src/testrender/CMakeLists.txt
+@@ -69,7 +69,10 @@ add_executable (testrender ${testrender_srcs})
  target_link_libraries (testrender
      PRIVATE
          oslexec oslquery
@@ -280,10 +313,11 @@ diff -Naur OpenShadingLanguage/src/testrender/CMakeLists.txt OSL_BLD/src/testren
  
  osl_optix_target (testrender)
  
-diff -Naur OpenShadingLanguage/src/testshade/CMakeLists.txt OSL_BLD/src/testshade/CMakeLists.txt
---- OpenShadingLanguage/src/testshade/CMakeLists.txt	2024-06-26 16:05:10.543665265 -0400
-+++ OSL_BLD/src/testshade/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
-@@ -79,7 +79,7 @@
+diff --git OpenShadingLanguage/src/testshade/CMakeLists.txt OSL_BLD/src/testshade/CMakeLists.txt
+index b145341..203dbdc 100644
+--- OpenShadingLanguage/src/testshade/CMakeLists.txt
++++ OSL_BLD/src/testshade/CMakeLists.txt
+@@ -79,7 +79,7 @@ add_executable ( testshade ${testshade_srcs} testshademain.cpp )
  
  target_link_libraries (testshade
                         PRIVATE
@@ -292,7 +326,7 @@ diff -Naur OpenShadingLanguage/src/testshade/CMakeLists.txt OSL_BLD/src/testshad
  
  install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
  
-@@ -106,7 +106,7 @@
+@@ -106,7 +106,7 @@ if (NOT CODECOV)
  
      target_link_libraries (libtestshade
                             PRIVATE
@@ -301,7 +335,7 @@ diff -Naur OpenShadingLanguage/src/testshade/CMakeLists.txt OSL_BLD/src/testshad
      set_target_properties (libtestshade PROPERTIES PREFIX "")
  
      install_targets ( libtestshade )
-@@ -116,7 +116,7 @@
+@@ -116,7 +116,7 @@ if (NOT CODECOV)
      target_link_libraries (testshade_dso
                             PRIVATE
                                 OpenImageIO::OpenImageIO
@@ -310,3 +344,16 @@ diff -Naur OpenShadingLanguage/src/testshade/CMakeLists.txt OSL_BLD/src/testshad
      install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
      osl_optix_target(libtestshade)
  endif ()
+diff --git OpenShadingLanguage/src/include/OSL/dual.h OSL_BLD/src/include/OSL/dual.h
+index a7b5e40..60ec05e 100644
+--- OpenShadingLanguage/src/include/OSL/dual.h
++++ OSL_BLD/src/include/OSL/dual.h
+@@ -204,7 +204,7 @@ public:
+     : m_val(other.m_val)
+     , m_dx(other.m_dx)
+     , m_dy(other.m_dy)
+-    , m_dz(other.dz)
++    , m_dz(other.m_dz)
+     {}
+ 
+     OSL_HOSTDEVICE constexpr const T& elem (ConstIndex<0>) const { return m_val; }

@@ -7,9 +7,19 @@ if (ENABLE_FMT)
 
   RegisterDeps(FMT)
 
+  # bext: apply a single-hunk patch to fmt/include/fmt/ostream.h that skips the
+  # MinGW __gnu_cxx::stdio_*_filebuf dynamic_cast branch when RTTI is disabled
+  # in the including TU (__GXX_RTTI undefined).  Consumers such as OSL's
+  # liboslexec compile llvm_util.cpp with -fno-rtti to match LLVM's ABI, and
+  # under GCC/clang -fno-rtti forbids dynamic_cast even at parse time.  The
+  # patch is safe on ALL platforms: MSVC takes its own branch (untouched);
+  # Linux/macOS never reach the _WIN32 branches; MinGW RTTI-on TUs get the
+  # same behavior as before (the added && defined(__GXX_RTTI) is true when
+  # -frtti is in effect, which is GCC's default).
   ExternalProject_Add(FMT_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/fmt"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/fmt.patch
     CMAKE_ARGS
     -DFMT_DOC=OFF
     -DFMT_TEST=OFF

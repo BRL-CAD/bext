@@ -1,0 +1,276 @@
+diff -Naur OpenShadingLanguage/CMakeLists.txt OSL_BLD/CMakeLists.txt
+--- OpenShadingLanguage/CMakeLists.txt	2024-06-26 16:05:10.530665518 -0400
++++ OSL_BLD/CMakeLists.txt	2024-06-26 16:00:29.386207307 -0400
+@@ -15,6 +15,11 @@
+ project (OSL VERSION ${OSL_VERSION}
+          LANGUAGES CXX C
+          HOMEPAGE_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage")
++
++set(CMAKE_CXX_EXTENSIONS OFF)
++set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++
+ set (PROJ_NAME ${PROJECT_NAME})    # short name
+ string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
+ string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
+diff -Naur OpenShadingLanguage/src/cmake/Config.cmake.in OSL_BLD/src/cmake/Config.cmake.in
+--- OpenShadingLanguage/src/cmake/Config.cmake.in	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/Config.cmake.in	2024-06-26 16:00:29.386207307 -0400
+@@ -8,7 +8,7 @@
+ 
+ # add here all the find_dependency() whenever switching to config based dependencies
+ if (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 3.0)
+-    find_dependency(Imath @Imath_VERSION@)
++	 find_dependency(OpenEXR @OpenEXR_VERSION@)
+ elseif (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 2.4 AND @FOUND_OPENEXR_WITH_CONFIG@)
+     find_dependency(IlmBase @OpenEXR_VERSION@)
+     find_dependency(OpenEXR @OpenEXR_VERSION@)
+diff -Naur OpenShadingLanguage/src/cmake/externalpackages.cmake OSL_BLD/src/cmake/externalpackages.cmake
+--- OpenShadingLanguage/src/cmake/externalpackages.cmake	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/externalpackages.cmake	2024-06-26 16:00:29.387207292 -0400
+@@ -49,13 +49,6 @@
+     # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
+ else ()
+     set (Boost_COMPONENTS filesystem system thread)
+-    # The FindBoost.cmake interface is broken if it uses boost's installed
+-    # cmake output (e.g. boost 1.70.0, cmake <= 3.14). Specifically it fails
+-    # to set the expected variables printed below. So until that's fixed
+-    # force FindBoost.cmake to use the original brute force path.
+-    if (NOT DEFINED Boost_NO_BOOST_CMAKE)
+-        set (Boost_NO_BOOST_CMAKE ON)
+-    endif ()
+     checked_find_package (Boost REQUIRED
+                        VERSION_MIN 1.55
+                        COMPONENTS ${Boost_COMPONENTS}
+diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OSL_BLD/src/cmake/flexbison.cmake
+--- OpenShadingLanguage/src/cmake/flexbison.cmake	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/flexbison.cmake	2024-06-26 16:00:29.387207292 -0400
+@@ -27,6 +27,11 @@
+                  DOC "path to the bison executable")
+ endif()
+ 
++if (MSVC)
++    find_program(BISON_EXECUTABLE NAMES win_bison HINTS ${BISON_ROOT} DOC "path to the bison executable")
++    find_program(FLEX_EXECUTABLE NAMES win_flex HINTS ${BISON_ROOT} DOC "path to the flex executable")
++endif (MSVC)
++
+ checked_find_package (BISON 2.7 REQUIRED
+                       PRINT BISON_EXECUTABLE)
+ checked_find_package (FLEX 2.3.35 REQUIRED
+diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmake/modules/FindLLVM.cmake
+--- OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/modules/FindLLVM.cmake	2024-06-26 16:22:10.337491211 -0400
+@@ -128,7 +128,7 @@
+ foreach (COMPONENT clangFrontend clangDriver clangSerialization
+                    clangParse clangSema clangAnalysis clangAST
+                    clangASTMatchers clangBasic clangEdit clangLex
+-                   clangSupport)
++                   clangSupport clangAPINotes)
+     find_library ( _CLANG_${COMPONENT}_LIBRARY
+                   NAMES ${COMPONENT}
+                   PATHS ${LLVM_LIB_DIR})
+@@ -156,6 +156,7 @@
+   endif ()
+ endif ()
+ 
++set(LLVM_LIBRARIES ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
+ 
+ include(FindPackageHandleStandardArgs)
+ find_package_handle_standard_args (LLVM
+diff -Naur OpenShadingLanguage/src/cmake/llvm_macros.cmake OSL_BLD/src/cmake/llvm_macros.cmake
+--- OpenShadingLanguage/src/cmake/llvm_macros.cmake	2024-06-26 16:05:10.532665479 -0400
++++ OSL_BLD/src/cmake/llvm_macros.cmake	2026-05-10 13:35:00.000000000 -0400
+@@ -40,6 +40,21 @@
+         endif ()
+         message (VERBOSE "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
+ 
++        if (APPLE)
++            execute_process (COMMAND xcrun --show-sdk-path
++                OUTPUT_VARIABLE OSL_MACOS_SDK_PATH
++                OUTPUT_STRIP_TRAILING_WHITESPACE)
++            if (OSL_MACOS_SDK_PATH)
++                list (APPEND LLVM_COMPILE_FLAGS
++                    "-isysroot" "${OSL_MACOS_SDK_PATH}"
++                    "-stdlib=libc++")
++                if (EXISTS "${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
++                    list (APPEND LLVM_COMPILE_FLAGS "-I${OSL_MACOS_SDK_PATH}/usr/include/c++/v1")
++                endif ()
++            endif ()
++        endif ()
++
++
+         if (NOT LLVM_AS_TOOL)
+             find_program (LLVM_AS_TOOL NAMES "llvm-as"
+                         PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
+diff -Naur OpenShadingLanguage/src/liboslcomp/CMakeLists.txt OSL_BLD/src/liboslcomp/CMakeLists.txt
+--- OpenShadingLanguage/src/liboslcomp/CMakeLists.txt	2024-06-26 16:05:10.536665401 -0400
++++ OSL_BLD/src/liboslcomp/CMakeLists.txt	2024-06-26 16:00:29.387207292 -0400
+@@ -41,7 +41,10 @@
+         ${LLVM_SYSTEM_LIBRARIES})
+
+ # link with (system) library to prevent missing symbols inside clangDriver.lib
+-if (MSVC)
+-    target_link_libraries (${local_lib} PRIVATE "Version.lib")
+-endif()
++# bext: MinGW-w64 and clang/mingw need Version.dll's imports too --
++# clangDriver's MSVC.cpp calls GetFileVersionInfoSizeW/GetFileVersionInfoW/
++# VerQueryValueW when detecting an installed MSVC toolchain.  MSVC's link.exe
++# accepts "Version.lib" as a positional lib name; GNU ld does not -- it needs
++# either a full path or a -l<name> flag.  Use the GCC-style short name on
++# non-MSVC and let cmake translate to -lversion; MSVC keeps the .lib form.
++if (MSVC)
++    target_link_libraries (${local_lib} PRIVATE "Version.lib")
++elseif (WIN32)
++    target_link_libraries (${local_lib} PRIVATE "-lversion")
++endif()
+
+@@ -60,6 +63,7 @@
+         SOVERSION   ${SOVERSION}
+         OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
+         LINK_FLAGS  ${link_flags}
++		  CXX_STANDARD 17
+         POSITION_INDEPENDENT_CODE ON
+     )
+ 
+diff -Naur OpenShadingLanguage/src/liboslexec/CMakeLists.txt OSL_BLD/src/liboslexec/CMakeLists.txt
+--- OpenShadingLanguage/src/liboslexec/CMakeLists.txt	2024-06-26 16:05:10.537665382 -0400
++++ OSL_BLD/src/liboslexec/CMakeLists.txt	2024-06-26 16:02:50.189463356 -0400
+@@ -561,7 +561,10 @@
+ endif()
+
+ # link with (system) library to prevent missing symbols inside clangDriver.lib
+-if (MSVC)
+-    target_link_libraries (${local_lib} PRIVATE "Version.lib")
+-endif()
++# bext: MinGW-w64 and clang/mingw need Version.dll's imports too --
++# clangDriver's MSVC.cpp calls GetFileVersionInfoSizeW/GetFileVersionInfoW/
++# VerQueryValueW when detecting an installed MSVC toolchain.  MSVC's link.exe
++# accepts "Version.lib" as a positional lib name; GNU ld does not -- it needs
++# either a full path or a -l<name> flag.  Use the GCC-style short name on
++# non-MSVC and let cmake translate to -lversion; MSVC keeps the .lib form.
++if (MSVC)
++    target_link_libraries (${local_lib} PRIVATE "Version.lib")
++elseif (WIN32)
++    target_link_libraries (${local_lib} PRIVATE "-lversion")
++endif()
+
+@@ -583,6 +586,7 @@
+         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+         ${CLANG_LIBRARIES}
+         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
++		  ${ZLIB_LIBRARIES}
+     )
+ 
+ target_compile_features (${local_lib}
+@@ -599,6 +600,7 @@
+         VERSION     ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
+         SOVERSION   ${SOVERSION}
+         OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
++		  CXX_STANDARD 17
+         LINK_FLAGS  ${link_flags}
+     )
+ 
+@@ -613,17 +615,17 @@
+ # Unit tests
+ if (OSL_BUILD_TESTS AND BUILD_TESTING)
+     add_executable (accum_test accum_test.cpp)
+-    target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
++	 target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
+     set_target_properties (accum_test PROPERTIES FOLDER "Unit Tests")
+     add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
+ 
+     add_executable (dual_test dual_test.cpp)
+-    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
++    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
+     set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
+     add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
+ 
+     add_executable (llvmutil_test llvmutil_test.cpp)
+-    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
++    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
+     set_target_properties (llvmutil_test PROPERTIES FOLDER "Unit Tests")
+     add_test (unit_llvmutil ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvmutil_test)
+ endif ()
+diff -Naur OpenShadingLanguage/src/liboslexec/llvm_util.cpp OSL_BLD/src/liboslexec/llvm_util.cpp
+--- OpenShadingLanguage/src/liboslexec/llvm_util.cpp	2024-06-26 16:05:10.538665362 -0400
++++ OSL_BLD/src/liboslexec/llvm_util.cpp	2024-06-26 16:04:03.078993987 -0400
+@@ -3266,12 +3266,6 @@
+     }
+ }
+ 
+-bool
+-LLVM_Util::is_type_array(llvm::Type* type)
+-{
+-    return type->isArrayTy();
+-}
+-
+ llvm::Type*
+ LLVM_Util::type_array(llvm::Type* type, int n)
+ {
+diff -Naur OpenShadingLanguage/src/oslc/CMakeLists.txt OSL_BLD/src/oslc/CMakeLists.txt
+--- OpenShadingLanguage/src/oslc/CMakeLists.txt	2024-06-26 16:05:10.542665284 -0400
++++ OSL_BLD/src/oslc/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
+@@ -12,5 +12,5 @@
+ endif ()
+ 
+ add_executable ( oslc ${oslc_srcs} )
+-target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
++target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS})
+ install_targets (oslc)
+diff -Naur OpenShadingLanguage/src/testrender/CMakeLists.txt OSL_BLD/src/testrender/CMakeLists.txt
+--- OpenShadingLanguage/src/testrender/CMakeLists.txt	2024-06-26 16:05:10.542665284 -0400
++++ OSL_BLD/src/testrender/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
+@@ -69,7 +69,10 @@
+ target_link_libraries (testrender
+     PRIVATE
+         oslexec oslquery
+-        pugixml::pugixml)
++        pugixml::pugixml
++		  LLVMSupport
++		  ${ZLIB_LIBRARIES}
++		  )
+ 
+ osl_optix_target (testrender)
+ 
+diff -Naur OpenShadingLanguage/src/include/OSL/dual.h OSL_BLD/src/include/OSL/dual.h
+--- OpenShadingLanguage/src/include/OSL/dual.h
++++ OSL_BLD/src/include/OSL/dual.h
+@@ -204,7 +204,7 @@
+     : m_val(other.m_val)
+     , m_dx(other.m_dx)
+     , m_dy(other.m_dy)
+-    , m_dz(other.dz)
++    , m_dz(other.m_dz)
+     {}
+
+     OSL_HOSTDEVICE constexpr const T& elem (ConstIndex<0>) const { return m_val; }
+diff -Naur OpenShadingLanguage/src/testshade/CMakeLists.txt OSL_BLD/src/testshade/CMakeLists.txt
+--- OpenShadingLanguage/src/testshade/CMakeLists.txt	2024-06-26 16:05:10.543665265 -0400
++++ OSL_BLD/src/testshade/CMakeLists.txt	2024-06-26 16:00:29.388207276 -0400
+@@ -79,7 +79,7 @@
+ 
+ target_link_libraries (testshade
+                        PRIVATE
+-                           oslexec oslquery)
++                           oslexec oslquery LLVMSupport ${ZLIB_LIBRARIES})
+ 
+ install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+ 
+@@ -106,7 +106,7 @@
+ 
+     target_link_libraries (libtestshade
+                            PRIVATE
+-                               oslexec oslquery)
++									oslexec oslquery LLVMSupport ${ZLIB_LIBRARIES})
+     set_target_properties (libtestshade PROPERTIES PREFIX "")
+ 
+     install_targets ( libtestshade )
+@@ -116,7 +116,7 @@
+     target_link_libraries (testshade_dso
+                            PRIVATE
+                                OpenImageIO::OpenImageIO
+-                               ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
++                               ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${CMAKE_DL_LIBS} )
+     install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+     osl_optix_target(libtestshade)
+ endif ()

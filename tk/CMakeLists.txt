@@ -55,6 +55,13 @@ if (TK_DO_BUILD)
   endif (TARGET TCL_BLD)
 
   set(TK_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD")
+  # bext (staged patch): the Tk configure template references @TK_BIN_DIR@ as its
+  # autotools (VPATH) build directory, but upstream never defines it -- on
+  # non-Windows execute_process inherits the ExternalProject step CWD, so it
+  # works by accident.  The Windows win/configure branch below runs configure
+  # explicitly, so define it to the default out-of-source ExternalProject build
+  # directory (mirrors tcl's TCL_BIN_DIR).
+  set(TK_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD-build")
 
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_configure.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_build.cmake @ONLY)
@@ -114,9 +121,12 @@ if (TK_DO_BUILD)
   endif (NOT MSVC)
 
   # The library file permissions end up a bit strange - fix them
+  # bext (staged patch): POSIX shared-object permission fixup (a-x on the .so).
+  # On Windows the produced names differ (tk86.dll / libtkstub86.a) and file-mode
+  # bits are meaningless, so restrict it to non-Windows (mirrors tcl).
   find_program(CHMOD_EXECUTABLE chmod)
   mark_as_advanced(CHMOD_EXECUTABLE)
-  if (CHMOD_EXECUTABLE)
+  if (CHMOD_EXECUTABLE AND NOT WIN32)
     if (MSVC)
       set(LIB_PREFIX)
       set(SHARED_DIR ${BIN_DIR})
@@ -130,7 +140,7 @@ if (TK_DO_BUILD)
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${LIB_PREFIX}tkstub${TCL_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}
       DEPENDS TK_BLD-install
       )
-  endif (CHMOD_EXECUTABLE)
+  endif (CHMOD_EXECUTABLE AND NOT WIN32)
 
   TargetInstallDeps(TK TK_DEPENDS)
 

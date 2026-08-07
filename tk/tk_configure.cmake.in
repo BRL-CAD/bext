@@ -1,4 +1,43 @@
-if (NOT WIN32)
+if (WIN32)
+
+  # bext (staged patch): mirror the Tcl fix -- on native Windows with a GNU
+  # toolchain (MinGW-w64 / clang) Tk builds from its win/ directory via autotools;
+  # the unix/ tree targets POSIX and produces no usable Windows Makefile.  MSVC
+  # uses the nmake path (makefile.vc) and never runs this script (its
+  # CONFIGURE_COMMAND is ""), so reaching here means a non-MSVC Windows compiler.
+  # Run win/configure via a POSIX shell so a Makefile is generated in the build
+  # dir for the subsequent mingw32-make.  Paths handed to the MSYS shell (the
+  # --prefix and the --with-tcl directory holding tclConfig.sh) must be
+  # POSIX-style, so convert them with cygpath.
+  execute_process(
+    COMMAND cygpath -u "@CMAKE_BUNDLE_INSTALL_PREFIX@"
+    OUTPUT_VARIABLE TK_MSYS_PREFIX
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  execute_process(
+    COMMAND cygpath -u "@WITH_TCL_DIR@"
+    OUTPUT_VARIABLE TK_MSYS_TCLDIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+  set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+  set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+
+  execute_process(
+    COMMAND sh @TK_SRC_DIR@/win/configure --prefix=${TK_MSYS_PREFIX} --with-tcl=${TK_MSYS_TCLDIR}
+    RESULT_VARIABLE TK_RET
+    WORKING_DIRECTORY "@TK_BIN_DIR@"
+    OUTPUT_VARIABLE MSG
+    ERROR_VARIABLE MSG
+    )
+
+  if (TK_RET)
+    message(FATAL_ERROR "Tk configure failed:\n${MSG}\n")
+  endif (TK_RET)
+
+  message("${MSG}\nTk configure succeeded.\n")
+
+elseif (NOT WIN32)
 
   if (APPLE)
 
@@ -38,7 +77,7 @@ if (NOT WIN32)
 
   message("${MSG}\nTk configure succeeded.\n")
 
-endif (NOT WIN32)
+endif (WIN32)
 
 # Local Variables:
 # tab-width: 8

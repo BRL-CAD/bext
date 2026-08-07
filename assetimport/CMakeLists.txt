@@ -16,6 +16,33 @@ if (ENABLE_ASSETIMPORT)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
 
+  # bext: assimp's inner CMakeLists sets -Werror; many of its headers and
+  # bundled third-party sources (utf8cpp, stb_image, cxxopts, assjson/*.c...)
+  # trigger Clang 20+ warnings that MSVC cl.exe doesn't implement: -Wpadded,
+  # -Wunsafe-buffer-usage(-in-libc-call), -Wswitch-default, -Wlifetime-bound,
+  # etc.  Whack-a-mole per warning is fragile; instead we globally disable
+  # -Werror on Clang so assimp's own -Werror flag becomes advisory.  MSVC
+  # cl.exe and GCC (both of which don't hit these particular new-Clang
+  # warnings) are untouched.  Apply to BOTH CMAKE_C_FLAGS_INIT and
+  # CMAKE_CXX_FLAGS_INIT since assjson/cencode.c is C, not C++.  Additive
+  # so CMake's default flags are preserved.
+  set(ASSETIMPORT_BEXT_C_FLAGS_INIT "")
+  set(ASSETIMPORT_BEXT_CXX_FLAGS_INIT "")
+  if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    if (MSVC)
+      set(ASSETIMPORT_BEXT_C_FLAGS_INIT "/clang:-Wno-error")
+    else ()
+      set(ASSETIMPORT_BEXT_C_FLAGS_INIT "-Wno-error")
+    endif ()
+  endif ()
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if (MSVC)
+      set(ASSETIMPORT_BEXT_CXX_FLAGS_INIT "/clang:-Wno-error")
+    else ()
+      set(ASSETIMPORT_BEXT_CXX_FLAGS_INIT "-Wno-error")
+    endif ()
+  endif ()
+
   ExternalProject_Add(ASSETIMPORT_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/assimp"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -25,6 +52,8 @@ if (ENABLE_ASSETIMPORT)
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake-modules/FindZLIB.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
+    -DCMAKE_C_FLAGS_INIT=${ASSETIMPORT_BEXT_C_FLAGS_INIT}
+    -DCMAKE_CXX_FLAGS_INIT=${ASSETIMPORT_BEXT_CXX_FLAGS_INIT}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>

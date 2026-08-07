@@ -11,6 +11,25 @@ if (ENABLE_BOOST)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
 
+  # bext (staged patch): Boost.Asio (pulled in by Boost.Cobalt, among others) calls
+  # WSAStartup/WSACleanup, which live in the Winsock import libraries.  MSVC auto-links
+  # these via `#pragma comment(lib, "ws2_32")`; GCC and Clang targeting MinGW ignore
+  # that pragma, so the shared libs fail to link with undefined references to
+  # `__imp_WSAStartup`/`__imp_WSACleanup`.  Append the winsock libs to
+  # CMAKE_<LANG>_STANDARD_LIBRARIES -- emitted at the very end of every link line, the
+  # only position where ld's left-to-right resolution actually pulls the import members
+  # (linker *flags* precede the objects and would be dropped as unreferenced there).
+  # Guarded by MSVC so clang-cl (MSVC ABI, honors the pragma) is left untouched, while
+  # gcc/clang targeting MinGW get the libs.  Byte-identical across all three branches.
+  if (NOT MSVC AND WIN32)
+    set(BOOST_STD_LIBS "-lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -lws2_32 -lmswsock")
+    set(BOOST_STDLIB_ARGS
+      "-DCMAKE_C_STANDARD_LIBRARIES=${BOOST_STD_LIBS}"
+      "-DCMAKE_CXX_STANDARD_LIBRARIES=${BOOST_STD_LIBS}"
+      )
+  else (NOT MSVC AND WIN32)
+    set(BOOST_STDLIB_ARGS)
+  endif (NOT MSVC AND WIN32)
 
   ExternalProject_Add(BOOST_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/boost"
@@ -32,6 +51,7 @@ if (ENABLE_BOOST)
     -DBUILD_SHARED_LIBS=ON
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    ${BOOST_STDLIB_ARGS}
     -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
     -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}

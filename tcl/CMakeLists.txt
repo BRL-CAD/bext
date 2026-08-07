@@ -129,22 +129,30 @@ if (ENABLE_TCL)
 
   # Scripts expect a non-versioned tclsh program, but the Tcl build doesn't provide one,
   # we must provide it ourselves
-  if (MSVC)
+  # bext (staged patch): the Windows build (both MSVC nmake and MinGW/clang
+  # autotools via win/) names the interpreter tclsh<major><minor> (e.g.
+  # tclsh86.exe); only the POSIX unix/ build uses tclsh<major>.<minor>.  Key the
+  # copy off WIN32, not MSVC, so MinGW/clang-on-Windows finds tclsh86.exe.
+  if (WIN32)
     add_custom_target(tclsh_cpy ALL
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${TCL_MAJOR_VERSION}${TCL_MINOR_VERSION}${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${CMAKE_EXECUTABLE_SUFFIX}
       DEPENDS TCL_BLD-install
       )
-  else (MSVC)
+  else (WIN32)
     add_custom_target(tclsh_cpy ALL
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${TCL_VERSION}${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${CMAKE_EXECUTABLE_SUFFIX}
       DEPENDS TCL_BLD-install
       )
-  endif (MSVC)
+  endif (WIN32)
 
   # The library file permissions end up a bit strange - fix them
+  # bext (staged patch): this is a POSIX shared-object permission fixup (a-x on
+  # the .so).  On Windows the produced names differ (tcl86.dll / libtclstub86.a)
+  # and file-mode bits are meaningless, so restrict it to non-Windows to avoid a
+  # chmod on a nonexistent versioned path under MinGW/clang.
   find_program(CHMOD_EXECUTABLE chmod)
   mark_as_advanced(CHMOD_EXECUTABLE)
-  if (CHMOD_EXECUTABLE)
+  if (CHMOD_EXECUTABLE AND NOT WIN32)
     if (MSVC)
       set(LIB_PREFIX)
       set(SHARED_DIR ${BIN_DIR})
@@ -158,7 +166,7 @@ if (ENABLE_TCL)
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${LIB_PREFIX}tclstub${TCL_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}
       DEPENDS TCL_BLD-install
       )
-  endif (CHMOD_EXECUTABLE)
+  endif (CHMOD_EXECUTABLE AND NOT WIN32)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   configure_file(

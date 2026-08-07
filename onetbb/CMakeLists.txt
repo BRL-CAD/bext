@@ -35,6 +35,20 @@ if (ENABLE_ONETBB)
   ExternalProject_Add(ONETBB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oneTBB"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    # bext (staged patch): oneTBB's profiling.h declares the library-side
+    # r1::itt_set_sync_name() taking "const tchar*", and tchar is unconditionally
+    # wchar_t on all Windows (incl. MinGW).  The inline wrapper that converts a
+    # char* name to wchar_t before calling it is gated on
+    # "(_WIN32||_WIN64) && !__MINGW32__", so on MinGW that conversion is skipped
+    # and the char* is passed straight to the wchar_t*-expecting r1 function ->
+    # "cannot convert const char* to const wchar_t*" (fatal, building src/tbb).
+    # The sibling create_itt_sync() already does the same char->wchar_t
+    # conversion under a plain "(_WIN32||_WIN64)" guard and compiles fine on
+    # MinGW, proving the conversion path works there.  The patch simply drops the
+    # "&& !__MINGW32__" exclusion so MinGW uses the converting overloads like
+    # MSVC.  No-op for MSVC (guard already true) and for non-Windows (guard
+    # false), so it is safe to apply on every toolchain.
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/onetbb.patch
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DTBB_TEST=OFF

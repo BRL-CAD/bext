@@ -14,6 +14,21 @@ if (ENABLE_STEPCODE)
   # For OSX, we need CMAKE_INSTALL_NAME_DIR
   set(CMAKE_INSTALL_NAME_DIR "@rpath")
 
+  # bext: stepcode declares many globals with SC_EXPRESS_EXPORT (which resolves
+  # to __declspec(dllexport) under WIN32) but does not extern-declare them in
+  # its own headers.  Under GCC 10+ (mingw's default -fno-common), each .c
+  # that includes the header emits its own definition and the DLL export
+  # decoration adds an extra leading underscore, producing exported symbols
+  # like `__ALLOC_new` / `__EXPcreate` etc. -- yet ld looks for the
+  # `__imp_ALLOC_new` etc. that __declspec(dllimport) generates in consumers.
+  # Restore the pre-GCC-10 tentative-definition semantics via -fcommon so the
+  # export decoration matches the import.  Gate on WIN32 GCC (MinGW-w64);
+  # MSVC cl.exe / clang-cl / Linux/macOS untouched.
+  set(STEPCODE_BEXT_C_FLAGS_INIT "")
+  if (WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set(STEPCODE_BEXT_C_FLAGS_INIT "-fcommon")
+  endif ()
+
   ExternalProject_Add(STEPCODE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/stepcode"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -21,6 +36,7 @@ if (ENABLE_STEPCODE)
     COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/stepcode_string_pool.patch
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
+    -DCMAKE_C_FLAGS_INIT=${STEPCODE_BEXT_C_FLAGS_INIT}
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -DBUILD_STATIC_LIBS=OFF

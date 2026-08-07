@@ -1,0 +1,33 @@
+diff --git a/rkcommon/common.h b/rkcommon/common.h
+--- a/rkcommon/common.h
++++ b/rkcommon/common.h
+@@ -36,9 +36,13 @@
+ #define RKCOMMON_INTERFACE
+ #endif
+
+-#ifdef _WIN32
++// bext: __FUNCSIG__ is an MSVC-only intrinsic.  Upstream keys the alias on
++// _WIN32, which is also true under MinGW-w64 and clang/mingw -- those
++// compilers already provide __PRETTY_FUNCTION__ natively and reject
++// __FUNCSIG__ ("was not declared in this scope").  Restrict the alias to MSVC.
++#if defined(_WIN32) && defined(_MSC_VER)
+ #define __PRETTY_FUNCTION__ __FUNCSIG__
+ #endif
+
+ namespace rkcommon {
+
+diff --git a/rkcommon/os/library.cpp b/rkcommon/os/library.cpp
+--- a/rkcommon/os/library.cpp
++++ b/rkcommon/os/library.cpp
+@@ -216,7 +216,10 @@
+   void *Library::getSymbol(const std::string &sym) const
+   {
+ #ifdef _WIN32
+-    return GetProcAddress((HMODULE)lib, sym.c_str());
++    // bext: MSVC quietly converts FARPROC (a function pointer) to void*.
++    // GCC/clang reject the implicit conversion; force it through with an
++    // explicit reinterpret_cast so MinGW-w64 and clang/mingw compile too.
++    return reinterpret_cast<void *>(GetProcAddress((HMODULE)lib, sym.c_str()));
+ #else
+     return dlsym(lib, sym.c_str());
+ #endif

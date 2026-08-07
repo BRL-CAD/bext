@@ -25,11 +25,25 @@ if (NOT MSVC AND NOT APPLE)
 
     RegisterDeps(PLIEF)
 
+    # bext: plief bundles cxxopts.hpp which uses uint8_t without including
+    # <cstdint>.  GCC 15+ (mingw's default now) tightens header hygiene and
+    # errors out at "'uint8_t' does not name a type".  Pre-inject <cstdint>
+    # via -include so cxxopts.hpp sees the type without editing the vendored
+    # header.  MSVC and Apple never reach this branch (outer NOT MSVC AND NOT
+    # APPLE guard); the flag is a no-op on older GCCs / other Clangs so
+    # applying it unconditionally within this branch is safe.
+    if (WIN32)
+      set(PLIEF_BEXT_CXX_FLAGS_INIT "-include cstdint")
+    else ()
+      set(PLIEF_BEXT_CXX_FLAGS_INIT "")
+    endif ()
+
     ExternalProject_Add(PLIEF_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/plief"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       CMAKE_ARGS
       ${BUILD_TYPE_SPECIFIER}
+      -DCMAKE_CXX_FLAGS_INIT=${PLIEF_BEXT_CXX_FLAGS_INIT}
       -DLIEF_ROOT=$<$<BOOL:${LEMON_TARGET}>:${CMAKE_NOBUNDLE_INSTALL_PREFIX}>
       -DBIN_DIR=${BIN_DIR}
       -DLIB_DIR=${LIB_DIR}

@@ -1,0 +1,27 @@
+diff -Naur oneTBB/include/oneapi/tbb/profiling.h ONETBB_BLD/include/oneapi/tbb/profiling.h
+--- oneTBB/include/oneapi/tbb/profiling.h
++++ ONETBB_BLD/include/oneapi/tbb/profiling.h
+@@ -132,7 +132,7 @@
+         r1::call_itt_notify(static_cast<int>(t), ptr);
+     }
+
+-#if (_WIN32||_WIN64) && !__MINGW32__
++#if (_WIN32||_WIN64)
+     inline void itt_set_sync_name(void* obj, const wchar_t* name) {
+         r1::itt_set_sync_name(obj, name);
+     }
+diff -Naur oneTBB/src/tbb/dynamic_link.cpp ONETBB_BLD/src/tbb/dynamic_link.cpp
+--- oneTBB/src/tbb/dynamic_link.cpp
++++ ONETBB_BLD/src/tbb/dynamic_link.cpp
+@@ -557,6 +557,11 @@
+     }
+
+ #if _WIN32
++#ifndef LOAD_LIBRARY_SAFE_CURRENT_DIRS
++// bext: MinGW's libloaderapi.h gates this flag on NTDDI_VERSION >= NTDDI_WIN10_RS1;
++// the default target version is lower, so supply its canonical value (0x2000).
++#define LOAD_LIBRARY_SAFE_CURRENT_DIRS 0x00002000
++#endif
+     DWORD loading_flags(int) {
+         // Do not search in working directory if it is considered unsafe
+         return LOAD_LIBRARY_SAFE_CURRENT_DIRS;

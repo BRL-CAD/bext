@@ -257,8 +257,18 @@ endif (NOT pcnt)
 # below.  Do not also pass down the top-level generator's jobserver state:
 # GNU make encodes it in MAKEFLAGS using options that other make variants
 # (notably FreeBSD make) do not understand.
+# bext (staged patch): locate a make program rather than hardcoding "make".
+# On MinGW-w64 the GNU make executable is named mingw32-make (there is no
+# make.exe on PATH), so a bare "make" fails the autotools ExternalProject
+# builds (TCL/ICU/flexbison) with "no such file or directory".  gmake and
+# mingw32-make are accepted fallbacks; if none is found we keep "make" so
+# behavior is unchanged on platforms that ship it (Linux/macOS/MSVC).
+find_program(BEXT_MAKE_EXECUTABLE NAMES make gmake mingw32-make)
+if (NOT BEXT_MAKE_EXECUTABLE)
+  set(BEXT_MAKE_EXECUTABLE make)
+endif (NOT BEXT_MAKE_EXECUTABLE)
 set(BEXT_MAKE_COMMAND
-  ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS --unset=MFLAGS make
+  ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS --unset=MFLAGS ${BEXT_MAKE_EXECUTABLE}
   )
 
 # We want to pass the build type option to CMake builds if we're not using a
@@ -273,7 +283,17 @@ endif (NOT isMultiConfig)
 
 # With MSVC, some of the non-CMake subbuilds are going to need the vcvars bat
 # file to set up the environment.
-if(MSVC)
+# bext: gate on both MSVC (the boolean CMake sets for the MSVC-compatible ABI)
+# AND CMAKE_CXX_COMPILER_ID == "MSVC" (the true compiler identity).  clang-cl
+# and Intel-LLVM icx-cl both set MSVC=TRUE for ABI purposes but their driver
+# executables do not live under a Visual Studio "Auxiliary/Build" tree, so the
+# vcvars.bat lookup below fatal-errors on those toolchains.  When invoked in
+# our own environments (see env\clang.ps1, env\icc.ps1) the MSVC devcmd is
+# already sourced into the process, so autotools sub-builds inherit the
+# needed INCLUDE/LIB/PATH without needing a bat file to source at build time.
+# Regular MSVC cl.exe builds (Linux/macOS never reach this branch) are
+# untouched -- they still resolve the vcvars bat exactly as before.
+if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
   get_filename_component(COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
   get_filename_component(COMPILER_ROOT "${COMPILER_DIR}" NAME)
@@ -295,7 +315,7 @@ if(MSVC)
     endif(NOT EXISTS "${VCVARS_BAT}")
   endif(NOT EXISTS "${VCVARS_BAT}")
 
-endif(MSVC)
+endif()
 
 # Add a target that will run every time we build and touch a file in
 # noinstall to allow interested parent CMake builds to be aware of potential
@@ -390,11 +410,39 @@ add_project(patch)
 ###############################################################################
 if (USE_APPLESEED OR USE_OSPRAY)
 
-  if (ENABLE_ALL)
-    if (NOT DEFINED ENABLE_BISON)
-      set(ENABLE_BISON ON)
-    endif (NOT DEFINED ENABLE_BISON)
-  endif (ENABLE_ALL)
+  # bext (staged patch): on Windows non-MSVC toolchains, bext's flexbison
+  # subproject builds winflexbison, whose upstream CMakeLists.txt hard-requires
+  # Visual Studio (line 5-7: 'FATAL_ERROR "Visual Studio Build supported only"')
+  # and fails to configure under MinGW-w64 or clang/mingw.  Upstream's
+  # ENABLE_ALL block forces ENABLE_BISON=ON without probing, so an
+  # everything-preset build under a GNU Windows toolchain always broke here.
+  # Fix: for GNU-Windows ONLY, run find_package(BISON/FLEX) BEFORE the
+  # ENABLE_ALL block and skip the force-enable when a suitable system bison/
+  # flex is on PATH.  The everything-preset guarantee still holds -- if
+  # find_package does NOT find one, ENABLE_BISON is still turned on and the
+  # subproject still runs (and will still surface the winflexbison error,
+  # correctly, since the user does not have a bison at all).
+  #
+  # On Linux, macOS, and MSVC the upstream ENABLE_ALL path is preserved
+  # BYTE-FOR-BYTE so no working build there changes behavior.
+  if (WIN32 AND NOT MSVC)
+    find_package(FLEX 2.6)
+    find_package(BISON 3.0)
+    if (ENABLE_ALL)
+      if (NOT DEFINED ENABLE_BISON AND NOT BISON_FOUND)
+        set(ENABLE_BISON ON)
+      endif ()
+      if (NOT DEFINED ENABLE_FLEX AND NOT FLEX_FOUND)
+        set(ENABLE_FLEX ON)
+      endif ()
+    endif (ENABLE_ALL)
+  else ()
+    if (ENABLE_ALL)
+      if (NOT DEFINED ENABLE_BISON)
+        set(ENABLE_BISON ON)
+      endif (NOT DEFINED ENABLE_BISON)
+    endif (ENABLE_ALL)
+  endif ()
 
   if (NOT ENABLE_FLEX)
     find_package(FLEX 2.6)

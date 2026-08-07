@@ -1,0 +1,21 @@
+diff --git a/include/fmt/ostream.h b/include/fmt/ostream.h
+--- a/include/fmt/ostream.h
++++ b/include/fmt/ostream.h
+@@ -78,7 +78,15 @@ inline auto write_ostream_unicode(std::ostream& os, fmt::string_view data)
+     f = get_file(*buf);
+   else
+     return false;
+-#elif defined(_WIN32) && defined(__GLIBCXX__)
++// bext: the MinGW-w64 / clang-mingw path below uses dynamic_cast, which
++// requires RTTI to parse -- and consumers such as OSL's liboslexec compile
++// llvm_util.cpp with -fno-rtti to match LLVM's ABI.  Skip the fast path when
++// RTTI is disabled in the including TU (__GXX_RTTI is defined only when
++// -frtti is in effect for the current TU on GCC/clang).  The generic
++// fallback below (else branch) returns false, which is the same behavior
++// this function had on non-Windows platforms before Windows Unicode
++// output was added -- writers fall back to the byte-oriented path.
++#elif defined(_WIN32) && defined(__GLIBCXX__) && defined(__GXX_RTTI)
+   auto* rdbuf = os.rdbuf();
+   if (auto* sfbuf = dynamic_cast<__gnu_cxx::stdio_sync_filebuf<char>*>(rdbuf))
+     f = sfbuf->file();
+

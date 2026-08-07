@@ -14,6 +14,33 @@ if (ENABLE_GDAL)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
 
+  # bext: gdal's cmake/helpers/CheckCompilerMachineOption.cmake sets
+  # SSSE3/SSE4_1/SSE4_2 feature flags via `-m<feature>` on the "not MSVC and
+  # not ICC" branch, but the MSVC branch only handles AVX/AVX2/AVX512.  Under
+  # clang-cl (MSVC=TRUE, driver is clang), the SSSE3/SSE4 arms fall through
+  # empty, so gcore/rasterio_ssse3.cpp is compiled WITHOUT -mssse3 and Clang
+  # fails with "always_inline function '_mm_shuffle_epi8' requires target
+  # feature 'ssse3'".  Real MSVC cl.exe accepts SSSE3 intrinsics without a
+  # target flag (its intrinsic headers don't gate on __SSSE3__ macros).
+  #
+  # Fix by pre-setting the GDAL_SSSE3_FLAG / GDAL_SSE41_FLAG / GDAL_SSE42_FLAG
+  # cache variables to `/clang:-m<feature>` (clang-cl passthrough) when the
+  # C++ compiler is Clang.  Regular MSVC and Linux/macOS builds see no change.
+  set(GDAL_BEXT_SSSE3_ARG "")
+  set(GDAL_BEXT_SSE41_ARG "")
+  set(GDAL_BEXT_SSE42_ARG "")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if (MSVC)
+      set(GDAL_BEXT_SSSE3_ARG "-DGDAL_SSSE3_FLAG=/clang:-mssse3")
+      set(GDAL_BEXT_SSE41_ARG "-DGDAL_SSE41_FLAG=/clang:-msse4.1")
+      set(GDAL_BEXT_SSE42_ARG "-DGDAL_SSE42_FLAG=/clang:-msse4.2")
+    else ()
+      set(GDAL_BEXT_SSSE3_ARG "-DGDAL_SSSE3_FLAG=-mssse3")
+      set(GDAL_BEXT_SSE41_ARG "-DGDAL_SSE41_FLAG=-msse4.1")
+      set(GDAL_BEXT_SSE42_ARG "-DGDAL_SSE42_FLAG=-msse4.2")
+    endif ()
+  endif ()
+
   ExternalProject_Add(GDAL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/gdal"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -23,6 +50,9 @@ if (ENABLE_GDAL)
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindPNG.cmake;<SOURCE_DIR>/cmake/modules/packages/FindPNG.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
+    ${GDAL_BEXT_SSSE3_ARG}
+    ${GDAL_BEXT_SSE41_ARG}
+    ${GDAL_BEXT_SSE42_ARG}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     -DBIN_DIR=${BIN_DIR}

@@ -1,0 +1,11 @@
+diff -Naur OpenColorIO/include/OpenColorIO/OpenColorIO.h OPENCOLORIO_BLD/include/OpenColorIO/OpenColorIO.h
+--- OpenColorIO/include/OpenColorIO/OpenColorIO.h
++++ OPENCOLORIO_BLD/include/OpenColorIO/OpenColorIO.h
+@@ -6,6 +6,7 @@
+ #define INCLUDED_OCIO_OPENCOLORIO_H
+
+ #include <cstddef>
++#include <cstdint>
+ #include <iosfwd>
+ #include <limits>
+ #include <stdexcept>

@@ -14,6 +14,12 @@ if (ENABLE_OPENCOLORIO)
     URL "${CMAKE_CURRENT_SOURCE_DIR}/OpenColorIO"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opencolorio.patch
+    # bext (staged patch): OpenColorIO.h uses uint8_t (and an enum : uint8_t) without
+    # including <cstdint>.  MSVC and older libstdc++ pulled it in transitively; GCC 16 /
+    # newer libstdc++ tightened transitive includes, so the header fails to compile
+    # ('uint8_t' was not declared).  Add the missing include -- a genuine portability
+    # fix, harmless (redundant) on MSVC.  Byte-identical across all three branches.
+    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opencolorio-cstdint.patch
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/share/cmake/modules/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;remove;<SOURCE_DIR>/share/cmake/modules/Findminizip-ng.cmake
     COMMAND ${CMAKE_COMMAND};-E;remove;<SOURCE_DIR>/share/cmake/modules/Findyaml-cpp.cmake

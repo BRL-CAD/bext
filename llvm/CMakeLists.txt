@@ -30,16 +30,49 @@ if (ENABLE_LLVM)
       endif (NOT CMAKE_BUILD_TYPE)
     endif (NOT isMultiConfig)
 
+    # bext (staged patch): pick debug-info suppression flags per compiler at
+    # configure time.  $<CXX_COMPILER_ID:MSVC> is illegal in ExternalProject steps
+    # (add_custom_command).  /DEBUG:NONE and /INCREMENTAL:NO are MSVC link.exe flags;
+    # passed to g++/clang++ (also WIN32) they poison every compiler probe (LLVM
+    # CheckAtomic fails "linker input file not found" -> "must support std::atomic!").
+    # MSVC keeps the link.exe flags; GNU-style drivers get -g0 (no debug info).
+    if (MSVC)
+      set(LLVM_DBG_CXX_FLAGS "$<$<CONFIG:Debug>:/DEBUG:NONE>")
+      set(LLVM_DBG_LINK_FLAGS "$<$<CONFIG:Debug>:/DEBUG:NONE /INCREMENTAL:NO>")
+    else (MSVC)
+      set(LLVM_DBG_CXX_FLAGS "$<$<CONFIG:Debug>:-g0>")
+      set(LLVM_DBG_LINK_FLAGS "")
+    endif (MSVC)
+
+    # bext (staged patch): GCC 16 / newer libstdc++ stopped providing <cstdint>
+    # transitively.  Many LLVM headers (SmallVector.h, X86MCTargetDesc.h, ...)
+    # use uintN_t without #include <cstdint>.  Rather than patch each one,
+    # force-include it globally for GNU-style drivers via -include cstdint.
+    # MSVC still gets it transitively and does not accept -include, so it is
+    # excluded (MSVC=TRUE also for clang-cl; FALSE for gcc/clang on MinGW).
+    if (MSVC)
+      set(LLVM_EXTRA_CXX_ARGS)
+    else (MSVC)
+      set(LLVM_EXTRA_CXX_ARGS "-DCMAKE_CXX_FLAGS=-include cstdint")
+    endif (MSVC)
+
     ExternalProject_Add(LLVM_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/llvm-project"
       SOURCE_SUBDIR llvm
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch"
+      # bext (staged patch): LLVM's SmallVector.h uses uint32_t/uint64_t in its
+      # extern-template declarations without #include <cstdint>.  GCC 16 / newer
+      # libstdc++ no longer provide it transitively, so LLVM fails to build its own
+      # ADT headers ('uint64_t' was not declared -> SmallVectorTemplateCommon is
+      # incomplete).  Matches the upstream LLVM fix for GCC 15+; harmless on MSVC.
+      COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_cstdint.patch"
       COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/Modules/FindZLIB.cmake
       ${Z_BRL_PATCH_CMD}
       CMAKE_ARGS
       -C ${CMAKE_CURRENT_SOURCE_DIR}/llvm_targets.cmake
       ${BUILD_TYPE_SPECIFIER}
+      ${LLVM_EXTRA_CXX_ARGS}
       $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
       $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
       -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
@@ -66,15 +99,12 @@ if (ENABLE_LLVM)
       -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
       -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
       -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
-      # we don't need LLVM itself to be debuggable.  Prevents .pdb and .ilk bloat.
-      # NOTE: the quotes must wrap the entire -D argument, not just the value.
-      # Writing -DVAR="..." leaves the double-quotes as literal characters in the
-      # generated configure command; on Windows Debug builds those literal quotes
-      # (plus the embedded space in the linker flags) corrupt child-process argv
-      # parsing and bleed a stray quote onto the following -B path.  Wrapping the
-      # whole argument lets CMake consume the quotes as delimiters.
-      "-DCMAKE_CXX_FLAGS_DEBUG=$<$<CONFIG:Debug>:/DEBUG:NONE>"
-      "-DCMAKE_EXE_LINKER_FLAGS_DEBUG=$<$<CONFIG:Debug>:/DEBUG:NONE /INCREMENTAL:NO>"
+      # we don't need LLVM itself to be debuggable.  Prevents .pdb/.ilk (MSVC) or
+      # debug-info (GNU) bloat.  NOTE: the quotes must wrap the entire -D argument,
+      # not just the value -- literal double-quotes in the value corrupt the
+      # generated configure command's argv on Windows.  Flags selected above.
+      "-DCMAKE_CXX_FLAGS_DEBUG=${LLVM_DBG_CXX_FLAGS}"
+      "-DCMAKE_EXE_LINKER_FLAGS_DEBUG=${LLVM_DBG_LINK_FLAGS}"
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
@@ -92,6 +122,12 @@ if (ENABLE_LLVM)
       SOURCE_SUBDIR llvm
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch"
+      # bext (staged patch): LLVM's SmallVector.h uses uint32_t/uint64_t in its
+      # extern-template declarations without #include <cstdint>.  GCC 16 / newer
+      # libstdc++ no longer provide it transitively, so LLVM fails to build its own
+      # ADT headers ('uint64_t' was not declared -> SmallVectorTemplateCommon is
+      # incomplete).  Matches the upstream LLVM fix for GCC 15+; harmless on MSVC.
+      COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_cstdint.patch"
       COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/Modules/FindZLIB.cmake
       ${Z_BRL_PATCH_CMD}
       CMAKE_ARGS
