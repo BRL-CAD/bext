@@ -1,0 +1,71 @@
+diff --git a/src/exp2cxx/write.cc b/src/exp2cxx/write.cc
+--- a/src/exp2cxx/write.cc
++++ b/src/exp2cxx/write.cc
+@@ -75,20 +75,25 @@ static uint32_t appendCompactNode(
+     return index;
+ }
+ 
+-static void writeCompactString( ostream & output, const std::string & value ) {
+-    output << '"';
++static void writeCompactBytes( ostream & output, const std::string & value ) {
++    output << "{\n        ";
++    size_t column = 8;
+     for( size_t i = 0; i < value.size(); ++i ) {
+         const unsigned char c = static_cast<unsigned char>( value[i] );
+-        if( c == '\\' || c == '"' ) {
+-            output << '\\' << static_cast<char>( c );
+-        } else if( c >= 32 && c < 127 ) {
+-            output << static_cast<char>( c );
+-        } else {
+-            output << '\\' << std::oct << std::setw( 3 ) << std::setfill( '0' )
+-                   << static_cast<unsigned>( c ) << std::dec;
++        if( i ) {
++            if( column + 6 > 76 ) {
++                output << ",\n        ";
++                column = 8;
++            } else {
++                output << ", ";
++                column += 2;
++            }
+         }
++        output << "0x" << std::hex << std::setw( 2 ) << std::setfill( '0' )
++               << static_cast<unsigned>( c ) << std::dec << std::setfill( ' ' );
++        column += 4;
+     }
+-    output << '"';
++    output << "\n    }";
+ }
+ 
+ static const char * compactNodeKind( JoinType kind ) {
+@@ -128,7 +133,7 @@ static void writeCompactComplex( ostream & output, ComplexCollect & collect ) {
+            << "];\n"
+            << "    PackedComplexList lists[" << ( roots.empty() ? 1 : roots.size() )
+            << "];\n"
+-           << "    char strings[" << strings.size() + 1 << "];\n"
++           << "    uint8_t strings[" << strings.size() << "];\n"
+            << "};\n\n"
+            << "const GeneratedComplexImage generatedComplexImage = {\n"
+            << "    { PackedComplexImageVersion_1, "
+@@ -167,7 +172,7 @@ static void writeCompactComplex( ostream & output, ComplexCollect & collect ) {
+         output << "        { " << roots[i] << " },\n";
+     }
+     output << "    },\n    ";
+-    writeCompactString( output, strings );
++    writeCompactBytes( output, strings );
+     output << "\n};\n}\n\nComplexCollect * gencomplex() {\n"
+            << "    return InitializePackedComplexSupport(\n"
+            << "        generatedComplexImage.header );\n"
+diff --git a/src/exp2cxx/test/api_version.cmake b/src/exp2cxx/test/api_version.cmake
+--- a/src/exp2cxx/test/api_version.cmake
++++ b/src/exp2cxx/test/api_version.cmake
+@@ -168,6 +168,10 @@ if(NOT late_complex MATCHES "struct GeneratedComplexImage" OR
+    late_complex MATCHES "ComplexNodeInitRecord")
+   message(FATAL_ERROR "late-bound complex metadata is not packed")
+ endif()
++if(NOT late_complex MATCHES "uint8_t strings\\[[0-9]+\\]" OR
++   NOT late_complex MATCHES "0x00")
++  message(FATAL_ERROR "late-bound complex string pool is not byte-initialized")
++endif()
+ if(NOT late_all MATCHES "SchemaModuleImage_FullMetadata")
+   message(FATAL_ERROR "late-bound output no longer defaults to full metadata")
+ endif()
