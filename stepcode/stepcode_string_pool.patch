@@ -1,0 +1,115 @@
+diff --git a/src/exp2cxx/schema_image.cc b/src/exp2cxx/schema_image.cc
+index 600e2843..22e6278b 100644
+--- a/src/exp2cxx/schema_image.cc
++++ b/src/exp2cxx/schema_image.cc
+@@ -666,29 +666,24 @@ class ImageBuilder {
+     }
+ 
+     static void writeStringPool( FILE * output, const std::string & data ) {
+-        fprintf( output, "    \"" );
+-        size_t column = 5;
++        fprintf( output, "    {\n        " );
++        size_t column = 8;
+         for( size_t i = 0; i < data.size(); ++i ) {
+             const unsigned char value =
+                 static_cast<unsigned char>( data[i] );
+-            char escaped[8];
+-            if( value == '"' || value == '\\' ) {
+-                snprintf( escaped, sizeof( escaped ), "\\%c", value );
+-            } else if( value >= 32 && value < 127 ) {
+-                escaped[0] = static_cast<char>( value );
+-                escaped[1] = '\0';
+-            } else {
+-                snprintf( escaped, sizeof( escaped ), "\\%03o", value );
+-            }
+-            const size_t length = strlen( escaped );
+-            if( column + length > 76 ) {
+-                fprintf( output, "\"\n    \"" );
+-                column = 5;
+-            }
+-            fprintf( output, "%s", escaped );
+-            column += length;
++            if( i ) {
++                if( column + 6 > 76 ) {
++                    fprintf( output, ",\n        " );
++                    column = 8;
++                } else {
++                    fprintf( output, ", " );
++                    column += 2;
++                }
++            }
++            fprintf( output, "0x%02x", value );
++            column += 4;
+         }
+-        fprintf( output, "\"\n" );
++        fprintf( output, "\n    }\n" );
+     }
+ 
+ public:
+@@ -791,7 +786,7 @@ public:
+             "    SchemaImageSchemaTextRecord schemaTexts[%zu];\n"
+             "    uint32_t enumElements[%zu];\n"
+             "    SchemaImageRenameRecord renames[%zu];\n"
+-            "    char strings[%zu];\n"
++            "    uint8_t strings[%zu];\n"
+             "};\n\n",
+             arraySize( _schemas.size() ), arraySize( _entities.size() ),
+             arraySize( _types.size() ), arraySize( _attributes.size() ),
+diff --git a/src/exp2cxx/test/api_version.cmake b/src/exp2cxx/test/api_version.cmake
+index 9c925b4a..c93092a3 100644
+--- a/src/exp2cxx/test/api_version.cmake
++++ b/src/exp2cxx/test/api_version.cmake
+@@ -151,6 +151,10 @@ if(NOT late_all MATCHES "struct GeneratedSchemaImage" OR
+    late_all MATCHES "InitializeEntityDescriptors|AttributeInitRecord")
+   message(FATAL_ERROR "late-bound descriptors are not in one packed image")
+ endif()
++if(NOT late_all MATCHES "uint8_t strings\\[[0-9]+\\]" OR
++   NOT late_all MATCHES "0x00, 0x[0-9a-f][0-9a-f]")
++  message(FATAL_ERROR "late-bound string pool is not byte-initialized")
++endif()
+ if(late_all MATCHES "SchemaImageTypeBinding|create_SdaiAttachment_method")
+   message(FATAL_ERROR "late-bound image still uses generated type factories")
+ endif()
+diff --git a/include/cllazyfile/judyLArray.h b/include/cllazyfile/judyLArray.h
+index 87742054..7eaf8780 100644
+--- a/include/cllazyfile/judyLArray.h
++++ b/include/cllazyfile/judyLArray.h
+@@ -24,8 +24,8 @@ struct judylKVpair {
+  * a JudyValue. Each cell must be set to a non-zero value by the caller.
+  *
+  * Both template parameters must be the same size as a void*
+- *  \param JudyKey the type of the key, i.e. uint64_t, pointer-to-object, etc
+- *  \param JudyValue the type of the value
++ *  \tparam JudyKey the type of the key, i.e. uint64_t, pointer-to-object, etc
++ *  \tparam JudyValue the type of the value
+  */
+ template< typename JudyKey, typename JudyValue >
+ class judyLArray {
+diff --git a/include/cllazyfile/judyL2Array.h b/include/cllazyfile/judyL2Array.h
+index 02b41682..c209b339 100644
+--- a/include/cllazyfile/judyL2Array.h
++++ b/include/cllazyfile/judyL2Array.h
+@@ -25,8 +25,8 @@ struct judyl2KVpair {
+ /** A judyL2 array maps JudyKey's to multiple JudyValue's, similar to std::multimap.
+  * Internally, this is a judyL array of std::vector< JudyValue >.
+  * The first template parameter must be the same size as a void*
+- *  \param JudyKey the type of the key, i.e. uint64_t, etc
+- *  \param JudyValue the type of the value, i.e. int, pointer-to-object, etc. With judyL2Array, the size of this value can vary.
++ *  \tparam JudyKey the type of the key, i.e. uint64_t, etc
++ *  \tparam JudyValue the type of the value, i.e. int, pointer-to-object, etc. With judyL2Array, the size of this value can vary.
+  */
+ template< typename JudyKey, typename JudyValue >
+ class judyL2Array {
+diff --git a/include/cllazyfile/judyS2Array.h b/include/cllazyfile/judyS2Array.h
+index c9b25db3..499138a9 100644
+--- a/include/cllazyfile/judyS2Array.h
++++ b/include/cllazyfile/judyS2Array.h
+@@ -25,7 +25,7 @@ struct judys2KVpair {
+ 
+ /** A judyS2 array maps a set of strings to multiple JudyValue's, similar to std::multimap.
+  * Internally, this is a judyS array of std::vector< JudyValue >.
+- *  \param JudyValue the type of the value, i.e. int, pointer-to-object, etc.
++ *  \tparam JudyValue the type of the value, i.e. int, pointer-to-object, etc.
+  */
+ template< typename JudyValue >
+ class judyS2Array {
