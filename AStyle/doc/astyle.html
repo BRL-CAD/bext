@@ -165,6 +165,7 @@
                    <li><a href="#_pad-brackets-in">pad-brackets-in </a><li>
                    <li><a href="#_pad-brackets-out">pad-brackets-out </a><li>
                    <li><a href="#_unpad-brackets">unpad-brackets </a><li>
+                   <li><a href="#_pad-semicolon">pad-semicolon </a><li>
                    <li><a href="#_delete-empty-lines">delete-empty-lines </a><li>
                    <li><a href="#_fill-empty-lines">fill-empty-lines </a><li>
                    <li><a href="#_line-between-members">line-between-members </a><li>
@@ -1921,6 +1922,33 @@ isBar = false;
         <p class="code">
             becomes:</p>
         <pre>a = b[a[1]];</pre>
+    </div>
+
+
+    <p id="_pad-semicolon">
+        <code class="title">--pad-semicolon=none</code>
+        <br />
+        Remove space padding <strong>before</strong> a semicolon.
+        An empty statement on a line of its own keeps its indent, and the empty
+        expressions of a <code>for</code> header are left unchanged.
+    </p>
+    <div class="code">
+        <pre>void Foo()
+<span class="brace">{</span>
+    bar() ;
+    for (i = 0 ; i &lt; 10 ; i++)
+        baz() ;
+<span class="brace">}</span>
+</pre>
+        <p class="code">
+            becomes:</p>
+        <pre>void Foo()
+<span class="brace">{</span>
+    bar();
+    for (i = 0; i &lt; 10; i++)
+        baz();
+<span class="brace">}</span>
+</pre>
     </div>
 
     <p>

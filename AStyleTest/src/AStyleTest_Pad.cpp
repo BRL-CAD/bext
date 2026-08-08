@@ -4182,6 +4182,243 @@ TEST(UnpadParen, NewDelete)
 	delete[] textOut;
 }
 
+TEST(UnpadParen, StructSans)
+{
+	// Padding used for alignment inside a struct is not removed (issue #80).
+	char textIn[] =
+	    "\ntypedef struct {\n"
+	    "    int             a;\n"
+	    "    void          (*cb)(int);\n"
+	    "    unsigned long (*handler)(void*, int);\n"
+	    "} Ops_t;";
+	char text[] =
+	    "\ntypedef struct {\n"
+	    "    int             a;\n"
+	    "    void          (*cb)(int);\n"
+	    "    unsigned long (*handler)(void*, int);\n"
+	    "} Ops_t;";
+	char options[] = "unpad-paren";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadParen, AfterStruct)
+{
+	// The struct exemption must end with the struct body. Code following a
+	// 'typedef struct' is unpadded normally.
+	char textIn[] =
+	    "\ntypedef struct {\n"
+	    "    int a;\n"
+	    "} S_t;\n"
+	    "\n"
+	    "void foo (bool isFoo)\n"
+	    "{\n"
+	    "    bar (a, b);\n"
+	    "}";
+	char text[] =
+	    "\ntypedef struct {\n"
+	    "    int a;\n"
+	    "} S_t;\n"
+	    "\n"
+	    "void foo(bool isFoo)\n"
+	    "{\n"
+	    "    bar(a, b);\n"
+	    "}";
+	char options[] = "unpad-paren";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadParen, AfterNestedStruct)
+{
+	// A nested struct must not end the exemption early, but the outer
+	// struct closing brace must.
+	char textIn[] =
+	    "\ntypedef struct {\n"
+	    "    struct {\n"
+	    "        int       b;\n"
+	    "        void    (*cb)(int);\n"
+	    "    } inner;\n"
+	    "    void        (*outer_cb)(int);\n"
+	    "} S_t;\n"
+	    "\n"
+	    "void foo (bool isFoo)\n"
+	    "{\n"
+	    "    bar (a, b);\n"
+	    "}";
+	char text[] =
+	    "\ntypedef struct {\n"
+	    "    struct {\n"
+	    "        int       b;\n"
+	    "        void    (*cb)(int);\n"
+	    "    } inner;\n"
+	    "    void        (*outer_cb)(int);\n"
+	    "} S_t;\n"
+	    "\n"
+	    "void foo(bool isFoo)\n"
+	    "{\n"
+	    "    bar(a, b);\n"
+	    "}";
+	char options[] = "unpad-paren";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+//-------------------------------------------------------------------------
+// AStyle Unpad Semicolon
+//-------------------------------------------------------------------------
+
+TEST(UnpadSemicolon, LongOption)
+{
+	// test unpad semicolon
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar() ;\n"
+	    "    x = 1 ;\n"
+	    "    for (i = 0 ; i < 10 ; i++)\n"
+	    "        baz() ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar();\n"
+	    "    x = 1;\n"
+	    "    for (i = 0; i < 10; i++)\n"
+	    "        baz();\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, PadSemicolonNone)
+{
+	// the documented "pad-semicolon=none" spelling
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar() ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar();\n"
+	    "}";
+	char options[] = "pad-semicolon=none";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, Sans)
+{
+	// semicolons are not unpadded without the option
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar() ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    bar() ;\n"
+	    "}";
+	char options[] = "";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, Tabs)
+{
+	// tabs preceding a semicolon are removed
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    x = 1\t;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    x = 1;\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, EmptyStatement)
+{
+	// an empty statement on a line of its own keeps its indent
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    while (bar())\n"
+	    "        ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    while (bar())\n"
+	    "        ;\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, ForHeaderSans)
+{
+	// empty expressions in a 'for' header are left alone,
+	// their spacing belongs to the paren options
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    for ( ; ; )\n"
+	    "        bar() ;\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    for ( ; ; )\n"
+	    "        bar();\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
+TEST(UnpadSemicolon, QuotesAndComments)
+{
+	// semicolons within quotes and comments are not changed
+	char textIn[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    const char* s = \"a ; b\" ;\n"
+	    "    // comment x ; y\n"
+	    "    /* block ; comment */\n"
+	    "}";
+	char text[] =
+	    "\nvoid foo()\n"
+	    "{\n"
+	    "    const char* s = \"a ; b\";\n"
+	    "    // comment x ; y\n"
+	    "    /* block ; comment */\n"
+	    "}";
+	char options[] = "unpad-semicolon";
+	char* textOut = AStyleMain(textIn, options, errorHandler, memoryAlloc);
+	EXPECT_STREQ(text, textOut);
+	delete[] textOut;
+}
+
 //-------------------------------------------------------------------------
 // AStyle Delete Empty Lines
 //-------------------------------------------------------------------------

@@ -270,6 +270,11 @@ Insert space padding around square brackets the inside only.
 .IP "--pad-brackets=none"
 Remove unnecessary space padding around square brackets.
 
+.IP "--pad-semicolon=none"
+Remove space padding before a semicolon. An empty statement on a line of
+its own keeps its indent, and the empty expressions of a 'for' header are
+left unchanged.
+
 .IP "--delete-empty-lines OR -xe"
 Delete empty lines within a function or method.
 It will NOT delete lines added by the break-blocks options.

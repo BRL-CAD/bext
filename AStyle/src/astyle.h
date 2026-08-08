@@ -777,6 +777,8 @@ public:	// functions
 	void setBracketsInsidePaddingMode(bool state);
 	void setBracketsUnPaddingMode(bool state);
 
+	void setSemicolonUnPaddingMode(bool state);
+
 	void setPointerAlignment(PointerAlign alignment);
 	void setPreprocBlockIndent(bool state);
 	void setReferenceAlignment(ReferenceAlign alignment);
@@ -1131,6 +1133,7 @@ private:  // variables
 	bool shouldPadBracketsOutside;
 	bool shouldPadBracketsInside;
 	bool shouldUnPadBrackets;
+	bool shouldUnPadSemicolon;
 	bool needHeaderOpeningBrace;
 	bool shouldBreakLineAtNextChar;
 	bool shouldKeepLineUnbroken;
@@ -1172,6 +1175,9 @@ private:  // variables
 	bool isInAllocator;
 	bool isInMultlineStatement;
 	int isInExplicitBlock;
+	// brace nesting level at which isInStruct was set, so the flag can be
+	// cleared again when the struct body is closed
+	int structNestingLevel;
 
 private:  // inline functions
 	// append the CURRENT character (currentChar) to the current formatted line.
