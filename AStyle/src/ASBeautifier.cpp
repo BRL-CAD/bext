@@ -3639,7 +3639,8 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 	                         && !isInClassHeader
 	                         && !isInClassInitializer
 	                         && !isInEnum
-							 && !isPrevHeaderBlockScope
+	                         && !isPrevHeaderBlockScope
+	                         && !foundPreCommandHeader   // added #112
 	                         && currentHeader == nullptr;
 
 	isInInitializerList = isCStyle() && isBlockOpener && (prevNonSpaceCh == '(' || prevNonSpaceCh == '=' || isDirectBraceInit);
