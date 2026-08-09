@@ -67,11 +67,20 @@
         <section class="release-notes">
 
             <article class="release">
-                <h3>Artistic Style 3.6.17 (July 2026)</h3>
+                <h3>Artistic Style 3.6.18 (August 2026)</h3>
                 <ul>
-
                     <li>Added option pad-semicolon=none (--unpad-semicolon) to remove space padding before a semicolon</li>
                     <li>Fix unpad-paren being suppressed for the remainder of a file after a typedef struct (https://gitlab.com/saalen/astyle/-/issues/80 follow-up)</li>
+                    <li>Fix statement alignment with noexcept keyword and -xb option (https://gitlab.com/saalen/astyle/-/work_items/112)</li>
+                    <li>Reduced the documented command-line option surface: trimmed pure-synonym spellings (e.g. style=bsd/break) and composite shortcut options (--pad-paren, --pad-brackets, --break-blocks=all) from --help/the man page/shell completions; all previously accepted option spellings still parse identically. Also fixed --attach-extern-c's short form, which collided with -xk and had never worked; it is now -xa.</li>
+                    <li>Added optional "in"/"out" parameters to --pad-paren and --pad-brackets (e.g. --pad-paren=in) to replace --pad-paren-in/--pad-paren-out and --pad-brackets-in/--pad-brackets-out; the older option names still work but are no longer documented.</li>
+                    <li>Extended the same "option=value" consolidation to more option pairs: --pad-paren=none, --pad-brackets=none, --pad-method-prefix=none, --pad-return-type=none, --pad-param-type=none, --break-return-type=decl and --attach-return-type=decl now replace --unpad-paren, --unpad-brackets, --unpad-method-prefix, --unpad-return-type, --unpad-param-type, --break-return-type-decl and --attach-return-type-decl respectively; the older option names still work but are no longer documented.</li>
+                </ul>
+            </article>
+
+            <article class="release">
+                <h3>Artistic Style 3.6.17 (July 2026)</h3>
+                <ul>
                     <li>Added option remove-braces=one-line (https://gitlab.com/saalen/astyle/-/work_items/70)</li>
                     <li>Fix address-of after a pointer cast padding (https://gitlab.com/saalen/astyle/-/work_items/14)</li>
                     <li>Added sanitation of terminal output</li>
@@ -81,11 +90,8 @@
                     <li>Added the "no-indent-if-after-else" and "line-between-members" parameters</li>
                     <li>Added new option --max-code-length-mode=ignore-side-comments (https://gitlab.com/saalen/astyle/-/work_items/93)</li>
                     <li>Fix indent of upcoming long lines with total mode (https://gitlab.com/saalen/astyle/-/work_items/67)</li>
-                    <li>apply more consistent indentation after line wrap (https://gitlab.com/saalen/astyle/-/work_items/98)</li>
+                    <li>Apply more consistent indentation after line wrap (https://gitlab.com/saalen/astyle/-/work_items/98)</li>
                     <li>Fixed `--align-pointer=name` for Function Arguments.</li>
-                    <li>Reduced the documented command-line option surface: trimmed pure-synonym spellings (e.g. style=bsd/break) and composite shortcut options (--pad-paren, --pad-brackets, --break-blocks=all) from --help/the man page/shell completions; all previously accepted option spellings still parse identically. Also fixed --attach-extern-c's short form, which collided with -xk and had never worked; it is now -xa.</li>
-                    <li>Added optional "in"/"out" parameters to --pad-paren and --pad-brackets (e.g. --pad-paren=in) to replace --pad-paren-in/--pad-paren-out and --pad-brackets-in/--pad-brackets-out; the older option names still work but are no longer documented.</li>
-                    <li>Extended the same "option=value" consolidation to more option pairs: --pad-paren=none, --pad-brackets=none, --pad-method-prefix=none, --pad-return-type=none, --pad-param-type=none, --break-return-type=decl and --attach-return-type=decl now replace --unpad-paren, --unpad-brackets, --unpad-method-prefix, --unpad-return-type, --unpad-param-type, --break-return-type-decl and --attach-return-type-decl respectively; the older option names still work but are no longer documented.</li>
                 </ul>
             </article>
 

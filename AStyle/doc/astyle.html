@@ -155,16 +155,16 @@
                    <li><a href="#_pad-negation">pad-negation </a><li>
                    <li><a href="#_pad-include">pad-include </a><li>
                    <li><a href="#_pad-paren">pad-paren </a><li>
-                   <li><a href="#_pad-paren-out">pad-paren-out </a><li>
+                   <li><a href="#_pad-paren-out">pad-paren=out </a><li>
                    <li><a href="#_pad-first-paren-out">pad-first-paren-out </a><li>
-                   <li><a href="#_pad-paren-in">pad-paren-in </a><li>
+                   <li><a href="#_pad-paren-in">pad-paren=in </a><li>
                    <li><a href="#_pad-header">pad-header </a><li>
-                   <li><a href="#_unpad-paren">unpad-paren </a><li>
+                   <li><a href="#_unpad-paren">pad-paren=none </a><li>
                    <li><a href="#_pad-empty-paren">pad-empty-paren </a><li>
                    <li><a href="#_pad-brackets">pad-brackets </a><li>
-                   <li><a href="#_pad-brackets-in">pad-brackets-in </a><li>
-                   <li><a href="#_pad-brackets-out">pad-brackets-out </a><li>
-                   <li><a href="#_unpad-brackets">unpad-brackets </a><li>
+                   <li><a href="#_pad-brackets-in">pad-brackets=in </a><li>
+                   <li><a href="#_pad-brackets-out">pad-brackets=out </a><li>
+                   <li><a href="#_unpad-brackets">pad-brackets=none </a><li>
                    <li><a href="#_pad-semicolon">pad-semicolon </a><li>
                    <li><a href="#_delete-empty-lines">delete-empty-lines </a><li>
                    <li><a href="#_fill-empty-lines">fill-empty-lines </a><li>
@@ -203,11 +203,11 @@
      <li><a href="#_Objective_C_Options">Objective C <span class="menu-arrow">&#9660;</span></a>
       <ul>
               <li><a href="#_pad-method-prefix">pad-method-prefix </a><li>
-              <li><a href="#_unpad-method-prefix">unpad-method-prefix </a><li>
+              <li><a href="#_unpad-method-prefix">pad-method-prefix=none </a><li>
               <li><a href="#_pad-return-type">pad-return-type </a><li>
-              <li><a href="#_unpad-return-type">unpad-return-type </a><li>
+              <li><a href="#_unpad-return-type">pad-return-type=none </a><li>
               <li><a href="#_pad-param-type">pad-param-type </a><li>
-              <li><a href="#_unpad-param-type">unpad-param-type </a><li>
+              <li><a href="#_unpad-param-type">pad-param-type=none </a><li>
               <li><a href="#_align-method-colon">align-method-colon </a><li>
               <li><a href="#_pad-method-colon">pad-method-colon </a><li>
       </ul>
@@ -238,6 +238,16 @@
               <li><a href="#_help">help </a><li>
               <li><a href="#_stdin=">stdin= </a><li>
               <li><a href="#_stdout=">stdout= </a><li>
+          </ul>
+      </li>
+
+     <li><a href="#_Deprecated_Options">Deprecated Options <span class="menu-arrow">&#9660;</span></a>
+          <ul>
+              <li><a href="#_deprecated-style-synonyms">style synonyms </a><li>
+              <li><a href="#_deprecated-mode-synonyms">mode synonyms </a><li>
+              <li><a href="#_deprecated-paren-bracket-side">pad-paren-in/-out, pad-brackets-in/-out </a><li>
+              <li><a href="#_deprecated-unpad">unpad-* options </a><li>
+              <li><a href="#_deprecated-return-type-decl">*-return-type-decl options </a><li>
           </ul>
       </li>
 
@@ -1760,11 +1770,11 @@ isBar = false;
     <p>
         &nbsp;</p>
     <p id="_pad-paren-out">
-        <code class="title">--pad-paren-out / -d </code>
+        <code class="title">--pad-paren=out / -d </code>
         <br />
         Insert space padding around parens on the <strong>outside</strong> only. Parens that are empty will
         not be padded. Any end of line comments will remain in the original column, if possible. This can be used with
-        unpad-paren below to remove unwanted spaces.</p>
+        pad-paren=none below to remove unwanted spaces.</p>
     <div class="code">
         <pre>if (isFoo((a+2), b))
     bar(a, b);
@@ -1782,8 +1792,8 @@ isBar = false;
         <br />
         Insert space padding around the <strong>first</strong> paren in a series on the <strong>outside</strong>
         only. Parens that are empty will not be padded. Any end of line comments will remain in the original column,
-        if possible. This can be used with unpad-paren below to remove unwanted spaces. If used with pad-paren or
-        pad-paren-out, this option will be ignored. If used with pad-paren-in, the result will
+        if possible. This can be used with pad-paren=none below to remove unwanted spaces. If used with pad-paren or
+        pad-paren=out, this option will be ignored. If used with pad-paren=in, the result will
         be the pad-paren.</p>
     <div class="code">
         <pre>if (isFoo((a+2), b))
@@ -1798,10 +1808,10 @@ isBar = false;
     <p>
         &nbsp;</p>
     <p id="_pad-paren-in">
-        <code class="title">--pad-paren-in / -D </code>
+        <code class="title">--pad-paren=in / -D </code>
         <br />
         Insert space padding around paren on the <strong>inside</strong> only. Any end of line comments will remain
-        in the original column, if possible. This can be used with unpad-paren below to remove unwanted spaces.</p>
+        in the original column, if possible. This can be used with pad-paren=none below to remove unwanted spaces.</p>
     <div class="code">
         <pre>if (isFoo((a+2), b))
     bar(a, b);
@@ -1819,7 +1829,7 @@ isBar = false;
         <br />
         Insert space padding between a header (e.g. 'if', 'for', 'while'...)
         and the following paren. Any end of line comments will remain in the original column, if possible. This can
-        be used with unpad-paren to remove unwanted spaces.</p>
+        be used with pad-paren=none to remove unwanted spaces.</p>
     <div class="code">
         <pre>if(isFoo((a+2), b))
     bar(a, b);</pre>
@@ -1832,17 +1842,17 @@ isBar = false;
     <p>
         &nbsp;</p>
     <p id="_unpad-paren">
-        <code class="title">--unpad-paren / -U </code>
+        <code class="title">--pad-paren=none / -U </code>
         <br />
         Remove extra space padding around parens on the inside and outside. Any end of line comments will remain
         in the original column, if possible. This option can be used in combination with the paren padding options
-        pad-paren, pad-paren-out, pad-paren-in,
+        pad-paren, pad-paren=out, pad-paren=in,
         and pad-header above. Only padding that has not been requested by other options will be
         removed.</p>
     <p>
         For example, if a source has parens padded on both the inside and outside, and you want inside only. You need
-        to use unpad-paren to remove the outside padding, and pad-paren-in to
-        retain the inside padding. Using only pad-paren-in would not remove the outside
+        to use pad-paren=none to remove the outside padding, and pad-paren=in to
+        retain the inside padding. Using only pad-paren=in would not remove the outside
         padding.</p>
     <div class="code">
         <pre>if ( isFoo( ( a+2 ), b ) )
@@ -1888,7 +1898,7 @@ isBar = false;
     </div>
 
     <p id="_pad-brackets-in">
-        <code class="title">--pad-brackets-in</code>
+        <code class="title">--pad-brackets=in</code>
         <br />
         Insert space padding around square brackets the <strong>inside</strong> only.
     </p>
@@ -1900,7 +1910,7 @@ isBar = false;
     </div>
 
     <p id="_pad-brackets-out">
-        <code class="title">--pad-brackets-out</code>
+        <code class="title">--pad-brackets=out</code>
         <br />
         Insert space padding around square brackets the <strong>outside</strong> only.
     </p>
@@ -1913,7 +1923,7 @@ isBar = false;
 
 
     <p id="_unpad-brackets">
-        <code class="title">--unpad-brackets</code>
+        <code class="title">--pad-brackets=none</code>
         <br />
         Remove padding around square brackets on both the <strong>outside</strong> and the <strong>inside</strong>.
     </p>
@@ -2325,7 +2335,7 @@ else
         &nbsp;</p>
     <p id="_break-return-type">
         <code class="title">--break-return-type &nbsp;&nbsp;&nbsp;&nbsp; / -xB</code><br />
-        <code class="title">--break-return-type-decl / -xD</code><br />
+        <code class="title">--break-return-type=decl / -xD</code><br />
         Break the return type from the function name. The two options are for the function definitions (-xB), and the
         function declarations or signatures (-xD). If used with --attach-return-type, the result will be to break the
         return type. This option has no effect on <span style="white-space: nowrap;">Objective-C</span> functions.</p>
@@ -2340,7 +2350,7 @@ Foo(bool isFoo);</pre>
         &nbsp;</p>
     <p id="_attach-return-type">
         <code class="title">--attach-return-type &nbsp;&nbsp;&nbsp;&nbsp; / -xf</code><br />
-        <code class="title">--attach-return-type-decl / -xh</code><br />
+        <code class="title">--attach-return-type=decl / -xh</code><br />
         Attach the return type to the function name. The two options are for the function definitions (-xf), and the
         function declarations or signatures (-xh). They are intended to undo the --break-return-type options. If used
         with --break-return-type, the result will be to break the return type. This option has no effect on
@@ -2509,7 +2519,7 @@ Foo(bool isFoo);</pre>
     <p>
         &nbsp;</p>
     <p id="_unpad-method-prefix">
-        <code class="title">--unpad-method-prefix / -xR</code><br />
+        <code class="title">--pad-method-prefix=none / -xR</code><br />
         Remove all space padding <strong>after</strong> the &#39;-&#39; or &#39;+&#39; <span style="white-space: nowrap;">Objective-C</span> method prefix.&nbsp;
         This option will be ignored if used with pad-method-prefix. This option  takes precedence over the
         pad paren outside option.</p>
@@ -2538,7 +2548,7 @@ Foo(bool isFoo);</pre>
     <p>
         &nbsp;</p>
     <p id="_unpad-return-type">
-        <code class="title">--unpad-return-type / -xr</code><br />
+        <code class="title">--pad-return-type=none / -xr</code><br />
         Remove all space padding <strong>after</strong> the <span style="white-space: nowrap;">Objective-C</span> return type. This option
         will be ignored if used with pad-return-type. This option  takes precedence over the pad paren
         outside option. </p>
@@ -2568,7 +2578,7 @@ Foo(bool isFoo);</pre>
     <p>
         &nbsp;</p>
     <p id="_unpad-param-type">
-        <code class="title">--unpad-param-type / -xs</code><br />
+        <code class="title">--pad-param-type=none / -xs</code><br />
         Remove all space padding around an <span style="white-space: nowrap;">Objective-C</span> parameter type. This option  takes precedence over the
         pad paren outside option. The pad method colon option has precedence over the <strong>opening</strong> paren.
         The closing paren will always be unpadded.</p>
@@ -2796,6 +2806,66 @@ Foo(bool isFoo);</pre>
         <code class="title">--stdout=<span class="option">####</span></code><br />
         Open a file using the file path #### as output from single file formatting. This is a replacement for redirection.
         Do not use this with "&gt;" redirection.</p>
+
+    <h3 id="_Deprecated_Options">Deprecated Options</h3>
+
+    <p>
+        The options listed below still parse and behave exactly as before, but are no longer shown in
+        <code>--help</code> or the man page. Use the listed equivalent instead in new scripts and configuration
+        files.</p>
+
+    <h4 id="_deprecated-style-synonyms">Style Synonyms</h4>
+    <p>
+        <code class="title">--style=bsd</code>, <code class="title">--style=break</code> &mdash;
+        equivalent to <a href="#_style=allman">--style=allman</a>.<br />
+        <code class="title">--style=k&amp;r</code>, <code class="title">--style=k/r</code> &mdash;
+        equivalent to <a href="#_style=kr">--style=kr</a>.<br />
+        <code class="title">--style=banner</code> &mdash;
+        equivalent to <a href="#_style=ratliff">--style=ratliff</a>.<br />
+        <code class="title">--style=knf</code> &mdash;
+        equivalent to <a href="#_style=linux">--style=linux</a>.<br />
+        <code class="title">--style=run-in</code> &mdash;
+        equivalent to <a href="#_style=horstmann">--style=horstmann</a>.<br />
+        <code class="title">--style=otbs</code> &mdash;
+        equivalent to <a href="#_style=1tbs">--style=1tbs</a>.<br />
+        <code class="title">--style=python</code> &mdash;
+        equivalent to <a href="#_style=lisp">--style=lisp</a>.</p>
+
+    <h4 id="_deprecated-mode-synonyms">Mode Synonyms</h4>
+    <p>
+        <code class="title">--mode=ghc</code> &mdash;
+        equivalent to <a href="#_mode">--mode=gsc</a>.</p>
+
+    <h4 id="_deprecated-paren-bracket-side">Paren / Bracket Side Padding</h4>
+    <p>
+        <code class="title">--pad-paren-in</code> &mdash;
+        equivalent to <a href="#_pad-paren-in">--pad-paren=in</a>.<br />
+        <code class="title">--pad-paren-out</code> &mdash;
+        equivalent to <a href="#_pad-paren-out">--pad-paren=out</a>.<br />
+        <code class="title">--pad-brackets-in</code> &mdash;
+        equivalent to <a href="#_pad-brackets-in">--pad-brackets=in</a>.<br />
+        <code class="title">--pad-brackets-out</code> &mdash;
+        equivalent to <a href="#_pad-brackets-out">--pad-brackets=out</a>.</p>
+
+    <h4 id="_deprecated-unpad">Unpadding Options</h4>
+    <p>
+        <code class="title">--unpad-paren</code> &mdash;
+        equivalent to <a href="#_unpad-paren">--pad-paren=none</a>.<br />
+        <code class="title">--unpad-brackets</code> &mdash;
+        equivalent to <a href="#_unpad-brackets">--pad-brackets=none</a>.<br />
+        <code class="title">--unpad-method-prefix</code> &mdash;
+        equivalent to <a href="#_unpad-method-prefix">--pad-method-prefix=none</a>.<br />
+        <code class="title">--unpad-return-type</code> &mdash;
+        equivalent to <a href="#_unpad-return-type">--pad-return-type=none</a>.<br />
+        <code class="title">--unpad-param-type</code> &mdash;
+        equivalent to <a href="#_unpad-param-type">--pad-param-type=none</a>.</p>
+
+    <h4 id="_deprecated-return-type-decl">Return-Type Declaration Options</h4>
+    <p>
+        <code class="title">--break-return-type-decl</code> &mdash;
+        equivalent to <a href="#_break-return-type">--break-return-type=decl</a>.<br />
+        <code class="title">--attach-return-type-decl</code> &mdash;
+        equivalent to <a href="#_attach-return-type">--attach-return-type=decl</a>.</p>
 
     <p >
         <a href="http://sourceforge.net/projects/astyle">
