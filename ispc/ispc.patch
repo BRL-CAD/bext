@@ -45,7 +45,7 @@ index 042e6dd..0d3a2ca 100644
 diff --git a/src/util.cpp b/src/util.cpp
 --- a/src/util.cpp
 +++ b/src/util.cpp
-@@ -51,6 +51,6 @@
+@@ -51,4 +51,4 @@
  void std::__libcpp_verbose_abort(char const *format, ...)
 -#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
 +#if defined(__APPLE__) || ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
