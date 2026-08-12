@@ -51,3 +51,15 @@ diff --git a/src/util.cpp b/src/util.cpp
 +#if defined(__APPLE__) || ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
      noexcept
  #endif
+diff --git a/cmake/GenerateBuiltins.cmake b/cmake/GenerateBuiltins.cmake
+--- a/cmake/GenerateBuiltins.cmake
++++ b/cmake/GenerateBuiltins.cmake
+@@ -357,7 +357,7 @@ function(builtin_xe_to_cpp os)
+
+     add_custom_command(
+         OUTPUT ${bc}
+-        COMMAND cat ${input} | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
++        COMMAND "${LLVM_AS_EXECUTABLE}" ${input} -o ${bc}
+         DEPENDS ${input}
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+         )
