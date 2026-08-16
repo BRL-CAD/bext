@@ -462,6 +462,10 @@ add_project(plief GROUPS "BRLCAD")
 # https://zlib.net
 add_project(zlib GROUPS "APPLESEED;BRLCAD;OSPRAY")
 
+# LLVM - code generation support, add it as EARLY as possible
+# https://llvm.org/
+add_project(llvm GROUPS "APPLESEED;OSPRAY")
+
 # zstd - fast lossless compression library
 # https://github.com/facebook/zstd
 add_project(zstd GROUPS "APPLESEED;OSPRAY")
@@ -565,10 +569,6 @@ add_project(onetbb GROUPS "APPLESEED;OSPRAY;BRLCAD")
 # rkcommon -  C++ infrastructure and CMake utilities
 # https://github.com/ospray/rkcommon
 add_project(rkcommon GROUPS "OSPRAY")
-
-# LLVM - code generation support
-# https://llvm.org/
-add_project(llvm GROUPS "APPLESEED;OSPRAY")
 
 # ISPC - Implicit SPMD Program Compiler
 # https://ispc.github.io
