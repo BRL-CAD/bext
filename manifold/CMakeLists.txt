@@ -1,5 +1,5 @@
 # Decide if we're using Manifold
-cad_enable(MANIFOLD "librt;libged")
+cad_enable(MANIFOLD "libbg;librt;libged")
 
 bext_enable(MANIFOLD)
 
