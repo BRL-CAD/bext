@@ -1,5 +1,5 @@
 # Decide if we're using clipper2
-cad_enable(CLIPPER2 "librt")
+cad_enable(CLIPPER2 "libbg;librt")
 
 bext_enable(CLIPPER2)
 
