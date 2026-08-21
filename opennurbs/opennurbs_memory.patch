@@ -1,0 +1,81 @@
+--- opennurbs/opennurbs_curve.cpp
++++ OPENNURBS_BLD/opennurbs_curve.cpp
+@@ -154,7 +154,8 @@
+   ON_NurbsCurve N;
+   if ( 0 == GetNurbForm(N) )
+     return false;
+-  if ( N.m_order < 2 || N.m_cv_count < N.m_order )
++  if ( N.m_order < 2 || N.m_cv_count < N.m_order
++       || nullptr == N.m_knot || nullptr == N.m_cv )
+     return false;
+ 
+   ON_BezierCurve B;
+--- opennurbs/opennurbs_nurbscurve.cpp
++++ OPENNURBS_BLD/opennurbs_nurbscurve.cpp
+@@ -41,7 +41,11 @@
+   const int knot_capacity = (nullptr != src.m_knot) ? src.KnotCount() : 0;
+   if (knot_capacity > 0)
+   {
+-    ReserveKnotCapacity(knot_capacity);
++    if ( !ReserveKnotCapacity(knot_capacity) )
++    {
++      Destroy();
++      return;
++    }
+     if ( nullptr != m_knot ) 
+       memcpy( m_knot, src.m_knot, knot_capacity*sizeof(m_knot[0]) );
+   }
+@@ -57,7 +61,11 @@
+   const int cv_capacity = (nullptr != src.m_cv) ? (cv_count*cv_stride) : 0;
+   if (cv_capacity > 0)
+   {
+-    ReserveCVCapacity(cv_capacity);
++    if ( !ReserveCVCapacity(cv_capacity) )
++    {
++      Destroy();
++      return;
++    }
+     if ( nullptr != m_cv ) 
+     {
+       // copy cv array
+@@ -2293,10 +2301,13 @@
+   const int current_capacity = (nullptr != m_cv && m_cv_capacity > 0) ? m_cv_capacity : 0;
+   if ( desired_capacity > current_capacity )
+   {
+-    m_cv = (0 == current_capacity)
++    double* cv = (0 == current_capacity)
+       ? (double*)onmalloc(desired_capacity*sizeof(*m_cv))
+       : (double*)onrealloc(m_cv,desired_capacity*sizeof(*m_cv));
+-    m_cv_capacity = ( nullptr != m_cv ) ? desired_capacity : 0;
++    if ( nullptr == cv )
++      return false;
++    m_cv = cv;
++    m_cv_capacity = desired_capacity;
+   }
+ 
+   const bool rc = (m_cv_capacity >= desired_capacity);
+@@ -2354,7 +2365,9 @@
+       = ( 0 == current_knot_capacity )
+       ? (double*)onmalloc(desired_capacity*sizeof(knot[0]))
+       : (double*)onrealloc(m_knot,desired_capacity*sizeof(knot[0]));
+-    this->ManageKnotForExperts((nullptr != knot) ? desired_capacity : 0, knot);
++    if ( nullptr == knot )
++      return false;
++    this->ManageKnotForExperts(desired_capacity, knot);
+   }
+ 
+   bool rc = (nullptr != m_knot && KnotCapacity() >= desired_capacity);
+@@ -3299,6 +3312,13 @@
+   if (this != &curve)
+   {
+     curve.Internal_DeepCopyFrom(*this); // does not copy user data
++    if ( curve.m_order != m_order || curve.m_cv_count != m_cv_count
++         || (nullptr != m_knot && nullptr == curve.m_knot)
++         || (nullptr != m_cv && nullptr == curve.m_cv) )
++    {
++      curve.Destroy();
++      return 0;
++    }
+   }
+ 
+   if ( subdomain ) 
