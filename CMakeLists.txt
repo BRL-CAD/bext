@@ -242,6 +242,12 @@ function(ExternalProject_Add name)
   endif (ARGC GREATER 1)
   string(APPEND ep_call ")")
   cmake_language(EVAL CODE "${ep_call}")
+  if (TARGET ${name}-install)
+    get_property(_bext_install_targets GLOBAL PROPERTY BEXT_INSTALL_TARGETS)
+    list(APPEND _bext_install_targets ${name}-install)
+    list(REMOVE_DUPLICATES _bext_install_targets)
+    set_property(GLOBAL PROPERTY BEXT_INSTALL_TARGETS "${_bext_install_targets}")
+  endif (TARGET ${name}-install)
 endfunction(ExternalProject_Add name)
 
 # In case we need to pass some sort of reasonable parallel
@@ -683,6 +689,60 @@ add_project(oidn GROUPS "OSPRAY")
 # OSPRay - ray tracing engine
 # https://github.com/ospray/OSPRay
 add_project(ospray GROUPS "OSPRAY")
+
+
+###############################################################################
+# Finalize the bundled output after all external projects have installed.
+# BRL-CAD can then consume the manifest without repeating file classification
+# during every configure pass.
+###############################################################################
+set(BEXT_STRCLEAR_EXPECTED
+  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/strclear${CMAKE_EXECUTABLE_SUFFIX}")
+if (TARGET STRCLEAR_BLD)
+  set(BEXT_STRCLEAR_EXECUTABLE "${BEXT_STRCLEAR_EXPECTED}")
+else ()
+  find_program(BEXT_STRCLEAR_EXECUTABLE NAMES strclear HINTS "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}")
+endif ()
+if (NOT BEXT_STRCLEAR_EXECUTABLE)
+  message(FATAL_ERROR "bext finalization requires strclear")
+endif ()
+
+set(BEXT_PLIEF_EXPECTED
+  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/plief${CMAKE_EXECUTABLE_SUFFIX}")
+if (TARGET PLIEF_BLD)
+  set(BEXT_PLIEF_EXECUTABLE "${BEXT_PLIEF_EXPECTED}")
+else ()
+  find_program(BEXT_PLIEF_EXECUTABLE NAMES plief patchelf HINTS "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}")
+endif ()
+
+set(BEXT_INSTALL_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-manifest.json")
+set(BEXT_FINALIZE_SCRIPT "${CMAKE_SOURCE_DIR}/CMake/FinalizeInstall.cmake")
+get_property(BEXT_INSTALL_TARGETS GLOBAL PROPERTY BEXT_INSTALL_TARGETS)
+list(REMOVE_DUPLICATES BEXT_INSTALL_TARGETS)
+
+add_custom_target(bext_finalize ALL
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_INSTALL_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DBEXT_MANIFEST=${BEXT_INSTALL_MANIFEST}
+    -DBEXT_SOURCE_ROOT=${CMAKE_SOURCE_DIR}
+    -DBEXT_BINARY_ROOT=${CMAKE_BINARY_DIR}
+    -DBEXT_NOINSTALL_ROOT=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+    -DBEXT_STRCLEAR=${BEXT_STRCLEAR_EXECUTABLE}
+    -DBEXT_PLIEF=${BEXT_PLIEF_EXECUTABLE}
+    -DBEXT_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+    -DBIN_DIR=${BIN_DIR}
+    -DLIB_DIR=${LIB_DIR}
+    -P ${BEXT_FINALIZE_SCRIPT}
+  DEPENDS ${BEXT_INSTALL_TARGETS}
+  VERBATIM
+)
+if (TARGET STRCLEAR_BLD-install)
+  add_dependencies(bext_finalize STRCLEAR_BLD-install)
+endif ()
+if (TARGET PLIEF_BLD-install)
+  add_dependencies(bext_finalize PLIEF_BLD-install)
+endif ()
+add_dependencies(BuildStamp bext_finalize)
 
 
 ###############################################################################

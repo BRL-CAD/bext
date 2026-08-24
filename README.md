@@ -131,6 +131,14 @@ output trees under that prefix:
 
 * `install/` - files intended to be bundled with downstream software
 * `noinstall/` - build-only tools and compile-time-only assets
+* `bext-install-manifest.json` - relative file classifications and the
+  platform metadata needed by downstream staging builds
+
+The normal build finalizes bundled binaries after all dependency install steps.
+It uses `strclear` and, where available, `plief` to remove stale build paths and
+normalize RPATH-bearing files before writing the manifest.  Consumers should
+continue to treat `install/` as read-only and perform their own staging-specific
+path and RPATH edits on copied files.
 
 The normal build also generates a dependency graph in the build directory as
 `bext.dot`.  When Graphviz `dot` is available, the build also emits rendered
