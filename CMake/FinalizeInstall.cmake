@@ -98,7 +98,7 @@ function(bext_run_binary_clear files)
 endfunction()
 
 function(bext_run_rpath_update files)
-  if (NOT files OR NOT DEFINED BEXT_PLIEF OR "${BEXT_PLIEF}" STREQUAL "")
+  if (NOT files OR NOT BEXT_PLIEF)
     return()
   endif ()
 
@@ -264,7 +264,7 @@ endif ()
 set(rpath_files)
 set(binary_files)
 if (binary_probe_files)
-  if (DEFINED BEXT_PLIEF AND NOT "${BEXT_PLIEF}" STREQUAL "")
+  if (BEXT_PLIEF)
     execute_process(
       COMMAND "${BEXT_PLIEF}" --help
       RESULT_VARIABLE plief_help_result
@@ -384,7 +384,7 @@ foreach(relative ${rpath_files})
 endforeach()
 set(binary_cleanup_paths ${binary_paths})
 if ("${BEXT_SYSTEM_NAME}" STREQUAL "Darwin" AND
-    (NOT DEFINED BEXT_PLIEF OR "${BEXT_PLIEF}" STREQUAL ""))
+    NOT BEXT_PLIEF)
   # Without plief, preserve Mach-O RPATH load commands for BRL-CAD's
   # install_name_tool staging pass.
   set(binary_cleanup_paths)
