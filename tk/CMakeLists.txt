@@ -1,6 +1,9 @@
 # By the time we get here, we have run FindTCL and should know
 # if we have TK.
 
+set(TK_EXTRA_PATCHES "" CACHE STRING "Additional patches to apply to bundled Tk on Unix")
+set(TK_CONFIGURE_ARGS "" CACHE STRING "Additional arguments for bundled Tk's Unix configure script")
+
 if (USE_BRLCAD)
 
   # Decide if we're using Tk
@@ -62,6 +65,22 @@ if (TK_DO_BUILD)
 
   if (NOT MSVC)
 
+    set(TK_PATCH_COMMAND
+      ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${CMAKE_CURRENT_SOURCE_DIR}/tk.patch
+      COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch
+      )
+    foreach(TK_EXTRA_PATCH IN LISTS TK_EXTRA_PATCHES)
+      if (NOT IS_ABSOLUTE "${TK_EXTRA_PATCH}")
+        message(FATAL_ERROR "TK_EXTRA_PATCHES entries must be absolute paths: ${TK_EXTRA_PATCH}")
+      endif ()
+      if (NOT EXISTS "${TK_EXTRA_PATCH}")
+        message(FATAL_ERROR "Additional Tk patch does not exist: ${TK_EXTRA_PATCH}")
+      endif ()
+      list(APPEND TK_PATCH_COMMAND
+        COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TK_EXTRA_PATCH}
+        )
+    endforeach()
+
     # Check for spaces in the source and build directories - those won't work
     # reliably with the Tk autotools based build.
     if ("${CMAKE_CURRENT_SOURCE_DIR}" MATCHES ".* .*")
@@ -74,8 +93,7 @@ if (TK_DO_BUILD)
     ExternalProject_Add(TK_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/tk"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk.patch
-      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch
+      PATCH_COMMAND ${TK_PATCH_COMMAND}
       CONFIGURE_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tk_configure.cmake
 
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make

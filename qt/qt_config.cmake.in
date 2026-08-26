@@ -1,6 +1,11 @@
 set(CONFIG_FILE configure)
 set(ENV_VARS)
 set(CONFIG_EXTRA_OPTS)
+set(QT_CMAKE_OPTS)
+set(QT_XMIN_ENABLED "@QT_XMIN_ENABLED@")
+set(QT_XMIN_ROOT "@QT_XMIN_ROOT@")
+set(QT_XMIN_DIR "@QT_XMIN_DIR@")
+set(QT_XMIN_RUNTIME_DIRS "@QT_XMIN_RUNTIME_DIRS@")
 
 # Windows uses a different file
 if (WIN32)
@@ -9,7 +14,9 @@ endif (WIN32)
 
 # If we're not on Windows, set some environment variables
 if (NOT WIN32)
-  set(ENV{LD_LIBRARY_PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(qt_runtime_dirs ${QT_XMIN_RUNTIME_DIRS} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  string(JOIN ":" qt_runtime_path ${qt_runtime_dirs})
+  set(ENV{LD_LIBRARY_PATH} "${qt_runtime_path}")
   set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
   set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
 endif (NOT WIN32)
@@ -18,6 +25,53 @@ endif (NOT WIN32)
 # coax it into using ours, just go with their solution:
 # https://doc.qt.io/qt-6/configure-options.html
 set(CONFIG_EXTRA_OPTS ${CONFIG_EXTRA_OPTS} -qt-zlib -qt-libpng)
+
+if (QT_XMIN_ENABLED)
+  list(APPEND CONFIG_EXTRA_OPTS
+    -qpa xcb
+    -default-qpa xcb
+    -xcb
+    -xmin-x11
+    -xcb-xlib
+    -feature-xlib
+    -no-sm
+    -no-egl
+    -no-eglfs
+    -no-vulkan
+    -no-feature-gbm
+    -no-feature-kms
+    -no-feature-wayland
+    -no-feature-wayland-client
+    -no-feature-wayland-server
+    -no-fontconfig
+    -qt-freetype
+    -qt-harfbuzz
+    -qt-libjpeg
+    -no-dbus
+    -no-glib
+    -nomake
+    examples
+    -nomake
+    tests
+    -opengl
+    desktop
+  )
+  string(JOIN ":" qt_xmin_install_rpath ${QT_XMIN_RUNTIME_DIRS})
+  list(APPEND QT_CMAKE_OPTS
+    "-DXmin_DIR=${QT_XMIN_DIR}"
+    "-DCMAKE_INSTALL_RPATH=${qt_xmin_install_rpath}"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_EGL=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_GLESv2=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_OpenGL=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_WrapOpenGL=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_X11=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_X11_XCB=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_XCB=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_XKB=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_XKB_COMMON_X11=ON"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_XRender=ON"
+  )
+endif ()
 
 # QFileSystemWatcher selects kqueue in its C++ platform dispatch on FreeBSD.
 # If the optional inotify compatibility headers are installed, however, Qt's
@@ -43,9 +97,11 @@ endif ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debu
 # Qt caches command-line feature choices separately from CMAKE_BUILD_TYPE.  If
 # a build directory previously configured for the other build type is reused,
 # FEATURE_debug can remain forced to a value whose condition is now false.
-# Clear only Qt's generated CMake configuration state when the two disagree;
-# compiled objects can still be reused whenever they remain compatible.
+# Qt leaves nested try-compile caches and generated files throughout its build
+# tree.  They retain the previous source path and feature results, so a profile
+# or staged-source change must clear the complete build tree.
 set(qt_cache "@QT_BUILD_DIR@/CMakeCache.txt")
+set(qt_signature_file "@QT_BUILD_DIR@/.bext-qt-config-signature")
 set(qt_cache_stale OFF)
 if (EXISTS "${qt_cache}" AND DEFINED QT_EXPECTED_BUILD_TYPE)
   file(STRINGS "${qt_cache}" qt_cached_build_type_line REGEX "^CMAKE_BUILD_TYPE:[^=]*=")
@@ -65,14 +121,36 @@ if (EXISTS "${qt_cache}" AND DEFINED QT_EXPECTED_BUILD_TYPE)
   endif ()
 endif ()
 
+set(qt_signature_material
+  "@QT_CONFIG_SIGNATURE@|${CONFIG_EXTRA_OPTS}|${QT_CMAKE_OPTS}|${QT_CONFIG_OPTS}")
+string(SHA256 qt_expected_signature "${qt_signature_material}")
+if (EXISTS "${qt_signature_file}")
+  file(READ "${qt_signature_file}" qt_cached_signature)
+  string(STRIP "${qt_cached_signature}" qt_cached_signature)
+  if (NOT qt_cached_signature STREQUAL qt_expected_signature)
+    set(qt_cache_stale ON)
+  endif ()
+elseif (EXISTS "${qt_cache}")
+  set(qt_cache_stale ON)
+endif ()
+
 if (qt_cache_stale)
   message(STATUS
     "Resetting stale Qt configuration for CMAKE_BUILD_TYPE=${QT_EXPECTED_BUILD_TYPE}")
-  file(REMOVE "${qt_cache}")
-  file(REMOVE_RECURSE "@QT_BUILD_DIR@/CMakeFiles")
+  file(REMOVE_RECURSE "@QT_BUILD_DIR@")
+  file(MAKE_DIRECTORY "@QT_BUILD_DIR@")
 endif ()
 
-execute_process(COMMAND @QT_SOURCE_DIR@/${CONFIG_FILE} ${CONFIG_EXTRA_OPTS} ${QT_CONFIG_OPTS} --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@ RESULT_VARIABLE QT_RET WORKING_DIRECTORY @QT_BUILD_DIR@ OUTPUT_VARIABLE MSG ERROR_VARIABLE MSG)
+set(qt_configure_args
+  ${CONFIG_EXTRA_OPTS}
+  ${QT_CONFIG_OPTS}
+  --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@
+)
+if (QT_CMAKE_OPTS)
+  list(APPEND qt_configure_args -- ${QT_CMAKE_OPTS})
+endif ()
+
+execute_process(COMMAND @QT_SOURCE_DIR@/${CONFIG_FILE} ${qt_configure_args} RESULT_VARIABLE QT_RET WORKING_DIRECTORY @QT_BUILD_DIR@ OUTPUT_VARIABLE MSG ERROR_VARIABLE MSG)
 
 if (QT_RET)
   message(FATAL_ERROR "Qt configure failed: ${MSG}\n")
@@ -106,6 +184,32 @@ qt_cache_check("FEATURE_xcb"             feature_xcb)
 qt_cache_check("FEATURE_wayland_client"  feature_wayland_client)
 qt_cache_check("FEATURE_direct2d"        feature_direct2d)
 qt_cache_check("QT_QPA_DEFAULT_PLATFORM" qpa_platform)
+qt_cache_check("FEATURE_xmin_x11"       feature_xmin_x11)
+qt_cache_check("FEATURE_xmin_opengl"    feature_xmin_opengl)
+qt_cache_check("FEATURE_opengl"         feature_opengl)
+qt_cache_check("FEATURE_xcb_glx"        feature_xcb_glx)
+qt_cache_check("FEATURE_xcb_glx_plugin" feature_xcb_glx_plugin)
+
+if (QT_XMIN_ENABLED)
+  foreach(required_feature IN ITEMS
+      feature_gui feature_xcb feature_xmin_x11 feature_xmin_opengl
+      feature_opengl feature_xcb_glx feature_xcb_glx_plugin)
+    if (NOT "${${required_feature}}" STREQUAL "ON")
+      message(FATAL_ERROR
+        "Xmin Qt configuration did not enable ${required_feature}: ${${required_feature}}")
+    endif ()
+  endforeach()
+  if (NOT qpa_platform STREQUAL "xcb")
+    message(FATAL_ERROR "Xmin Qt configuration did not select qxcb: ${qpa_platform}")
+  endif ()
+
+  qt_cache_check("Xmin_DIR" configured_xmin_dir)
+  file(REAL_PATH "${configured_xmin_dir}" configured_xmin_dir_real)
+  if (NOT configured_xmin_dir_real STREQUAL QT_XMIN_DIR)
+    message(FATAL_ERROR
+      "Qt resolved Xmin from ${configured_xmin_dir_real}, expected ${QT_XMIN_DIR}")
+  endif ()
+endif ()
 
 # does a window-capable backend exists for this host OS?
 set(qt_has_window_gui OFF)
@@ -136,6 +240,8 @@ elseif (feature_gui STREQUAL "ON" AND NOT qt_has_window_gui AND QT_ALLOW_HEADLES
 else()
   message(STATUS "Qt platform backend check: OK (window-capable backend present).")
 endif()
+
+file(WRITE "${qt_signature_file}" "${qt_expected_signature}\n")
 
 message("Qt configure succeeded: ${MSG}\n")
 

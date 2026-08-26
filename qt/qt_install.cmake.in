@@ -4,6 +4,17 @@ if (QT_RET)
   message(FATAL_ERROR "Qt install failed: ${MSG}\n")
 endif (QT_RET)
 
+if ("@QT_XMIN_ENABLED@" STREQUAL "ON")
+  execute_process(
+    COMMAND "@CMAKE_COMMAND@" -DQT_AUDIT_ROOT=@CMAKE_BUNDLE_INSTALL_PREFIX@
+      -P "@CMAKE_CURRENT_BINARY_DIR@/qt_xmin_audit.cmake"
+    RESULT_VARIABLE QT_AUDIT_RET
+  )
+  if (QT_AUDIT_RET)
+    message(FATAL_ERROR "Installed Qt Xmin dependency audit failed")
+  endif ()
+endif ()
+
 message("Qt install succeeded: ${MSG}\n")
 
 # Local Variables:
@@ -12,4 +23,3 @@ message("Qt install succeeded: ${MSG}\n")
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

@@ -61,6 +61,44 @@ When `bext` is driven from a BRL-CAD build, `BRLCAD_COMPONENTS` can further
 narrow some BRL-CAD-related packages to only those needed by the requested
 component set.
 
+## Additional bundled Tk patches
+
+Unix builds may pass a semicolon-separated list of absolute patch paths in
+`TK_EXTRA_PATCHES`. The patches are applied after bext's built-in Tk patches.
+Additional arguments for Tk's Unix `configure` script may likewise be supplied
+as a semicolon-separated `TK_CONFIGURE_ARGS` list. For example:
+
+```sh
+cmake -DTK_EXTRA_PATCHES=/absolute/path/tk.patch \
+  -DTK_CONFIGURE_ARGS=--with-example=/absolute/prefix ...
+```
+
+## Xmin-backed bundled Qt
+
+An installed Xmin SDK can provide the complete X11/XCB/OpenGL surface for
+bext's bundled Qt without linking Qt to host X libraries.  Set
+`QT_XMIN_ROOT` to the exact SDK prefix and provide the patch matching bext's
+Qt version in `QT_EXTRA_PATCHES`:
+
+```sh
+cmake -S /path/to/bext -B /path/to/bext-build \
+  -DENABLE_QT=ON \
+  -DQT_XMIN_ROOT=/absolute/path/to/xmin-sdk \
+  -DQT_EXTRA_PATCHES=/absolute/path/to/Xmin/patches/qt/qt-6.11.1-xmin.patch
+```
+
+The Xmin SDK must have been installed with `XMIN_BUILD_QT_CLIENT=ON` and
+`XMIN_BUILD_CLIENT_GL=ON`.  This mode forces Qt's qxcb desktop-OpenGL profile,
+uses bundled font and image dependencies, disables conventional X11, XCB,
+xkbcommon, EGL, and OpenGL package discovery, and rejects Qt artifacts that
+resolve any corresponding host libraries.  Normal Qt autodetection is
+unchanged when `QT_XMIN_ROOT` is empty.
+
+Qt's installed package metadata retains an explicit dependency on Xmin.
+Downstream projects must therefore keep the same SDK discoverable with
+`Xmin_DIR` or `CMAKE_PREFIX_PATH`; configuration fails instead of falling back
+to host X libraries when that SDK is absent.
+
 # Official profiles
 
 The supported configure entry points are:

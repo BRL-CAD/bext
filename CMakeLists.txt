@@ -200,8 +200,8 @@ include(ExternalProject)
 #     source patching or staging is needed.
 #   * Use a local URL when patching a submodule, so ExternalProject stages a
 #     build-tree copy before PATCH_COMMAND and other source modifications run.
-#   * A deliberate exception is a very large source tree such as Qt6, where the
-#     copy cost is significant and in-place patching/building is preferred.
+#   * A large source tree such as Qt6 is built in place when unmodified, but is
+#     staged when caller-supplied patches must be applied.
 # Do not replace URL with SOURCE_DIR merely to avoid the local URL spelling;
 # that can cause patches or generated-file changes to modify the checkout.
 
@@ -442,14 +442,14 @@ add_project(astyle GROUPS "BRLCAD")
 add_project(lemon GROUPS "BRLCAD")
 add_project(re2c GROUPS "BRLCAD")
 add_project(perplex GROUPS "BRLCAD")
-add_project(strclear GROUPS "BRLCAD")
+add_project(strclear)
 add_project(xmltools GROUPS "BRLCAD_EXTRA")  # Used for Docbook building
 
 # RPATH editing - LIEF has the core capabilities, and plief exposes them via
 # a command line utility with patchelf compatible options, so we can drop
 # either patchelf or plief into our upstream workflows.
-add_project(lief GROUPS "BRLCAD")
-add_project(plief GROUPS "BRLCAD")
+add_project(lief)
+add_project(plief)
 
 # Keeping this set up for easy turn-on until we're confident plief+LIEF has
 # all of our use cases covered - plief is preferred, but we've already hit
