@@ -466,7 +466,7 @@ add_project(plief GROUPS "BRLCAD")
 
 # zlib compression/decompression library
 # https://zlib.net
-add_project(zlib GROUPS "APPLESEED;BRLCAD;OSPRAY")
+add_project(zlib GROUPS "APPLESEED;BRLCAD;OSPRAY;TCL")
 
 # LLVM - code generation support, add it as EARLY as possible
 # https://llvm.org/
@@ -532,7 +532,7 @@ add_project(jpeg GROUPS "APPLESEED;BRLCAD;GDAL")
 
 # libpng - Portable Network Graphics image file support
 # http://www.libpng.org/pub/png/libpng.html
-add_project(png GROUPS "APPLESEED;BRLCAD")
+add_project(png GROUPS "APPLESEED;BRLCAD;TCL")
 
 # libtiff - Tag Image File Format (TIFF) support
 # https://libtiff.gitlab.io/libtiff/
