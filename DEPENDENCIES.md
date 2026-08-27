@@ -64,7 +64,7 @@ selection further.
 | `patch` | always considered | `noinstall` | — | [repository](https://github.com/BRL-CAD/patch) |
 | `perplex` | `USE_BRLCAD` | `noinstall` | `patch`, `lemon`, `re2c` | [repository](https://github.com/BRL-CAD/perplex) |
 | `plief` | `USE_BRLCAD` | `noinstall` | `lief`, `patch` | [repository](https://github.com/BRL-CAD/plief) |
-| `png` | `USE_APPLESEED`, `USE_BRLCAD` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/libpng) |
+| `png` | `USE_APPLESEED`, `USE_BRLCAD`, `USE_TCL` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/libpng) |
 | `poissonrecon` | `USE_BRLCAD` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/PoissonRecon) |
 | `proj` | `USE_GDAL` | `install` | `patch`, `sqlite3` | [repository](https://github.com/BRL-CAD/PROJ) |
 | `pugixml` | `USE_BRLCAD`, `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/pugixml) |
@@ -85,7 +85,7 @@ selection further.
 | `xerces-c` | `USE_APPLESEED` | `install` | `icu`, `patch` | [repository](https://github.com/BRL-CAD/xerces-c) |
 | `xmltools` | `USE_BRLCAD_EXTRA` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/xmltools) |
 | `yaml-cpp` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/yaml-cpp) |
-| `zlib` | `USE_APPLESEED`, `USE_BRLCAD`, `USE_OSPRAY` | `install` | `patch` | [repository](https://github.com/BRL-CAD/zlib) |
+| `zlib` | `USE_APPLESEED`, `USE_BRLCAD`, `USE_OSPRAY`, `USE_TCL` | `install` | `patch` | [repository](https://github.com/BRL-CAD/zlib) |
 | `zstd` | `USE_APPLESEED`, `USE_OSPRAY` | `install` | `patch` | [repository](https://github.com/BRL-CAD/zstd) |
 <!-- END GENERATED PROJECT TABLE -->
 
