@@ -600,7 +600,7 @@ add_project(gdal GROUPS "GDAL")
 # OpenVDB - storage and manipulation of sparse volumetric data discretized on
 # three-dimensional grids
 # https://github.com/AcademySoftwareFoundation/openvdb
-#add_project(openvdb GROUPS "BRLCAD_EXTRA")
+add_project(openvdb GROUPS "BRLCAD_EXTRA")
 
 # tinygltf - tiny glTF library(loader/saver)
 # https://github.com/syoyo/tinygltf

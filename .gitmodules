@@ -120,6 +120,12 @@
 	branch = RELEASE
 	ignore = dirty
         shallow = true
+[submodule "openvdb/openvdb"]
+	path = openvdb/openvdb
+	url = https://github.com/BRL-CAD/openvdb
+	branch = master
+	ignore = dirty
+        shallow = true
 [submodule "osmesa/osmesa"]
 	path = osmesa/osmesa
 	url = https://github.com/BRL-CAD/osmesa
