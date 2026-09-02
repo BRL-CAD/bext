@@ -58,6 +58,7 @@ selection further.
 | `openexr` | `USE_APPLESEED` | `install` | `deflate`, `patch` | [repository](https://github.com/BRL-CAD/openexr) |
 | `openimageio` | `USE_APPLESEED` | `install` | `boost`, `fmt`, `jpeg`, `opencolorio`, `openexr`, `patch`, `png`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/oiio) |
 | `opennurbs` | `USE_BRLCAD` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/opennurbs) |
+| `openvdb` | `USE_BRLCAD_EXTRA` | `install` | `onetbb`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/openvdb) |
 | `osl` | `USE_APPLESEED` | `install` | `bison`, `boost`, `flex`, `llvm`, `openexr`, `openimageio`, `patch`, `pugixml`, `zlib` | [repository](https://github.com/BRL-CAD/OpenShadingLanguage) |
 | `osmesa` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/osmesa) |
 | `ospray` | `USE_OSPRAY` | `install` | `embree`, `ispc`, `oidn`, `onetbb`, `patch`, `rkcommon` | [repository](https://github.com/BRL-CAD/ospray) |
