@@ -76,3 +76,131 @@ diff -Naur MANIFOLD/src/CMakeLists.txt MANIFOLD_BLD/src/CMakeLists.txt
 +
 +endif()
 +
+diff -Naur MANIFOLD/src/vec.h MANIFOLD_BLD/src/vec.h
+--- MANIFOLD/src/vec.h
++++ MANIFOLD_BLD/src/vec.h
+@@ -19,6 +19,10 @@
+ #define TracyAllocS(ptr, size, n) (void)0
+ #define TracyFreeS(ptr, n) (void)0
+ #endif
++#include <cstdlib>
++#include <limits>
++#include <memory>
++#include <new>
+ #include <vector>
+
+ #include "manifold/vec_view.h"
+@@ -63,10 +67,9 @@
+     this->capacity_ = this->size_;
+     auto policy = autoPolicy(this->size_);
+     if (this->size_ != 0) {
+-      this->ptr_ = reinterpret_cast<T*>(malloc(this->size_ * sizeof(T)));
+-      ASSERT(this->ptr_ != nullptr, std::bad_alloc());
+-      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
+-      copy(policy, vec.begin(), vec.end(), this->ptr_);
++      auto buffer = allocate(this->size_);
++      copy(policy, vec.begin(), vec.end(), buffer.get());
++      this->ptr_ = buffer.release();
+     }
+   }
+
+@@ -75,10 +78,9 @@
+     this->capacity_ = this->size_;
+     auto policy = autoPolicy(this->size_);
+     if (this->size_ != 0) {
+-      this->ptr_ = reinterpret_cast<T*>(malloc(this->size_ * sizeof(T)));
+-      ASSERT(this->ptr_ != nullptr, std::bad_alloc());
+-      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
+-      copy(policy, vec.begin(), vec.end(), this->ptr_);
++      auto buffer = allocate(this->size_);
++      copy(policy, vec.begin(), vec.end(), buffer.get());
++      this->ptr_ = buffer.release();
+     }
+   }
+
+@@ -105,17 +107,8 @@
+
+   Vec<T>& operator=(const Vec<T>& other) {
+     if (&other == this) return *this;
+-    if (this->ptr_ != nullptr) {
+-      free_async(this->ptr_, capacity_);
+-    }
+-    this->size_ = other.size_;
+-    capacity_ = other.size_;
+-    if (this->size_ != 0) {
+-      this->ptr_ = reinterpret_cast<T*>(malloc(this->size_ * sizeof(T)));
+-      ASSERT(this->ptr_ != nullptr, std::bad_alloc());
+-      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
+-      manifold::copy(other.begin(), other.end(), this->ptr_);
+-    }
++    Vec<T> replacement(other);
++    swap(replacement);
+     return *this;
+   }
+
+@@ -160,16 +153,14 @@
+
+   void reserve(size_t n) {
+     if (n > capacity_) {
+-      T* newBuffer = reinterpret_cast<T*>(malloc(n * sizeof(T)));
+-      ASSERT(newBuffer != nullptr, std::bad_alloc());
+-      TracyAllocS(newBuffer, n * sizeof(T), 3);
++      auto newBuffer = allocate(n);
+       if (this->size_ > 0)
+         manifold::copy(autoPolicy(this->size_), this->ptr_,
+-                       this->ptr_ + this->size_, newBuffer);
++                       this->ptr_ + this->size_, newBuffer.get());
+       if (this->ptr_ != nullptr) {
+         free_async(this->ptr_, capacity_);
+       }
+-      this->ptr_ = newBuffer;
++      this->ptr_ = newBuffer.release();
+       capacity_ = n;
+     }
+   }
+@@ -200,23 +191,39 @@
+   }
+
+   void shrink_to_fit() {
+-    T* newBuffer = nullptr;
++    Buffer newBuffer;
+     if (this->size_ > 0) {
+-      newBuffer = reinterpret_cast<T*>(malloc(this->size_ * sizeof(T)));
+-      ASSERT(newBuffer != nullptr, std::bad_alloc());
+-      TracyAllocS(newBuffer, this->size_ * sizeof(T), 3);
+-      manifold::copy(this->ptr_, this->ptr_ + this->size_, newBuffer);
++      newBuffer = allocate(this->size_);
++      manifold::copy(this->ptr_, this->ptr_ + this->size_, newBuffer.get());
+     }
+     if (this->ptr_ != nullptr) {
+       free_async(this->ptr_, capacity_);
+     }
+-    this->ptr_ = newBuffer;
++    this->ptr_ = newBuffer.release();
+     capacity_ = this->size_;
+   }
+
+   size_t capacity() const { return capacity_; }
+
+  private:
++  struct BufferDeleter {
++    void operator()(T* pointer) const noexcept {
++      TracyFreeS(pointer, 3);
++      free(pointer);
++    }
++  };
++  using Buffer = std::unique_ptr<T, BufferDeleter>;
++
++  static Buffer allocate(size_t count) {
++    if (count > std::numeric_limits<size_t>::max() / sizeof(T))
++      throw std::bad_alloc();
++    T* pointer = reinterpret_cast<T*>(malloc(count * sizeof(T)));
++    // Allocation failures must be handled in release builds as well.
++    if (pointer == nullptr) throw std::bad_alloc();
++    TracyAllocS(pointer, count * sizeof(T), 3);
++    return Buffer(pointer);
++  }
++
+   size_t capacity_ = 0;
+
+   static_assert(std::is_trivially_destructible<T>::value);
