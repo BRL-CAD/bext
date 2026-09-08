@@ -3440,11 +3440,16 @@ void ASBeautifier::handleClosingParen(std::string_view line, size_t i, bool tabI
 	// direct-list-init like 'A var_a { ... }': prev char ends an identifier
 	// or template/array close, and we are not inside a class/enum header, a
 	// control-flow header (do/try/else/...), or a class initializer.
-	// Also exclude block-scope openers like 'namespace xxx {' where the
-    // brace opens a scope rather than initializing a variable.
-    bool isPrevHeaderBlockScope = !headerStack->empty()
-                                  && (headerStack->back() == &ASResource::AS_NAMESPACE
-                                      || headerStack->back() == &ASResource::AS_MODULE);
+	// Also exclude block-scope openers like 'namespace xxx {' or 'extern "C" {'
+	// where the brace opens a scope rather than initializing a variable.
+	// For extern "C", prevNonSpaceCh is not reliable here: it is not updated
+	// while scanning the quoted "C" token, so it still holds a stale legal
+	// identifier character left over from 'extern', which would otherwise
+	// make isDirectBraceInit true below.
+	bool isPrevHeaderBlockScope = (!headerStack->empty()
+	                               && (headerStack->back() == &ASResource::AS_NAMESPACE
+	                                   || headerStack->back() == &ASResource::AS_MODULE))
+	                              || isInExternC;
 
 	bool isDirectBraceInit = isCStyle() && isBlockOpener
 	                         && (isLegalNameChar(prevNonSpaceCh)
