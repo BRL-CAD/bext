@@ -99,13 +99,11 @@
 [submodule "opencv/opencv"]
 	path = opencv/opencv
 	url = https://github.com/BRL-CAD/opencv
-	branch = RELEASE
 	ignore = dirty
         shallow = true
 [submodule "opennurbs/opennurbs"]
 	path = opennurbs/opennurbs
 	url = https://github.com/BRL-CAD/opennurbs
-	branch = RELEASE
 	ignore = dirty
         shallow = true
 [submodule "openvdb/openvdb"]
@@ -242,7 +240,6 @@
 [submodule "tiff/libtiff"]
 	path = tiff/libtiff
 	url = https://github.com/BRL-CAD/libtiff
-	branch = RELEASE
 	ignore = dirty
         shallow = true
 [submodule "onetbb/oneTBB"]
@@ -330,7 +327,6 @@
 [submodule "manifold/manifold"]
 	path = manifold/manifold
 	url = https://github.com/BRL-CAD/manifold.git
-	branch = RELEASE
 	ignore = dirty
         shallow = true
 [submodule "appleseed/appleseed"]
@@ -351,19 +347,16 @@
 [submodule "clipper2/Clipper2"]
 	path = clipper2/Clipper2
 	url = https://github.com/BRL-CAD/Clipper2.git
-	branch = RELEASE
         ignore = dirty
         shallow = true
 [submodule "tinygltf/tinygltf"]
 	path = tinygltf/tinygltf
 	url = https://github.com/BRL-CAD/tinygltf.git
-	branch = release
         ignore = dirty
         shallow = true
 [submodule "poissonrecon/PoissonRecon"]
 	path = poissonrecon/PoissonRecon
 	url = https://github.com/BRL-CAD/PoissonRecon
-	branch = RELEASE
         ignore = dirty
         shallow = true
 [submodule "bullet/bullet3"]
