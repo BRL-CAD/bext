@@ -36,17 +36,6 @@ diff -Naur opencv/CMakeLists.txt OPENCV_BLD/CMakeLists.txt
  include(cmake/OpenCVMinDepVersions.cmake)
  
  if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-@@ -68,6 +70,10 @@
-   cmake_policy(SET CMP0071 NEW)  # CMake 3.10+: Let `AUTOMOC` and `AUTOUIC` process `GENERATED` files.
- endif()
- 
-+if (POLICY CMP0074)
-+  cmake_policy(SET CMP0074 NEW)  # CMake 3.12+: find_package() uses <PackageName>_ROOT variables.
-+endif (POLICY CMP0074)
-+
- if(POLICY CMP0075)
-   cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
- endif()
 @@ -1154,7 +1160,7 @@
  if(ANDROID OR NOT UNIX)
    install(FILES ${OPENCV_LICENSE_FILE}

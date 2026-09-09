@@ -49,7 +49,7 @@ if (ENABLE_OPENCV)
     -DBUILD_opencv_apps=ON
     -DBUILD_opencv_calib3d=OFF
     -DBUILD_opencv_core=ON
-    -DBUILD_opencv_dnn=ON
+    -DBUILD_opencv_dnn=OFF
     -DBUILD_opencv_features2d=ON
     -DBUILD_opencv_flann=ON
     -DBUILD_opencv_highgui=ON
@@ -79,7 +79,7 @@ if (ENABLE_OPENCV)
     -DWITH_CUDA=OFF
     -DWITH_EIGEN=OFF
     -DWITH_FFMPEG=OFF
-    -DWITH_FLATBUFFERS=ON
+    -DWITH_FLATBUFFERS=OFF
     -DWITH_FREETYPE=OFF
     -DWITH_GDAL=OFF
     -DWITH_GDCM=OFF
