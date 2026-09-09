@@ -450,11 +450,6 @@ add_project(strclear GROUPS "BRLCAD")
 add_project(lief GROUPS "BRLCAD")
 add_project(plief GROUPS "BRLCAD")
 
-# Keeping this set up for easy turn-on until we're confident plief+LIEF has
-# all of our use cases covered - plief is preferred, but we've already hit
-# one case where a bug in LIEF had to be fixed.
-#add_project(patchelf GROUPS "BRLCAD")
-
 ###############################################################################
 # Build logic is broken out per-library, but the ordering is important.  Some
 # libraries will depend on others listed here (for example, we want openNURBS
