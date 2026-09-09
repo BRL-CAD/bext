@@ -443,7 +443,6 @@ add_project(lemon GROUPS "BRLCAD")
 add_project(re2c GROUPS "BRLCAD")
 add_project(perplex GROUPS "BRLCAD")
 add_project(strclear GROUPS "BRLCAD")
-add_project(xmltools GROUPS "BRLCAD_EXTRA")  # Used for Docbook building
 
 # RPATH editing - LIEF has the core capabilities, and plief exposes them via
 # a command line utility with patchelf compatible options, so we can drop

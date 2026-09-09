@@ -39,11 +39,6 @@
 	url = https://github.com/BRL-CAD/strclear
 	ignore = dirty
         shallow = true
-[submodule "xmltools/xmltools"]
-	path = xmltools/xmltools
-	url = https://github.com/BRL-CAD/xmltools
-	ignore = dirty
-        shallow = true
 [submodule "zlib/zlib"]
 	path = zlib/zlib
 	url = https://github.com/BRL-CAD/zlib
