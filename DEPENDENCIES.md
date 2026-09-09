@@ -84,7 +84,6 @@ selection further.
 | `tkhtml` | `USE_TCL` | `install` | `patch`, `tcl`, `tk` | [repository](https://github.com/BRL-CAD/tkhtml) |
 | `tktable` | `USE_TCL` | `install` | `patch`, `tcl`, `tk` | [repository](https://github.com/BRL-CAD/tktable) |
 | `xerces-c` | `USE_APPLESEED` | `install` | `icu`, `patch` | [repository](https://github.com/BRL-CAD/xerces-c) |
-| `xmltools` | `USE_BRLCAD_EXTRA` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/xmltools) |
 | `yaml-cpp` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/yaml-cpp) |
 | `zlib` | `USE_APPLESEED`, `USE_BRLCAD`, `USE_OSPRAY`, `USE_TCL` | `install` | `patch` | [repository](https://github.com/BRL-CAD/zlib) |
 | `zstd` | `USE_APPLESEED`, `USE_OSPRAY` | `install` | `patch` | [repository](https://github.com/BRL-CAD/zstd) |
