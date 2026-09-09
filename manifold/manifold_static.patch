@@ -1,0 +1,81 @@
+--- MANIFOLD/CMakeLists.txt
++++ MANIFOLD_BLD/CMakeLists.txt
+@@ -114,6 +114,12 @@
+ option(CMAKE_BUILD_TYPE "Build type" Release)
+ # default to building shared library
+ option(BUILD_SHARED_LIBS "Build shared library" ON)
++# optionally build a static library alongside the shared library
++option(
++  BUILD_STATIC_LIBS
++  "Build a static library (manifold-static) alongside the shared library"
++  OFF
++)
+ # Set some option values in the CMake cache
+ set(MANIFOLD_FLAGS "" CACHE STRING "Manifold compiler flags")
+ 
+--- MANIFOLD/src/CMakeLists.txt
++++ MANIFOLD_BLD/src/CMakeLists.txt
+@@ -131,3 +131,63 @@
+ exportlib(manifold)
+ 
+ install(TARGETS manifold EXPORT manifoldTargets)
++
++if(BUILD_STATIC_LIBS AND BUILD_SHARED_LIBS)
++  add_library(manifold_static STATIC ${MANIFOLD_SRCS} ${MANIFOLD_PRIVATE_HDRS})
++
++  set_target_properties(
++    manifold_static
++    PROPERTIES OUTPUT_NAME manifold EXPORT_NAME manifold-static
++  )
++
++  target_link_libraries(
++    manifold_static PUBLIC $<$<BOOL:${TRACY_ENABLE}>:TracyClient>
++  )
++
++  set(MANIFOLD_STATIC_CROSS_SECTION_LIBS ${MANIFOLD_CROSS_SECTION_LIBS})
++  if(
++    MANIFOLD_CROSS_SECTION
++    AND MANIFOLD_CROSS_SECTION_BACKEND STREQUAL "clipper2"
++    AND TARGET Clipper2::Clipper2-static
++  )
++    set(MANIFOLD_STATIC_CROSS_SECTION_LIBS Clipper2::Clipper2-static)
++  endif()
++  target_link_libraries(
++    manifold_static
++    PRIVATE
++      $<$<BOOL:${MANIFOLD_PAR}>:TBB::tbb>
++      ${MANIFOLD_STATIC_CROSS_SECTION_LIBS}
++  )
++
++  target_compile_options(manifold_static PRIVATE ${MANIFOLD_FLAGS})
++  target_compile_features(manifold_static PUBLIC cxx_std_17)
++  foreach(OPT IN LISTS OPTIONS)
++    if(${${OPT}})
++      target_compile_definitions(manifold_static PUBLIC ${OPT})
++    endif()
++  endforeach()
++  if(MANIFOLD_PAR)
++    target_compile_definitions(manifold_static PUBLIC MANIFOLD_PAR=1)
++  else()
++    target_compile_definitions(manifold_static PUBLIC MANIFOLD_PAR=-1)
++  endif()
++  if(MANIFOLD_NO_IOSTREAM)
++    target_compile_definitions(manifold_static PUBLIC MANIFOLD_NO_FILESYSTEM)
++  endif()
++
++  target_include_directories(
++    manifold_static
++    PUBLIC
++      $<INSTALL_INTERFACE:include>
++      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
++      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
++    PRIVATE ${MANIFOLD_INCLUDE_DIRS}
++  )
++
++  install(
++    TARGETS manifold_static
++    EXPORT manifoldTargets
++    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
++  )
++endif()

@@ -1,0 +1,167 @@
+--- MANIFOLD/src/vec.h
++++ MANIFOLD_BLD/src/vec.h
+@@ -31,6 +31,10 @@
+ #define ZoneScoped
+ #define ZoneScopedN(name)
+ #endif
++#include <cstdlib>
++#include <limits>
++#include <memory>
++#include <new>
+ #include <vector>
+ 
+ #include "manifold/vec_view.h"
+@@ -70,16 +74,14 @@
+   // Note that the vector constructed with this constructor will contain
+   // uninitialized memory. Please specify `val` if you need to make sure that
+   // the data is initialized.
+-  inline Vec(size_t size) : VecView<T>() {
++  inline Vec(size_t size) : Vec() {
+     ZoneScopedN("Vec(size)");
+-    if constexpr (shared) count_ = new std::atomic<int>(1);
+     reserve(size);
+     this->size_ = size;
+   }
+ 
+-  inline Vec(size_t size, T val) : VecView<T>() {
++  inline Vec(size_t size, T val) : Vec() {
+     ZoneScopedN("Vec(size, val)");
+-    if constexpr (shared) count_ = new std::atomic<int>(1);
+     resize(size, val);
+   }
+ 
+@@ -112,17 +114,15 @@
+     moveContent(other);
+   }
+ 
+-  inline Vec(const VecView<const T>& vec) : VecView<T>() {
++  inline Vec(const VecView<const T>& vec) : Vec() {
+     ZoneScopedN("Vec(const VecView&)");
+-    if constexpr (shared) this->count_ = new std::atomic<int>(1);
+     this->size_ = vec.size();
+     this->capacity_ = this->size_;
+     auto policy = autoPolicy(this->size_);
+     if (this->size_ != 0) {
+-      this->ptr_ = reinterpret_cast<T*>(malloc(this->size_ * sizeof(T)));
+-      ASSERT(this->ptr_ != nullptr, std::bad_alloc());
+-      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
+-      copy(policy, vec.begin(), vec.end(), this->ptr_);
++      auto buffer = allocate(this->size_);
++      copy(policy, vec.begin(), vec.end(), buffer.get());
++      this->ptr_ = buffer.release();
+     }
+   }
+ 
+@@ -137,8 +137,8 @@
+   Vec& operator=(const Vec& other) {
+     ZoneScopedN("Vec operator=(other)");
+     if (&other == this) return *this;
+-    dealloc();
+     if constexpr (shared) {
++      dealloc();
+       other.count_->fetch_add(1);
+       this->count_ = other.count_;
+       this->ptr_ = other.ptr_;
+@@ -146,29 +146,15 @@
+       this->capacity_ = other.capacity_;
+       return *this;
+     }
+-    this->size_ = other.size_;
+-    this->capacity_ = other.size_;
+-    if (this->size_ != 0) {
+-      this->ptr_ = reinterpret_cast<T*>(malloc(this->size_ * sizeof(T)));
+-      ASSERT(this->ptr_ != nullptr, std::bad_alloc());
+-      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
+-      manifold::copy(other.begin(), other.end(), this->ptr_);
+-    }
++    Vec replacement(other.view());
++    swap(replacement);
+     return *this;
+   }
+ 
+   inline Vec<T, shared>& operator=(const Vec<T, !shared>& other) {
+     ZoneScopedN("Vec operator=(other)");
+-    dealloc();
+-    if constexpr (shared) this->count_ = new std::atomic<int>(1);
+-    this->size_ = other.size_;
+-    this->capacity_ = other.size_;
+-    if (this->size_ != 0) {
+-      this->ptr_ = reinterpret_cast<T*>(malloc(this->size_ * sizeof(T)));
+-      ASSERT(this->ptr_ != nullptr, std::bad_alloc());
+-      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
+-      manifold::copy(other.begin(), other.end(), this->ptr_);
+-    }
++    Vec replacement(other.view());
++    *this = std::move(replacement);
+     return *this;
+   }
+ 
+@@ -221,17 +207,15 @@
+   void reserve(size_t n) {
+     AssertUnique();
+     if (n > capacity_) {
+-      T* newBuffer = reinterpret_cast<T*>(malloc(n * sizeof(T)));
+-      ASSERT(newBuffer != nullptr, std::bad_alloc());
+-      TracyAllocS(newBuffer, n * sizeof(T), 3);
++      auto newBuffer = allocate(n);
+       if (this->size_ > 0)
+         manifold::copy(autoPolicy(this->size_), this->ptr_,
+-                       this->ptr_ + this->size_, newBuffer);
++                       this->ptr_ + this->size_, newBuffer.get());
+       if (this->ptr_ != nullptr) {
+         TracyFreeS(this->ptr_, 3);
+         free(this->ptr_);
+       }
+-      this->ptr_ = newBuffer;
++      this->ptr_ = newBuffer.release();
+       capacity_ = n;
+     }
+   }
+@@ -269,18 +253,16 @@
+ 
+   void shrink_to_fit() {
+     AssertUnique();
+-    T* newBuffer = nullptr;
++    Buffer newBuffer;
+     if (this->size_ > 0) {
+-      newBuffer = reinterpret_cast<T*>(malloc(this->size_ * sizeof(T)));
+-      ASSERT(newBuffer != nullptr, std::bad_alloc());
+-      TracyAllocS(newBuffer, this->size_ * sizeof(T), 3);
+-      manifold::copy(this->ptr_, this->ptr_ + this->size_, newBuffer);
++      newBuffer = allocate(this->size_);
++      manifold::copy(this->ptr_, this->ptr_ + this->size_, newBuffer.get());
+     }
+     if (this->ptr_ != nullptr) {
+       TracyFreeS(this->ptr_, 3);
+       free(this->ptr_);
+     }
+-    this->ptr_ = newBuffer;
++    this->ptr_ = newBuffer.release();
+     capacity_ = this->size_;
+   }
+ 
+@@ -297,6 +279,24 @@
+   }
+ 
+  private:
++  struct BufferDeleter {
++    void operator()(T* pointer) const noexcept {
++      TracyFreeS(pointer, 3);
++      free(pointer);
++    }
++  };
++  using Buffer = std::unique_ptr<T, BufferDeleter>;
++
++  static Buffer allocate(size_t count) {
++    if (count > std::numeric_limits<size_t>::max() / sizeof(T))
++      throw std::bad_alloc();
++    T* pointer = reinterpret_cast<T*>(malloc(count * sizeof(T)));
++    // Allocation failures must be handled in release builds as well.
++    if (pointer == nullptr) throw std::bad_alloc();
++    TracyAllocS(pointer, count * sizeof(T), 3);
++    return Buffer(pointer);
++  }
++
+   size_t capacity_ = 0;
+ 
+   // Normally empty structs have size 1 (1 byte) to ensure every field has a
