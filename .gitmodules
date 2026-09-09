@@ -83,13 +83,11 @@
 [submodule "proj/PROJ"]
 	path = proj/PROJ
 	url = https://github.com/BRL-CAD/PROJ
-	branch = RELEASE
 	ignore = dirty
         shallow = true
 [submodule "gdal/gdal"]
 	path = gdal/gdal
 	url = https://github.com/BRL-CAD/gdal
-	branch = RELEASE
 	ignore = dirty
         shallow = true
 [submodule "assetimport/assimp"]
