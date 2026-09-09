@@ -11,7 +11,6 @@
 [submodule "lief/LIEF"]
 	path = lief/LIEF
 	url = https://github.com/BRL-CAD/LIEF
-	branch = RELEASE
 	ignore = dirty
         shallow = true
 [submodule "lemon/lemon"]
