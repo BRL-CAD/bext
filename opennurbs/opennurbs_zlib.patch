@@ -1,23 +1,23 @@
---- opennurbs/opennurbs_zlib.cpp	2024-06-25 15:44:35.958646126 -0400
-+++ OPENNURBS_BLD/opennurbs_zlib.cpp	2024-06-25 15:44:06.155134199 -0400
-@@ -23,6 +23,7 @@
- 
- #include "opennurbs_zlib.h"
- 
+--- opennurbs/opennurbs_zlib.cpp	2026-09-09 15:31:14.185083448 -0400
++++ OPENNURBS_BLD/opennurbs_zlib.cpp	2026-09-09 15:41:51.335267196 -0400
+@@ -30,6 +30,7 @@
+ // ON_CMAKE_BUILD should be renamed "ON_NOT_USING_MSVC_LINK_LIB_PRAGMA"
+ // This whole thing should be reworked so MSVC builds also use build properties,
+ // instead of this non-portable pragma.
 +#if 0
  #if defined(ON_COMPILER_MSC) && !defined(ON_CMAKE_BUILD)
  
  #if !defined(OPENNURBS_ZLIB_LIB_DIR)
-@@ -52,6 +53,8 @@
+@@ -60,6 +61,8 @@
  
- #endif
+ #endif  // defined(ON_COMPILER_MSC) && !defined(ON_CMAKE_BUILD)
  
 +#endif
 +
  // compressed buffer I/O uses zlib 1.1.3 inflate()/deflate()
  class ON_CompressorImplementation
  {
-@@ -319,11 +322,11 @@
+@@ -327,11 +332,11 @@
        // no uncompressed input is left - switch to finish mode
        flush = Z_FINISH;
      }
@@ -31,7 +31,7 @@
        rc = false;
        break;
      }
-@@ -519,11 +522,11 @@
+@@ -527,11 +532,11 @@
        // no compressed input is left - switch to finish mode
        flush = Z_FINISH;
      }
@@ -45,7 +45,7 @@
        rc = false;
        break;
      }
-@@ -1200,11 +1203,11 @@
+@@ -1208,11 +1213,11 @@
        // no uncompressed input is left - switch to finish mode
        flush = Z_FINISH;
      }
@@ -59,7 +59,7 @@
        rc = false;
        break;
      }
-@@ -1333,11 +1336,11 @@
+@@ -1341,11 +1346,11 @@
        // no compressed input is left - switch to finish mode
        flush = Z_FINISH;
      }

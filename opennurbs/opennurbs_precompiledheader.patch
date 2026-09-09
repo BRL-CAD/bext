@@ -1,17 +1,5 @@
 --- opennurbs/opennurbs_precompiledheader.cpp	2024-09-24 11:00:03.440753786 -0400
 +++ OPENNURBS_BLD/opennurbs_precompiledheader.cpp	2024-09-24 10:59:40.545148988 -0400
-@@ -28,9 +28,9 @@
- #error Incorrect _M_... setting for x64 build
- #endif
- 
--#if !defined(_M_X64)
-+#if !defined(_M_X64) && !defined(_M_ARM64)
- // This should be automatically defined by the compiler
--#error _M_X64 should be defined for x64 builds
-+#error _M_X64 or _M_ARM64 should be defined for x64 or ARM64 builds
- #endif
- 
- // All opennurbs code uses the "offical" _M_X64. Unfortunately, 
 @@ -39,9 +39,9 @@
  // _M_X64 and _M_AMD64 for the WIN64 platform.  If it doesn't,
  // then we have a serious problem because some system header
@@ -33,18 +21,6 @@
  #error Incorrect _M_... setting for 32 bit Windows build.
  #endif
  
-@@ -104,9 +104,9 @@
- #error Incorrect _M_... setting for x64 build
- #endif
- 
--#if !defined(_M_X64)
-+#if !defined(_M_X64) && !defined(_M_ARM64)
- // This should be automatically defined by the compiler
--#error _M_X64 should be defined for x64 builds
-+#error _M_X64 or _M_ARM64 should be defined for x64 or ARM64 builds
- #endif
- 
- // All opennurbs code uses the "offical" _M_X64. Unfortunately, 
 @@ -115,9 +115,9 @@
  // _M_X64 and _M_AMD64 for the WIN64 platform.  If it doesn't,
  // then we have a serious problem because some system header
