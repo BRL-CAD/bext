@@ -1,0 +1,215 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -7,6 +7,8 @@
+     HOMEPAGE_URL "https://zlib.net/"
+     DESCRIPTION "a general-purpose lossless data-compression library")
+ 
++set(CMAKE_POSITION_INDEPENDENT_CODE ON)
++
+ # ============================================================================
+ # CPack
+ # ============================================================================
+@@ -25,7 +27,15 @@
+ option(ZLIB_INSTALL "Enable installation of zlib" ON)
+ option(ZLIB_PREFIX "prefix for all types and library functions, see zconf.h.in"
+        OFF)
++set(Z_PREFIX_STR "" CACHE STRING "Custom prefix for zlib symbols")
++if(NOT Z_PREFIX_STR STREQUAL "")
++    set(ZLIB_PREFIX ON CACHE BOOL "Enable the configured symbol prefix" FORCE)
++endif()
++if(ZLIB_PREFIX AND Z_PREFIX_STR STREQUAL "")
++    set(Z_PREFIX_STR "z_")
++endif()
+ mark_as_advanced(ZLIB_PREFIX)
++mark_as_advanced(Z_PREFIX_STR)
+ 
+ get_property(IS_MULTI GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+ 
+@@ -44,33 +54,8 @@
+ 
+ set(CPACK_INCLUDED TRUE)
+ 
+-if(NOT ZLIB_CONF_WRITTEN)
+-    set(Z_PREFIX ${ZLIB_PREFIX})
+-    set(CONF_OUT_FILE ${zlib_BINARY_DIR}/zconf.h.cmakein)
+-    file(READ ${zlib_SOURCE_DIR}/zconf.h ZCONF_CONTENT LIMIT 245)
+-    file(WRITE ${CONF_OUT_FILE} ${ZCONF_CONTENT})
+-    file(APPEND ${CONF_OUT_FILE} "#cmakedefine Z_PREFIX 1\n")
+-    file(APPEND ${CONF_OUT_FILE} "#cmakedefine HAVE_STDARG_H 1\n")
+-    file(APPEND ${CONF_OUT_FILE} "#cmakedefine HAVE_UNISTD_H 1\n")
+-    file(READ ${zlib_SOURCE_DIR}/zconf.h ZCONF_CONTENT OFFSET 244)
+-    set(FIRST_ITEM TRUE)
++set(Z_PREFIX ${ZLIB_PREFIX})
+ 
+-    foreach(item IN LISTS ZCONF_CONTENT)
+-        if(FIRST_ITEM)
+-            string(APPEND OUT_CONTENT ${item})
+-            set(FIRST_ITEM FALSE)
+-        else(FIRST_ITEM)
+-            string(APPEND OUT_CONTENT "\;" ${item})
+-        endif(FIRST_ITEM)
+-    endforeach(item IN LISTS ${ZCONF_CONTENT})
+-
+-    file(APPEND ${CONF_OUT_FILE} ${OUT_CONTENT})
+-    set(ZLIB_CONF_WRITTEN
+-        TRUE
+-        CACHE BOOL "zconf.h.cmakein was created")
+-    mark_as_advanced(ZLIB_CONF_WRITTEN)
+-endif(NOT ZLIB_CONF_WRITTEN)
+-
+ #
+ # Check to see if we have large file support
+ #
+@@ -113,13 +98,14 @@
+ unset(CMAKE_COMPILE_FLAGS)
+ set(ZLIB_PC ${zlib_BINARY_DIR}/zlib.pc)
+ configure_file(${zlib_SOURCE_DIR}/zlib.pc.cmakein ${ZLIB_PC} @ONLY)
+-configure_file(${zlib_BINARY_DIR}/zconf.h.cmakein ${zlib_BINARY_DIR}/zconf.h)
++configure_file(${zlib_SOURCE_DIR}/zconf.h.in ${zlib_BINARY_DIR}/zconf.h)
++configure_file(${zlib_SOURCE_DIR}/zlib.h.in ${zlib_BINARY_DIR}/zlib.h @ONLY)
+ 
+ # ============================================================================
+ # zlib
+ # ============================================================================
+ 
+-set(ZLIB_PUBLIC_HDRS ${zlib_BINARY_DIR}/zconf.h zlib.h)
++set(ZLIB_PUBLIC_HDRS ${zlib_BINARY_DIR}/zconf.h ${zlib_BINARY_DIR}/zlib.h)
+ 
+ set(ZLIB_PRIVATE_HDRS
+     crc32.h
+@@ -149,11 +135,6 @@
+     uncompr.c
+     zutil.c)
+ 
+-if(WIN32)
+-    set(zlib_static_suffix "s")
+-    set(CMAKE_DEBUG_POSTFIX "d")
+-endif(WIN32)
+-
+ if(ZLIB_BUILD_SHARED)
+     add_library(
+         zlib SHARED ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS}
+@@ -175,29 +156,20 @@
+     set(INSTALL_VERSION ${zlib_VERSION})
+ 
+     if(NOT CYGWIN)
+-        set_target_properties(zlib PROPERTIES SOVERSION ${zlib_VERSION_MAJOR}
+-                                              VERSION ${INSTALL_VERSION})
++        if(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
++            set_target_properties(zlib PROPERTIES SOVERSION ${zlib_VERSION_MAJOR}
++                                                  VERSION "1.3")
++        else()
++            set_target_properties(zlib PROPERTIES SOVERSION ${zlib_VERSION_MAJOR}
++                                                  VERSION ${INSTALL_VERSION})
++        endif()
+     endif(NOT CYGWIN)
+ 
+     set_target_properties(
+         zlib
+         PROPERTIES DEFINE_SYMBOL ZLIB_DLL
+                    EXPORT_NAME ZLIB
+-                   OUTPUT_NAME z)
+-    if(UNIX
+-        AND NOT APPLE
+-        AND NOT (CMAKE_SYSTEM_NAME STREQUAL AIX)
+-        AND NOT (CMAKE_SYSTEM_NAME STREQUAL SunOS))
+-        # On unix-like platforms the library is almost always called libz
+-        set_target_properties(
+-            zlib
+-            PROPERTIES LINK_FLAGS
+-                       "-Wl,--version-script,\"${zlib_SOURCE_DIR}/zlib.map\"")
+-    endif(
+-        UNIX
+-        AND NOT APPLE
+-        AND NOT (CMAKE_SYSTEM_NAME STREQUAL AIX)
+-        AND NOT (CMAKE_SYSTEM_NAME STREQUAL SunOS))
++                   OUTPUT_NAME z_brl)
+ endif(ZLIB_BUILD_SHARED)
+ 
+ if(ZLIB_BUILD_STATIC)
+@@ -217,9 +189,13 @@
+                 $<$<BOOL:${MSVC}>:_CRT_SECURE_NO_DEPRECATE>
+                 $<$<BOOL:${MSVC}>:_CRT_NONSTDC_NO_DEPRECATE>
+         PUBLIC $<$<BOOL:${HAVE_OFF64_T}>:_LARGEFILE64_SOURCE=1>)
+-    set_target_properties(
+-        zlibstatic PROPERTIES EXPORT_NAME ZLIBSTATIC OUTPUT_NAME
+-                                                     z${zlib_static_suffix})
++    if(MSVC)
++        set(zlib_static_name z_brl-static)
++    else()
++        set(zlib_static_name z_brl)
++    endif()
++    set_target_properties(zlibstatic PROPERTIES EXPORT_NAME ZLIBSTATIC
++                                                OUTPUT_NAME ${zlib_static_name})
+ endif(ZLIB_BUILD_STATIC)
+ 
+ if(ZLIB_INSTALL)
+@@ -227,15 +203,9 @@
+         install(
+             TARGETS zlib
+             COMPONENT Runtime
+-            EXPORT zlibSharedExport
+             RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+-        install(
+-            EXPORT zlibSharedExport
+-            FILE ZLIB-shared.cmake
+-            NAMESPACE ZLIB::
+-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zlib)
+ 
+         if(MSVC)
+             install(
+@@ -251,52 +221,15 @@
+         install(
+             TARGETS zlibstatic
+             COMPONENT Development
+-            EXPORT zlibStaticExport
+             RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+-        install(
+-            EXPORT zlibStaticExport
+-            FILE ZLIB-static.cmake
+-            NAMESPACE ZLIB::
+-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zlib)
+     endif(ZLIB_BUILD_STATIC)
+ 
+-    configure_package_config_file(
+-        ${zlib_SOURCE_DIR}/zlibConfig.cmake.in
+-        ${zlib_BINARY_DIR}/ZLIBConfig.cmake
+-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zlib)
+-
+-    write_basic_package_version_file(
+-        "${zlib_BINARY_DIR}/ZLIBConfigVersion.cmake"
+-        VERSION "${zlib_VERSION}"
+-        COMPATIBILITY AnyNewerVersion)
+-
+-    install(FILES ${zlib_BINARY_DIR}/ZLIBConfig.cmake
+-                  ${zlib_BINARY_DIR}/ZLIBConfigVersion.cmake
+-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zlib)
+     install(
+         FILES ${ZLIB_PUBLIC_HDRS}
+         COMPONENT Development
+         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+-    install(
+-        FILES zlib.3
+-        COMPONENT Docs
+-        DESTINATION "${CMAKE_INSTALL_MANDIR}/man3")
+-    install(
+-        FILES LICENSE
+-              doc/algorithm.txt
+-              doc/crc-doc.1.0.pdf
+-              doc/rfc1950.txt
+-              doc/rfc1951.txt
+-              doc/rfc1952.txt
+-              doc/txtvsbin.txt
+-        COMPONENT Docs
+-        DESTINATION "${CMAKE_INSTALL_DOCDIR}/zlib")
+-    install(
+-        FILES ${ZLIB_PC}
+-        COMPONENT Development
+-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+ endif(ZLIB_INSTALL)
+ 
+ # ============================================================================
