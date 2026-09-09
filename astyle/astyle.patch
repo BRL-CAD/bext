@@ -1,22 +1,74 @@
-diff -Naur astyle/build/cmake/InstallOptions.cmake ASTYLE_BLD/build/cmake/InstallOptions.cmake
---- astyle/build/cmake/InstallOptions.cmake	2024-06-24 11:35:23.444068225 -0400
-+++ ASTYLE_BLD/build/cmake/InstallOptions.cmake	2024-06-24 11:36:14.697228521 -0400
-@@ -1,45 +1,10 @@
+diff -Naur astyle/CMakeLists.txt ASTYLE_BLD/CMakeLists.txt
+--- astyle/CMakeLists.txt	2026-09-09 09:23:57.197122193 -0400
++++ ASTYLE_BLD/CMakeLists.txt	2026-09-09 09:17:33.423173910 -0400
+@@ -17,6 +17,8 @@
+ endif()
+ 
+ set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_EXTENSIONS OFF)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
+ # Linux Soname Version
+ set(MAJORVER 3)
+@@ -72,151 +74,13 @@
+     target_compile_options(astyle PRIVATE /utf-8)
+ endif()
+ 
+-# Set build-specific compile options
+-if(BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS)
+-    if(BUILD_JAVA_LIBS)
+-        find_package(JNI)
+-        if (NOT JNI_FOUND)
+-            set(err_jni "Use '-DJAVA_HOME=<JNI Directory>' to define the Java path")
+-            message(FATAL_ERROR ${err_jni})
+-        endif()
+-        target_compile_options(astyle PRIVATE -DASTYLE_JNI)
+-        target_include_directories(astyle PRIVATE ${JNI_INCLUDE_DIRS})
+-    else()
+-        target_compile_options(astyle PRIVATE -DASTYLE_LIB)
+-    endif()
+-    # Windows DLL exports removed
+-    set_property(TARGET astyle PROPERTY DEFINE_SYMBOL "")
+-    # Linux solib version added
+-    set_property(TARGET astyle PROPERTY VERSION ${SOLIBVER})
+-    set_property(TARGET astyle PROPERTY SOVERSION ${MAJORVER})
+-endif()
+-
+-
+-# Linker options:
+-
+-# Strip release builds
+-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+-	if(NOT BUILD_STATIC_LIBS AND NOT BORLAND AND NOT MSVC)
+-		add_custom_command(TARGET astyle POST_BUILD
+-						   COMMAND ${CMAKE_STRIP} $<TARGET_FILE_NAME:astyle>)
+-	endif()
+-endif()
+-# Shared library options
+-if(BUILD_SHARED_LIBS)
+-	set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")     # remove -rdynamic
+-	if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Intel")
+-		# need static linking because cannot find the intel libraries at runtime
+-		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-intel")
+-	elseif(MINGW)
+-		# minGW dlls don't work
+-		# tdm-gcc dlls work with everything except python
+-		set(CMAKE_SHARED_LINKER_FLAGS
+-			"${CMAKE_SHARED_LINKER_FLAGS} -Wl,--add-stdcall-alias -Wl,--dll")
+-	elseif(BORLAND)
+-		# use a development environment to compile Borland dlls
+-	endif()
+-endif()
+-
+-
+-# Installation options:
+-
 -# Define install directories
 -# To uninstall 'xargs rm < install_manifest.txt'
 -# Default linux install prefix is /usr/local"
 -# This may be modified by -DCMAKE_INSTALL_PREFIX=
 -# Default Win32 install prefix is not used (C:/Program Files (x86))
-+install(TARGETS astyle
-+       LIBRARY DESTINATION lib
-+       ARCHIVE DESTINATION lib
-+       RUNTIME DESTINATION bin
-+       )
-+install(FILES ${DOCS} DESTINATION share/doc/astyle/html)
-+if (MAN)
-+       INSTALL(FILES ${MAN} DESTINATION man/man1)
-+endif (MAN)
- 
+-
 -option(INSTALL_DOC ON)
 -
 -if(BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS)
@@ -56,21 +108,66 @@ diff -Naur astyle/build/cmake/InstallOptions.cmake ASTYLE_BLD/build/cmake/Instal
 -        endif()
 -	endif()
 -endif()
-diff -Naur astyle/CMakeLists.txt ASTYLE_BLD/CMakeLists.txt
---- astyle/CMakeLists.txt	2024-06-06 01:30:44.000000000 -0400
-+++ ASTYLE_BLD/CMakeLists.txt	2024-06-28 12:11:49.297259511 -0400
-@@ -6,9 +6,13 @@
+-
+-
+-# output files:
++install(TARGETS astyle
++       LIBRARY DESTINATION lib
++       ARCHIVE DESTINATION lib
++       RUNTIME DESTINATION bin
++       )
++install(FILES ${DOCS} DESTINATION share/doc/astyle/html)
++if (MAN)
++       INSTALL(FILES ${MAN} DESTINATION man/man1)
++endif (MAN)
  
- project(astyle CXX)
- 
-+set(CMAKE_CXX_EXTENSIONS OFF)
-+set(CMAKE_CXX_STANDARD 17)
-+set(CMAKE_CXX_STANDARD_REQUIRED ON)
-+
- include( build/cmake/Options.cmake REQUIRED )
- include( build/cmake/CompilerOptions.cmake REQUIRED )
--include( build/cmake/LinkerOptions.cmake REQUIRED )
-+#include( build/cmake/LinkerOptions.cmake REQUIRED )
- include( build/cmake/InstallOptions.cmake REQUIRED )
- include( build/cmake/OutputFiles.cmake REQUIRED )
- include( build/cmake/PrintInfo.cmake REQUIRED )
+-# Set output file names if different than 'astyle'
+-if(BUILD_JAVA_LIBS)
+-    if(WIN32)
+-        set_property(TARGET astyle PROPERTY OUTPUT_NAME AStyle32j)
+-        set_property(TARGET astyle PROPERTY PREFIX "")
+-    else()
+-        set_property(TARGET astyle PROPERTY OUTPUT_NAME astylej)
+-    endif()
+-elseif(BUILD_SHARED_LIBS)
+-    if(WIN32)
+-        set_property(TARGET astyle PROPERTY OUTPUT_NAME AStyle32)
+-        set_property(TARGET astyle PROPERTY PREFIX "")
+-    endif()
+-elseif(BUILD_STATIC_LIBS)
+-    if(WIN32)
+-        set_property(TARGET astyle PROPERTY OUTPUT_NAME AStyleLib)
+-        set_property(TARGET astyle PROPERTY PREFIX "")
+-    endif()
+-else()
+-    if(WIN32)
+-        set_property(TARGET astyle PROPERTY OUTPUT_NAME AStyle)
+-    endif()
+-endif()
+-
+-
+-# print info:
+-
+-if(BUILD_JAVA_LIBS)
+-	SET(ASTYLE_BUILD_TYPE "Java Shared Library")
+-elseif(BUILD_SHARED_LIBS)
+-	SET(ASTYLE_BUILD_TYPE "Shared Library")
+-elseif(BUILD_STATIC_LIBS)
+-	SET(ASTYLE_BUILD_TYPE "Static Library")
+-else()
+-	SET(ASTYLE_BUILD_TYPE "Executable")
+-endif()
+-
+-# Display build information
+-
+-message( STATUS "---------- General Configuration ----------" )
+-message( STATUS )
+-message( STATUS "CMake Generator:       ${CMAKE_GENERATOR}" )
+-message( STATUS "CMake Compiler:        ${CMAKE_CXX_COMPILER_ID}" )
+-message( STATUS "AStyle Build:          ${ASTYLE_BUILD_TYPE}" )
+-message( STATUS "AStyle Configuration:  ${CMAKE_BUILD_TYPE}" )
+-if( BUILD_JAVA_LIBS )
+-    message( STATUS "Java Include Path:     ${JAVA_INCLUDE_PATH}" )
+-endif()
+-message( STATUS )
+-message( STATUS "-------------------------------------------" )
