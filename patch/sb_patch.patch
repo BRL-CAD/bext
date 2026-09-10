@@ -1,0 +1,78 @@
+diff -Naur -U2 patch/src/locator.cpp PATCH_BLD/src/locator.cpp
+--- patch/src/locator.cpp	2026-09-10 18:10:23.356218000 +0000
++++ PATCH_BLD/src/locator.cpp	2026-09-10 18:10:23.373457000 +0000
+@@ -130,6 +130,6 @@
+         auto suffix_fuzz = fuzz + patch_suffix_content - context;
+         auto prefix_fuzz = fuzz + patch_prefix_content - context;
+-        const bool must_match_at_end = suffix_fuzz < 0;
+-        const bool must_match_at_start = prefix_fuzz < 0 && hunk.old_file_range.start_line <= 1;
++        const bool must_match_at_end = patch_suffix_content > 0 && suffix_fuzz < 0;
++        const bool must_match_at_start = patch_prefix_content > 0 && prefix_fuzz < 0 && hunk.old_file_range.start_line <= 1;
+         suffix_fuzz = std::max<LineNumber>(suffix_fuzz, 0);
+         prefix_fuzz = std::max<LineNumber>(prefix_fuzz, 0);
+diff -Naur -U2 patch/tests/test_locator.cpp PATCH_BLD/tests/test_locator.cpp
+--- patch/tests/test_locator.cpp	2026-09-10 18:10:23.358081000 +0000
++++ PATCH_BLD/tests/test_locator.cpp	2026-09-10 18:10:23.373648000 +0000
+@@ -381,2 +381,62 @@
+     EXPECT_EQ(location.fuzz, 1);
+ }
++
++TEST(locator_hunk_with_no_trailing_context_is_not_end_anchored)
++{
++    const std::vector<Patch::Line> file_content = {
++        { "before", Patch::NewLine::LF },
++        { "alpha", Patch::NewLine::LF },
++        { "beta", Patch::NewLine::LF },
++        { "gamma", Patch::NewLine::LF },
++        { "after", Patch::NewLine::LF },
++    };
++
++    Patch::Hunk hunk;
++    hunk.lines = {
++        { ' ', "alpha" },
++        { ' ', "beta" },
++        { ' ', "gamma" },
++        { '+', "inserted" },
++    };
++
++    hunk.old_file_range.start_line = 2;
++    hunk.old_file_range.number_of_lines = 3;
++    hunk.new_file_range.start_line = 2;
++    hunk.new_file_range.number_of_lines = 4;
++
++    auto location = Patch::locate_hunk(file_content, hunk, false, 0, 0);
++    EXPECT_TRUE(location.is_found());
++    EXPECT_EQ(location.line_number, 1);
++    EXPECT_EQ(location.fuzz, 0);
++    EXPECT_EQ(location.offset, 0);
++}
++
++TEST(locator_hunk_with_no_leading_context_is_not_start_anchored)
++{
++    const std::vector<Patch::Line> file_content = {
++        { "before", Patch::NewLine::LF },
++        { "alpha", Patch::NewLine::LF },
++        { "beta", Patch::NewLine::LF },
++        { "gamma", Patch::NewLine::LF },
++        { "after", Patch::NewLine::LF },
++    };
++
++    Patch::Hunk hunk;
++    hunk.lines = {
++        { '+', "inserted" },
++        { ' ', "alpha" },
++        { ' ', "beta" },
++        { ' ', "gamma" },
++    };
++
++    hunk.old_file_range.start_line = 1;
++    hunk.old_file_range.number_of_lines = 3;
++    hunk.new_file_range.start_line = 1;
++    hunk.new_file_range.number_of_lines = 4;
++
++    auto location = Patch::locate_hunk(file_content, hunk, false, 0, 0);
++    EXPECT_TRUE(location.is_found());
++    EXPECT_EQ(location.line_number, 1);
++    EXPECT_EQ(location.fuzz, 0);
++    EXPECT_EQ(location.offset, 1);
++}

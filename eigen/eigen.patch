@@ -27,12 +27,12 @@ diff -Naur eigen/lapack/CMakeLists.txt EIGEN_BLD/lapack/CMakeLists.txt
 --- eigen/lapack/CMakeLists.txt	2026-09-09 11:39:12.910074781 -0400
 +++ EIGEN_BLD/lapack/CMakeLists.txt	2026-09-10 00:00:00.000000000 -0400
 @@ -24,3 +24,9 @@
- set(EigenLapack_SRCS
-   dsecnd_INT_CPU_TIME.cpp second_INT_CPU_TIME.cpp single.cpp double.cpp complex_single.cpp complex_double.cpp
- )
-+
 +# Eigen's template-heavy complex LAPACK sources can exceed the default COFF
 +# section limit when compiled with MSVC, particularly in debug builds.
 +if(MSVC)
 +  set_property(SOURCE complex_single.cpp complex_double.cpp APPEND PROPERTY COMPILE_OPTIONS "/bigobj")
 +endif()
++
+ set(EigenLapack_SRCS
+   dsecnd_INT_CPU_TIME.cpp second_INT_CPU_TIME.cpp single.cpp double.cpp complex_single.cpp complex_double.cpp
+ )

@@ -39,8 +39,10 @@ if (ENABLE_PATCH)
   git_submodule_init(patch README.md)
 
   ExternalProject_Add(PATCH_BLD
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/patch"
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/patch"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    # Bootstrap the local fix without requiring a patch utility to patch itself.
+    PATCH_COMMAND ${CMAKE_COMMAND};-E;copy_if_different;${CMAKE_CURRENT_SOURCE_DIR}/locator.cpp;<SOURCE_DIR>/src/locator.cpp
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}
