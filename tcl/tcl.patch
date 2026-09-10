@@ -1,85 +1,114 @@
-diff -Naur tcl/generic/tclConfig.c TCL_BLD/generic/tclConfig.c
---- tcl/generic/tclConfig.c	2024-03-06 17:07:53.393766385 -0500
-+++ TCL_BLD/generic/tclConfig.c	2024-03-06 17:04:34.432781121 -0500
-@@ -259,6 +259,37 @@
+diff -Naur --exclude=.git tcl/generic/tclConfig.c TCL_BLD/generic/tclConfig.c
+--- tcl/generic/tclConfig.c	2026-09-10 16:55:00.508727000 +0000
++++ TCL_BLD/generic/tclConfig.c	2026-09-10 17:36:28.674756000 +0000
+@@ -44,6 +44,7 @@
+ static Tcl_ObjCmdProc QueryConfigObjCmd;
+ static void		QueryConfigDelete(ClientData clientData);
+ static Tcl_Obj *	GetConfigDict(Tcl_Interp *interp);
++static Tcl_Obj *	RelocateConfigPath(Tcl_Obj *pathPtr);
+ static void		ConfigDictDeleteProc(ClientData clientData,
+ 			    Tcl_Interp *interp);
+ 
+@@ -176,6 +177,60 @@
+ /*
+  *----------------------------------------------------------------------
+  *
++ * RelocateConfigPath --
++ *
++ *	Resolve a path embedded relative to the Tcl installation prefix.
++ *
++ * Results:
++ *	The relocated path, with a reference held by the caller, or the
++ *	original path when relocation is unnecessary or unavailable.
++ *
++ * Side effects:
++ *	None.
++ *
++ *----------------------------------------------------------------------
++ */
++
++static Tcl_Obj *
++RelocateConfigPath(
++    Tcl_Obj *pathPtr)
++{
++    Tcl_Obj *executablePtr, *splitPtr, *prefixPtr, *resultPtr;
++    const char *executableName = Tcl_GetNameOfExecutable();
++    int pathc;
++
++    Tcl_IncrRefCount(pathPtr);
++    if (Tcl_FSGetPathType(pathPtr) != TCL_PATH_RELATIVE
++	    || executableName == NULL) {
++	return pathPtr;
++    }
++
++    executablePtr = Tcl_NewStringObj(executableName, -1);
++    Tcl_IncrRefCount(executablePtr);
++    splitPtr = Tcl_FSSplitPath(executablePtr, &pathc);
++    Tcl_IncrRefCount(splitPtr);
++    Tcl_DecrRefCount(executablePtr);
++
++    if (pathc < 3) {
++	Tcl_DecrRefCount(splitPtr);
++	return pathPtr;
++    }
++
++    prefixPtr = Tcl_FSJoinPath(splitPtr, pathc - 2);
++    Tcl_IncrRefCount(prefixPtr);
++    Tcl_DecrRefCount(splitPtr);
++
++    resultPtr = Tcl_FSJoinToPath(prefixPtr, 1, &pathPtr);
++    Tcl_IncrRefCount(resultPtr);
++    Tcl_DecrRefCount(pathPtr);
++    Tcl_DecrRefCount(prefixPtr);
++    return resultPtr;
++}
++
++
++/*
++ *----------------------------------------------------------------------
++ *
+  * QueryConfigObjCmd --
+  *
+  *	Implementation of "::<package>::pkgconfig", the command to query
+@@ -199,7 +254,7 @@
+ {
+     QCCD *cdPtr = (QCCD *)clientData;
+     Tcl_Obj *pkgName = cdPtr->pkg;
+-    Tcl_Obj *pDB, *pkgDict, *val, *listPtr;
++    Tcl_Obj *pDB, *pkgDict, *val, *listPtr, *pathPtr;
+     int n, index;
+     static const char *const subcmdStrings[] = {
+ 	"get", "list", NULL
+@@ -259,8 +314,26 @@
  	 * Value is stored as-is in a byte array, see Bug [9b2e636361],
  	 * so we have to decode it first.
  	 */
-+	/* We're storing the CFG_RUNTIME and CFG_INSTALL values as relative paths
-+	 * to make Tcl relocatable - hard coded paths will be invalid if the Tcl
-+	 * install is moved. */
-+	if (Tcl_StringMatch(Tcl_GetString(objv[0]), "::tcl::pkgconfig")) {
-+	   if (Tcl_StringMatch(Tcl_GetString(objv[2]), "*,runtime") || Tcl_StringMatch(Tcl_GetString(objv[2]), "*,install")) {
-+	      const char *texec = Tcl_GetNameOfExecutable();
-+	      Tcl_Obj *tpath = Tcl_NewStringObj(texec, strlen(texec)+1);
-+	      Tcl_FSConvertToPathType(interp, tpath);
-+	      int tpath_elements;
-+	      Tcl_Obj *tlist = Tcl_FSSplitPath(tpath, &tpath_elements);
-+	      Tcl_ListObjReplace(interp, tlist, tpath_elements-2, 2, 0, NULL);
-+	      Tcl_Obj *tdir = Tcl_FSJoinPath(tlist, tpath_elements-2);
-+	      Tcl_DecrRefCount(tlist);
-+
-+	      const char *rpath_str = (const char *) Tcl_GetByteArrayFromObj(val, &n);
-+	      Tcl_Obj *dict_rpath = Tcl_NewStringObj(rpath_str, n);
-+	      Tcl_FSConvertToPathType(interp, dict_rpath);
-+	      Tcl_Obj *cpaths[2] = {NULL};
-+	      cpaths[0] = dict_rpath;
-+	      Tcl_Obj *comb_path = Tcl_FSJoinToPath(tdir, 1, cpaths);
-+
-+	      int pn;
-+	      const char *jpath = (const char *) Tcl_GetByteArrayFromObj(comb_path, &pn);
-+	      Tcl_DecrRefCount(comb_path);
-+	      jpath = Tcl_ExternalToUtfDString(venc, jpath, pn, &conv);
-+	      Tcl_SetObjResult(interp, Tcl_NewStringObj(jpath, Tcl_DStringLength(&conv)));
-+	      Tcl_DStringFree(&conv);
-+	      return TCL_OK;
-+	   }
-+	}
 +
  	value = (const char *) Tcl_GetByteArrayFromObj(val, &n);
  	value = Tcl_ExternalToUtfDString(venc, value, n, &conv);
++
++	/*
++	 * Tcl installation paths are embedded relative to the installation
++	 * prefix so that the tree can be moved after installation.
++	 */
++
++	if (strcmp(Tcl_GetString(pkgName), "tcl") == 0
++		&& (Tcl_StringMatch(Tcl_GetString(objv[2]), "*,runtime")
++		|| Tcl_StringMatch(Tcl_GetString(objv[2]), "*,install"))) {
++	    pathPtr = Tcl_NewStringObj(value, Tcl_DStringLength(&conv));
++	    Tcl_DStringFree(&conv);
++	    pathPtr = RelocateConfigPath(pathPtr);
++	    Tcl_SetObjResult(interp, pathPtr);
++	    Tcl_DecrRefCount(pathPtr);
++	    return TCL_OK;
++	}
++
  	Tcl_SetObjResult(interp, Tcl_NewStringObj(value,
-diff -Naur tcl/macosx/configure TCL_BLD/macosx/configure
---- tcl/macosx/configure	2024-03-06 17:07:53.429765833 -0500
-+++ TCL_BLD/macosx/configure	2024-03-06 17:04:34.432781121 -0500
-@@ -10268,7 +10268,7 @@
- 
- eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
- 
--test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
-+test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
- PRIVATE_INCLUDE_DIR='$(includedir)'
- HTML_DIR='$(DISTDIR)/html'
- 
-@@ -10397,9 +10397,9 @@
-     test -z "$TCL_MODULE_PATH"  && \
- 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
- elif test "$prefix/lib" != "$libdir"; then
--    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib} ${TCL_PACKAGE_PATH}"
-+    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {lib} ${TCL_PACKAGE_PATH}"
- else
--    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${prefix}/lib} ${TCL_PACKAGE_PATH}"
-+    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{lib} ${TCL_PACKAGE_PATH}"
- fi
- 
- #--------------------------------------------------------------------
-diff -Naur tcl/macosx/Tcl-Common.xcconfig TCL_BLD/macosx/Tcl-Common.xcconfig
---- tcl/macosx/Tcl-Common.xcconfig	2024-03-06 17:07:53.429765833 -0500
-+++ TCL_BLD/macosx/Tcl-Common.xcconfig	2024-03-06 17:04:34.432781121 -0500
-@@ -25,8 +25,8 @@
- CPPFLAGS = -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET) $(CPPFLAGS)
- FRAMEWORK_INSTALL_PATH = /Library/Frameworks
- INCLUDEDIR = $(PREFIX)/include
--LIBDIR = $(PREFIX)/lib
--MANDIR = $(PREFIX)/man
-+LIBDIR = lib
-+MANDIR = man
- PER_ARCH_CFLAGS_ppc = -mcpu=G3 -mtune=G4 $(PER_ARCH_CFLAGS_ppc)
- PER_ARCH_CFLAGS_ppc64 = -mcpu=G5 -mpowerpc64 $(PER_ARCH_CFLAGS_ppc64)
- PREFIX = /usr/local
-diff -Naur tcl/macosx/Tcl.xcode/project.pbxproj TCL_BLD/macosx/Tcl.xcode/project.pbxproj
---- tcl/macosx/Tcl.xcode/project.pbxproj	2024-03-06 17:07:53.429765833 -0500
-+++ TCL_BLD/macosx/Tcl.xcode/project.pbxproj	2024-03-06 17:04:34.436781061 -0500
+ 		Tcl_DStringLength(&conv)));
+ 	Tcl_DStringFree(&conv);
+diff -Naur --exclude=.git tcl/macosx/Tcl.xcode/project.pbxproj TCL_BLD/macosx/Tcl.xcode/project.pbxproj
+--- tcl/macosx/Tcl.xcode/project.pbxproj	2026-09-10 16:55:00.566031000 +0000
++++ TCL_BLD/macosx/Tcl.xcode/project.pbxproj	2026-09-10 17:00:54.993929000 +0000
 @@ -69,7 +69,7 @@
  		F96D45B008F272BC004A47F5 /* tclPathObj.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1108F272A7004A47F5 /* tclPathObj.c */; };
  		F96D45B108F272BC004A47F5 /* tclPipe.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1208F272A7004A47F5 /* tclPipe.c */; };
@@ -89,9 +118,9 @@ diff -Naur tcl/macosx/Tcl.xcode/project.pbxproj TCL_BLD/macosx/Tcl.xcode/project
  		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
  		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
  		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
-diff -Naur tcl/macosx/Tcl.xcodeproj/project.pbxproj TCL_BLD/macosx/Tcl.xcodeproj/project.pbxproj
---- tcl/macosx/Tcl.xcodeproj/project.pbxproj	2024-03-06 17:07:53.429765833 -0500
-+++ TCL_BLD/macosx/Tcl.xcodeproj/project.pbxproj	2024-03-06 17:04:34.436781061 -0500
+diff -Naur --exclude=.git tcl/macosx/Tcl.xcodeproj/project.pbxproj TCL_BLD/macosx/Tcl.xcodeproj/project.pbxproj
+--- tcl/macosx/Tcl.xcodeproj/project.pbxproj	2026-09-10 16:55:00.566299000 +0000
++++ TCL_BLD/macosx/Tcl.xcodeproj/project.pbxproj	2026-09-10 17:00:54.998230000 +0000
 @@ -69,7 +69,7 @@
  		F96D45B008F272BC004A47F5 /* tclPathObj.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1108F272A7004A47F5 /* tclPathObj.c */; };
  		F96D45B108F272BC004A47F5 /* tclPipe.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1208F272A7004A47F5 /* tclPipe.c */; };
@@ -101,57 +130,14 @@ diff -Naur tcl/macosx/Tcl.xcodeproj/project.pbxproj TCL_BLD/macosx/Tcl.xcodeproj
  		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
  		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
  		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
-diff -Naur tcl/unix/configure TCL_BLD/unix/configure
---- tcl/unix/configure	2024-03-06 17:07:53.465765278 -0500
-+++ TCL_BLD/unix/configure	2024-03-06 17:04:34.440781001 -0500
-@@ -19116,7 +19116,7 @@
- 
- eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
- 
--test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
-+test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
- PRIVATE_INCLUDE_DIR='$(includedir)'
- HTML_DIR='$(DISTDIR)/html'
- 
-@@ -19247,9 +19247,9 @@
-     test -z "$TCL_MODULE_PATH"  && \
- 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
- elif test "$prefix/lib" != "$libdir"; then
--    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib} ${TCL_PACKAGE_PATH}"
-+    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {lib} ${TCL_PACKAGE_PATH}"
- else
--    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${prefix}/lib} ${TCL_PACKAGE_PATH}"
-+    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{lib} ${TCL_PACKAGE_PATH}"
- fi
- 
- #--------------------------------------------------------------------
-diff -Naur tcl/unix/configure.in TCL_BLD/unix/configure.in
---- tcl/unix/configure.in	2024-03-06 17:07:53.465765278 -0500
-+++ TCL_BLD/unix/configure.in	2024-03-06 17:04:34.444780941 -0500
-@@ -775,7 +775,7 @@
- 
- eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
- 
--test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
-+test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
- PRIVATE_INCLUDE_DIR='$(includedir)'
- HTML_DIR='$(DISTDIR)/html'
- 
-@@ -868,9 +868,9 @@
-     test -z "$TCL_MODULE_PATH"  && \
- 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
- elif test "$prefix/lib" != "$libdir"; then
--    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib} ${TCL_PACKAGE_PATH}"
-+    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${libdir}} {lib} ${TCL_PACKAGE_PATH}"
- else
--    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{${prefix}/lib} ${TCL_PACKAGE_PATH}"
-+    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="{lib} ${TCL_PACKAGE_PATH}"
- fi
- 
- #--------------------------------------------------------------------
-diff -Naur tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
---- tcl/unix/Makefile.in	2024-03-06 17:07:53.465765278 -0500
-+++ TCL_BLD/unix/Makefile.in	2024-03-06 17:04:34.452780824 -0500
+diff -Naur --exclude=.git tcl/manifest.uuid TCL_BLD/manifest.uuid
+--- tcl/manifest.uuid	1970-01-01 00:00:00.000000000 +0000
++++ TCL_BLD/manifest.uuid	2026-09-10 17:13:18.278096000 +0000
+@@ -0,0 +1 @@
++git-515167c897a7c8066abfbd71e8fe7bd8bf3569de
+diff -Naur --exclude=.git tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
+--- tcl/unix/Makefile.in	2026-09-10 16:55:00.589799000 +0000
++++ TCL_BLD/unix/Makefile.in	2026-09-10 17:09:34.696388000 +0000
 @@ -51,7 +51,7 @@
  DLL_INSTALL_DIR		= @DLL_INSTALL_DIR@
  
@@ -170,7 +156,7 @@ diff -Naur tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
  
  #--------------------------------------------------------------------------
  # The information below is modified by the configure script when Makefile is
-@@ -1369,16 +1369,16 @@
+@@ -1277,17 +1277,17 @@
  
  tclPkgConfig.o: $(GENERIC_DIR)/tclPkgConfig.c
  	$(CC) -c $(CC_SWITCHES) \
@@ -184,53 +170,73 @@ diff -Naur tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
 -		-DCFG_RUNTIME_SCRDIR="\"$(TCL_LIBRARY)\"" \
 -		-DCFG_RUNTIME_INCDIR="\"$(includedir)\"" \
 -		-DCFG_RUNTIME_DOCDIR="\"$(mandir)\"" \
+-		-DCFG_RUNTIME_DLLFILE="\"$(TCL_LIB_FILE)\"" \
 +		-DCFG_INSTALL_LIBDIR="\"lib\"" \
 +		-DCFG_INSTALL_BINDIR="\"bin\"" \
-+		-DCFG_INSTALL_SCRDIR="\"lib/tcl8.6\"" \
++		-DCFG_INSTALL_SCRDIR="\"lib/tcl$(VERSION)\"" \
 +		-DCFG_INSTALL_INCDIR="\"include\"" \
 +		-DCFG_INSTALL_DOCDIR="\"man\"" \
 +		-DCFG_RUNTIME_LIBDIR="\"lib\"" \
 +		-DCFG_RUNTIME_BINDIR="\"bin\"" \
-+		-DCFG_RUNTIME_SCRDIR="\"lib/tcl8.6\"" \
++		-DCFG_RUNTIME_SCRDIR="\"lib/tcl$(VERSION)\"" \
 +		-DCFG_RUNTIME_INCDIR="\"include\"" \
 +		-DCFG_RUNTIME_DOCDIR="\"man\"" \
- 		-DCFG_RUNTIME_DLLFILE="\"$(TCL_LIB_FILE)\"" \
++		-DCFG_RUNTIME_DLLFILE="\"lib/$(TCL_LIB_FILE)\"" \
  		$(GENERIC_DIR)/tclPkgConfig.c
  
-diff -Naur tcl/win/configure TCL_BLD/win/configure
---- tcl/win/configure	2024-03-06 17:07:53.469765217 -0500
-+++ TCL_BLD/win/configure	2024-03-06 17:04:34.452780824 -0500
-@@ -5296,9 +5296,9 @@
- #--------------------------------------------------------------------
+ tclPosixStr.o: $(GENERIC_DIR)/tclPosixStr.c
+diff -Naur --exclude=.git tcl/unix/configure TCL_BLD/unix/configure
+--- tcl/unix/configure	2026-09-10 16:55:00.590363000 +0000
++++ TCL_BLD/unix/configure	2026-09-10 17:30:54.834095000 +0000
+@@ -19111,7 +19111,7 @@
  
- if test "$prefix/lib" != "$libdir"; then
--    TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib}"
-+    TCL_PACKAGE_PATH="{${libdir}} {lib}"
+ eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
+ 
+-test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
++test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
+ PRIVATE_INCLUDE_DIR='$(includedir)'
+ HTML_DIR='$(DISTDIR)/html'
+ 
+@@ -19242,9 +19242,9 @@
+     test -z "$TCL_MODULE_PATH"  && \
+ 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
+ elif test "$prefix/lib" != "$libdir"; then
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${libdir}:${prefix}/lib"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${libdir}"
  else
--    TCL_PACKAGE_PATH="{${prefix}/lib}"
-+    TCL_PACKAGE_PATH="{lib}"
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${prefix}/lib"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH=""
  fi
  
- # The tclsh.exe.manifest requires these
-diff -Naur tcl/win/configure.in TCL_BLD/win/configure.in
---- tcl/win/configure.in	2024-03-06 17:07:53.469765217 -0500
-+++ TCL_BLD/win/configure.in	2024-03-06 17:04:34.452780824 -0500
-@@ -372,9 +372,9 @@
  #--------------------------------------------------------------------
+diff -Naur --exclude=.git tcl/unix/configure.in TCL_BLD/unix/configure.in
+--- tcl/unix/configure.in	2026-09-10 16:55:00.590431000 +0000
++++ TCL_BLD/unix/configure.in	2026-09-10 17:30:54.834273000 +0000
+@@ -774,7 +774,7 @@
  
- if test "$prefix/lib" != "$libdir"; then
--    TCL_PACKAGE_PATH="{${libdir}} {${prefix}/lib}"
-+    TCL_PACKAGE_PATH="{${libdir}} {lib}"
+ eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
+ 
+-test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
++test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
+ PRIVATE_INCLUDE_DIR='$(includedir)'
+ HTML_DIR='$(DISTDIR)/html'
+ 
+@@ -867,9 +867,9 @@
+     test -z "$TCL_MODULE_PATH"  && \
+ 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
+ elif test "$prefix/lib" != "$libdir"; then
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${libdir}:${prefix}/lib"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${libdir}"
  else
--    TCL_PACKAGE_PATH="{${prefix}/lib}"
-+    TCL_PACKAGE_PATH="{lib}"
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${prefix}/lib"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH=""
  fi
  
- # The tclsh.exe.manifest requires these
-diff -Naur tcl/win/Makefile.in TCL_BLD/win/Makefile.in
---- tcl/win/Makefile.in	2024-03-06 17:07:53.469765217 -0500
-+++ TCL_BLD/win/Makefile.in	2024-03-06 17:04:34.456780764 -0500
-@@ -35,7 +35,7 @@
+ #--------------------------------------------------------------------
+diff -Naur --exclude=.git tcl/win/Makefile.in TCL_BLD/win/Makefile.in
+--- tcl/win/Makefile.in	2026-09-10 16:55:00.558515000 +0000
++++ TCL_BLD/win/Makefile.in	2026-09-10 17:10:10.333775000 +0000
+@@ -38,7 +38,7 @@
  # Directory from which applications will reference the library of Tcl scripts
  # (note: you can set the TCL_LIBRARY environment variable at run-time to
  # override this value):
@@ -239,7 +245,16 @@ diff -Naur tcl/win/Makefile.in TCL_BLD/win/Makefile.in
  
  # Path to use at runtime to refer to LIB_INSTALL_DIR:
  LIB_RUNTIME_DIR		= $(libdir)
-@@ -570,17 +570,17 @@
+@@ -50,7 +50,7 @@
+ LIB_INSTALL_DIR		= $(INSTALL_ROOT)$(libdir)
+ 
+ # Path name to use when installing library scripts.
+-SCRIPT_INSTALL_DIR	= $(INSTALL_ROOT)$(TCL_LIBRARY)
++SCRIPT_INSTALL_DIR	= $(INSTALL_ROOT)$(prefix)/$(TCL_LIBRARY)
+ 
+ # Path name to use when installing Tcl modules.
+ MODULE_INSTALL_DIR	= $(SCRIPT_INSTALL_DIR)/../tcl8
+@@ -589,18 +589,18 @@
  
  tclPkgConfig.${OBJEXT}: tclPkgConfig.c
  	$(CC)	-c $(CC_SWITCHES)			\
@@ -250,7 +265,7 @@ diff -Naur tcl/win/Makefile.in TCL_BLD/win/Makefile.in
 -		-DCFG_INSTALL_DOCDIR="\"$(MAN_INSTALL_DIR_NATIVE)\"" \
 +		-DCFG_INSTALL_LIBDIR="\"lib\"" \
 +		-DCFG_INSTALL_BINDIR="\"bin\"" \
-+		-DCFG_INSTALL_SCRDIR="\"lib/tcl8.6\"" \
++		-DCFG_INSTALL_SCRDIR="\"lib/tcl$(VERSION)\"" \
 +		-DCFG_INSTALL_INCDIR="\"include\"" \
 +		-DCFG_INSTALL_DOCDIR="\"man\"" \
  		\
@@ -259,17 +274,49 @@ diff -Naur tcl/win/Makefile.in TCL_BLD/win/Makefile.in
 -		-DCFG_RUNTIME_SCRDIR="\"$(TCL_LIBRARY_NATIVE)\"" \
 -		-DCFG_RUNTIME_INCDIR="\"$(includedir_native)\"" \
 -		-DCFG_RUNTIME_DOCDIR="\"$(mandir_native)\"" \
+-		-DCFG_RUNTIME_DLLFILE="\"$(TCL_DLL_FILE)\"" \
 +		-DCFG_RUNTIME_LIBDIR="\"lib\"" \
 +		-DCFG_RUNTIME_BINDIR="\"bin\"" \
-+		-DCFG_RUNTIME_SCRDIR="\"lib/tcl8.6\"" \
++		-DCFG_RUNTIME_SCRDIR="\"lib/tcl$(VERSION)\"" \
 +		-DCFG_RUNTIME_INCDIR="\"include\"" \
 +		-DCFG_RUNTIME_DOCDIR="\"man\"" \
++		-DCFG_RUNTIME_DLLFILE="\"bin/$(TCL_DLL_FILE)\"" \
  		-DBUILD_tcl \
  		@DEPARG@ $(CC_OBJNAME)
  
-diff -Naur tcl/win/makefile.vc TCL_BLD/win/makefile.vc
---- tcl/win/makefile.vc	2024-03-06 17:07:53.469765217 -0500
-+++ TCL_BLD/win/makefile.vc	2024-03-06 17:04:34.456780764 -0500
+diff -Naur --exclude=.git tcl/win/configure TCL_BLD/win/configure
+--- tcl/win/configure	2026-09-10 16:55:00.558895000 +0000
++++ TCL_BLD/win/configure	2026-09-10 17:30:54.837430000 +0000
+@@ -5462,9 +5462,9 @@
+ #--------------------------------------------------------------------
+ 
+ if test "$prefix/lib" != "$libdir"; then
+-    TCL_PACKAGE_PATH="${libdir};${prefix}\\lib"
++    TCL_PACKAGE_PATH="${libdir}"
+ else
+-    TCL_PACKAGE_PATH="${prefix}\\lib"
++    TCL_PACKAGE_PATH=""
+ fi
+ 
+ # The tclsh.exe.manifest requires these
+diff -Naur --exclude=.git tcl/win/configure.in TCL_BLD/win/configure.in
+--- tcl/win/configure.in	2026-09-10 16:55:00.558949000 +0000
++++ TCL_BLD/win/configure.in	2026-09-10 17:30:54.837573000 +0000
+@@ -390,9 +390,9 @@
+ #--------------------------------------------------------------------
+ 
+ if test "$prefix/lib" != "$libdir"; then
+-    TCL_PACKAGE_PATH="${libdir};${prefix}\\lib"
++    TCL_PACKAGE_PATH="${libdir}"
+ else
+-    TCL_PACKAGE_PATH="${prefix}\\lib"
++    TCL_PACKAGE_PATH=""
+ fi
+ 
+ # The tclsh.exe.manifest requires these
+diff -Naur --exclude=.git tcl/win/makefile.vc TCL_BLD/win/makefile.vc
+--- tcl/win/makefile.vc	2026-09-10 16:55:00.559074000 +0000
++++ TCL_BLD/win/makefile.vc	2026-09-10 17:30:54.840323000 +0000
 @@ -303,7 +303,6 @@
  	$(TMP_DIR)\tclVar.obj \
  	$(TMP_DIR)\tclZlib.obj
@@ -288,16 +335,16 @@ diff -Naur tcl/win/makefile.vc TCL_BLD/win/makefile.vc
  
  TOMMATHOBJS = \
  	$(TMP_DIR)\bn_mp_add.obj \
-@@ -445,7 +441,7 @@
- release:    setup $(TCLSH) $(TCLSTUBLIB) dlls pkgs
+@@ -470,7 +466,7 @@
+ all:	    setup $(TCLSH) $(TCLSTUBLIB) dlls $(CAT32) pkgs
  core:	    setup $(TCLLIB) $(TCLSTUBLIB)
  shell:	    setup $(TCLSH)
 -dlls:	    setup $(TCLREGLIB) $(TCLDDELIB) $(OUT_DIR)\zlib1.dll
 +dlls:	    setup $(TCLREGLIB) $(TCLDDELIB)
- all:	    setup $(TCLSH) $(TCLSTUBLIB) dlls $(CAT32) pkgs
  tcltest:    setup $(TCLTEST) dlls $(CAT32)
  install:    install-binaries install-libraries install-docs install-pkgs
-@@ -520,23 +516,6 @@
+ !if $(SYMBOLS)
+@@ -544,23 +540,6 @@
  	$(_VC_MANIFEST_EMBED_DLL)
  !endif
  
@@ -321,7 +368,16 @@ diff -Naur tcl/win/makefile.vc TCL_BLD/win/makefile.vc
  pkgs:
  	@for /d %d in ($(PKGSDIR)\*) do \
  	  @if exist "%~fd\win\makefile.vc" ( \
-@@ -787,16 +766,16 @@
+@@ -764,7 +743,7 @@
+ !else
+ @TCL_SHARED_BUILD@   1
+ !endif
+-@TCL_ZLIB_LIB_NAME@ zdll.lib
++@TCL_ZLIB_LIB_NAME@
+ <<
+ 
+ 
+@@ -819,16 +798,17 @@
  
  $(TMP_DIR)\tclPkgConfig.obj: $(GENERICDIR)\tclPkgConfig.c
  	$(cc32) $(pkgcflags) \
@@ -337,18 +393,19 @@ diff -Naur tcl/win/makefile.vc TCL_BLD/win/makefile.vc
 -	/DCFG_RUNTIME_DOCDIR="\"$(DOC_INSTALL_DIR:\=\\)\""     \
 +	/DCFG_INSTALL_LIBDIR="\"lib\"" \
 +	/DCFG_INSTALL_BINDIR="\"bin\"" \
-+	/DCFG_INSTALL_SCRDIR="\"lib/tcl8.6\"" \
++	/DCFG_INSTALL_SCRDIR="\"lib/tcl$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)\"" \
 +	/DCFG_INSTALL_INCDIR="\"include\"" \
 +	/DCFG_INSTALL_DOCDIR="\"man\""	\
 +	/DCFG_RUNTIME_LIBDIR="\"lib\"" \
 +	/DCFG_RUNTIME_BINDIR="\"bin\"" \
-+	/DCFG_RUNTIME_SCRDIR="\"lib/tcl8.6\"" \
++	/DCFG_RUNTIME_SCRDIR="\"lib/tcl$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)\"" \
 +	/DCFG_RUNTIME_INCDIR="\"include\"" \
 +	/DCFG_RUNTIME_DOCDIR="\"man\""     \
++	/DCFG_RUNTIME_DLLFILE="\"bin/$(TCLLIBNAME)\"" \
  	-Fo$@ $?
  
  $(TMP_DIR)\tclAppInit.obj: $(WIN_DIR)\tclAppInit.c
-@@ -900,7 +879,6 @@
+@@ -932,7 +912,6 @@
  	@$(CPY) "$(TCLLIB)" "$(BIN_INSTALL_DIR)\"
  !endif
  	@$(CPY) "$(TCLIMPLIB)" "$(LIB_INSTALL_DIR)\"
@@ -356,7 +413,7 @@ diff -Naur tcl/win/makefile.vc TCL_BLD/win/makefile.vc
  !if exist($(TCLSH))
  	@echo Installing $(TCLSHNAME)
  	@$(CPY) "$(TCLSH)" "$(BIN_INSTALL_DIR)\"
-@@ -949,7 +927,6 @@
+@@ -971,7 +950,6 @@
  	@$(CPY) "$(WIN_DIR)\rules.vc"              "$(LIB_INSTALL_DIR)\nmake\"
  	@$(CPY) "$(WIN_DIR)\targets.vc"              "$(LIB_INSTALL_DIR)\nmake\"
  	@$(CPY) "$(WIN_DIR)\nmakehlp.c"            "$(LIB_INSTALL_DIR)\nmake\"

@@ -1,22 +1,22 @@
-diff -Naur tk/macosx/GNUmakefile TK_BLD/macosx/GNUmakefile
---- tk/macosx/GNUmakefile	2024-03-14 19:40:17.907399776 -0400
-+++ TK_BLD/macosx/GNUmakefile	2024-03-14 19:36:35.471180824 -0400
-@@ -145,9 +145,9 @@
+diff -Naur --exclude=.git tk/macosx/GNUmakefile TK_BLD/macosx/GNUmakefile
+--- tk/macosx/GNUmakefile	2026-09-10 16:55:00.763527000 +0000
++++ TK_BLD/macosx/GNUmakefile	2026-09-10 17:14:11.640385000 +0000
+@@ -143,12 +143,6 @@
+ ifeq (${EMBEDDED_BUILD},)
+ INSTALL_TARGETS		+= install-private-headers install-demos
  endif
- ifeq (${INSTALL_BUILD}_${EMBEDDED_BUILD}_${BUILD_STYLE},1__Deployment)
- INSTALL_TARGETS		+= html-tk
+-ifeq (${INSTALL_BUILD}_${EMBEDDED_BUILD}_${BUILD_STYLE},1__Deployment)
+-INSTALL_TARGETS		+= html-tk
 -ifneq (${INSTALL_MANPAGES},)
 -INSTALL_TARGETS		+= install-doc
 -endif
-+#ifneq (${INSTALL_MANPAGES},)
-+#INSTALL_TARGETS		+= install-doc
-+#endif
- endif
+-endif
  
  MAKE_VARS		+= INSTALL_ROOT INSTALL_TARGETS VERSION
-diff -Naur tk/unix/Makefile.in TK_BLD/unix/Makefile.in
---- tk/unix/Makefile.in	2024-03-14 19:40:27.223241339 -0400
-+++ TK_BLD/unix/Makefile.in	2024-03-14 19:37:41.702055525 -0400
+ MAKE_ARGS_V		= $(foreach v,${MAKE_VARS},$v='${$v}')
+diff -Naur --exclude=.git tk/unix/Makefile.in TK_BLD/unix/Makefile.in
+--- tk/unix/Makefile.in	2026-09-10 16:55:00.776870000 +0000
++++ TK_BLD/unix/Makefile.in	2026-09-10 17:14:11.643687000 +0000
 @@ -574,7 +574,7 @@
  	TCL_LIBRARY=$(TCLDIR)/library; export TCL_LIBRARY; \
  	TK_LIBRARY=@TK_SRC_DIR@/library; export TK_LIBRARY;
@@ -26,24 +26,43 @@ diff -Naur tk/unix/Makefile.in TK_BLD/unix/Makefile.in
  
  binaries: ${LIB_FILE} ${WISH_EXE}
  
-@@ -701,11 +701,11 @@
- 	$(SHELL_ENV) valgrind $(VALGRINDARGS) ./$(TKTEST_EXE) $(SCRIPT)
- 
- INSTALL_BASE_TARGETS = install-binaries install-libraries
--INSTALL_DOC_TARGETS = install-doc
-+#INSTALL_DOC_TARGETS = install-doc
- INSTALL_DEV_TARGETS = install-headers
+@@ -706,7 +706,7 @@
  INSTALL_DEMO_TARGETS = install-demos
  INSTALL_EXTRA_TARGETS = @EXTRA_INSTALL@
--INSTALL_TARGETS = $(INSTALL_BASE_TARGETS) $(INSTALL_DOC_TARGETS) $(INSTALL_DEV_TARGETS) \
-+INSTALL_TARGETS = $(INSTALL_BASE_TARGETS) $(INSTALL_DEV_TARGETS) \
- 		$(INSTALL_DEMO_TARGETS) $(INSTALL_EXTRA_TARGETS)
+ INSTALL_TARGETS = $(INSTALL_BASE_TARGETS) $(INSTALL_DEV_TARGETS) \
+-		$(INSTALL_DEMO_TARGETS) $(INSTALL_DOC_TARGETS) $(INSTALL_EXTRA_TARGETS)
++		$(INSTALL_DEMO_TARGETS) $(INSTALL_EXTRA_TARGETS)
  
  install: $(INSTALL_TARGETS)
-diff -Naur tk/win/Makefile.in TK_BLD/win/Makefile.in
---- tk/win/Makefile.in	2024-03-14 19:40:17.915399641 -0400
-+++ TK_BLD/win/Makefile.in	2024-03-14 19:39:05.968623139 -0400
-@@ -409,7 +409,7 @@
+ 
+diff -Naur --exclude=.git tk/unix/configure TK_BLD/unix/configure
+--- tk/unix/configure	2026-09-10 16:55:00.777205000 +0000
++++ TK_BLD/unix/configure	2026-09-10 17:14:11.646928000 +0000
+@@ -11140,7 +11140,7 @@
+     includedir="${libdir}/Headers"
+     PRIVATE_INCLUDE_DIR="${libdir}/PrivateHeaders"
+     HTML_DIR="${libdir}/Resources/Documentation/Reference/Tk"
+-    EXTRA_INSTALL="install-private-headers html-tk"
++    EXTRA_INSTALL="install-private-headers"
+     EXTRA_BUILD_HTML='@ln -fs contents.htm "$(HTML_INSTALL_DIR)"/TkTOC.html'
+     EXTRA_INSTALL_BINARIES='@echo "Installing Info.plist to $(LIB_INSTALL_DIR)/Resources/" && $(INSTALL_DATA_DIR) "$(LIB_INSTALL_DIR)/Resources" && $(INSTALL_DATA) Tk-Info.plist "$(LIB_INSTALL_DIR)/Resources/Info.plist"'
+     EXTRA_INSTALL_BINARIES="$EXTRA_INSTALL_BINARIES"' && echo "Installing Credits.html to $(LIB_INSTALL_DIR)/Resources/" && $(INSTALL_DATA_DIR) "$(LIB_INSTALL_DIR)/Resources" && $(INSTALL_DATA) Credits.html "$(LIB_INSTALL_DIR)/Resources"'
+diff -Naur --exclude=.git tk/unix/configure.in TK_BLD/unix/configure.in
+--- tk/unix/configure.in	2026-09-10 16:55:00.777282000 +0000
++++ TK_BLD/unix/configure.in	2026-09-10 17:14:11.647091000 +0000
+@@ -722,7 +722,7 @@
+     includedir="${libdir}/Headers"
+     PRIVATE_INCLUDE_DIR="${libdir}/PrivateHeaders"
+     HTML_DIR="${libdir}/Resources/Documentation/Reference/Tk"
+-    EXTRA_INSTALL="install-private-headers html-tk"
++    EXTRA_INSTALL="install-private-headers"
+     EXTRA_BUILD_HTML='@ln -fs contents.htm "$(HTML_INSTALL_DIR)"/TkTOC.html'
+     EXTRA_INSTALL_BINARIES='@echo "Installing Info.plist to $(LIB_INSTALL_DIR)/Resources/" && $(INSTALL_DATA_DIR) "$(LIB_INSTALL_DIR)/Resources" && $(INSTALL_DATA) Tk-Info.plist "$(LIB_INSTALL_DIR)/Resources/Info.plist"'
+     EXTRA_INSTALL_BINARIES="$EXTRA_INSTALL_BINARIES"' && echo "Installing Credits.html to $(LIB_INSTALL_DIR)/Resources/" && $(INSTALL_DATA_DIR) "$(LIB_INSTALL_DIR)/Resources" && $(INSTALL_DATA) Credits.html "$(LIB_INSTALL_DIR)/Resources"'
+diff -Naur --exclude=.git tk/win/Makefile.in TK_BLD/win/Makefile.in
+--- tk/win/Makefile.in	2026-09-10 16:55:00.779409000 +0000
++++ TK_BLD/win/Makefile.in	2026-09-10 17:13:34.002003000 +0000
+@@ -410,7 +410,7 @@
  # Main targets.  The default target -- all -- builds the binaries,
  # performs any post processing on libraries or documents.
  
@@ -52,7 +71,7 @@ diff -Naur tk/win/Makefile.in TK_BLD/win/Makefile.in
  
  binaries: @LIBRARIES@ $(WISH)
  
-@@ -462,7 +462,7 @@
+@@ -463,7 +463,7 @@
  	gdb ./$(WISH) --command=gdb.run
  	@$(RM) gdb.run
  
@@ -61,9 +80,9 @@ diff -Naur tk/win/Makefile.in TK_BLD/win/Makefile.in
  
  install-binaries: binaries
  	@for i in $(LIB_INSTALL_DIR) $(BIN_INSTALL_DIR) $(PKG_INSTALL_DIR); \
-diff -Naur tk/win/makefile.vc TK_BLD/win/makefile.vc
---- tk/win/makefile.vc	2024-03-14 19:40:17.915399641 -0400
-+++ TK_BLD/win/makefile.vc	2024-03-14 19:39:43.011993258 -0400
+diff -Naur --exclude=.git tk/win/makefile.vc TK_BLD/win/makefile.vc
+--- tk/win/makefile.vc	2026-09-10 16:55:00.779836000 +0000
++++ TK_BLD/win/makefile.vc	2026-09-10 17:13:34.002764000 +0000
 @@ -335,7 +335,7 @@
  all:	  release $(CAT32)
  core:	  setup $(TKSTUBLIB) $(TKLIB)

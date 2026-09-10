@@ -1,220 +1,90 @@
-diff -Naur tcl/macosx/GNUmakefile TCL_BLD/macosx/GNUmakefile
---- tcl/macosx/GNUmakefile	2024-03-14 19:42:40.296945040 -0400
-+++ TCL_BLD/macosx/GNUmakefile	2024-03-14 19:44:30.270989279 -0400
-@@ -118,9 +118,9 @@
+diff -Naur --exclude=.git TCL_BLD/macosx/GNUmakefile TCL_BLD/macosx/GNUmakefile
+--- TCL_BLD/macosx/GNUmakefile	2026-09-10 17:00:41.376647000 +0000
++++ TCL_BLD/macosx/GNUmakefile	2026-09-10 17:19:13.741872000 +0000
+@@ -117,10 +117,7 @@
+ INSTALL_TARGETS		+= install-private-headers
  endif
  ifeq (${INSTALL_BUILD}_${EMBEDDED_BUILD}_${BUILD_STYLE},1__Deployment)
- INSTALL_TARGETS		+= install-packages html-tcl
+-INSTALL_TARGETS		+= install-packages html-tcl
 -ifneq (${INSTALL_MANPAGES},)
 -INSTALL_TARGETS		+= install-doc
 -endif
-+#ifneq (${INSTALL_MANPAGES},)
-+#INSTALL_TARGETS		+= install-doc
-+#endif
++INSTALL_TARGETS		+= install-packages
  endif
  
  MAKE_VARS		:= INSTALL_ROOT INSTALL_TARGETS VERSION GENERIC_FLAGS
-diff -Naur tcl/pkgs/itcl4.2.3/Makefile.in TCL_BLD/pkgs/itcl4.2.3/Makefile.in
---- tcl/pkgs/itcl4.2.3/Makefile.in	2024-03-14 19:42:40.376943611 -0400
-+++ TCL_BLD/pkgs/itcl4.2.3/Makefile.in	2024-03-14 19:44:50.990622377 -0400
-@@ -218,7 +218,7 @@
- 
- doc:
- 
--install: all install-binaries install-libraries install-doc
-+install: all install-binaries install-libraries
- 
- install-binaries: binaries install-lib-binaries install-bin-binaries
- 
-diff -Naur tcl/pkgs/sqlite3.40.0/Makefile.in TCL_BLD/pkgs/sqlite3.40.0/Makefile.in
---- tcl/pkgs/sqlite3.40.0/Makefile.in	2024-03-14 19:42:40.380943540 -0400
-+++ TCL_BLD/pkgs/sqlite3.40.0/Makefile.in	2024-03-14 19:46:29.184889675 -0400
-@@ -223,7 +223,7 @@
- 	@echo "        xml2nroff sample.xml > sample.n"
- 	@echo "        xml2html sample.xml > sample.html"
- 
--install: all install-binaries install-libraries install-doc
-+install: all install-binaries install-libraries
- 
- install-binaries: binaries install-lib-binaries install-bin-binaries
- 
-diff -Naur tcl/pkgs/sqlite3.40.0/win/makefile.vc TCL_BLD/pkgs/sqlite3.40.0/win/makefile.vc
---- tcl/pkgs/sqlite3.40.0/win/makefile.vc	2024-03-14 19:42:40.388943398 -0400
-+++ TCL_BLD/pkgs/sqlite3.40.0/win/makefile.vc	2024-03-14 19:46:56.956401266 -0400
-@@ -55,5 +55,5 @@
- 	@echo } >> $(OUT_DIR)\pkgIndex.tcl
- 
- # Install the manpage though on Windows, doubt it does much good
--install:    default-install-docs-n
-+#install:    default-install-docs-n
- 
-diff -Naur tcl/pkgs/tdbc1.1.5/Makefile.in TCL_BLD/pkgs/tdbc1.1.5/Makefile.in
---- tcl/pkgs/tdbc1.1.5/Makefile.in	2024-03-14 19:42:40.388943398 -0400
-+++ TCL_BLD/pkgs/tdbc1.1.5/Makefile.in	2024-03-14 19:47:16.916050661 -0400
-@@ -213,7 +213,7 @@
- 
- doc:
- 
--install: all install-binaries install-libraries install-doc
-+install: all install-binaries install-libraries
- 
- install-binaries: binaries install-lib-binaries install-bin-binaries
- 
-diff -Naur tcl/pkgs/tdbc1.1.5/win/makefile.vc TCL_BLD/pkgs/tdbc1.1.5/win/makefile.vc
---- tcl/pkgs/tdbc1.1.5/win/makefile.vc	2024-03-14 19:42:40.392943326 -0400
-+++ TCL_BLD/pkgs/tdbc1.1.5/win/makefile.vc	2024-03-14 19:47:41.771614503 -0400
-@@ -104,7 +104,7 @@
- 
- # TDBC has additional installation in addition to that provided by
- # the default installation targets.
--install: default-install-docs-n
-+#install: default-install-docs-n
- default-install-libraries: install-tdbc-extras
- 
- install-tdbc-extras: $(OUT_DIR)\tdbcConfig.sh
-diff -Naur tcl/pkgs/tdbcmysql1.1.5/Makefile.in TCL_BLD/pkgs/tdbcmysql1.1.5/Makefile.in
---- tcl/pkgs/tdbcmysql1.1.5/Makefile.in	2024-03-14 19:42:40.392943326 -0400
-+++ TCL_BLD/pkgs/tdbcmysql1.1.5/Makefile.in	2024-03-14 19:47:54.715387567 -0400
-@@ -221,7 +221,7 @@
- 
- doc:
- 
--install: all install-binaries install-libraries install-doc
-+install: all install-binaries install-libraries
- 
- install-binaries: binaries install-lib-binaries install-bin-binaries
- 
-diff -Naur tcl/pkgs/tdbcmysql1.1.5/win/makefile.vc TCL_BLD/pkgs/tdbcmysql1.1.5/win/makefile.vc
---- tcl/pkgs/tdbcmysql1.1.5/win/makefile.vc	2024-03-14 19:42:40.392943326 -0400
-+++ TCL_BLD/pkgs/tdbcmysql1.1.5/win/makefile.vc	2024-03-14 19:48:09.515128237 -0400
-@@ -82,7 +82,7 @@
- !include "$(_RULESDIR)\targets.vc"
- 
- # Our install has a few more steps than the default install
--install: default-install-docs-n
-+#install: default-install-docs-n
- 
- # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
- # all replacements below so define our own.
-diff -Naur tcl/pkgs/tdbcodbc1.1.5/Makefile.in TCL_BLD/pkgs/tdbcodbc1.1.5/Makefile.in
---- tcl/pkgs/tdbcodbc1.1.5/Makefile.in	2024-03-14 19:42:40.392943326 -0400
-+++ TCL_BLD/pkgs/tdbcodbc1.1.5/Makefile.in	2024-03-14 19:48:24.690862500 -0400
-@@ -221,7 +221,7 @@
- 
- doc:
- 
--install: all install-binaries install-libraries install-doc
-+install: all install-binaries install-libraries
- 
- install-binaries: binaries install-lib-binaries install-bin-binaries
- 
-diff -Naur tcl/pkgs/tdbcodbc1.1.5/win/makefile.vc TCL_BLD/pkgs/tdbcodbc1.1.5/win/makefile.vc
---- tcl/pkgs/tdbcodbc1.1.5/win/makefile.vc	2024-03-14 19:42:40.392943326 -0400
-+++ TCL_BLD/pkgs/tdbcodbc1.1.5/win/makefile.vc	2024-03-14 19:48:37.402640028 -0400
-@@ -84,7 +84,7 @@
- !include "$(_RULESDIR)\targets.vc"
- 
- # Install needs some extra default actions.
--install: default-install-docs-n
-+#install: default-install-docs-n
- 
- # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
- # all replacements below so define our own it.
-diff -Naur tcl/pkgs/tdbcpostgres1.1.5/Makefile.in TCL_BLD/pkgs/tdbcpostgres1.1.5/Makefile.in
---- tcl/pkgs/tdbcpostgres1.1.5/Makefile.in	2024-03-14 19:42:40.396943253 -0400
-+++ TCL_BLD/pkgs/tdbcpostgres1.1.5/Makefile.in	2024-03-14 19:48:58.018279487 -0400
-@@ -221,7 +221,7 @@
- 
- doc:
- 
--install: all install-binaries install-libraries install-doc
-+install: all install-binaries install-libraries
- 
- install-binaries: binaries install-lib-binaries install-bin-binaries
- 
-diff -Naur tcl/pkgs/tdbcpostgres1.1.5/win/makefile.vc TCL_BLD/pkgs/tdbcpostgres1.1.5/win/makefile.vc
---- tcl/pkgs/tdbcpostgres1.1.5/win/makefile.vc	2024-03-14 19:42:40.396943253 -0400
-+++ TCL_BLD/pkgs/tdbcpostgres1.1.5/win/makefile.vc	2024-03-14 19:49:06.790126170 -0400
-@@ -82,7 +82,7 @@
- !include "$(_RULESDIR)\targets.vc"
- 
- # Additional default actions for install
--install: default-install-docs-n
-+#install: default-install-docs-n
- 
- # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
- # all replacements below so define our own target.
-diff -Naur tcl/pkgs/tdbcsqlite3-1.1.5/Makefile.in TCL_BLD/pkgs/tdbcsqlite3-1.1.5/Makefile.in
---- tcl/pkgs/tdbcsqlite3-1.1.5/Makefile.in	2024-03-14 19:42:40.396943253 -0400
-+++ TCL_BLD/pkgs/tdbcsqlite3-1.1.5/Makefile.in	2024-03-14 19:49:17.965930872 -0400
-@@ -220,7 +220,7 @@
- 
- doc:
- 
--install: all install-tm install-doc
-+install: all install-tm
- 
- install-binaries: binaries install-lib-binaries install-bin-binaries
- 
-diff -Naur tcl/pkgs/tdbcsqlite3-1.1.5/win/makefile.vc TCL_BLD/pkgs/tdbcsqlite3-1.1.5/win/makefile.vc
---- tcl/pkgs/tdbcsqlite3-1.1.5/win/makefile.vc	2024-03-14 19:42:40.396943253 -0400
-+++ TCL_BLD/pkgs/tdbcsqlite3-1.1.5/win/makefile.vc	2024-03-14 19:49:30.989703421 -0400
-@@ -26,7 +26,7 @@
- $(PROJECT):
- 	@echo "This is a pure Tcl module and does not require a build step. Do a nmake install to install"
- setup: default-setup
--install: install-tm default-install-docs-n
-+install: install-tm
- clean: default-clean
- realclean: hose
- hose: default-hose
-diff -Naur tcl/pkgs/thread2.8.8/Makefile.in TCL_BLD/pkgs/thread2.8.8/Makefile.in
---- tcl/pkgs/thread2.8.8/Makefile.in	2024-03-14 19:42:40.396943253 -0400
-+++ TCL_BLD/pkgs/thread2.8.8/Makefile.in	2024-03-14 19:49:39.397556641 -0400
-@@ -213,7 +213,7 @@
- 
- doc:
- 
--install: all install-binaries install-libraries install-doc
-+install: all install-binaries install-libraries
- 
- install-binaries: binaries install-lib-binaries install-bin-binaries
- 
-diff -Naur tcl/pkgs/thread2.8.8/win/makefile.vc TCL_BLD/pkgs/thread2.8.8/win/makefile.vc
---- tcl/pkgs/thread2.8.8/win/makefile.vc	2024-03-14 19:42:40.400943183 -0400
-+++ TCL_BLD/pkgs/thread2.8.8/win/makefile.vc	2024-03-14 19:49:51.397347206 -0400
-@@ -48,7 +48,7 @@
- 
- !include "$(_RULESDIR)\targets.vc"
- 
--install:    default-install-docs-html
-+#install:    default-install-docs-html
- pkgindex:   default-pkgindex-tea
- 
- $(ROOT)\manifest.uuid:
-diff -Naur tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
---- tcl/unix/Makefile.in	2024-03-14 19:42:40.416942896 -0400
-+++ TCL_BLD/unix/Makefile.in	2024-03-14 19:51:07.960012968 -0400
-@@ -880,11 +880,11 @@
+diff -Naur --exclude=.git TCL_BLD/unix/Makefile.in TCL_BLD/unix/Makefile.in
+--- TCL_BLD/unix/Makefile.in	2026-09-10 17:09:34.696388000 +0000
++++ TCL_BLD/unix/Makefile.in	2026-09-10 17:19:13.743997000 +0000
+@@ -622,7 +622,7 @@
+ # Start of rules
  #--------------------------------------------------------------------------
  
- INSTALL_BASE_TARGETS = install-binaries install-libraries install-msgs $(INSTALL_TZDATA)
--INSTALL_DOC_TARGETS = install-doc
-+#INSTALL_DOC_TARGETS = install-doc
+-all: binaries libraries doc packages
++all: binaries libraries packages
+ 
+ binaries: ${LIB_FILE} ${TCL_EXE}
+ 
+@@ -792,7 +792,7 @@
  INSTALL_PACKAGE_TARGETS = install-packages
  INSTALL_DEV_TARGETS = install-headers
  INSTALL_EXTRA_TARGETS = @EXTRA_INSTALL@
--INSTALL_TARGETS = $(INSTALL_BASE_TARGETS) $(INSTALL_DOC_TARGETS) $(INSTALL_DEV_TARGETS) \
+-INSTALL_TARGETS = $(INSTALL_BASE_TARGETS) $(INSTALL_DEV_TARGETS) $(INSTALL_DOC_TARGETS) \
 +INSTALL_TARGETS = $(INSTALL_BASE_TARGETS) $(INSTALL_DEV_TARGETS) \
  		  $(INSTALL_PACKAGE_TARGETS) $(INSTALL_EXTRA_TARGETS)
  
  install: $(INSTALL_TARGETS)
-diff -Naur tcl/win/makefile.vc TCL_BLD/win/makefile.vc
---- tcl/win/makefile.vc	2024-03-14 19:42:40.420942826 -0400
-+++ TCL_BLD/win/makefile.vc	2024-03-14 19:51:24.079732451 -0400
-@@ -448,7 +448,7 @@
- dlls:	    setup $(TCLREGLIB) $(TCLDDELIB) $(OUT_DIR)\zlib1.dll
- all:	    setup $(TCLSH) $(TCLSTUBLIB) dlls $(CAT32) pkgs
+diff -Naur --exclude=.git TCL_BLD/unix/configure TCL_BLD/unix/configure
+--- TCL_BLD/unix/configure	2026-09-10 17:09:34.687269000 +0000
++++ TCL_BLD/unix/configure	2026-09-10 17:19:13.760019000 +0000
+@@ -19201,7 +19201,7 @@
+     includedir="${libdir}/Headers"
+     PRIVATE_INCLUDE_DIR="${libdir}/PrivateHeaders"
+     HTML_DIR="${libdir}/Resources/Documentation/Reference/Tcl"
+-    EXTRA_INSTALL="install-private-headers html-tcl"
++    EXTRA_INSTALL="install-private-headers"
+     EXTRA_BUILD_HTML='@ln -fs contents.htm "$(HTML_INSTALL_DIR)/TclTOC.html"'
+     EXTRA_INSTALL_BINARIES='@echo "Installing Info.plist to $(LIB_INSTALL_DIR)/Resources/" && $(INSTALL_DATA_DIR) "$(LIB_INSTALL_DIR)/Resources" && $(INSTALL_DATA) Tcl-Info.plist "$(LIB_INSTALL_DIR)/Resources/Info.plist"'
+     EXTRA_INSTALL_BINARIES="$EXTRA_INSTALL_BINARIES"' && echo "Installing license.terms to $(LIB_INSTALL_DIR)/Resources/" && $(INSTALL_DATA) "$(TOP_DIR)/license.terms" "$(LIB_INSTALL_DIR)/Resources"'
+diff -Naur --exclude=.git TCL_BLD/unix/configure.in TCL_BLD/unix/configure.in
+--- TCL_BLD/unix/configure.in	2026-09-10 17:09:34.687465000 +0000
++++ TCL_BLD/unix/configure.in	2026-09-10 17:19:13.762242000 +0000
+@@ -826,7 +826,7 @@
+     includedir="${libdir}/Headers"
+     PRIVATE_INCLUDE_DIR="${libdir}/PrivateHeaders"
+     HTML_DIR="${libdir}/Resources/Documentation/Reference/Tcl"
+-    EXTRA_INSTALL="install-private-headers html-tcl"
++    EXTRA_INSTALL="install-private-headers"
+     EXTRA_BUILD_HTML='@ln -fs contents.htm "$(HTML_INSTALL_DIR)/TclTOC.html"'
+     EXTRA_INSTALL_BINARIES='@echo "Installing Info.plist to $(LIB_INSTALL_DIR)/Resources/" && $(INSTALL_DATA_DIR) "$(LIB_INSTALL_DIR)/Resources" && $(INSTALL_DATA) Tcl-Info.plist "$(LIB_INSTALL_DIR)/Resources/Info.plist"'
+     EXTRA_INSTALL_BINARIES="$EXTRA_INSTALL_BINARIES"' && echo "Installing license.terms to $(LIB_INSTALL_DIR)/Resources/" && $(INSTALL_DATA) "$(TOP_DIR)/license.terms" "$(LIB_INSTALL_DIR)/Resources"'
+diff -Naur --exclude=.git TCL_BLD/win/Makefile.in TCL_BLD/win/Makefile.in
+--- TCL_BLD/win/Makefile.in	2026-09-10 17:10:10.333775000 +0000
++++ TCL_BLD/win/Makefile.in	2026-09-10 17:19:13.763317000 +0000
+@@ -441,7 +441,7 @@
+ 
+ TCL_DOCS = "$(ROOT_DIR_NATIVE)"/doc/*.[13n]
+ 
+-all: binaries libraries doc packages
++all: binaries libraries packages
+ 
+ # Test-suite helper (can be used to test Tcl from build directory with all expected modules).
+ # To start from windows shell use:
+@@ -658,7 +658,7 @@
+ 		"$(TOMMATH_DIR_NATIVE)/tommath.h" \
+ 		> "$(GENERIC_DIR_NATIVE)/tclTomMath.h"
+ 
+-install: all install-binaries install-libraries install-headers install-doc install-packages
++install: all install-binaries install-libraries install-headers install-packages
+ 
+ install-binaries: binaries
+ 	@for i in "$(LIB_INSTALL_DIR)" "$(BIN_INSTALL_DIR)"; \
+diff -Naur --exclude=.git TCL_BLD/win/makefile.vc TCL_BLD/win/makefile.vc
+--- TCL_BLD/win/makefile.vc	2026-09-10 17:10:32.280973000 +0000
++++ TCL_BLD/win/makefile.vc	2026-09-10 17:19:13.765572000 +0000
+@@ -468,7 +468,7 @@
+ shell:	    setup $(TCLSH)
+ dlls:	    setup $(TCLREGLIB) $(TCLDDELIB)
  tcltest:    setup $(TCLTEST) dlls $(CAT32)
 -install:    install-binaries install-libraries install-docs install-pkgs
 +install:    install-binaries install-libraries install-pkgs

@@ -1,6 +1,11 @@
-diff -Naur tk8.6.13/unix/Makefile.in tk/unix/Makefile.in
---- tk8.6.13/unix/Makefile.in	2023-08-24 18:07:15.604873525 -0400
-+++ tk/unix/Makefile.in	2023-08-24 18:07:50.988255437 -0400
+diff -Naur --exclude=.git tk/manifest.uuid TK_BLD/manifest.uuid
+--- tk/manifest.uuid	1970-01-01 00:00:00.000000000 +0000
++++ TK_BLD/manifest.uuid	2026-09-10 17:13:18.280356000 +0000
+@@ -0,0 +1 @@
++git-6dbe68819aac4a22f6f7a143133ce26c5e8d2b05
+diff -Naur --exclude=.git tk/unix/Makefile.in TK_BLD/unix/Makefile.in
+--- tk/unix/Makefile.in	2026-09-10 16:55:00.776870000 +0000
++++ TK_BLD/unix/Makefile.in	2026-09-10 17:13:18.283051000 +0000
 @@ -285,7 +285,7 @@
  LD_SEARCH_FLAGS	= @LD_SEARCH_FLAGS@
  
@@ -10,7 +15,3 @@ diff -Naur tk8.6.13/unix/Makefile.in tk/unix/Makefile.in
  
  # support for building the Aqua resource file
  TK_RSRC_FILE		= @TK_RSRC_FILE@
---- tk8.6.13/manifest.uuid	1969-12-31 19:00:00.000000000 -0500
-+++ tk/manifest.uuid	2023-09-18 15:58:31.279973759 -0400
-@@ -0,0 +1 @@
-+abf90cd012a519888fe42251221dc0550ddf984b6131076f80543aa750b5d436
