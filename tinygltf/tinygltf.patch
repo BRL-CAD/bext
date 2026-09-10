@@ -53,3 +53,66 @@ diff -Naur tinygltf/CMakeLists.txt TINYGLTF_BLD/CMakeLists.txt
    install(FILES
      tiny_gltf_v3.h
      tiny_gltf_v3.c
+diff -Naur tinygltf/tests/tester_v3_c.c TINYGLTF_BLD/tests/tester_v3_c.c
+--- tinygltf/tests/tester_v3_c.c	2026-07-31 09:17:13.000000000 -0400
++++ TINYGLTF_BLD/tests/tester_v3_c.c	2026-09-10 00:00:00.000000000 -0400
+@@ -1233,0 +1234,36 @@
++static int check_nonstandard_double_strictness(void) {
++  static const uint8_t json[] =
++      "{\"asset\":{\"version\":\"2.0\"},"
++      "\"buffers\":[{\"uri\":\"data:application/octet-stream;base64,"
++      "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"byteLength\":24}],"
++      "\"bufferViews\":[{\"buffer\":0,\"byteLength\":24}],"
++      "\"accessors\":[{\"bufferView\":0,\"componentType\":5130,"
++      "\"count\":1,\"type\":\"VEC3\"}]}";
++  int strict;
++
++  for (strict = 0; strict <= 1; ++strict) {
++    tg3_model model;
++    tg3_error_stack errors;
++    tg3_parse_options opts;
++    tg3_error_code err;
++    tg3_error_code expected = strict ? TG3_ERR_INVALID_ACCESSOR : TG3_OK;
++
++    tg3_error_stack_init(&errors);
++    tg3_parse_options_init(&opts);
++    opts.strictness = strict ? TG3_STRICT : TG3_PERMISSIVE;
++    err = tg3_parse(&model, &errors, json, (uint64_t)(sizeof(json) - 1),
++                    "", 0, &opts);
++    if (err != expected) {
++      fprintf(stderr,
++              "non-standard DOUBLE with strictness %d expected %d, got %d\n",
++              strict, (int)expected, (int)err);
++      tg3_model_free(&model);
++      tg3_error_stack_free(&errors);
++      return 0;
++    }
++    tg3_model_free(&model);
++    tg3_error_stack_free(&errors);
++  }
++  return 1;
++}
++
+@@ -1778,6 +1814,9 @@
+   if (!check_accessor_range_rejected()) {
+     return 1;
+   }
++  if (!check_nonstandard_double_strictness()) {
++    return 1;
++  }
+   if (!check_sparse_accessor_range_rejected()) {
+     return 1;
+   }
+diff -Naur tinygltf/tiny_gltf_v3.c TINYGLTF_BLD/tiny_gltf_v3.c
+--- tinygltf/tiny_gltf_v3.c	2026-07-31 09:17:13.000000000 -0400
++++ TINYGLTF_BLD/tiny_gltf_v3.c	2026-09-10 00:00:00.000000000 -0400
+@@ -1987 +1987,2 @@
+-static int tg3__valid_accessor_component_type(int32_t component_type) {
++static int tg3__valid_accessor_component_type(int32_t component_type,
++                                               tg3_strictness strictness) {
+@@ -1995,0 +1997,2 @@
++        case TG3_COMPONENT_TYPE_DOUBLE:
++            return strictness == TG3_PERMISSIVE;
+@@ -2068 +2071 @@
+-        if (!tg3__valid_accessor_component_type(a->component_type)) {
++        if (!tg3__valid_accessor_component_type(a->component_type, ctx->opts.strictness)) {
