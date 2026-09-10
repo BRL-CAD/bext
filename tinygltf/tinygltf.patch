@@ -1,0 +1,55 @@
+diff -Naur tinygltf/CMakeLists.txt TINYGLTF_BLD/CMakeLists.txt
+--- tinygltf/CMakeLists.txt	2026-07-31 09:17:13.000000000 -0400
++++ TINYGLTF_BLD/CMakeLists.txt	2026-09-10 00:00:00.000000000 -0400
+@@ -2,6 +2,7 @@
+ 
+ project(tinygltf_v3 C)
+ 
++include(CMakePackageConfigHelpers)
+ include(GNUInstallDirs)
+ 
+ set(CMAKE_C_STANDARD 11)
+@@ -12,6 +13,18 @@
+ option(TINYGLTF3_BUILD_TESTS "Build and run tinygltf v3 C unit tests" ON)
+ option(TINYGLTF3_INSTALL "Install tinygltf v3 files during install step" ON)
+ 
++add_library(tinygltf STATIC tiny_gltf_v3.c)
++add_library(tinygltf::tinygltf ALIAS tinygltf)
++target_compile_definitions(tinygltf PRIVATE TINYGLTF3_ENABLE_FS)
++target_include_directories(tinygltf
++  PUBLIC
++    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
++    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
++)
++set_target_properties(tinygltf PROPERTIES
++  POSITION_INDEPENDENT_CODE ON
++)
++
+ set(TINYGLTF3_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+ 
+ if (TINYGLTF3_BUILD_TESTS)
+@@ -46,6 +59,24 @@
+ endif ()
+ 
+ if (TINYGLTF3_INSTALL)
++  install(TARGETS tinygltf EXPORT tinygltfTargets
++    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++  )
++  install(EXPORT tinygltfTargets
++    NAMESPACE tinygltf::
++    FILE TinyGLTFTargets.cmake
++    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tinygltf
++  )
++  configure_package_config_file(
++    ${CMAKE_CURRENT_SOURCE_DIR}/attic/cmake/TinyGLTFConfig.cmake.in
++    ${CMAKE_CURRENT_BINARY_DIR}/TinyGLTFConfig.cmake
++    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tinygltf
++  )
++  install(FILES
++    ${CMAKE_CURRENT_BINARY_DIR}/TinyGLTFConfig.cmake
++    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tinygltf
++  )
++
+   install(FILES
+     tiny_gltf_v3.h
+     tiny_gltf_v3.c
