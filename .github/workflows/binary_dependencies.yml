@@ -1,0 +1,214 @@
+name: Binary dependencies
+
+on:
+  push:
+  schedule:
+    - cron: '30 2 * * 3'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BEXT_ARCHIVE_RETENTION_DAYS: 90
+
+jobs:
+  # Finalized package metadata retains its install prefix.  runner.temp is
+  # stable between producer and consumer jobs on each pinned runner image.
+  linux_release:
+    name: Ubuntu GCC Release Build
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup - System
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          # Install XCB/OpenGL dev pkgs for Qt - see:
+          # https://wiki.qt.io/Building_Qt_6_from_Git
+          # https://doc.qt.io/qt-6/linux-requirements.html
+          sudo apt-get install libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-cursor-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev
+          sudo apt-get install libgl-dev
+          sudo apt-get install libinput-dev
+          sudo apt-get clean
+
+      - name: Configure
+        run: cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/bext_output"
+
+      - name: Build
+        run: cmake --build build --parallel 2 --verbose
+
+      - name: Package dependency tree
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          BEXT_CHANNEL: ubuntu-24.04-${{ runner.arch }}-release
+        working-directory: ${{ runner.temp }}/bext_output
+        run: |
+          test -d install
+          test -d noinstall
+          test -f bext-install-manifest.json
+          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+
+      - name: Upload dependency tree
+        if: github.ref == 'refs/heads/main'
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: bext-ubuntu-24.04-${{ runner.arch }}-release-${{ github.sha }}
+          path: ${{ runner.temp }}/bext-ubuntu-24.04-${{ runner.arch }}-release.tar.gz
+          if-no-files-found: error
+          retention-days: ${{ env.BEXT_ARCHIVE_RETENTION_DAYS }}
+          compression-level: 0
+
+  windows_ninja_release:
+    name: MSVC - Ninja Release build
+    runs-on: windows-2025
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add github workspace to path
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_PATH -Value $env:GITHUB_WORKSPACE
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Add cl.exe to PATH
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=cl.exe -DCMAKE_CXX_COMPILER=cl.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$env:RUNNER_TEMP/bext_output"
+          # Ensure generated files are flushed before compilation begins.
+          Write-VolumeCache C
+          Write-VolumeCache D
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --parallel 2 --verbose
+
+      - name: Package dependency tree
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          BEXT_CHANNEL: windows-2025-${{ runner.arch }}-release
+        working-directory: ${{ runner.temp }}/bext_output
+        run: |
+          test -d install
+          test -d noinstall
+          test -f bext-install-manifest.json
+          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+
+      - name: Upload dependency tree
+        if: github.ref == 'refs/heads/main'
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: bext-windows-2025-${{ runner.arch }}-release-${{ github.sha }}
+          path: ${{ runner.temp }}/bext-windows-2025-${{ runner.arch }}-release.tar.gz
+          if-no-files-found: error
+          retention-days: ${{ env.BEXT_ARCHIVE_RETENTION_DAYS }}
+          compression-level: 0
+
+  macos_release:
+    name: macOS Clang Release Build
+    runs-on: macos-14
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - name: Setup - CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Xquartz
+        run: brew install xquartz --cask
+
+      - name: Configure
+        env:
+          CC: clang
+          CXX: clang++
+        run: cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/bext_output"
+
+      - name: Build
+        run: cmake --build build --parallel 2 --verbose
+
+      - name: Package dependency tree
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          BEXT_CHANNEL: macos-14-${{ runner.arch }}-release
+        working-directory: ${{ runner.temp }}/bext_output
+        run: |
+          test -d install
+          test -d noinstall
+          test -f bext-install-manifest.json
+          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+
+      - name: Upload dependency tree
+        if: github.ref == 'refs/heads/main'
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: bext-macos-14-${{ runner.arch }}-release-${{ github.sha }}
+          path: ${{ runner.temp }}/bext-macos-14-${{ runner.arch }}-release.tar.gz
+          if-no-files-found: error
+          retention-days: ${{ env.BEXT_ARCHIVE_RETENTION_DAYS }}
+          compression-level: 0
+
+  publish:
+    name: Publish dependency set
+    if: github.ref == 'refs/heads/main'
+    needs: [linux_release, windows_ninja_release, macos_release]
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Record complete dependency set
+        run: echo "${{ github.sha }}" > "$RUNNER_TEMP/bext-production"
+
+      - name: Upload completion marker
+        id: marker
+        uses: actions/upload-artifact@v4
+        with:
+          name: bext-production-${{ github.sha }}
+          path: ${{ runner.temp }}/bext-production
+          if-no-files-found: error
+          retention-days: ${{ env.BEXT_ARCHIVE_RETENTION_DAYS }}
+
+      - name: Remove superseded dependency sets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_ARTIFACT_IDS: ${{ needs.linux_release.outputs.artifact-id }},${{ needs.windows_ninja_release.outputs.artifact-id }},${{ needs.macos_release.outputs.artifact-id }},${{ steps.marker.outputs.artifact-id }}
+        run: |
+          set -euo pipefail
+          artifact_pattern='^bext-((ubuntu-24\.04|windows-2025|macos-14)-(X86|X64|ARM|ARM64)-release|production)-'
+          artifact_rows="$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq '.artifacts[] | [.id, .name] | @tsv')"
+          while IFS=$'\t' read -r artifact_id artifact_name; do
+            if [[ "$artifact_name" =~ $artifact_pattern && ",${CURRENT_ARTIFACT_IDS}," != *",${artifact_id},"* ]]; then
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id"
+            fi
+          done <<< "$artifact_rows"
