@@ -6,7 +6,7 @@ diff -Naur GeometricTools/CMakeLists.txt GTE_BLD/CMakeLists.txt
 +
 +project(GTE)
 +
-+file(GLOB LIST_DIRECTORIES false GTE_MFILES "${CMAKE_SOURCE_DIR}/GTE/Mathematics/*")
++file(GLOB GTE_MFILES LIST_DIRECTORIES false "${CMAKE_SOURCE_DIR}/GTE/Mathematics/*")
 +
 +if(NOT DEFINED INCLUDE_DIR)
 +  set(INCLUDE_DIR include)
