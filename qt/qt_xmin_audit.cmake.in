@@ -1,0 +1,93 @@
+cmake_minimum_required(VERSION 3.26)
+
+if (NOT DEFINED QT_AUDIT_ROOT OR NOT QT_AUDIT_ROOT)
+  message(FATAL_ERROR "QT_AUDIT_ROOT is required")
+endif ()
+
+find_program(QT_LDD_EXECUTABLE ldd REQUIRED)
+
+set(qt_xmin_audit_files
+  "${QT_AUDIT_ROOT}/@LIB_DIR@/libQt6Gui@CMAKE_SHARED_LIBRARY_SUFFIX@"
+  "${QT_AUDIT_ROOT}/@LIB_DIR@/libQt6XcbQpa@CMAKE_SHARED_LIBRARY_SUFFIX@"
+  "${QT_AUDIT_ROOT}/@LIB_DIR@/libQt6OpenGLWidgets@CMAKE_SHARED_LIBRARY_SUFFIX@"
+  "${QT_AUDIT_ROOT}/plugins/platforms/libqxcb@CMAKE_SHARED_LIBRARY_SUFFIX@"
+  "${QT_AUDIT_ROOT}/plugins/xcbglintegrations/libqxcb-glx-integration@CMAKE_SHARED_LIBRARY_SUFFIX@"
+)
+if (QT_AUDIT_INCLUDE_SVG)
+  list(APPEND qt_xmin_audit_files
+    "${QT_AUDIT_ROOT}/@LIB_DIR@/libQt6Svg@CMAKE_SHARED_LIBRARY_SUFFIX@"
+    "${QT_AUDIT_ROOT}/@LIB_DIR@/libQt6SvgWidgets@CMAKE_SHARED_LIBRARY_SUFFIX@"
+  )
+endif ()
+set(qt_forbidden_x_libraries
+  libX11
+  libX11-xcb
+  libXau
+  libXdmcp
+  libXext
+  libICE
+  libSM
+  libxcb
+  libxkbcommon
+  libxkbcommon-x11
+  libXi
+  libXrender
+  libGLX
+  libOpenGL
+  libEGL
+)
+
+foreach(qt_audit_file IN LISTS qt_xmin_audit_files)
+  if (NOT EXISTS "${qt_audit_file}")
+    message(FATAL_ERROR "Qt Xmin audit artifact is missing: ${qt_audit_file}")
+  endif ()
+
+  execute_process(
+    COMMAND "${QT_LDD_EXECUTABLE}" "${qt_audit_file}"
+    RESULT_VARIABLE qt_ldd_result
+    OUTPUT_VARIABLE qt_ldd_output
+    ERROR_VARIABLE qt_ldd_error
+  )
+  if (qt_ldd_result)
+    message(FATAL_ERROR "ldd failed for ${qt_audit_file}: ${qt_ldd_error}")
+  endif ()
+  if (qt_ldd_output MATCHES "not found")
+    message(FATAL_ERROR "Unresolved Qt dependency for ${qt_audit_file}:\n${qt_ldd_output}")
+  endif ()
+
+  foreach(qt_forbidden_library IN LISTS qt_forbidden_x_libraries)
+    if (qt_ldd_output MATCHES "(^|[\\n\\t ])${qt_forbidden_library}\\.so")
+      message(FATAL_ERROR
+        "Qt Xmin artifact resolved forbidden host library ${qt_forbidden_library}:\n${qt_ldd_output}")
+    endif ()
+  endforeach()
+
+  set(qt_found_xmin_client FALSE)
+  set(qt_found_xmin_gl FALSE)
+  string(REPLACE "\n" ";" qt_dependency_lines "${qt_ldd_output}")
+  foreach(qt_dependency_line IN LISTS qt_dependency_lines)
+    if (qt_dependency_line MATCHES "libXminClient\\.so")
+      string(FIND "${qt_dependency_line}" "@QT_XMIN_CLIENT_DIR@/" qt_xmin_client_pos)
+      if (qt_xmin_client_pos EQUAL -1)
+        message(FATAL_ERROR
+          "Qt resolved libXminClient outside QT_XMIN_ROOT: ${qt_dependency_line}")
+      endif ()
+      set(qt_found_xmin_client TRUE)
+    endif ()
+    if (qt_dependency_line MATCHES "libGL\\.so")
+      string(FIND "${qt_dependency_line}" "@QT_XMIN_GL_DIR@/" qt_xmin_gl_pos)
+      if (qt_xmin_gl_pos EQUAL -1)
+        message(FATAL_ERROR
+          "Qt resolved libGL outside QT_XMIN_ROOT: ${qt_dependency_line}")
+      endif ()
+      set(qt_found_xmin_gl TRUE)
+    endif ()
+  endforeach()
+
+  if (NOT qt_found_xmin_client OR NOT qt_found_xmin_gl)
+    message(FATAL_ERROR
+      "Qt artifact is not backed by both Xmin client libraries: ${qt_audit_file}\n${qt_ldd_output}")
+  endif ()
+endforeach()
+
+message(STATUS "Qt Xmin dependency audit passed for ${QT_AUDIT_ROOT}")

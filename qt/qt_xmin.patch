@@ -1,0 +1,401 @@
+diff --git a/src/gui/CMakeLists.txt b/src/gui/CMakeLists.txt
+index 5799112..6db8402 100644
+--- a/src/gui/CMakeLists.txt
++++ b/src/gui/CMakeLists.txt
+@@ -6,6 +6,28 @@ qt_find_package(WrapHarfbuzz MODULE PROVIDED_TARGETS WrapHarfbuzz::WrapHarfbuzz)
+ qt_find_package(WrapPNG MODULE PROVIDED_TARGETS WrapPNG::WrapPNG)
+ qt_find_package(WrapFreetype MODULE PROVIDED_TARGETS WrapFreetype::WrapFreetype)
+
++if(QT_FEATURE_xmin_x11)
++    get_target_property(qt_xmin_font_files Xmin::QtX11 XMIN_FONT_FILES)
++    if(NOT qt_xmin_font_files)
++        message(FATAL_ERROR "The Xmin package did not provide its client font files")
++    endif()
++    foreach(qt_xmin_font_file IN LISTS qt_xmin_font_files)
++        if(NOT EXISTS "${qt_xmin_font_file}")
++            message(FATAL_ERROR "Xmin client font file not found: ${qt_xmin_font_file}")
++        endif()
++    endforeach()
++
++    qt_path_join(qt_xmin_font_build_dir
++        "${QT_BUILD_DIR}" "${INSTALL_LIBDIR}" "fonts")
++    qt_path_join(qt_xmin_font_install_dir
++        "${QT_INSTALL_DIR}" "${INSTALL_LIBDIR}" "fonts")
++    qt_copy_or_install(FILES ${qt_xmin_font_files}
++        DESTINATION "${qt_xmin_font_install_dir}")
++    if(QT_WILL_INSTALL)
++        file(COPY ${qt_xmin_font_files} DESTINATION "${qt_xmin_font_build_dir}")
++    endif()
++endif()
++
+ if (QT_FEATURE_gui)
+     if(QT_QPA_PLATFORMS)
+         list(GET QT_QPA_PLATFORMS 0 _default_platform)
+@@ -373,6 +395,8 @@ if(QT_FEATURE_opengl)
+                     PlatformGraphics::PlatformGraphics
+             )
+         endif()
++    elseif(QT_FEATURE_xmin_opengl)
++        target_link_libraries(Gui PUBLIC Xmin::GL)
+     elseif(NOT QT_FEATURE_opengl_dynamic)
+         target_link_libraries(Gui PUBLIC WrapOpenGL::WrapOpenGL)
+     endif()
+@@ -901,11 +925,17 @@ qt_internal_extend_target(Gui CONDITION QT_FEATURE_undogroup
+         util/qundogroup.cpp util/qundogroup.h
+ )
+
++if(QT_FEATURE_xmin_x11)
++    set(qt_glx_xlib_target Xmin::QtX11)
++else()
++    set(qt_glx_xlib_target X11::X11)
++endif()
++
+ qt_internal_extend_target(Gui CONDITION QT_FEATURE_opengl AND QT_FEATURE_xlib AND NOT QT_FEATURE_opengles2
+     SOURCES
+         opengl/platform/unix/qglxconvenience.cpp opengl/platform/unix/qglxconvenience_p.h
+     LIBRARIES
+-        X11::X11
++        ${qt_glx_xlib_target}
+ )
+
+ qt_internal_extend_target(Gui CONDITION QT_FEATURE_opengles2
+@@ -1087,14 +1117,20 @@ qt_internal_extend_target(Gui CONDITION QT_FEATURE_systemtrayicon AND TARGET Qt:
+         platform/unix/dbustray/qxdgnotificationproxy.cpp platform/unix/dbustray/qxdgnotificationproxy_p.h
+ )
+
++if(QT_FEATURE_xmin_x11)
++    set(qt_xkbcommon_target Xmin::QtX11)
++else()
++    set(qt_xkbcommon_target XKB::XKB)
++endif()
++
+ qt_internal_extend_target(Gui CONDITION QT_FEATURE_xkbcommon AND UNIX
+     SOURCES
+         platform/unix/qxkbcommon.cpp platform/unix/qxkbcommon_p.h
+         platform/unix/qxkbcommon_3rdparty.cpp
+     LIBRARIES
+-        XKB::XKB
++        ${qt_xkbcommon_target}
+     PRIVATE_MODULE_INTERFACE
+-        XKB::XKB
++        ${qt_xkbcommon_target}
+ )
+
+ qt_internal_extend_target(Gui CONDITION QT_FEATURE_metal
+diff --git a/src/gui/configure.cmake b/src/gui/configure.cmake
+index db35764..6b3bf38 100644
+--- a/src/gui/configure.cmake
++++ b/src/gui/configure.cmake
+@@ -94,9 +94,11 @@ if(QT_FEATURE_system_zlib)
+     qt_add_qmake_lib_dependency(libpng zlib)
+ endif()
+ qt_find_package(Mtdev MODULE PROVIDED_TARGETS PkgConfig::Mtdev MODULE_NAME gui QMAKE_LIB mtdev)
++if(NOT FEATURE_xmin_x11)
+ qt_find_package(WrapOpenGL MODULE PROVIDED_TARGETS WrapOpenGL::WrapOpenGL MODULE_NAME gui QMAKE_LIB opengl)
+ qt_find_package(GLESv2 MODULE
+     PROVIDED_TARGETS GLESv2::GLESv2 MODULE_NAME gui QMAKE_LIB opengl_es2)
++endif()
+ qt_find_package(Tslib MODULE PROVIDED_TARGETS PkgConfig::Tslib MODULE_NAME gui QMAKE_LIB tslib)
+ qt_find_package(WrapVulkanHeaders MODULE PROVIDED_TARGETS WrapVulkanHeaders::WrapVulkanHeaders
+     MODULE_NAME gui QMAKE_LIB vulkan MARK_OPTIONAL)
+@@ -115,6 +117,16 @@ if(LINUX OR FREEBSD OR QT_FIND_ALL_PACKAGES_ALWAYS)
+     qt_find_package(Wayland MODULE PROVIDED_TARGETS Wayland::Egl
+                     MODULE_NAME gui QMAKE_LIB wayland_egl)
+ endif()
++if(FEATURE_xmin_x11)
++    qt_find_package(Xmin 0.1 CONFIG
++        PROVIDED_TARGETS Xmin::QtX11 Xmin::GL MODULE_NAME gui QMAKE_LIB xmin_x11)
++    if(TARGET Xmin::GL AND NOT TARGET WrapOpenGL::WrapOpenGL)
++        add_library(WrapOpenGL::WrapOpenGL INTERFACE IMPORTED)
++        set_property(TARGET WrapOpenGL::WrapOpenGL PROPERTY
++            INTERFACE_LINK_LIBRARIES Xmin::GL)
++        set(WrapOpenGL_FOUND ON)
++    endif()
++else()
+ if((X11_SUPPORTED) OR QT_FIND_ALL_PACKAGES_ALWAYS)
+     qt_find_package(X11 MODULE PROVIDED_TARGETS X11::X11 MODULE_NAME gui QMAKE_LIB xlib)
+ endif()
+@@ -215,6 +227,7 @@ if((X11_SUPPORTED) OR QT_FIND_ALL_PACKAGES_ALWAYS)
+         PROVIDED_TARGETS PkgConfig::XRender MODULE_NAME gui QMAKE_LIB xrender)
+ endif()
+ qt_add_qmake_lib_dependency(xrender xlib)
++endif()
+
+ # qt wayland client
+ if(LINUX OR FREEBSD OR QT_FIND_ALL_PACKAGES_ALWAYS)
+@@ -603,6 +616,53 @@ glFramebufferTexture(GL_TEXTURE_2D, GL_DEPTH_STENCIL_ATTACHMENT, 1, 0);
+ }
+ ")
+
++# xmin_x11
++if(FEATURE_xmin_x11)
++    qt_config_compile_test(xmin_x11
++        LABEL "Xmin X11 client"
++        LIBRARIES
++            Xmin::QtX11
++        CODE
++"#include <X11/Xlib.h>
++#include <X11/Xlib-xcb.h>
++#include <xcb/glx.h>
++#include <xcb/xcb.h>
++#include <xcb/xcb_cursor.h>
++#include <xcb/xcb_icccm.h>
++#include <xcb/xcb_image.h>
++#include <xcb/xcb_keysyms.h>
++#include <xcb/xcb_renderutil.h>
++#include <xcb/randr.h>
++#include <xcb/render.h>
++#include <xcb/shape.h>
++#include <xcb/shm.h>
++#include <xcb/sync.h>
++#include <xcb/xfixes.h>
++#include <xcb/xkb.h>
++#include <xkbcommon/xkbcommon.h>
++#include <xkbcommon/xkbcommon-x11.h>
++
++int main(void)
++{
++    int screen = 0;
++    Display *display = XOpenDisplay(nullptr);
++    xcb_connection_t *connection = XGetXCBConnection(display);
++    xcb_glx_query_version(connection, 1, 4);
++    xcb_render_query_pict_formats(connection);
++    xcb_render_util_find_standard_format(nullptr, XCB_PICT_STANDARD_ARGB_32);
++    xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_DEFAULT_INCLUDES);
++    xkb_x11_setup_xkb_extension(
++        connection,
++        XKB_X11_MIN_MAJOR_XKB_VERSION,
++        XKB_X11_MIN_MINOR_XKB_VERSION,
++        XKB_X11_SETUP_XKB_EXTENSION_NO_FLAGS,
++        nullptr, nullptr, nullptr, nullptr);
++    xkb_context_unref(context);
++    XCloseDisplay(display);
++    return screen;
++}")
++endif()
++
+ # xcb_syslibs
+ qt_config_compile_test(xcb_syslibs
+     LABEL "XCB (extensions)"
+@@ -1221,20 +1281,30 @@ qt_feature("tuiotouch" PRIVATE
+     PURPOSE "Provides the TuioTouch input plugin."
+     CONDITION QT_FEATURE_network AND QT_FEATURE_udpsocket
+ )
++qt_feature("xmin-x11" PRIVATE
++    SECTION "Platform plugins"
++    LABEL "Xmin minimalist X11 client"
++    CONDITION TARGET Xmin::QtX11 AND TEST_xmin_x11
++)
+ qt_feature("xcb" PUBLIC
+     SECTION "Platform plugins"
+     LABEL "XCB"
+     AUTODETECT NOT APPLE
+-    CONDITION QT_FEATURE_thread AND TARGET XCB::XCB AND TEST_xcb_syslibs AND QT_FEATURE_xkbcommon_x11
++    CONDITION QT_FEATURE_thread AND ((TARGET XCB::XCB AND TEST_xcb_syslibs AND QT_FEATURE_xkbcommon_x11) OR (QT_FEATURE_xmin_x11 AND TEST_xmin_x11))
+ )
+ qt_feature("xcb-glx-plugin" PUBLIC
+     LABEL "GLX Plugin"
+     CONDITION QT_FEATURE_xcb_xlib AND QT_FEATURE_opengl AND NOT QT_FEATURE_opengles2
+     EMIT_IF QT_FEATURE_xcb
+ )
++qt_feature("xmin-opengl" PRIVATE
++    LABEL "Xmin software-direct OpenGL"
++    CONDITION QT_FEATURE_xmin_x11 AND TARGET Xmin::GL AND QT_FEATURE_opengl
++    EMIT_IF QT_FEATURE_xcb
++)
+ qt_feature("xcb-glx" PRIVATE
+     LABEL "  XCB GLX"
+-    CONDITION XCB_GLX_FOUND
++    CONDITION XCB_GLX_FOUND OR QT_FEATURE_xmin_opengl
+     EMIT_IF QT_FEATURE_xcb AND QT_FEATURE_xcb_glx_plugin
+ )
+ qt_feature("xcb-egl-plugin" PRIVATE
+@@ -1244,7 +1314,7 @@ qt_feature("xcb-egl-plugin" PRIVATE
+ )
+ qt_feature("xcb-xlib" PRIVATE
+     LABEL "XCB Xlib"
+-    CONDITION QT_FEATURE_xlib AND X11_XCB_FOUND
++    CONDITION QT_FEATURE_xlib AND (X11_XCB_FOUND OR QT_FEATURE_xmin_x11)
+ )
+ qt_feature("xcb-sm" PRIVATE
+     LABEL "xcb-sm"
+@@ -1261,16 +1331,16 @@ qt_feature("system-xcb-xinput" PRIVATE SYSTEM_LIBRARY
+ )
+ qt_feature("xkbcommon" PUBLIC
+     LABEL "xkbcommon"
+-    CONDITION XKB_FOUND
++    CONDITION XKB_FOUND OR QT_FEATURE_xmin_x11
+ )
+ qt_feature("xkbcommon-x11" PRIVATE
+     LABEL "xkbcommon-x11"
+-    CONDITION QT_FEATURE_xkbcommon AND XKB_COMMON_X11_FOUND
++    CONDITION QT_FEATURE_xkbcommon AND (XKB_COMMON_X11_FOUND OR QT_FEATURE_xmin_x11)
+ )
+ qt_feature("xlib" PRIVATE
+     LABEL "XLib"
+     AUTODETECT NOT APPLE OR QT_FEATURE_xcb
+-    CONDITION X11_FOUND
++    CONDITION X11_FOUND OR QT_FEATURE_xmin_x11
+ )
+ qt_feature("texthtmlparser" PUBLIC
+     SECTION "Kernel"
+diff --git a/src/gui/qt_cmdline.cmake b/src/gui/qt_cmdline.cmake
+index cbafae7..4cdd0b0 100644
+--- a/src/gui/qt_cmdline.cmake
++++ b/src/gui/qt_cmdline.cmake
+@@ -38,6 +38,7 @@ qt_commandline_option(sm TYPE boolean NAME sessionmanager)
+ qt_commandline_option(tslib TYPE boolean)
+ qt_commandline_option(vulkan TYPE boolean)
+ qt_commandline_option(xcb TYPE boolean)
++qt_commandline_option(xmin-x11 TYPE boolean)
+ qt_commandline_option(bundled-xcb-xinput TYPE boolean)
+ qt_commandline_option(xcb-native-painting TYPE boolean)
+ qt_commandline_option(xcb-xlib TYPE boolean)
+diff --git a/src/plugins/platforminputcontexts/CMakeLists.txt b/src/plugins/platforminputcontexts/CMakeLists.txt
+index f54516c..af8395d 100644
+--- a/src/plugins/platforminputcontexts/CMakeLists.txt
++++ b/src/plugins/platforminputcontexts/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ # Copyright (C) 2022 The Qt Company Ltd.
+ # SPDX-License-Identifier: BSD-3-Clause
+
+-if(QT_FEATURE_xkbcommon)
++if(QT_FEATURE_xkbcommon AND NOT QT_FEATURE_xmin_x11)
+     add_subdirectory(compose)
+ endif()
+ if(QT_FEATURE_xkbcommon AND TARGET Qt::DBus AND UNIX AND NOT MACOS)
+diff --git a/src/plugins/platforms/xcb/CMakeLists.txt b/src/plugins/platforms/xcb/CMakeLists.txt
+index 204acd7..a8e77d0 100644
+--- a/src/plugins/platforms/xcb/CMakeLists.txt
++++ b/src/plugins/platforms/xcb/CMakeLists.txt
+@@ -10,6 +10,29 @@ if(GCC)
+     add_compile_options(-Wno-psabi)
+ endif()
+
++if(QT_FEATURE_xmin_x11)
++    set(qt_xcb_client_libraries Xmin::QtX11)
++else()
++    set(qt_xcb_client_libraries
++        PkgConfig::XKB_COMMON_X11
++        XCB::CURSOR
++        XCB::ICCCM
++        XCB::UTIL
++        XCB::IMAGE
++        XCB::KEYSYMS
++        XCB::RANDR
++        XCB::RENDER
++        XCB::RENDERUTIL
++        XCB::SHAPE
++        XCB::SHM
++        XCB::SYNC
++        XCB::XCB
++        XCB::XFIXES
++        XCB::XKB
++        XKB::XKB
++    )
++endif()
++
+ qt_internal_add_module(XcbQpaPrivate
+     CONFIG_MODULE_NAME xcb_qpa_lib
+     INTERNAL_MODULE
+@@ -47,24 +70,9 @@ qt_internal_add_module(XcbQpaPrivate
+     INCLUDE_DIRECTORIES
+         gl_integrations
+     PUBLIC_LIBRARIES
+-        PkgConfig::XKB_COMMON_X11
+         Qt::CorePrivate
+         Qt::GuiPrivate
+-        XCB::CURSOR
+-        XCB::ICCCM
+-        XCB::UTIL
+-        XCB::IMAGE
+-        XCB::KEYSYMS
+-        XCB::RANDR
+-        XCB::RENDER
+-        XCB::RENDERUTIL
+-        XCB::SHAPE
+-        XCB::SHM
+-        XCB::SYNC
+-        XCB::XCB
+-        XCB::XFIXES
+-        XCB::XKB
+-        XKB::XKB
++        ${qt_xcb_client_libraries}
+     NO_UNITY_BUILD # X11 define clashes
+ )
+
+@@ -83,12 +91,17 @@ qt_internal_extend_target(XcbQpaPrivate CONDITION QT_FEATURE_draganddrop
+         qxcbdrag.cpp qxcbdrag.h
+ )
+
++if(QT_FEATURE_xmin_x11)
++    set(qt_xcb_xlib_libraries Xmin::QtX11)
++else()
++    set(qt_xcb_xlib_libraries X11::XCB X11::X11)
++endif()
++
+ qt_internal_extend_target(XcbQpaPrivate CONDITION QT_FEATURE_xcb_xlib
+     SOURCES
+         qt_xlib_wrapper.c qt_xlib_wrapper.h
+     PUBLIC_LIBRARIES
+-        X11::XCB
+-        X11::X11
++        ${qt_xcb_xlib_libraries}
+ )
+
+ qt_internal_extend_target(XcbQpaPrivate CONDITION NOT QT_FEATURE_xcb_xlib
+diff --git a/src/plugins/platforms/offscreen/CMakeLists.txt b/src/plugins/platforms/offscreen/CMakeLists.txt
+index 907c2c9..b900459 100644
+--- a/src/plugins/platforms/offscreen/CMakeLists.txt
++++ b/src/plugins/platforms/offscreen/CMakeLists.txt
+@@ -26,9 +26,15 @@ qt_internal_add_plugin(QOffscreenIntegrationPlugin
+ ## Scopes:
+ #####################################################################
+
++if(QT_FEATURE_xmin_x11)
++    set(qt_offscreen_xlib_target Xmin::QtX11)
++else()
++    set(qt_offscreen_xlib_target X11::X11)
++endif()
++
+ qt_internal_extend_target(QOffscreenIntegrationPlugin CONDITION QT_FEATURE_opengl AND QT_FEATURE_xlib AND NOT QT_FEATURE_opengles2
+     SOURCES
+         qoffscreenintegration_x11.cpp qoffscreenintegration_x11.h
+     LIBRARIES
+-        X11::X11
++        ${qt_offscreen_xlib_target}
+ )
+diff --git a/src/plugins/platforms/xcb/gl_integrations/xcb_glx/CMakeLists.txt b/src/plugins/platforms/xcb/gl_integrations/xcb_glx/CMakeLists.txt
+index f9f78ad..32bb053 100644
+--- a/src/plugins/platforms/xcb/gl_integrations/xcb_glx/CMakeLists.txt
++++ b/src/plugins/platforms/xcb/gl_integrations/xcb_glx/CMakeLists.txt
+@@ -31,9 +31,15 @@ qt_internal_add_plugin(QXcbGlxIntegrationPlugin
+ ## Scopes:
+ #####################################################################
+
++if(QT_FEATURE_xmin_x11)
++    set(qt_xcb_glx_library Xmin::QtX11)
++else()
++    set(qt_xcb_glx_library XCB::GLX)
++endif()
++
+ qt_internal_extend_target(QXcbGlxIntegrationPlugin CONDITION QT_FEATURE_xcb_glx
+     LIBRARIES
+-        XCB::GLX
++        ${qt_xcb_glx_library}
+ )
+
+ qt_internal_extend_target(QXcbGlxIntegrationPlugin
+diff --git a/src/plugins/platforms/xcb/qxcbeventqueue.cpp b/src/plugins/platforms/xcb/qxcbeventqueue.cpp
+index fa9a7a3..37cc5d3 100644
+--- a/src/plugins/platforms/xcb/qxcbeventqueue.cpp
++++ b/src/plugins/platforms/xcb/qxcbeventqueue.cpp
+@@ -341,7 +341,7 @@ void QXcbEventQueue::sendCloseConnectionEvent() const
+     xcb_create_window(c, XCB_COPY_FROM_PARENT,
+                       window, screen->root,
+                       0, 0, 1, 1, 0, XCB_WINDOW_CLASS_INPUT_ONLY,
+-                      screen->root_visual, 0, nullptr);
++                      XCB_COPY_FROM_PARENT, 0, nullptr);
+
+     event.response_type = XCB_CLIENT_MESSAGE;
+     event.format = 32;
