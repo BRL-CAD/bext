@@ -1,0 +1,35 @@
+message("Itk build begins\n")
+
+set(BUILD_SCRIPT "${CMAKE_BINARY_DIR}/build_itk.bat")
+file(WRITE "${BUILD_SCRIPT}"
+  "@echo off\n"
+  "set VSCMD_DEBUG=0\n"
+  "set \"NoDefaultCurrentDirectoryInExePath=\"\n"
+  "call \"@VCVARS_BAT@\"\n"
+  "cd /D \"@ITK_SRC_DIR@/win\"\n"
+  "set CC=\n"
+  "set RC=\n"
+  "nmake -f makefile.vc TCLDIR=@TCL_SRC_DIR@ TKDIR=@TK_SRC_DIR@ ITCLDIR=@ITCL_SRC_DIR@ INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
+  "exit /b %ERRORLEVEL%\n"
+  )
+
+execute_process(
+  WORKING_DIRECTORY "@ITK_SRC_DIR@/win"
+  COMMAND cmd /c "${BUILD_SCRIPT}"
+  RESULT_VARIABLE ITK_RET
+  OUTPUT_VARIABLE CMD_OUT
+  ERROR_VARIABLE CMD_OUT
+  )
+
+if (ITK_RET)
+  message(FATAL_ERROR "Itk build failed:\n${CMD_OUT}\n")
+endif (ITK_RET)
+
+message("Itk build succeeded:\n${CMD_OUT}\n")
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8

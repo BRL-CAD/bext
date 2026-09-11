@@ -1,216 +1,65 @@
-diff -Naur itk/generic/itk_cmds.c ITK_BLD/generic/itk_cmds.c
---- itk/generic/itk_cmds.c	2024-07-10 10:44:13.330651607 -0400
-+++ ITK_BLD/generic/itk_cmds.c	2024-07-10 10:32:07.734264686 -0400
-@@ -111,8 +111,7 @@
-  * ------------------------------------------------------------------------
-  */
- static int
--Initialize(interp)
--    Tcl_Interp *interp;  /* interpreter to be updated */
-+Initialize(Tcl_Interp *interp)
- {
-     Tcl_Namespace *itkNs, *parserNs;
-     ClientData parserInfo;
-@@ -256,8 +255,7 @@
-  * ------------------------------------------------------------------------
-  */
- int
--Itk_Init(interp)
--    Tcl_Interp *interp;  /* interpreter to be updated */
-+Itk_Init(Tcl_Interp *interp)
- {
-     if (Initialize(interp) != TCL_OK) {
- 	return TCL_ERROR;
-@@ -282,8 +280,7 @@
-  * ------------------------------------------------------------------------
-  */  
- int 
--Itk_SafeInit(interp)
--    Tcl_Interp *interp;  /* interpreter to be updated */ 
-+Itk_SafeInit(Tcl_Interp *interp)
- {   
-     if (Initialize(interp) != TCL_OK) {
-         return TCL_ERROR;
-@@ -316,11 +313,7 @@
-  */
- /* ARGSUSED */
- int
--Itk_ConfigBodyCmd(dummy, interp, objc, objv)
--    ClientData dummy;        /* unused */
--    Tcl_Interp *interp;      /* current interpreter */
--    int objc;                /* number of arguments */
--    Tcl_Obj *CONST objv[];   /* argument objects */
-+Itk_ConfigBodyCmd(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[])
- {
-     int result = TCL_OK;
+diff --git a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -161,5 +161,6 @@
+ TEA_PRIVATE_TCL_HEADERS
  
-diff -Naur itk/generic/itk_archetype.c ITK_BLD/generic/itk_archetype.c
---- itk/generic/itk_archetype.c	2026-05-31 11:06:17
-+++ ITK_BLD/generic/itk_archetype.c	2026-05-31 11:06:17
-@@ -3974,6 +3974,8 @@
-     char **confv = NULL;
-     int optc;
-     char **optv = NULL;
-+    const char **splitConfv = NULL;
-+    const char **splitOptv = NULL;
+ TEA_PUBLIC_TK_HEADERS
+ #TEA_PRIVATE_TK_HEADERS
+-TEA_PATH_X
++# Itk uses Tk stubs and makes no direct Xlib calls.  Its X implementation is
++# selected by Tk, so do not add a second platform X library dependency.
+diff --git a/configure b/configure
+--- a/configure
++++ b/configure
+@@ -7051,4 +7051,6 @@
+     # TEA specific:
+     if test x"${XLIBSW}" != x ; then
+-	PKG_LIBS="${PKG_LIBS} ${XLIBSW}"
++	# Itk uses Tk stubs and does not make direct Xlib calls. Avoid
++	# preserving TEA_PATH_X's platform X libraries.
++	:
+     fi
+diff --git a/generic/itkBase.c b/generic/itkBase.c
+--- a/generic/itkBase.c
++++ b/generic/itkBase.c
+@@ -132 +132 @@ Initialize(
+-    if (Itcl_InitStubs(interp, "4.1", 0) == NULL) {
++    if (Itcl_InitStubs(interp, "4.1.1", 0) == NULL) {
+diff --git a/pkgIndex.tcl.in b/pkgIndex.tcl.in
+--- a/pkgIndex.tcl.in
++++ b/pkgIndex.tcl.in
+@@ -6 +6 @@ if {![package vsatisfies [package provide Tcl] 8.6-]} {return}
+-if {[string length [package provide Itcl]] && ![package vsatisfies [package provide Itcl] 4.1]} return
++if {[string length [package provide Itcl]] && ![package vsatisfies [package provide Itcl] 4.1.1]} return
+diff --git a/win/makefile.vc b/win/makefile.vc
+--- a/win/makefile.vc
++++ b/win/makefile.vc
+@@ -60,18 +60,27 @@ PRJ_HEADERS = \
+ # In principle, we don't need the ITCL source directory, and an installed
+ # ITCL should suffice. But that needs additional machinery not implemented
+ # yet.
++!if "$(ITCLDIR)" != ""
++ITCL_DIR = $(ITCLDIR)
++!else
+ !if [echo ITCL_DIR = \> nmakehlp.out] \
+    || [nmakehlp -L generic\itcl.h >> nmakehlp.out]
+ !error Could not locate ITCL source directory.
+ !endif
++!include nmakehlp.out
++!endif
+ # Locate TK headers and libraries.
+ # In principle, we don't need the TK source directory, and an installed
+ # TK should suffice. But that needs additional machinery not implemented
+ # yet.
++!if "$(TKDIR)" != ""
++TK_DIR = $(TKDIR)
++!else
+ !if [echo TK_DIR = \> nmakehlp.out] \
+    || [nmakehlp -L generic\tk.h >> nmakehlp.out]
+ !error Could not locate TK source directory.
+ !endif
+ !include nmakehlp.out
++!endif
  
-     int i, newEntry;
-     Tcl_HashTable *tPtr;
-@@ -3988,13 +3990,15 @@
-      *  Only consider options with all 5 required components.  Avoid
-      *  aliases like "-bg".
-      */
--    if (Tcl_SplitList(interp, options, &confc, &confv) != TCL_OK) {
-+    if (Tcl_SplitList(interp, options, &confc, &splitConfv) != TCL_OK) {
-         goto tableFail;
-     }
-+    confv = (char **)splitConfv;
-     for (i=0; i < confc; i++) {
--        if (Tcl_SplitList(interp, confv[i], &optc, &optv) != TCL_OK) {
-+        if (Tcl_SplitList(interp, confv[i], &optc, &splitOptv) != TCL_OK) {
-             goto tableFail;
-         }
-+        optv = (char **)splitOptv;
-         if (optc == 5) {    /* avoid aliased options */
-             entry = Tcl_CreateHashEntry(tPtr, optv[0], &newEntry);
-             if (newEntry) {
-@@ -4089,6 +4093,7 @@
- 
-     int optc, result;
-     char **optv;
-+    const char **splitOptv = NULL;
-     char *name, *info;
-     Tcl_Obj *resultPtr;
- 
-@@ -4126,7 +4131,8 @@
-     Tcl_IncrRefCount(resultPtr);
-     info = Tcl_GetStringFromObj(resultPtr, (int*)NULL);
- 
--    result = Tcl_SplitList(interp, info, &optc, &optv);
-+    result = Tcl_SplitList(interp, info, &optc, &splitOptv);
-+    optv = (char **)splitOptv;
- 
-     Tcl_DecrRefCount(resultPtr);
- 
-diff -Naur itk/win/rc/itk.rc ITK_BLD/win/rc/itk.rc
---- itk/win/rc/itk.rc	2024-07-10 10:44:13.334651538 -0400
-+++ ITK_BLD/win/rc/itk.rc	2024-07-10 10:32:07.734264686 -0400
-@@ -1,59 +1,59 @@
--//
--// Version resource script.
--//
--
--#include <winver.h>
--#include <itcl.h>
--#include <itk.h>
--
--//
--// build-up the name suffix that defines the type of build this is.
--//
--#if DEBUG
--#define SUFFIX_DEBUG	    "g"
--#else
--#define SUFFIX_DEBUG	    ""
--#endif
--
--#define SUFFIX		    SUFFIX_DEBUG
--
--
--VS_VERSION_INFO VERSIONINFO
-- FILEVERSION    ITK_MAJOR_VERSION,ITK_MINOR_VERSION,ITK_RELEASE_LEVEL,ITK_RELEASE_SERIAL
-- PRODUCTVERSION ITK_MAJOR_VERSION,ITK_MINOR_VERSION,ITK_RELEASE_LEVEL,ITK_RELEASE_SERIAL
-- FILEFLAGSMASK	0x3fL
--#if DEBUG
-- FILEFLAGS	VS_FF_DEBUG
--#else
-- FILEFLAGS	0x0L
--#endif
-- FILEOS		VOS__WINDOWS32
-- FILETYPE	VFT_DLL
-- FILESUBTYPE	0x0L
--
--BEGIN
--    BLOCK "StringFileInfo"
--    BEGIN
--        BLOCK "040904b0"
--        BEGIN
--            VALUE "FileDescription", "[Incr Tk] Object-Oriented Tk extension\0"
--            VALUE "Authors", "Michael McLennan\0"
--            VALUE "OriginalFilename", "itk" STRINGIFY(ITK_MAJOR_VERSION) STRINGIFY(ITK_MINOR_VERSION) SUFFIX ".dll\0"
--            VALUE "CompanyName", "Bell Labs Innovations for Lucent Technologies\0"
--            VALUE "FileVersion", ITK_PATCH_LEVEL
--            VALUE "LegalCopyright", "Copyright \251 1993-2003\0"
--            VALUE "ProductName", "[Incr Tk] " ITK_VERSION " for Windows\0"
--            VALUE "ProductVersion", ITK_PATCH_LEVEL
--        END
--    END
--    BLOCK "VarFileInfo"
--    BEGIN
--        VALUE "Translation", 0x409, 1200
--    END
--END
--
--//
--// Icons
--//
--
--toaster		ICON	DISCARDABLE	"itk.ico"
-+//
-+// Version resource script.
-+//
-+
-+#include <winver.h>
-+#include <itcl.h>
-+#include <itk.h>
-+
-+//
-+// build-up the name suffix that defines the type of build this is.
-+//
-+#if DEBUG
-+#define SUFFIX_DEBUG	    "g"
-+#else
-+#define SUFFIX_DEBUG	    ""
-+#endif
-+
-+#define SUFFIX		    SUFFIX_DEBUG
-+
-+
-+VS_VERSION_INFO VERSIONINFO
-+ FILEVERSION    ITK_MAJOR_VERSION,ITK_MINOR_VERSION,ITK_RELEASE_LEVEL,ITK_RELEASE_SERIAL
-+ PRODUCTVERSION ITK_MAJOR_VERSION,ITK_MINOR_VERSION,ITK_RELEASE_LEVEL,ITK_RELEASE_SERIAL
-+ FILEFLAGSMASK	0x3fL
-+#if DEBUG
-+ FILEFLAGS	VS_FF_DEBUG
-+#else
-+ FILEFLAGS	0x0L
-+#endif
-+ FILEOS		VOS__WINDOWS32
-+ FILETYPE	VFT_DLL
-+ FILESUBTYPE	0x0L
-+
-+BEGIN
-+    BLOCK "StringFileInfo"
-+    BEGIN
-+        BLOCK "040904b0"
-+        BEGIN
-+            VALUE "FileDescription", "[Incr Tk] Object-Oriented Tk extension\0"
-+            VALUE "Authors", "Michael McLennan\0"
-+            VALUE "OriginalFilename", "itk" STRINGIFY(ITK_MAJOR_VERSION) STRINGIFY(ITK_MINOR_VERSION) SUFFIX ".dll\0"
-+            VALUE "CompanyName", "Bell Labs Innovations for Lucent Technologies\0"
-+            VALUE "FileVersion", ITK_PATCH_LEVEL
-+            VALUE "LegalCopyright", "Copyright \251 1993-2003\0"
-+            VALUE "ProductName", "[Incr Tk] " ITK_VERSION " for Windows\0"
-+            VALUE "ProductVersion", ITK_PATCH_LEVEL
-+        END
-+    END
-+    BLOCK "VarFileInfo"
-+    BEGIN
-+        VALUE "Translation", 0x409, 1200
-+    END
-+END
-+
-+//
-+// Icons
-+//
-+
-+toaster		ICON	DISCARDABLE	"itk.ico"
+ # Get the ITCL version from its configure.ac

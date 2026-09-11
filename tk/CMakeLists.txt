@@ -7,7 +7,7 @@ set(TK_CONFIGURE_ARGS "" CACHE STRING "Additional arguments for bundled Tk's Uni
 if (USE_BRLCAD)
 
   # Decide if we're using Tk
-  cad_enable(TK "archer;mged;bwish;rtwizard;brlman")
+  cad_enable(TK "${BEXT_TK_COMPONENTS}")
 
   if (NOT TK_LIBRARY OR TARGET TCL_BLD)
     set(TK_DO_BUILD 1)
@@ -40,6 +40,17 @@ if (BEXT_XMIN_ROOT AND NOT DISABLE_TCL AND NOT DISABLE_TK)
   if (tk_xmin_arg_index EQUAL -1)
     list(APPEND TK_CONFIGURE_ARGS "${tk_xmin_configure_arg}")
   endif ()
+endif ()
+
+# Tcl selection happens first because a missing system Itk requires the whole
+# implementation-coupled stack to be bundled.  Guard that earlier decision so
+# no later option combination can silently select an unvalidated system Tk.
+if (NOT TK_DO_BUILD AND NOT DISABLE_TCL AND NOT DISABLE_TK AND NOT BEXT_TCLTK_SYSTEM_STACK)
+  message(FATAL_ERROR
+    "System Tk may be used only when its Tcl package path provides Itcl "
+    "${BEXT_ITCL_MIN_VERSION} or newer and Itk ${BEXT_ITK_MIN_VERSION} or "
+    "newer.  Enable the bundled stack with -DENABLE_TCL=ON."
+    )
 endif ()
 
 if (TK_DO_BUILD)

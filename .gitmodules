@@ -123,16 +123,9 @@
 	branch = RELEASE
 	ignore = dirty
         shallow = true
-[submodule "itcl3/itcl"]
-	path = itcl/itcl
-	url = https://github.com/BRL-CAD/itcl
-	branch = RELEASE
-	ignore = dirty
-        shallow = true
-[submodule "itk3/itk"]
+[submodule "itk/itk"]
 	path = itk/itk
-	url = https://github.com/BRL-CAD/itk
-	branch = RELEASE
+	url = https://github.com/tcltk/itk
 	ignore = dirty
         shallow = true
 [submodule "iwidgets/iwidgets"]
