@@ -675,9 +675,19 @@ add_project(embree GROUPS "APPLESEED;OSPRAY")
 # static lib building on so we get the stub libraries.
 # https://www.tcl.tk
 set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
+# Tcl 8.6.18 bundles Itcl 4.3.7.  Itk remains a separate upstream project.
+# Keep the compatibility floors distinct from the bundled versions so a newer
+# system installation can be used without changing the versions we ship.
+set(BEXT_ITCL_MIN_VERSION "4.1.1")
+set(BEXT_ITCL_BUNDLED_VERSION "4.3.7")
+set(BEXT_ITCL_BUNDLED_SOURCE_DIR
+  "${CMAKE_SOURCE_DIR}/tcl/tcl/pkgs/itcl${BEXT_ITCL_BUNDLED_VERSION}"
+  )
+set(BEXT_ITK_MIN_VERSION "4.2.3")
+set(BEXT_ITK_BUNDLED_VERSION "4.2.7")
+set(BEXT_TK_COMPONENTS "archer;mged;bwish;rtwizard;brlman")
 add_project(tcl GROUPS "TCL")
 add_project(tk GROUPS "TCL")
-add_project(itcl GROUPS "TCL")
 add_project(itk GROUPS "TCL")
 add_project(iwidgets GROUPS "TCL")
 add_project(tkhtml GROUPS "TCL")

@@ -1,0 +1,335 @@
+diff --git a/generic/canvasprintbox.itk b/generic/canvasprintbox.itk
+index 9d41daa..4f7d1d0 100755
+--- a/generic/canvasprintbox.itk
++++ b/generic/canvasprintbox.itk
+@@ -352,7 +352,7 @@ itcl::body iwidgets::Canvasprintbox::constructor {args} {
+ 	itk_component add printerrb {
+ 		radiobutton $cs.printerrb \
+ 			-text Printer \
+-			-variable [itcl::scope _globVar($this,output)] \
++			-variable [namespace which -variable _globVar]($this,output) \
+ 			-anchor w \
+ 			-justify left \
+ 			-value printer \
+@@ -366,7 +366,7 @@ itcl::body iwidgets::Canvasprintbox::constructor {args} {
+ 			-labeltext "command:" \
+ 			-state normal \
+ 			-labelpos w \
+-			-textvariable [itcl::scope _globVar($this,printeref)]
++			-textvariable [namespace which -variable _globVar]($this,printeref)
+ 	}
+ 
+ 	itk_component add filerb {
+@@ -374,7 +374,7 @@ itcl::body iwidgets::Canvasprintbox::constructor {args} {
+ 			-text File \
+ 			-justify left \
+ 			-anchor w \
+-			-variable [itcl::scope _globVar($this,output)] \
++			-variable [namespace which -variable _globVar]($this,output) \
+ 			-value file \
+ 			-command [itcl::code $this _update_attr]
+ 	} { 
+@@ -386,7 +386,7 @@ itcl::body iwidgets::Canvasprintbox::constructor {args} {
+ 			-labeltext "filename:" \
+ 			-state disabled \
+ 			-labelpos w \
+-			-textvariable [itcl::scope _globVar($this,fileef)]
++			-textvariable [namespace which -variable _globVar]($this,fileef)
+ 	}
+ 
+ 	itk_component add propsframe {
+@@ -422,7 +422,7 @@ itcl::body iwidgets::Canvasprintbox::constructor {args} {
+ 			-text {Stretch to fit} \
+ 			-justify left \
+ 			-anchor w \
+-			-variable [itcl::scope _globVar($this,stretchcb)] \
++			-variable [namespace which -variable _globVar]($this,stretchcb) \
+ 			-command [itcl::code $this refresh]
+ 	} { 
+ 		usual
+@@ -435,7 +435,7 @@ itcl::body iwidgets::Canvasprintbox::constructor {args} {
+ 			-text Posterize \
+ 			-justify left \
+ 			-anchor w \
+-			-variable [itcl::scope _globVar($this,postercb)] \
++			-variable [namespace which -variable _globVar]($this,postercb) \
+ 			-command [itcl::code $this refresh]
+ 	} { 
+ 		usual
+@@ -445,7 +445,7 @@ itcl::body iwidgets::Canvasprintbox::constructor {args} {
+ 	itk_component add hpcnt {
+ 		iwidgets::entryfield $cs.hpcnt \
+ 			-labeltext on \
+-			-textvariable [itcl::scope _globVar($this,hpc)] \
++			-textvariable [namespace which -variable _globVar]($this,hpc) \
+ 			-validate integer -width 3 \
+ 			-command [itcl::code $this refresh]
+ 	}
+@@ -453,7 +453,7 @@ itcl::body iwidgets::Canvasprintbox::constructor {args} {
+ 	itk_component add vpcnt {
+ 		iwidgets::entryfield $cs.vpcnt \
+ 			-labeltext by \
+-			-textvariable [itcl::scope _globVar($this,vpc)] \
++			-textvariable [namespace which -variable _globVar]($this,vpc) \
+ 			-validate integer -width 3 \
+ 			-command [itcl::code $this refresh]
+ 	}
+diff --git a/generic/checkbox.itk b/generic/checkbox.itk
+index 49e8888..123be27 100755
+--- a/generic/checkbox.itk
++++ b/generic/checkbox.itk
+@@ -172,7 +172,7 @@ itcl::body iwidgets::Checkbox::index {index} {
+ itcl::body iwidgets::Checkbox::add {tag args} {
+     itk_component add $tag {
+         eval checkbutton $itk_component(childsite).cb[incr _unique] \
+-            -variable [list [itcl::scope buttonVar($this,$tag)]] \
++            -variable [list [namespace which -variable buttonVar]($this,$tag)] \
+             -anchor w \
+             -justify left \
+             -highlightthickness 0 \
+@@ -207,7 +207,7 @@ itcl::body iwidgets::Checkbox::add {tag args} {
+ itcl::body iwidgets::Checkbox::insert {index tag args} {
+     itk_component add $tag {
+         eval checkbutton $itk_component(childsite).cb[incr _unique] \
+-            -variable [list [itcl::scope buttonVar($this,$tag)]] \
++            -variable [list [namespace which -variable buttonVar]($this,$tag)] \
+             -anchor w \
+             -justify left \
+             -highlightthickness 0 \
+@@ -258,7 +258,7 @@ itcl::body iwidgets::Checkbox::select {index} {
+     # already selected.  Check its associated variable, and if
+     # it's set, then just ignore and return.
+     #-----------------------------------------------------------
+-    if {[set [itcl::scope buttonVar($this,$tag)]] == 
++    if {[set [namespace which -variable buttonVar]($this,$tag)] ==
+ 	[[component $tag] cget -onvalue]} {
+       return
+     }
+diff --git a/generic/combobox.itk b/generic/combobox.itk
+index 140724b..dfa690b 100755
+--- a/generic/combobox.itk
++++ b/generic/combobox.itk
+@@ -1231,7 +1231,7 @@ itcl::body iwidgets::Combobox::_listShowing {{val ""}} {
+ 	return $_listShowing($this)
+     } elseif {$val == "-wait"} {
+ 	while {!$_listShowing($this)} {
+-	    tkwait variable [itcl::scope _listShowing($this)]
++	    tkwait variable [namespace which -variable _listShowing]($this)
+ 	}
+ 	return
+     }
+diff --git a/generic/finddialog.itk b/generic/finddialog.itk
+index 7bf38f1..608ebb9 100755
+--- a/generic/finddialog.itk
++++ b/generic/finddialog.itk
+@@ -102,7 +102,7 @@ itcl::body ::iwidgets::Finddialog::constructor {args} {
+     #
+     itk_component add all {
+ 	checkbutton $itk_interior.all \
+-	    -variable [itcl::scope _optionValues($this-all)] \
++	    -variable [namespace which -variable _optionValues]($this-all) \
+ 	    -text "All"
+     }
+ 
+@@ -111,7 +111,7 @@ itcl::body ::iwidgets::Finddialog::constructor {args} {
+     #
+     itk_component add case {
+ 	checkbutton $itk_interior.case \
+-	    -variable [itcl::scope _optionValues($this-case)] \
++	    -variable [namespace which -variable _optionValues]($this-case) \
+ 	    -text "Consider Case"
+     }
+ 
+@@ -120,7 +120,7 @@ itcl::body ::iwidgets::Finddialog::constructor {args} {
+     #
+     itk_component add regexp {
+ 	checkbutton $itk_interior.regexp \
+-	    -variable [itcl::scope _optionValues($this-regexp)] \
++	    -variable [namespace which -variable _optionValues]($this-regexp) \
+ 	    -text "Use Regular Expression"
+     }
+ 
+@@ -129,7 +129,7 @@ itcl::body ::iwidgets::Finddialog::constructor {args} {
+     #
+     itk_component add backwards {
+ 	checkbutton $itk_interior.backwards \
+-	    -variable [itcl::scope _optionValues($this-backwards)] \
++	    -variable [namespace which -variable _optionValues]($this-backwards) \
+ 	    -text "Find Backwards"
+     }
+ 
+@@ -290,7 +290,7 @@ itcl::body ::iwidgets::Finddialog::find {} {
+     # of the string matching the pattern.
+     #
+     set precmd "$itk_option(-textwidget) search \
+-	    -count [list [itcl::scope _matchLen($this)]]"
++	    -count [list [namespace which -variable _matchLen]($this)]"
+ 
+     if {! [_get case]} {
+ 	append precmd " -nocase"
+@@ -423,7 +423,7 @@ itcl::body ::iwidgets::Finddialog::find {} {
+     # If a match command is defined, then call it with the match point.
+     #
+     if {$itk_option(-matchcommand) != {}} {
+-	[subst $itk_option(-matchcommand)] $matchPoint
++	{*}$itk_option(-matchcommand) $matchPoint
+     }
+ 
+     #
+diff --git a/generic/mainwindow.itk b/generic/mainwindow.itk
+index 032021e..4f94a4d 100755
+--- a/generic/mainwindow.itk
++++ b/generic/mainwindow.itk
+@@ -84,7 +84,7 @@ itcl::body iwidgets::Mainwindow::constructor {args} {
+     #
+     itk_component add menubar {
+ 	iwidgets::Menubar $itk_interior.menubar \
+-	  -helpvariable [itcl::scope _helpVar($this)] 
++	  -helpvariable [namespace which -variable _helpVar]($this)
+     } {
+ 	keep -disabledforeground -cursor \
+ 	    -highlightbackground -highlightthickness
+@@ -101,7 +101,7 @@ itcl::body iwidgets::Mainwindow::constructor {args} {
+     #
+     itk_component add toolbar {
+ 	iwidgets::Toolbar $itk_interior.toolbar -orient horizontal \
+-	    -helpvariable [itcl::scope _helpVar($this)] 
++	    -helpvariable [namespace which -variable _helpVar]($this)
+     } {
+ 	keep -balloonbackground -balloondelay1 -balloondelay2 \
+ 	    -balloonfont -balloonforeground -disabledforeground -cursor \
+@@ -116,7 +116,7 @@ itcl::body iwidgets::Mainwindow::constructor {args} {
+     #
+     itk_component add mousebar {
+ 	iwidgets::Toolbar $itk_interior.mousebar -orient vertical \
+-	    -helpvariable [itcl::scope _helpVar($this)] 
++	    -helpvariable [namespace which -variable _helpVar]($this)
+     } {
+ 	keep -balloonbackground -balloondelay1 -balloondelay2 \
+ 	    -balloonfont -balloonforeground -disabledforeground -cursor \
+@@ -142,13 +142,13 @@ itcl::body iwidgets::Mainwindow::constructor {args} {
+ 
+     itk_component add help {
+ 	label $itk_component(lineframe).help \
+-	    -textvariable [itcl::scope _helpVar($this)] \
++	    -textvariable [namespace which -variable _helpVar]($this) \
+ 	    -relief sunken -borderwidth 2 -width 10
+     }
+ 
+     itk_component add status {
+ 	label $itk_component(lineframe).status \
+-	    -textvariable [itcl::scope _statusVar($this)] \
++	    -textvariable [namespace which -variable _statusVar]($this) \
+ 	    -relief sunken -borderwidth 2 -width 10
+     }
+ 
+diff --git a/generic/radiobox.itk b/generic/radiobox.itk
+index 282eaa7..fe1b11e 100755
+--- a/generic/radiobox.itk
++++ b/generic/radiobox.itk
+@@ -111,7 +111,7 @@ itcl::body iwidgets::Radiobox::constructor {args} {
+     #
+     set _modes($this) {}
+ 
+-    trace variable [itcl::scope _modes($this)] w [itcl::code $this _command]
++    trace variable [namespace which -variable _modes]($this) w [itcl::code $this _command]
+ 
+     grid columnconfigure $itk_component(childsite) 0 -weight 1
+ 
+@@ -123,7 +123,7 @@ itcl::body iwidgets::Radiobox::constructor {args} {
+ # ------------------------------------------------------------------
+ itcl::body iwidgets::Radiobox::destructor { } {
+ 
+-    trace vdelete [itcl::scope _modes($this)] w [itcl::code $this _command]
++    trace vdelete [namespace which -variable _modes]($this) w [itcl::code $this _command]
+     catch {unset _modes($this)}
+ 
+ }
+@@ -212,7 +212,7 @@ itcl::body iwidgets::Radiobox::add {tag args} {
+ 
+     itk_component add $tag {
+         eval radiobutton $itk_component(childsite).rb[incr _unique] \
+-            -variable [list [itcl::scope _modes($this)]] \
++            -variable [list [namespace which -variable _modes]($this)] \
+             -anchor w \
+             -justify left \
+             -highlightthickness 0 \
+@@ -250,7 +250,7 @@ itcl::body iwidgets::Radiobox::insert {index tag args} {
+ 
+     itk_component add $tag {
+         eval radiobutton $itk_component(childsite).rb[incr _unique] \
+-            -variable [list [itcl::scope _modes($this)]] \
++            -variable [list [namespace which -variable _modes]($this)] \
+             -highlightthickness 0 \
+             -anchor w \
+             -justify left \
+diff --git a/generic/shell.itk b/generic/shell.itk
+index c7b6f04..b326f05 100755
+--- a/generic/shell.itk
++++ b/generic/shell.itk
+@@ -275,7 +275,7 @@ itcl::body iwidgets::Shell::activate {} {
+ 
+         lappend grabstack [list grab $itk_component(hull)]
+         
+-        tkwait variable [itcl::scope _wait($this)]
++        tkwait variable [namespace which -variable _wait]($this)
+         return $_result
+         
+     } elseif {$itk_option(-modality) == "global" }  {
+@@ -293,7 +293,7 @@ itcl::body iwidgets::Shell::activate {} {
+ 
+         lappend grabstack [list grab -global $itk_component(hull)]
+  
+-        tkwait variable [itcl::scope _wait($this)]
++        tkwait variable [namespace which -variable _wait]($this)
+         return $_result
+     }
+ }
+diff --git a/generic/watch.itk b/generic/watch.itk
+index ace2cc9..4993aca 100755
+--- a/generic/watch.itk
++++ b/generic/watch.itk
+@@ -171,7 +171,7 @@ itcl::body iwidgets::Watch::constructor { args } {
+ 	radiobutton $itk_component(frame).am \
+ 	    -text "AM" \
+ 	    -value "AM" \
+-	    -variable [itcl::scope _ampmVar($this)]
++	    -variable [namespace which -variable _ampmVar]($this)
+     } {
+ 	usual
+ 	rename -font -labelfont labelFont Font
+@@ -181,7 +181,7 @@ itcl::body iwidgets::Watch::constructor { args } {
+ 	radiobutton $itk_component(frame).pm \
+ 	    -text "PM" \
+ 	    -value "PM" \
+-	    -variable [itcl::scope _ampmVar($this)]
++	    -variable [namespace which -variable _ampmVar]($this)
+     } {
+ 	usual
+ 	rename -font -labelfont labelFont Font
+diff --git a/generic/labeledwidget.itk b/generic/labeledwidget.itk
+index 2e0faa5..0f43ddb 100755
+--- a/generic/labeledwidget.itk
++++ b/generic/labeledwidget.itk
+@@ -248,9 +248,9 @@
+     # Verify that all the widgets are of type Labeledwidget and 
+     # determine the size of the maximum length label string.
+     #
+     foreach iwid $args {
+-	set objcmd [itcl::find objects -isa Labeledwidget *::$iwid]
++	set objcmd [itcl::find objects -isa ::iwidgets::Labeledwidget *::$iwid]
+ 
+ 	if {$objcmd == ""} {
+ 	    error "$iwid is not a \"Labeledwidget\""
+ 	}
+@@ -273,9 +273,9 @@
+ 	
+ 	set labelSize [expr {$shellWidth - $csWidth}]
+ 	
+ 	if {$maxLabelWidth > $labelSize} {
+-	    set objcmd [itcl::find objects -isa Labeledwidget *::$iwid]
++	    set objcmd [itcl::find objects -isa ::iwidgets::Labeledwidget *::$iwid]
+ 	    set dist [expr {$maxLabelWidth - \
+ 		    ($labelSize - [$objcmd cget -labelmargin])}]
+ 	    
+ 	    $objcmd configure -labelmargin $dist

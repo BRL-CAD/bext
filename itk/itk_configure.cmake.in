@@ -1,0 +1,41 @@
+if (APPLE)
+  execute_process(
+    COMMAND xcrun --show-sdk-path
+    OUTPUT_VARIABLE SDK_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  set(ENV{LDFLAGS} "-isysroot ${SDK_PATH} -L${SDK_PATH}/usr/lib -L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@ -F${SDK_PATH}/System/Library/Frameworks -framework CoreFoundation")
+  set(ENV{CFLAGS} "-isysroot ${SDK_PATH} -L${SDK_PATH}/usr/lib -L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@ -F${SDK_PATH}/System/Library/Frameworks")
+  set(ENV{CPPFLAGS} "-isystem ${SDK_PATH}/usr/include -F${SDK_PATH}/System/Library/Frameworks -I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+else ()
+  set(ENV{LD_LIBRARY_PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+endif (APPLE)
+
+execute_process(
+  COMMAND "@ITK_SRC_DIR@/configure"
+    --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@
+    --with-tcl=@WITH_TCL_DIR@
+    --with-tk=@WITH_TK_DIR@
+    --with-itcl=@WITH_ITCL_DIR@
+    --with-tclinclude=@WITH_TCL_INCLUDE_DIR@
+    --with-tkinclude=@WITH_TK_INCLUDE_DIR@
+  RESULT_VARIABLE ITK_RET
+  WORKING_DIRECTORY "@ITK_BIN_DIR@"
+  OUTPUT_VARIABLE MSG
+  ERROR_VARIABLE MSG
+  )
+
+if (ITK_RET)
+  message(FATAL_ERROR "Itk configure failed:\n${MSG}\n")
+endif (ITK_RET)
+
+message("${MSG}\nItk configure succeeded.\n")
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8

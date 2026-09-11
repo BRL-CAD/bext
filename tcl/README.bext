@@ -1,0 +1,47 @@
+Tcl in bext
+===========
+
+Bext builds Tcl from the complete upstream source distribution mirrored by the
+RELEASE branch of BRL-CAD/tcl.  The Tcl core Git tags are not sufficient for
+this purpose: release assembly adds the packages under pkgs, including Itcl.
+Tcl 8.6.18 supplies Itcl 4.3.7 there.  Configuration fails immediately if the
+declared Itcl source directory is absent, rather than allowing the later Itk
+build to fail with incomplete private headers or configuration data.
+
+The bundled Itcl version and the minimum system version are deliberately
+separate.  The source distribution determines the former.  The latter is the
+oldest version that passes BRL-CAD and upstream Itk compatibility testing, so
+a newer Tcl release does not by itself raise the requirement imposed on a
+complete system Tcl/Tk/Itcl/Itk stack.
+
+zlib selection
+--------------
+
+The Tcl source distribution also contains a fallback zlib implementation in
+compat/zlib.  That is useful to Tcl's normal standalone build, but it can hide
+an incomplete external-zlib setup by supplying headers or sources after bext
+has selected its symbol-prefixed z_brl library.
+
+On Unix-like platforms, when bext builds zlib locally, Tcl's configure probe is
+patched to require brl_deflateSetHeader from z_brl.  Bext then removes
+compat/zlib only from the ExternalProject staging copy.  Consequently Tcl must
+compile with the installed z_brl headers and library, and a bad include path
+fails instead of silently mixing the distribution headers with z_brl.  The Tcl
+source submodule remains an unmodified copy of the official distribution.
+
+When a local z_brl target is not present, bext leaves the fallback directory
+and upstream zlib selection unchanged.  The removal is also intentionally not
+part of the Windows build: Tcl's Windows makefiles use files supplied by the
+distribution's compatibility zlib tree.
+
+Validation
+----------
+
+A bundled-stack build must establish all of the following:
+
+* the Tcl staging tree has no compat/zlib when z_brl is selected;
+* Tcl's configure probe resolves brl_deflateSetHeader from -lz_brl;
+* the installed Tcl library depends on libz_brl and has unresolved brl_ zlib
+  symbols for that library to satisfy;
+* package require reports Itcl 4.3.7, Itk 4.2.7, and Iwidgets 4.1.1; and
+* Itk's upstream suite and BRL-CAD's Tcl GUI baseline pass under Xmin.

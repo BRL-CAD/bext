@@ -1,0 +1,41 @@
+Itk in bext
+===========
+
+Tcl 8.6.18 already bundles Itcl 4.3.7, so bext deliberately has no separate
+Itcl project.  Itk is not part of either source distribution, so the bundled
+stack builds Itk from its own upstream repository after Tcl and Tk.  A system
+Tcl/Tk stack must already provide Itcl and Itk; bext never builds Itk against
+system Tcl/Tk.
+
+Itk cannot be built from installed public headers alone.  Its implementation
+includes Tcl's private tclInt.h and Itcl's private itclInt.h and directly uses
+the corresponding internal structures and entry points.  The Itk build must
+therefore use the private headers and stubs from the exact Tcl/Itcl sources it
+accompanies.  Bext supplies the standard install-sh helper omitted from the Itk
+repository.  On Windows, explicit Tcl, Tk, and Itcl source directories are
+passed to nmake.  On Unix-like platforms, upstream's generated TEA configure
+logic gets the corresponding source locations from the bundled configuration.
+
+Itk itself makes no direct Xlib calls: all of its window-system interaction
+goes through Tk stubs.  Upstream's TEA configuration nevertheless adds the
+host X library to Itk.  Bext suppresses that unnecessary dependency so Itk
+uses the X implementation selected by its matching Tk build and does not mix
+two incompatible X ABIs in builds such as the Xmin test configuration.
+
+BRL-CAD requires Itcl 4.1.1 or newer.  Itk's nominal 4.1 requirement is not
+sufficient: the upstream Itk suite has seven failures with Itcl 4.1.0, involving
+private/protected components and destroyed-component cleanup, while all 100
+tests pass with both Itcl 4.1.1 and Tcl's bundled Itcl 4.3.7.  Bext applies
+this more precise floor to Itk's stub and package-index checks.
+
+System selection is all-or-nothing: Tcl must load Itcl 4.1.1 or newer, and its
+package path must advertise Itk 4.2.3 or newer before bext accepts the matching
+system Tk.  Itk detection asks Tcl's package handler to index available versions
+without executing the selected package's load script, enforcing the floor on
+headless builders without trying to create a Tk window.  If either extension is
+missing or too old, bext selects the complete bundled stack.
+
+The bundled Itk revision reports version 4.2.7 and includes the upstream August
+2024 release plus subsequent Windows, Tcl/Tk 9, warning, and TEA maintenance.
+The complete upstream suite passes against both minimum and bundled Itcl under
+Xmin with the Xmin-compatible Tk build.

@@ -1,0 +1,70 @@
+Iwidgets in bext
+================
+
+Bext packages Iwidgets 4.1.1 because Iwidgets is not bundled with Tcl or Tk
+and cannot be assumed to be installed with a system Tcl/Tk stack.  The source
+predates Itcl 4 and needs a small compatibility patch when used with the Itcl
+4.1.1-or-newer stack required by BRL-CAD.
+
+Upstream status
+---------------
+
+The latest official Incr Widgets source release is 4.1.1.  The release archive
+and bext's generic widget sources match except for expanded CVS Id strings;
+bext omits obsolete build, CVS, demo, manual, and test files and supplies its
+own CMake packaging.  The Tcl Core fossil project named "iwidgets for itk4"
+has only two check-ins, both from May 24, 2012, and its source retains the
+compatibility defects fixed here.  There is consequently no newer maintained
+upstream source to import as of September 2026.
+
+Tcl can discover versions advertised by system package indexes without loading
+Iwidgets or opening a display.  That is sufficient for inventory, but not for
+safe selection: an unpatched system package and one with equivalent downstream
+fixes both advertise version 4.1.1.  Loading enough code to validate behavior
+also loads Tk and requires a display.  Bext therefore continues to use its
+known patched copy by default instead of treating the version string as proof
+of compatibility.
+
+Compatibility patch
+-------------------
+
+Itcl 3 accepted an array element as the argument to itcl::scope.  Itcl 4
+instead resolves that argument as a variable name and rejects array element
+syntax.  The patch resolves each common array's fully qualified variable name
+with namespace which, then appends the element index.  This preserves the
+variable names expected by Tk -variable, -textvariable, trace, and tkwait
+without depending on Itcl 3's itcl::scope behavior.
+
+The Finddialog match callback previously constructed a command with subst and
+then executed the resulting string.  Tcl 8.5's argument expansion syntax
+invokes the stored command prefix directly, preserving argument boundaries and
+supporting the command prefixes produced by Itcl 4.
+
+Labeledwidget::alignlabels originally passed the unqualified class name
+Labeledwidget to itcl::find.  Itcl 4 resolves that name in the caller's object
+context.  The result therefore depended on package initialization order: it
+worked when Itcl was loaded before Tk, but failed in applications such as
+bwish and Archer where Tk was initialized first.  The patch uses the fully
+qualified ::iwidgets::Labeledwidget class name so both supported initialization
+orders behave identically.
+
+These changes are kept as a bext patch rather than modifications to the source
+submodule.  That keeps the imported upstream revision identifiable and makes
+the compatibility delta explicit and independently reviewable.  The external
+project patches a staged copy so builds do not modify the source submodule.
+
+Validation
+----------
+
+The BRL-CAD Tcl/Itcl smoke baseline exercises the affected Iwidgets under both
+initialization orders:
+
+* btclsh loads Itcl before Tk and represents command-line tools such as
+  rtwizard;
+* bwish initializes Tk before tclcad loads Itcl and represents Archer and
+  other Tk-first applications.
+
+The baseline constructs and operates the affected widgets, invokes
+Labeledwidget::alignlabels, follows callbacks after returning to the event
+loop, and treats background Tcl errors as failures.  Xmin supplies the X
+server needed to run the GUI case on headless builders.

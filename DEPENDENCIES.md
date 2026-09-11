@@ -37,9 +37,8 @@ selection further.
 | `gte` | `USE_BRLCAD` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/GeometricTools) |
 | `icu` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/icu) |
 | `ispc` | `USE_OSPRAY` | `install` | `bison`, `flex`, `patch`, `llvm`, `ncurses`, `zlib` | [repository](https://github.com/BRL-CAD/ispc) |
-| `itcl` | `USE_TCL` | `install` | `patch`, `tcl` | [repository](https://github.com/BRL-CAD/itcl) |
-| `itk` | `USE_TCL` | `install` | `patch`, `tcl`, `tk`, `itcl` | [repository](https://github.com/BRL-CAD/itk) |
-| `iwidgets` | `USE_TCL` | `install` | `patch`, `itcl`, `itk` | [repository](https://github.com/BRL-CAD/iwidgets) |
+| `itk` | `USE_TCL` | `install` | `patch`, `tcl`, `tk` | [repository](https://github.com/tcltk/itk) |
+| `iwidgets` | `USE_TCL` | `install` | `patch`, `itk` | [repository](https://github.com/BRL-CAD/iwidgets) |
 | `jpeg` | `USE_APPLESEED`, `USE_BRLCAD`, `USE_GDAL` | `install` | `patch` | [repository](https://github.com/BRL-CAD/libjpeg-turbo) |
 | `lemon` | `USE_BRLCAD` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/lemon) |
 | `lief` | `USE_BRLCAD` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/LIEF) |
