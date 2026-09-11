@@ -200,8 +200,8 @@ include(ExternalProject)
 #     source patching or staging is needed.
 #   * Use a local URL when patching a submodule, so ExternalProject stages a
 #     build-tree copy before PATCH_COMMAND and other source modifications run.
-#   * A deliberate exception is a very large source tree such as Qt6, where the
-#     copy cost is significant and in-place patching/building is preferred.
+#   * A large source tree such as Qt6 is built in place when unmodified, but is
+#     staged when caller-supplied patches must be applied.
 # Do not replace URL with SOURCE_DIR merely to avoid the local URL spelling;
 # that can cause patches or generated-file changes to modify the checkout.
 
@@ -350,6 +350,21 @@ option(USE_GDAL         "GDAL terrain support"                       ON)
 option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
 option(USE_QT           "Qt graphical toolkit support"               ON)
 option(USE_TCL          "Tcl/Tk support"                             ON)
+
+# An Xmin prefix selects a coherent toolkit build profile.  Individual
+# dependency logic applies the version-matched patches only when that
+# dependency is selected for a local build.
+set(BEXT_XMIN_ROOT "" CACHE PATH "Installed Xmin SDK used by bundled Tk and Qt")
+if (BEXT_XMIN_ROOT)
+  if (NOT UNIX OR APPLE)
+    message(FATAL_ERROR "The bext Xmin profile currently requires Linux or BSD")
+  endif ()
+  if (NOT IS_DIRECTORY "${BEXT_XMIN_ROOT}")
+    message(FATAL_ERROR "BEXT_XMIN_ROOT is not an installed SDK: ${BEXT_XMIN_ROOT}")
+  endif ()
+  file(REAL_PATH "${BEXT_XMIN_ROOT}" BEXT_XMIN_ROOT)
+  set(BEXT_XMIN_ROOT "${BEXT_XMIN_ROOT}" CACHE PATH "Installed Xmin SDK used by bundled Tk and Qt" FORCE)
+endif ()
 
 
 ###############################################################################

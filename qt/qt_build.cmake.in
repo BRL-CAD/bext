@@ -3,7 +3,9 @@
 # putting that directory first makes tools such as qtwaylandscanner fail with
 # missing Qt symbol versions while a newer Qt is being built.
 if (NOT WIN32)
-  set(ENV{LD_LIBRARY_PATH} "@QT_BUILD_DIR@/@LIB_DIR@:@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(qt_runtime_dirs "@QT_XMIN_RUNTIME_DIRS@" "@QT_BUILD_DIR@/@LIB_DIR@" "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  string(JOIN ":" qt_runtime_path ${qt_runtime_dirs})
+  set(ENV{LD_LIBRARY_PATH} "${qt_runtime_path}")
 endif (NOT WIN32)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
@@ -19,6 +21,17 @@ execute_process(COMMAND "@CMAKE_COMMAND@" --build . ${QT_CMAKE_OPTS} RESULT_VARI
 if (QT_RET)
   message(FATAL_ERROR "Qt build failed: ${MSG}\n")
 endif (QT_RET)
+
+if ("@QT_XMIN_ENABLED@" STREQUAL "ON")
+  execute_process(
+    COMMAND "@CMAKE_COMMAND@" -DQT_AUDIT_ROOT=@QT_BUILD_DIR@
+      -P "@CMAKE_CURRENT_BINARY_DIR@/qt_xmin_audit.cmake"
+    RESULT_VARIABLE QT_AUDIT_RET
+  )
+  if (QT_AUDIT_RET)
+    message(FATAL_ERROR "Qt Xmin dependency audit failed")
+  endif ()
+endif ()
 
 message("Qt build succeeded: ${MSG}\n")
 

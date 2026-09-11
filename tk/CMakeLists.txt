@@ -1,6 +1,9 @@
 # By the time we get here, we have run FindTCL and should know
 # if we have TK.
 
+set(TK_EXTRA_PATCHES "" CACHE STRING "Additional patches to apply to bundled Tk on Unix")
+set(TK_CONFIGURE_ARGS "" CACHE STRING "Additional arguments for bundled Tk's Unix configure script")
+
 if (USE_BRLCAD)
 
   # Decide if we're using Tk
@@ -26,6 +29,18 @@ else (USE_BRLCAD)
   endif (NOT DISABLE_TCL)
 
 endif(USE_BRLCAD)
+
+if (BEXT_XMIN_ROOT AND NOT DISABLE_TCL AND NOT DISABLE_TK)
+  set(TK_DO_BUILD 1)
+  set(tk_xmin_patch "${CMAKE_CURRENT_SOURCE_DIR}/tk_xmin.patch")
+  list(PREPEND TK_EXTRA_PATCHES "${tk_xmin_patch}")
+  list(REMOVE_DUPLICATES TK_EXTRA_PATCHES)
+  set(tk_xmin_configure_arg "--with-xmin=${BEXT_XMIN_ROOT}")
+  list(FIND TK_CONFIGURE_ARGS "${tk_xmin_configure_arg}" tk_xmin_arg_index)
+  if (tk_xmin_arg_index EQUAL -1)
+    list(APPEND TK_CONFIGURE_ARGS "${tk_xmin_configure_arg}")
+  endif ()
+endif ()
 
 if (TK_DO_BUILD)
 
@@ -54,7 +69,56 @@ if (TK_DO_BUILD)
     endif ()
   endif (TARGET TCL_BLD)
 
+  set(TK_SOURCE_ARGUMENTS URL "${CMAKE_CURRENT_SOURCE_DIR}/tk")
   set(TK_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD")
+  set(TK_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD-build")
+
+  if (NOT MSVC)
+    set(TK_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tk.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch"
+      )
+    foreach(TK_EXTRA_PATCH IN LISTS TK_EXTRA_PATCHES)
+      if (NOT IS_ABSOLUTE "${TK_EXTRA_PATCH}")
+        message(FATAL_ERROR "TK_EXTRA_PATCHES entries must be absolute paths: ${TK_EXTRA_PATCH}")
+      endif ()
+      if (NOT EXISTS "${TK_EXTRA_PATCH}")
+        message(FATAL_ERROR "Additional Tk patch does not exist: ${TK_EXTRA_PATCH}")
+      endif ()
+      list(APPEND TK_PATCH_FILES "${TK_EXTRA_PATCH}")
+    endforeach()
+
+    set(TK_PATCH_COMMAND)
+    set(tk_patch_hash_input "")
+    foreach(TK_PATCH_FILE IN LISTS TK_PATCH_FILES)
+      file(SHA256 "${TK_PATCH_FILE}" tk_patch_hash)
+      string(APPEND tk_patch_hash_input "${TK_PATCH_FILE}:${tk_patch_hash}\n")
+      if (NOT TK_PATCH_COMMAND)
+        set(TK_PATCH_COMMAND
+          ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TK_PATCH_FILE}
+          )
+      else ()
+        list(APPEND TK_PATCH_COMMAND
+          COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TK_PATCH_FILE}
+          )
+      endif ()
+    endforeach()
+    string(SHA256 TK_PATCH_SIGNATURE "${tk_patch_hash_input}")
+    string(SUBSTRING "${TK_PATCH_SIGNATURE}" 0 12 tk_patch_short_hash)
+    string(SHA256 TK_CONFIG_SIGNATURE
+      "${TK_PATCH_SIGNATURE}|${TK_CONFIGURE_ARGS}")
+    string(SUBSTRING "${TK_CONFIG_SIGNATURE}" 0 12 tk_config_short_hash)
+    set(TK_SRC_DIR
+      "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD-${tk_patch_short_hash}")
+    set(TK_BIN_DIR
+      "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD-build-${tk_config_short_hash}")
+    set(TK_SOURCE_ARGUMENTS
+      URL "${CMAKE_CURRENT_SOURCE_DIR}/tk"
+      SOURCE_DIR "${TK_SRC_DIR}"
+        )
+  elseif (TK_EXTRA_PATCHES OR TK_CONFIGURE_ARGS)
+    message(FATAL_ERROR "TK_EXTRA_PATCHES and TK_CONFIGURE_ARGS are supported only on Unix")
+  endif ()
 
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_configure.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_build.cmake @ONLY)
@@ -72,10 +136,10 @@ if (TK_DO_BUILD)
     endif ("${CMAKE_CURRENT_BINARY_DIR}" MATCHES ".* .*")
 
     ExternalProject_Add(TK_BLD
-      URL "${CMAKE_CURRENT_SOURCE_DIR}/tk"
+      ${TK_SOURCE_ARGUMENTS}
+      BINARY_DIR "${TK_BIN_DIR}"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk.patch
-      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch
+      PATCH_COMMAND ${TK_PATCH_COMMAND}
       CONFIGURE_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tk_configure.cmake
 
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make
@@ -95,7 +159,7 @@ if (TK_DO_BUILD)
   else (NOT MSVC)
 
     ExternalProject_Add(TK_BLD
-      URL "${CMAKE_CURRENT_SOURCE_DIR}/tk"
+      ${TK_SOURCE_ARGUMENTS}
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk.patch
       COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch
