@@ -5,16 +5,12 @@ if (USE_BRLCAD)
 
 endif (USE_BRLCAD)
 
-# Unfortunately, there does not appear to be a reliable way to test for the
-# presence of the IWidgets package on a system Tcl/Tk.  As far as I can tell
-# the "package require Iwidgets" test (which is what is required to properly
-# test for an available Iwidgets package) can ONLY be performed successfully on
-# a system that supports creation of a graphics window. Window creation isn't
-# typically available on continuous integration runners, which means the test
-# will always fail there even when it shouldn't.
-
-# Unless we have been specifically instructed not to, provide the bundled
-# version of IWidgets.
+# Tcl can inspect a system package index without loading Iwidgets, but the
+# advertised version does not establish Itcl 4 compatibility.  The latest
+# upstream 4.1.1 sources still need the fixes in iwidgets_itcl4.patch, and a
+# system package using that same version may or may not carry equivalent
+# downstream fixes.  Actually validating it loads Tk and requires a display.
+# Unless explicitly disabled, use the known patched copy.
 
 if (NOT DEFINED ENABLE_IWIDGETS AND NOT DISABLE_IWIDGETS)
   set(ENABLE_IWIDGETS ON)
@@ -27,8 +23,9 @@ if (ENABLE_IWIDGETS)
   RegisterDeps(IWIDGETS)
 
   ExternalProject_Add(IWIDGETS_BLD
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/iwidgets"
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/iwidgets"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/iwidgets_itcl4.patch
     CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -58,4 +55,3 @@ endif (ENABLE_IWIDGETS)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

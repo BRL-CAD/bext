@@ -130,11 +130,6 @@ diff -Naur --exclude=.git tcl/macosx/Tcl.xcodeproj/project.pbxproj TCL_BLD/macos
  		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
  		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
  		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
-diff -Naur --exclude=.git tcl/manifest.uuid TCL_BLD/manifest.uuid
---- tcl/manifest.uuid	1970-01-01 00:00:00.000000000 +0000
-+++ TCL_BLD/manifest.uuid	2026-09-10 17:13:18.278096000 +0000
-@@ -0,0 +1 @@
-+git-515167c897a7c8066abfbd71e8fe7bd8bf3569de
 diff -Naur --exclude=.git tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
 --- tcl/unix/Makefile.in	2026-09-10 16:55:00.589799000 +0000
 +++ TCL_BLD/unix/Makefile.in	2026-09-10 17:09:34.696388000 +0000
@@ -147,7 +142,18 @@ diff -Naur --exclude=.git tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
  
  # Path name to use when installing Tcl modules.
  MODULE_INSTALL_DIR	= $(SCRIPT_INSTALL_DIR)/../tcl8
-@@ -209,7 +209,7 @@
+@@ -190,6 +190,10 @@
+ # the second is for use when running ld directly.
+ CC_SEARCH_FLAGS	= @CC_SEARCH_FLAGS@
+ LD_SEARCH_FLAGS	= @LD_SEARCH_FLAGS@
++
++# Executables and extensions can require different loader-relative paths.
++# This override lets distributors change tclsh without affecting extensions.
++TCLSH_SEARCH_FLAGS	= ${CC_SEARCH_FLAGS}
+ 
+ # The following symbol is defined to "$(DLTEST_TARGETS)" if dynamic loading is
+ # available; this causes everything in the "dltest" subdirectory to be built
+@@ -209,7 +213,7 @@
  #TCL_LIB_FLAG		= -ltcl
  
  # support for embedded libraries on Darwin / Mac OS X
@@ -156,7 +162,16 @@ diff -Naur --exclude=.git tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
  
  #--------------------------------------------------------------------------
  # The information below is modified by the configure script when Makefile is
-@@ -1277,17 +1277,17 @@
+@@ -656,7 +660,7 @@
+ ${TCL_EXE}: ${TCLSH_OBJS} ${TCL_LIB_FILE} ${TCL_STUB_LIB_FILE}
+ 	${CC} ${CFLAGS} ${LDFLAGS} ${TCLSH_OBJS} \
+ 		@TCL_BUILD_LIB_SPEC@ ${TCL_STUB_LIB_FILE} ${LIBS} @EXTRA_TCLSH_LIBS@ \
+-		${CC_SEARCH_FLAGS} -o ${TCL_EXE}
++		${TCLSH_SEARCH_FLAGS} -o ${TCL_EXE}
+ 
+ # Must be empty so it doesn't conflict with rule for ${TCL_EXE} above
+ ${NATIVE_TCLSH}:
+@@ -1277,17 +1281,17 @@
  
  tclPkgConfig.o: $(GENERIC_DIR)/tclPkgConfig.c
  	$(CC) -c $(CC_SWITCHES) \
