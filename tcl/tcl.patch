@@ -130,11 +130,6 @@ diff -Naur --exclude=.git tcl/macosx/Tcl.xcodeproj/project.pbxproj TCL_BLD/macos
  		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
  		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
  		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
-diff -Naur --exclude=.git tcl/manifest.uuid TCL_BLD/manifest.uuid
---- tcl/manifest.uuid	1970-01-01 00:00:00.000000000 +0000
-+++ TCL_BLD/manifest.uuid	2026-09-10 17:13:18.278096000 +0000
-@@ -0,0 +1 @@
-+git-515167c897a7c8066abfbd71e8fe7bd8bf3569de
 diff -Naur --exclude=.git tcl/unix/Makefile.in TCL_BLD/unix/Makefile.in
 --- tcl/unix/Makefile.in	2026-09-10 16:55:00.589799000 +0000
 +++ TCL_BLD/unix/Makefile.in	2026-09-10 17:09:34.696388000 +0000
