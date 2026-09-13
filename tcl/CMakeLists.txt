@@ -138,11 +138,24 @@ if (ENABLE_TCL)
       )
   endif (TARGET ZLIB_BLD)
 
-  # For OSX, we need to adjust the rpath of tclsh in order for tkhtml's build to
-  # succeed
+  # Give tclsh a loader-relative search path at link time.  Keep this override
+  # specific to tclsh: extensions are installed below lib and need their normal
+  # Tcl-configured search flags.  On systems without a confirmed relative
+  # loader token, retain Tcl's native absolute search path.
+  set(TCLSH_SEARCH_FLAGS_ARG)
   if (APPLE)
-    set(RPATH_CMD "COMMAND;install_name_tool;-add_rpath;@executable_path/../${LIB_DIR};${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${TCL_VERSION}${CMAKE_EXECUTABLE_SUFFIX}")
-  endif (APPLE)
+    set(TCLSH_SEARCH_FLAGS_ARG
+      "TCLSH_SEARCH_FLAGS=-Wl,-rpath,@executable_path/../${LIB_DIR}"
+      )
+  elseif ("${CMAKE_SYSTEM_NAME}" MATCHES "^(DragonFly|FreeBSD|Linux|NetBSD|OpenBSD)$")
+    set(TCLSH_SEARCH_FLAGS_ARG
+      "TCLSH_SEARCH_FLAGS=-Wl,-z,origin,-rpath,'$$ORIGIN/../${LIB_DIR}'"
+      )
+  elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS" AND
+      "${CMAKE_SYSTEM_VERSION}" MATCHES "^5\\.")
+    set(TCLSH_SEARCH_FLAGS_ARG
+      "TCLSH_SEARCH_FLAGS=-Wl,-z,origin,-R,'$$ORIGIN/../${LIB_DIR}'")
+  endif ()
 
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake @ONLY)
@@ -172,10 +185,8 @@ if (ENABLE_TCL)
 
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make
       # jobserver mode bug.  Tcl also seems to have a race fixed via genstubs.
-
-      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
-      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 genstubs install
-      ${RPATH_CMD}
+      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt} ${TCLSH_SEARCH_FLAGS_ARG}
+      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 ${TCLSH_SEARCH_FLAGS_ARG} genstubs install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
