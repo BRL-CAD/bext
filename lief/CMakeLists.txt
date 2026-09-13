@@ -18,6 +18,10 @@ if (NOT MSVC)
       PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief_cmake.patch
       COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief_fscale_macro_fix.patch
       COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief_major_minor_macro_fix.patch
+      # FreeBSD linkers can emit multiple BSS-like LOAD segments.  LIEF 1.0
+      # rejects those binaries during PHDR relocation, and its gap relocator
+      # can extend a LOAD beyond the next segment's virtual address.
+      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief_elf_phdr_relocation.patch
       CMAKE_ARGS
       ${BUILD_TYPE_SPECIFIER}
       -DBIN_DIR=${BIN_DIR}

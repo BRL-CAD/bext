@@ -1,0 +1,97 @@
+diff --git a/src/ELF/Binary.cpp b/src/ELF/Binary.cpp
+index 5ce58838d2..241eedb35e 100644
+--- a/src/ELF/Binary.cpp
++++ b/src/ELF/Binary.cpp
+@@ -3018,21 +3018,30 @@ uint64_t Binary::relocate_phdr_table_v2() {
+                                  sizeof(details::ELF64::Elf_Phdr);
+ 
+ 
+-  std::vector<Segment*> load_seg;
+-  Segment* bss_segment = nullptr;
+-  size_t bss_cnt = 0;
++  Segment* last_file_load = nullptr;
++  Segment* last_virtual_load = nullptr;
+   for (std::unique_ptr<Segment>& segment : segments_) {
+-    if (segment->is_load()) {
+-      load_seg.push_back(segment.get());
+-      if (segment->physical_size() < segment->virtual_size()) {
+-        bss_segment = segment.get();
+-        ++bss_cnt;
+-      }
++    if (!segment->is_load()) {
++      continue;
+     }
++    if (last_file_load == nullptr ||
++        last_file_load->file_offset() < segment->file_offset()) {
++      last_file_load = segment.get();
++    }
++    if (last_virtual_load == nullptr ||
++        last_virtual_load->virtual_address() < segment->virtual_address()) {
++      last_virtual_load = segment.get();
++    }
++  }
++
++  if (last_file_load == nullptr || last_file_load != last_virtual_load) {
++    LIEF_ERR("Unable to identify a unique final LOAD segment");
++    return 0;
+   }
+ 
+-  if (bss_cnt != 1 || bss_segment == nullptr) {
+-    LIEF_ERR("Expected exactly 1 BSS-like segment");
++  Segment* bss_segment = last_file_load;
++  if (bss_segment->physical_size() >= bss_segment->virtual_size()) {
++    LIEF_ERR("The final LOAD segment is not BSS-like");
+     return 0;
+   }
+ 
+@@ -3159,6 +3168,11 @@ uint64_t Binary::relocate_phdr_table_v2() {
+     phdr_segment->file_offset(nsegment_addr->file_offset());
+     phdr_segment->virtual_address(nsegment_addr->virtual_address());
+     phdr_segment->physical_address(nsegment_addr->physical_address());
++    // PT_PHDR must describe the area we just reserved. Otherwise, it would
++    // keep the size of its previous location which is likely to no longer be
++    // wrapped by a PT_LOAD segment.
++    phdr_segment->physical_size(nsegment_addr->physical_size());
++    phdr_segment->virtual_size(nsegment_addr->virtual_size());
+     phdr_segment->clear();
+   }
+ 
+@@ -3238,14 +3252,20 @@ uint64_t Binary::relocate_phdr_table_v1() {
+       continue;
+     }
+     Segment* adjacent = load_seg[i + 1];
+-    const int64_t gap = adjacent->file_offset() -
+-                        (current->file_offset() + current->physical_size());
+-    if (gap <= 0) {
++    const int64_t file_gap = adjacent->file_offset() -
++                             (current->file_offset() + current->physical_size());
++    const int64_t virtual_gap = adjacent->virtual_address() -
++        (current->virtual_address() + current->virtual_size());
++    if (file_gap <= 0 || virtual_gap <= 0) {
+       continue;
+     }
+ 
++    // Extending the segment through a larger file gap would overlap the next
++    // LOAD in memory when their file and virtual layouts differ.
++    const int64_t gap = std::min(file_gap, virtual_gap);
+     const size_t nb_seg_gap = gap / phdr_size;
+-    LIEF_DEBUG("Gap between {:d} <-> {:d}: {:x} ({:d} segments)", i, i + 1, gap,
++    LIEF_DEBUG("Gap between {:d} <-> {:d}: file={:x}, virtual={:x} "
++               "({:d} segments usable)", i, i + 1, file_gap, virtual_gap,
+                nb_seg_gap);
+     if (nb_seg_gap > potential_size) {
+       seg_to_extend = current;
+@@ -3275,8 +3295,11 @@ uint64_t Binary::relocate_phdr_table_v1() {
+ 
+   // Extend the segment that wraps the next PHDR table so that it is contiguous
+   // with the next segment.
+-  int64_t delta = next_to_extend->file_offset() -
+-                  (seg_to_extend->file_offset() + seg_to_extend->physical_size());
++  const int64_t file_gap = next_to_extend->file_offset() -
++      (seg_to_extend->file_offset() + seg_to_extend->physical_size());
++  const int64_t virtual_gap = next_to_extend->virtual_address() -
++      (seg_to_extend->virtual_address() + seg_to_extend->virtual_size());
++  const int64_t delta = std::min(file_gap, virtual_gap);
+   if (delta <= 0) {
+     return 0;
+   }
