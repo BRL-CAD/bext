@@ -10,9 +10,11 @@ build to fail with incomplete private headers or configuration data.
 
 The bundled Itcl version and the minimum system version are deliberately
 separate.  The source distribution determines the former.  The latter is the
-oldest version that passes BRL-CAD and upstream Itk compatibility testing, so
-a newer Tcl release does not by itself raise the requirement imposed on a
-complete system Tcl/Tk/Itcl/Itk stack.
+oldest version that passes BRL-CAD's Tcl-first and Tk-first GUI baselines as
+well as upstream Itk compatibility testing.  Itcl 4.3.0 is required for the
+workaround to Tcl 8.6.15's `Tcl_NewObjectInstance` behavior; earlier Itcl 4
+releases fail when Iwidgets classes are loaded after Tk.  A newer Tcl release
+does not by itself raise the complete system-stack requirement.
 
 zlib selection
 --------------

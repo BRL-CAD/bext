@@ -22,13 +22,18 @@ host X library to Itk.  Bext suppresses that unnecessary dependency so Itk
 uses the X implementation selected by its matching Tk build and does not mix
 two incompatible X ABIs in builds such as the Xmin test configuration.
 
-BRL-CAD requires Itcl 4.1.1 or newer.  Itk's nominal 4.1 requirement is not
-sufficient: the upstream Itk suite has seven failures with Itcl 4.1.0, involving
-private/protected components and destroyed-component cleanup, while all 100
-tests pass with both Itcl 4.1.1 and Tcl's bundled Itcl 4.3.7.  Bext applies
-this more precise floor to Itk's stub and package-index checks.
+Itk's own nominal Itcl 4.1 requirement is not sufficient: its upstream suite
+has seven failures with Itcl 4.1.0, involving private/protected components and
+destroyed-component cleanup, while all 100 tests pass with Itcl 4.1.1.  Bext
+therefore retains 4.1.1 as Itk's stub and package-index floor.
 
-System selection is all-or-nothing: Tcl must load Itcl 4.1.1 or newer, and its
+BRL-CAD has a stronger system-stack requirement.  With Tcl/Tk 8.6.18, Itcl
+4.1.1, 4.1.2, and 4.2.3 fail the Tk-first Iwidgets baseline because they lack
+Itcl 4.3.0's workaround for Tcl 8.6.15's `Tcl_NewObjectInstance` behavior.
+The complete baseline passes with Itcl 4.3.0 and Itk 4.2.3, so bext requires
+Itcl 4.3.0 or newer before accepting a system stack.
+
+System selection is all-or-nothing: Tcl must load Itcl 4.3.0 or newer, and its
 package path must advertise Itk 4.2.3 or newer before bext accepts the matching
 system Tk.  Itk detection asks Tcl's package handler to index available versions
 without executing the selected package's load script, enforcing the floor on
@@ -37,5 +42,5 @@ missing or too old, bext selects the complete bundled stack.
 
 The bundled Itk revision reports version 4.2.7 and includes the upstream August
 2024 release plus subsequent Windows, Tcl/Tk 9, warning, and TEA maintenance.
-The complete upstream suite passes against both minimum and bundled Itcl under
-Xmin with the Xmin-compatible Tk build.
+The complete upstream suite and BRL-CAD GUI baseline pass with the bundled
+Itcl under Xmin using the Xmin-compatible Tk build.
