@@ -1,9 +1,10 @@
-diff -Naur LIEF/CMakeLists.txt LIEF_BLD/CMakeLists.txt
---- LIEF/CMakeLists.txt	2026-02-05 12:03:01.774599713 -0500
-+++ LIEF_BLD/CMakeLists.txt	2026-02-05 12:03:42.945448427 -0500
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 334f6f83..d9b0db12 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
 @@ -1,4 +1,4 @@
 -cmake_minimum_required(VERSION 3.24)
 +cmake_minimum_required(VERSION 3.22)
  project(LIEF LANGUAGES C CXX)
  
- enable_language(C)
+ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
