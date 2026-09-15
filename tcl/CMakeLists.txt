@@ -131,6 +131,35 @@ if (ENABLE_TCL)
 
   RegisterDeps(TCL)
 
+  set(TCL_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/tcl_relocatable_config.patch")
+  if (NOT MSVC)
+    list(APPEND TCL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_unix_build.patch")
+  endif ()
+  if (WIN32)
+    list(APPEND TCL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_windows_build.patch")
+  endif ()
+  list(APPEND TCL_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
+
+  set(TCL_PATCH_COMMAND)
+  foreach(TCL_PATCH_FILE IN LISTS TCL_PATCH_FILES)
+    if (NOT TCL_PATCH_COMMAND)
+      set(TCL_PATCH_COMMAND
+        ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TCL_PATCH_FILE}
+        )
+    else ()
+      list(APPEND TCL_PATCH_COMMAND
+        COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS}
+          -i ${TCL_PATCH_FILE}
+        )
+    endif ()
+  endforeach ()
+  unset(TCL_PATCH_FILE)
+  unset(TCL_PATCH_FILES)
+
   if (TARGET ZLIB_BLD)
     set(ZLIB_SETUP_COMMANDS
       ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl-z_brl.patch
@@ -220,8 +249,7 @@ if (ENABLE_TCL)
     ExternalProject_Add(TCL_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/tcl"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl.patch
-      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch
+      PATCH_COMMAND ${TCL_PATCH_COMMAND}
       # Tcl's fallback zlib can silently supply headers even when we intend to
       # use z_brl.  Remove it only from this staging copy after patching Tcl to
       # require z_brl; the pristine source distribution remains untouched.
@@ -253,8 +281,7 @@ if (ENABLE_TCL)
     ExternalProject_Add(TCL_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/tcl"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl.patch
-      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch
+      PATCH_COMMAND ${TCL_PATCH_COMMAND}
       ${TCL_PACKAGE_MANIFEST_SETUP_COMMANDS}
       CONFIGURE_COMMAND ""
       BINARY_DIR ${TCL_SRC_DIR}/win

@@ -84,11 +84,19 @@ if (TK_DO_BUILD)
   set(TK_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD")
   set(TK_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD-build")
 
+  set(TK_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tk_manifest.patch")
   if (NOT MSVC)
-    set(TK_PATCH_FILES
-      "${CMAKE_CURRENT_SOURCE_DIR}/tk.patch"
-      "${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch"
-      )
+    list(APPEND TK_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tk_unix_build.patch")
+  endif ()
+  if (WIN32)
+    list(APPEND TK_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tk_windows_build.patch")
+  endif ()
+  list(APPEND TK_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch")
+
+  if (NOT MSVC)
     foreach(TK_EXTRA_PATCH IN LISTS TK_EXTRA_PATCHES)
       if (NOT IS_ABSOLUTE "${TK_EXTRA_PATCH}")
         message(FATAL_ERROR "TK_EXTRA_PATCHES entries must be absolute paths: ${TK_EXTRA_PATCH}")
@@ -97,23 +105,35 @@ if (TK_DO_BUILD)
         message(FATAL_ERROR "Additional Tk patch does not exist: ${TK_EXTRA_PATCH}")
       endif ()
       list(APPEND TK_PATCH_FILES "${TK_EXTRA_PATCH}")
-    endforeach()
+    endforeach ()
+  elseif (TK_EXTRA_PATCHES OR TK_CONFIGURE_ARGS)
+    message(FATAL_ERROR
+      "TK_EXTRA_PATCHES and TK_CONFIGURE_ARGS are supported only on Unix")
+  endif ()
 
-    set(TK_PATCH_COMMAND)
-    set(tk_patch_hash_input "")
-    foreach(TK_PATCH_FILE IN LISTS TK_PATCH_FILES)
+  set(TK_PATCH_COMMAND)
+  set(tk_patch_hash_input "")
+  foreach(TK_PATCH_FILE IN LISTS TK_PATCH_FILES)
+    if (NOT MSVC)
       file(SHA256 "${TK_PATCH_FILE}" tk_patch_hash)
       string(APPEND tk_patch_hash_input "${TK_PATCH_FILE}:${tk_patch_hash}\n")
-      if (NOT TK_PATCH_COMMAND)
-        set(TK_PATCH_COMMAND
-          ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TK_PATCH_FILE}
-          )
-      else ()
-        list(APPEND TK_PATCH_COMMAND
-          COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TK_PATCH_FILE}
-          )
-      endif ()
-    endforeach()
+    endif ()
+    if (NOT TK_PATCH_COMMAND)
+      set(TK_PATCH_COMMAND
+        ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TK_PATCH_FILE}
+        )
+    else ()
+      list(APPEND TK_PATCH_COMMAND
+        COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS}
+          -i ${TK_PATCH_FILE}
+        )
+    endif ()
+  endforeach ()
+  unset(TK_EXTRA_PATCH)
+  unset(TK_PATCH_FILE)
+  unset(TK_PATCH_FILES)
+
+  if (NOT MSVC)
     string(SHA256 TK_PATCH_SIGNATURE "${tk_patch_hash_input}")
     string(SUBSTRING "${TK_PATCH_SIGNATURE}" 0 12 tk_patch_short_hash)
     string(SHA256 TK_CONFIG_SIGNATURE
@@ -127,8 +147,6 @@ if (TK_DO_BUILD)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/tk"
       SOURCE_DIR "${TK_SRC_DIR}"
         )
-  elseif (TK_EXTRA_PATCHES OR TK_CONFIGURE_ARGS)
-    message(FATAL_ERROR "TK_EXTRA_PATCHES and TK_CONFIGURE_ARGS are supported only on Unix")
   endif ()
 
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tk_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tk_configure.cmake @ONLY)
@@ -172,8 +190,7 @@ if (TK_DO_BUILD)
     ExternalProject_Add(TK_BLD
       ${TK_SOURCE_ARGUMENTS}
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk.patch
-      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch
+      PATCH_COMMAND ${TK_PATCH_COMMAND}
       CONFIGURE_COMMAND ""
       BINARY_DIR ${TK_SRC_DIR}/win
       BUILD_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tk_build.cmake

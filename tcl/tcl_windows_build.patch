@@ -1,0 +1,329 @@
+--- a/win/Makefile.in
++++ b/win/Makefile.in
+@@ -38,7 +38,7 @@
+ # Directory from which applications will reference the library of Tcl scripts
+ # (note: you can set the TCL_LIBRARY environment variable at run-time to
+ # override this value):
+-TCL_LIBRARY	= $(prefix)/lib/tcl$(VERSION)
++TCL_LIBRARY	= lib/tcl$(VERSION)
+ 
+ # Path to use at runtime to refer to LIB_INSTALL_DIR:
+ LIB_RUNTIME_DIR		= $(libdir)
+@@ -50,7 +50,7 @@
+ LIB_INSTALL_DIR		= $(INSTALL_ROOT)$(libdir)
+ 
+ # Path name to use when installing library scripts.
+-SCRIPT_INSTALL_DIR	= $(INSTALL_ROOT)$(TCL_LIBRARY)
++SCRIPT_INSTALL_DIR	= $(INSTALL_ROOT)$(prefix)/$(TCL_LIBRARY)
+ 
+ # Path name to use when installing Tcl modules.
+ MODULE_INSTALL_DIR	= $(SCRIPT_INSTALL_DIR)/../tcl8
+@@ -589,18 +589,18 @@
+ 
+ tclPkgConfig.${OBJEXT}: tclPkgConfig.c
+ 	$(CC)	-c $(CC_SWITCHES)			\
+-		-DCFG_INSTALL_LIBDIR="\"$(LIB_INSTALL_DIR_NATIVE)\"" \
+-		-DCFG_INSTALL_BINDIR="\"$(BIN_INSTALL_DIR_NATIVE)\"" \
+-		-DCFG_INSTALL_SCRDIR="\"$(SCRIPT_INSTALL_DIR_NATIVE)\"" \
+-		-DCFG_INSTALL_INCDIR="\"$(INCLUDE_INSTALL_DIR_NATIVE)\"" \
+-		-DCFG_INSTALL_DOCDIR="\"$(MAN_INSTALL_DIR_NATIVE)\"" \
++		-DCFG_INSTALL_LIBDIR="\"lib\"" \
++		-DCFG_INSTALL_BINDIR="\"bin\"" \
++		-DCFG_INSTALL_SCRDIR="\"lib/tcl$(VERSION)\"" \
++		-DCFG_INSTALL_INCDIR="\"include\"" \
++		-DCFG_INSTALL_DOCDIR="\"man\"" \
+ 		\
+-		-DCFG_RUNTIME_LIBDIR="\"$(libdir_native)\"" \
+-		-DCFG_RUNTIME_BINDIR="\"$(bindir_native)\"" \
+-		-DCFG_RUNTIME_SCRDIR="\"$(TCL_LIBRARY_NATIVE)\"" \
+-		-DCFG_RUNTIME_INCDIR="\"$(includedir_native)\"" \
+-		-DCFG_RUNTIME_DOCDIR="\"$(mandir_native)\"" \
+-		-DCFG_RUNTIME_DLLFILE="\"$(TCL_DLL_FILE)\"" \
++		-DCFG_RUNTIME_LIBDIR="\"lib\"" \
++		-DCFG_RUNTIME_BINDIR="\"bin\"" \
++		-DCFG_RUNTIME_SCRDIR="\"lib/tcl$(VERSION)\"" \
++		-DCFG_RUNTIME_INCDIR="\"include\"" \
++		-DCFG_RUNTIME_DOCDIR="\"man\"" \
++		-DCFG_RUNTIME_DLLFILE="\"bin/$(TCL_DLL_FILE)\"" \
+ 		-DBUILD_tcl \
+ 		@DEPARG@ $(CC_OBJNAME)
+ 
+--- a/win/configure
++++ b/win/configure
+@@ -5462,9 +5462,9 @@
+ #--------------------------------------------------------------------
+ 
+ if test "$prefix/lib" != "$libdir"; then
+-    TCL_PACKAGE_PATH="${libdir};${prefix}\\lib"
++    TCL_PACKAGE_PATH="${libdir}"
+ else
+-    TCL_PACKAGE_PATH="${prefix}\\lib"
++    TCL_PACKAGE_PATH=""
+ fi
+ 
+ # The tclsh.exe.manifest requires these
+--- a/win/configure.in
++++ b/win/configure.in
+@@ -390,9 +390,9 @@
+ #--------------------------------------------------------------------
+ 
+ if test "$prefix/lib" != "$libdir"; then
+-    TCL_PACKAGE_PATH="${libdir};${prefix}\\lib"
++    TCL_PACKAGE_PATH="${libdir}"
+ else
+-    TCL_PACKAGE_PATH="${prefix}\\lib"
++    TCL_PACKAGE_PATH=""
+ fi
+ 
+ # The tclsh.exe.manifest requires these
+--- a/win/makefile.vc
++++ b/win/makefile.vc
+@@ -303,7 +303,6 @@
+ 	$(TMP_DIR)\tclVar.obj \
+ 	$(TMP_DIR)\tclZlib.obj
+ 
+-!if $(STATIC_BUILD)
+ ZLIBOBJS = \
+ 	$(TMP_DIR)\adler32.obj \
+ 	$(TMP_DIR)\compress.obj \
+@@ -316,9 +315,6 @@
+ 	$(TMP_DIR)\trees.obj \
+ 	$(TMP_DIR)\uncompr.obj \
+ 	$(TMP_DIR)\zutil.obj
+-!else
+-ZLIBOBJS = $(OUT_DIR)\zdll.lib
+-!endif
+ 
+ TOMMATHOBJS = \
+ 	$(TMP_DIR)\bn_mp_add.obj \
+@@ -470,7 +466,7 @@
+ all:	    setup $(TCLSH) $(TCLSTUBLIB) dlls $(CAT32) pkgs
+ core:	    setup $(TCLLIB) $(TCLSTUBLIB)
+ shell:	    setup $(TCLSH)
+-dlls:	    setup $(TCLREGLIB) $(TCLDDELIB) $(OUT_DIR)\zlib1.dll
++dlls:	    setup $(TCLREGLIB) $(TCLDDELIB)
+ tcltest:    setup $(TCLTEST) dlls $(CAT32)
+ install:    install-binaries install-libraries install-docs install-pkgs
+ !if $(SYMBOLS)
+@@ -544,23 +540,6 @@
+ 	$(_VC_MANIFEST_EMBED_DLL)
+ !endif
+ 
+-!if "$(MACHINE)" == "ARM64"
+-$(OUT_DIR)\zlib1.dll:	$(COMPATDIR)\zlib\win64-arm\zlib1.dll
+-	$(COPY) $(COMPATDIR)\zlib\win64-arm\zlib1.dll $(OUT_DIR)\zlib1.dll
+-$(OUT_DIR)\zdll.lib:	$(COMPATDIR)\zlib\win64-arm\zdll.lib
+-	$(COPY) $(COMPATDIR)\zlib\win64-arm\zdll.lib $(OUT_DIR)\zdll.lib
+-!elseif "$(MACHINE)" == "IX86"
+-$(OUT_DIR)\zlib1.dll:	$(COMPATDIR)\zlib\win32\zlib1.dll
+-	$(COPY) $(COMPATDIR)\zlib\win32\zlib1.dll $(OUT_DIR)\zlib1.dll
+-$(OUT_DIR)\zdll.lib:	$(COMPATDIR)\zlib\win32\zdll.lib
+-	$(COPY) $(COMPATDIR)\zlib\win32\zdll.lib $(OUT_DIR)\zdll.lib
+-!else
+-$(OUT_DIR)\zlib1.dll:	$(COMPATDIR)\zlib\win64\zlib1.dll
+-	$(COPY) $(COMPATDIR)\zlib\win64\zlib1.dll $(OUT_DIR)\zlib1.dll
+-$(OUT_DIR)\zdll.lib:	$(COMPATDIR)\zlib\win64\zdll.lib
+-	$(COPY) $(COMPATDIR)\zlib\win64\zdll.lib $(OUT_DIR)\zdll.lib
+-!endif
+-
+ pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+@@ -764,7 +743,7 @@
+ !else
+ @TCL_SHARED_BUILD@   1
+ !endif
+-@TCL_ZLIB_LIB_NAME@ zdll.lib
++@TCL_ZLIB_LIB_NAME@
+ <<
+ 
+ 
+@@ -819,16 +798,17 @@
+ 
+ $(TMP_DIR)\tclPkgConfig.obj: $(GENERICDIR)\tclPkgConfig.c
+ 	$(cc32) $(pkgcflags) \
+-	/DCFG_INSTALL_LIBDIR="\"$(LIB_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_INSTALL_BINDIR="\"$(BIN_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_INSTALL_SCRDIR="\"$(SCRIPT_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_INSTALL_INCDIR="\"$(INCLUDE_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_INSTALL_DOCDIR="\"$(DOC_INSTALL_DIR:\=\\)\""	\
+-	/DCFG_RUNTIME_LIBDIR="\"$(LIB_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_RUNTIME_BINDIR="\"$(BIN_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_RUNTIME_SCRDIR="\"$(SCRIPT_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_RUNTIME_INCDIR="\"$(INCLUDE_INSTALL_DIR:\=\\)\"" \
+-	/DCFG_RUNTIME_DOCDIR="\"$(DOC_INSTALL_DIR:\=\\)\""     \
++	/DCFG_INSTALL_LIBDIR="\"lib\"" \
++	/DCFG_INSTALL_BINDIR="\"bin\"" \
++	/DCFG_INSTALL_SCRDIR="\"lib/tcl$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)\"" \
++	/DCFG_INSTALL_INCDIR="\"include\"" \
++	/DCFG_INSTALL_DOCDIR="\"man\""	\
++	/DCFG_RUNTIME_LIBDIR="\"lib\"" \
++	/DCFG_RUNTIME_BINDIR="\"bin\"" \
++	/DCFG_RUNTIME_SCRDIR="\"lib/tcl$(TCL_MAJOR_VERSION).$(TCL_MINOR_VERSION)\"" \
++	/DCFG_RUNTIME_INCDIR="\"include\"" \
++	/DCFG_RUNTIME_DOCDIR="\"man\""     \
++	/DCFG_RUNTIME_DLLFILE="\"bin/$(TCLLIBNAME)\"" \
+ 	-Fo$@ $?
+ 
+ $(TMP_DIR)\tclAppInit.obj: $(WIN_DIR)\tclAppInit.c
+@@ -932,7 +912,6 @@
+ 	@$(CPY) "$(TCLLIB)" "$(BIN_INSTALL_DIR)\"
+ !endif
+ 	@$(CPY) "$(TCLIMPLIB)" "$(LIB_INSTALL_DIR)\"
+-	@$(CPY) "$(OUT_DIR)\zlib1.dll" "$(BIN_INSTALL_DIR)\"
+ !if exist($(TCLSH))
+ 	@echo Installing $(TCLSHNAME)
+ 	@$(CPY) "$(TCLSH)" "$(BIN_INSTALL_DIR)\"
+@@ -971,7 +950,6 @@
+ 	@$(CPY) "$(WIN_DIR)\rules.vc"              "$(LIB_INSTALL_DIR)\nmake\"
+ 	@$(CPY) "$(WIN_DIR)\targets.vc"              "$(LIB_INSTALL_DIR)\nmake\"
+ 	@$(CPY) "$(WIN_DIR)\nmakehlp.c"            "$(LIB_INSTALL_DIR)\nmake\"
+-	@$(CPY) "$(WIN_DIR)\x86_64-w64-mingw32-nmakehlp.exe" "$(LIB_INSTALL_DIR)\nmake\"
+ 	@$(CPY) "$(OUT_DIR)\tcl.nmake"            "$(LIB_INSTALL_DIR)\nmake\"
+ 	@echo Installing package http 1.0 (obsolete)
+ 	@$(CPY) "$(ROOT)\library\http1.0\*.tcl" \
+--- a/pkgs/itcl4.3.7/win/makefile.vc
++++ b/pkgs/itcl4.3.7/win/makefile.vc
+@@ -64,7 +64,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\itclUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\itclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\itclUuid.h
++	copy /b $(WIN_DIR)\itclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\itclUuid.h
+ 
+ (TMP_DIR)\itclBase.obj: $(TMP_DIR)\itclUuid.h
+ 
+--- a/pkgs/sqlite3.53.0/win/makefile.vc
++++ b/pkgs/sqlite3.53.0/win/makefile.vc
+@@ -31,7 +31,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\sqlite3Uuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\sqlite3Uuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\sqlite3Uuid.h
++	copy /b $(WIN_DIR)\sqlite3Uuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\sqlite3Uuid.h
+ 
+ # Preprocessor macros specific to sqlite3.
+ PRJ_DEFINES = -I"$(ROOT)\.." -D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE \
+--- a/pkgs/tdbc1.1.13/win/makefile.vc
++++ b/pkgs/tdbc1.1.13/win/makefile.vc
+@@ -78,7 +78,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tdbcUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tdbcUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcUuid.h
++	copy /b $(WIN_DIR)\tdbcUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcUuid.h
+ 
+ .PHONY: $(OUT_DIR)\tdbcConfig.sh
+ 
+--- a/pkgs/tdbcmysql1.1.13/win/makefile.vc
++++ b/pkgs/tdbcmysql1.1.13/win/makefile.vc
+@@ -107,7 +107,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tdbcMysqlUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tdbcMysqlUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcMysqlUuid.h
++	copy /b $(WIN_DIR)\tdbcMysqlUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcMysqlUuid.h
+ 
+ .PHONY: $(OUT_DIR)\tdbcConfig.sh
+ 
+--- a/pkgs/tdbcodbc1.1.13/win/makefile.vc
++++ b/pkgs/tdbcodbc1.1.13/win/makefile.vc
+@@ -109,7 +109,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tdbcOdbcUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tdbcOdbcUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcOdbcUuid.h
++	copy /b $(WIN_DIR)\tdbcOdbcUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcOdbcUuid.h
+ 
+ test: test-jet test-sqlserver test-sqlite
+ 
+--- a/pkgs/tdbcpostgres1.1.13/win/makefile.vc
++++ b/pkgs/tdbcpostgres1.1.13/win/makefile.vc
+@@ -107,7 +107,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tdbcPostgresUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tdbcPostgresUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcPostgresUuid.h
++	copy /b $(WIN_DIR)\tdbcPostgresUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcPostgresUuid.h
+ 
+ test: setup $(PROJECT)
+ 	@set TCL_LIBRARY=$(TCL_LIBRARY:\=/)
+--- a/pkgs/thread2.8.13/win/makefile.vc
++++ b/pkgs/thread2.8.13/win/makefile.vc
+@@ -56,7 +56,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\threadUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\threadUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\threadUuid.h
++	copy /b $(WIN_DIR)\threadUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\threadUuid.h
+ 
+ # Explicit dependency rules
+ $(GENERICDIR)\psGdbm.c: $(GENERICDIR)\psGdbm.h
+--- a/win/makefile.vc
++++ b/win/makefile.vc
+@@ -564,41 +564,41 @@
+ pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ test-pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) test &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) test && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ install-pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) install &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) install && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ clean-pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) clean &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) clean && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ hose-pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) hose &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) hose && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ $(CAT32): $(WIN_DIR)\cat.c
+@@ -799,7 +799,7 @@
+ 	git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tclUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tclUuid.h
++	copy /b $(WIN_DIR)\tclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tclUuid.h
+ 
+ $(TMP_DIR)\tclAppInit.obj: $(WIN_DIR)\tclAppInit.c
+ 	$(cc32) $(appcflags) /DUNICODE /D_UNICODE \

@@ -5,14 +5,50 @@
 # tool by default.
 bext_enable_all_default(PATCH patch)
 
+function(bext_find_patch_check_option patch_executable result_variable)
+  set(check_directory "${CMAKE_BINARY_DIR}/CMakeFiles/patch-option-check")
+  set(check_input "${check_directory}/input.txt")
+  set(check_patch "${check_directory}/change.patch")
+  file(MAKE_DIRECTORY "${check_directory}")
+  file(WRITE "${check_patch}"
+    "--- input.txt\n"
+    "+++ input.txt\n"
+    "@@ -1 +1 @@\n"
+    "-before\n"
+    "+after\n")
+
+  foreach(check_option IN ITEMS "--dry-run" "-C")
+    file(WRITE "${check_input}" "before\n")
+    execute_process(
+      COMMAND "${patch_executable}" "${check_option}" -t -p 0
+        -i "${check_patch}"
+      WORKING_DIRECTORY "${check_directory}"
+      RESULT_VARIABLE check_result
+      OUTPUT_QUIET
+      ERROR_QUIET
+    )
+    file(READ "${check_input}" check_contents)
+    if (check_result EQUAL 0 AND check_contents STREQUAL "before\n")
+      file(REMOVE_RECURSE "${check_directory}")
+      set("${result_variable}" "${check_option}" PARENT_SCOPE)
+      return()
+    endif()
+  endforeach()
+
+  file(REMOVE_RECURSE "${check_directory}")
+  message(FATAL_ERROR
+    "Patch executable ${patch_executable} has no supported check option")
+endfunction()
+
 # Although individual projects may need their own patching options, there are
 # some common settings that will be used for most/all cases.  We define those
 # here for uniformity.
 #
-# We ignore whitespace for portability and flexibility when applying patches
+# We ignore whitespace for portability and flexibility when applying patches.
+# Use split short options accepted by both bundled and Unix patch tools.
 #
 # -N avoids attempting to reverse patch if the patching is already done.
-set(PATCH_OPTIONS "--ignore-whitespace;-N" CACHE STRING "Command line options to use when patching" FORCE)
+set(PATCH_OPTIONS "-l;-N" CACHE STRING "Command line options to use when patching" FORCE)
 
 # Preserve any existing user-specified patch path before we replace the public
 # PATCH_EXECUTABLE variable with a wrapper command list.
@@ -62,12 +98,26 @@ if (ENABLE_PATCH)
  
   # If we're using sb_patch, add the newline-output option
   set(PATCH_OPTIONS "${PATCH_OPTIONS};--newline-output;preserve" CACHE STRING "Command line options to use when patching" FORCE)
+  set(PATCH_CHECK_OPTION "--dry-run")
+
+else (ENABLE_PATCH)
+
+  # GNU and BSD patch use different options for an applicability check.
+  bext_find_patch_check_option("${PATCH_NATIVE_EXECUTABLE}"
+    PATCH_CHECK_OPTION)
 
 endif (ENABLE_PATCH)
+
+set(PATCH_CHECK_OPTION "${PATCH_CHECK_OPTION}" CACHE INTERNAL
+  "Patch option for a non-modifying applicability check" FORCE)
+set(PATCH_REJECT_DIR "${CMAKE_BINARY_DIR}/patch-rejects" CACHE INTERNAL
+  "Directory for failed patch artifacts" FORCE)
 
 set(PATCH_EXECUTABLE
   ${CMAKE_COMMAND}
   -DBEXT_PATCH_NATIVE_EXECUTABLE:FILEPATH=${PATCH_NATIVE_EXECUTABLE}
+  -DBEXT_PATCH_CHECK_OPTION:STRING=${PATCH_CHECK_OPTION}
+  -DBEXT_PATCH_REJECT_DIR:PATH=${PATCH_REJECT_DIR}
   -P
   ${CMAKE_SOURCE_DIR}/CMake/PatchWrapper.cmake
   --

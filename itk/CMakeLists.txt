@@ -50,11 +50,21 @@ if (ENABLE_ITK)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/itk_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/itk_build.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/itk_install.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/itk_install.cmake @ONLY)
 
+  set(ITK_PATCH_COMMAND
+    ${CMAKE_COMMAND}
+    "-DITK_SOURCE_DIR=<SOURCE_DIR>"
+    "-DITK_PATCH_EXECUTABLE=${PATCH_NATIVE_EXECUTABLE}"
+    "-DITK_PATCH_CHECK_OPTION=${PATCH_CHECK_OPTION}"
+    "-DITK_PATCH_REJECT_DIR=${PATCH_REJECT_DIR}"
+    "-DITK_PATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/itk.patch"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake"
+    )
+
   if (NOT MSVC)
     ExternalProject_Add(ITK_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/itk"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${CMAKE_COMMAND} -DITK_SOURCE_DIR=<SOURCE_DIR> -DITK_PATCH_EXECUTABLE=${PATCH_NATIVE_EXECUTABLE} -DITK_PATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/itk.patch -P ${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake
+      PATCH_COMMAND ${ITK_PATCH_COMMAND}
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/manifest.uuid <SOURCE_DIR>/manifest.uuid
       COMMAND ${CMAKE_COMMAND} -E make_directory <SOURCE_DIR>/tclconfig
       COMMAND ${CMAKE_COMMAND} -E copy ${BEXT_ITCL_BUNDLED_SOURCE_DIR}/tclconfig/install-sh <SOURCE_DIR>/tclconfig/install-sh
@@ -74,7 +84,7 @@ if (ENABLE_ITK)
     ExternalProject_Add(ITK_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/itk"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${CMAKE_COMMAND} -DITK_SOURCE_DIR=<SOURCE_DIR> -DITK_PATCH_EXECUTABLE=${PATCH_NATIVE_EXECUTABLE} -DITK_PATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/itk.patch -P ${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake
+      PATCH_COMMAND ${ITK_PATCH_COMMAND}
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/manifest.uuid <SOURCE_DIR>/manifest.uuid
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/targets.vc <SOURCE_DIR>/win/targets.vc
       COMMAND ${CMAKE_COMMAND} -E make_directory <SOURCE_DIR>/tclconfig
@@ -106,4 +116,3 @@ endif (ENABLE_ITK)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

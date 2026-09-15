@@ -1,5 +1,9 @@
-if (NOT ITK_SOURCE_DIR OR NOT ITK_PATCH_EXECUTABLE OR NOT ITK_PATCH_FILE)
-  message(FATAL_ERROR "Itk patching requires source, patch tool, and patch file paths")
+if (NOT ITK_SOURCE_DIR OR NOT ITK_PATCH_EXECUTABLE OR
+    NOT ITK_PATCH_CHECK_OPTION OR NOT ITK_PATCH_REJECT_DIR OR
+    NOT ITK_PATCH_FILE)
+  message(FATAL_ERROR
+    "Itk patching requires source, patch tool, check option, reject "
+    "directory, and patch file paths")
 endif ()
 
 # Upstream stores this Windows makefile with CRLF line endings.  The BSD patch
@@ -14,6 +18,8 @@ set(ITK_PATCH_WRAPPER "${CMAKE_CURRENT_LIST_DIR}/../CMake/PatchWrapper.cmake")
 execute_process(
   COMMAND "${CMAKE_COMMAND}"
     "-DBEXT_PATCH_NATIVE_EXECUTABLE=${ITK_PATCH_EXECUTABLE}"
+    "-DBEXT_PATCH_CHECK_OPTION=${ITK_PATCH_CHECK_OPTION}"
+    "-DBEXT_PATCH_REJECT_DIR=${ITK_PATCH_REJECT_DIR}"
     -P "${ITK_PATCH_WRAPPER}" -- -E -p1 -N -i "${ITK_PATCH_FILE}"
   WORKING_DIRECTORY "${ITK_SOURCE_DIR}"
   RESULT_VARIABLE ITK_PATCH_RESULT

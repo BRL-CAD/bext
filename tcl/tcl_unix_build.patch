@@ -1,0 +1,137 @@
+--- a/macosx/Tcl.xcode/project.pbxproj
++++ b/macosx/Tcl.xcode/project.pbxproj
+@@ -69,7 +69,7 @@
+ 		F96D45B008F272BC004A47F5 /* tclPathObj.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1108F272A7004A47F5 /* tclPathObj.c */; };
+ 		F96D45B108F272BC004A47F5 /* tclPipe.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1208F272A7004A47F5 /* tclPipe.c */; };
+ 		F96D45B208F272BC004A47F5 /* tclPkg.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1308F272A7004A47F5 /* tclPkg.c */; };
+-		F96D45B308F272BC004A47F5 /* tclPkgConfig.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1408F272A7004A47F5 /* tclPkgConfig.c */; settings = {COMPILER_FLAGS = "-DCFG_INSTALL_LIBDIR=\\\"$(LIBDIR)\\\" -DCFG_INSTALL_BINDIR=\\\"$(BINDIR)\\\" -DCFG_INSTALL_SCRDIR=\\\"$(TCL_LIBRARY)\\\" -DCFG_INSTALL_INCDIR=\\\"$(INCLUDEDIR)\\\" -DCFG_INSTALL_DOCDIR=\\\"$(MANDIR)\\\" -DCFG_RUNTIME_LIBDIR=\\\"$(LIBDIR)\\\" -DCFG_RUNTIME_BINDIR=\\\"$(BINDIR)\\\" -DCFG_RUNTIME_SCRDIR=\\\"$(TCL_LIBRARY)\\\" -DCFG_RUNTIME_INCDIR=\\\"$(INCLUDEDIR)\\\" -DCFG_RUNTIME_DOCDIR=\\\"$(MANDIR)\\\""; }; };
++		F96D45B308F272BC004A47F5 /* tclPkgConfig.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1408F272A7004A47F5 /* tclPkgConfig.c */; settings = {COMPILER_FLAGS = "-DCFG_INSTALL_LIBDIR=\\\"lib\\\" -DCFG_INSTALL_BINDIR=\\\"bin\\\" -DCFG_INSTALL_SCRDIR=\\\"lib/tcl8.6\\\" -DCFG_INSTALL_INCDIR=\\\"include\\\" -DCFG_INSTALL_DOCDIR=\\\"man\\\" -DCFG_RUNTIME_LIBDIR=\\\"lib\\\" -DCFG_RUNTIME_BINDIR=\\\"bin\\\" -DCFG_RUNTIME_SCRDIR=\\\"lib/tcl8.6\\\" -DCFG_RUNTIME_INCDIR=\\\"include\\\" -DCFG_RUNTIME_DOCDIR=\\\"man\\\""; }; };
+ 		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
+ 		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
+ 		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
+--- a/macosx/Tcl.xcodeproj/project.pbxproj
++++ b/macosx/Tcl.xcodeproj/project.pbxproj
+@@ -69,7 +69,7 @@
+ 		F96D45B008F272BC004A47F5 /* tclPathObj.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1108F272A7004A47F5 /* tclPathObj.c */; };
+ 		F96D45B108F272BC004A47F5 /* tclPipe.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1208F272A7004A47F5 /* tclPipe.c */; };
+ 		F96D45B208F272BC004A47F5 /* tclPkg.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1308F272A7004A47F5 /* tclPkg.c */; };
+-		F96D45B308F272BC004A47F5 /* tclPkgConfig.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1408F272A7004A47F5 /* tclPkgConfig.c */; settings = {COMPILER_FLAGS = "-DCFG_INSTALL_LIBDIR=\\\"$(LIBDIR)\\\" -DCFG_INSTALL_BINDIR=\\\"$(BINDIR)\\\" -DCFG_INSTALL_SCRDIR=\\\"$(TCL_LIBRARY)\\\" -DCFG_INSTALL_INCDIR=\\\"$(INCLUDEDIR)\\\" -DCFG_INSTALL_DOCDIR=\\\"$(MANDIR)\\\" -DCFG_RUNTIME_LIBDIR=\\\"$(LIBDIR)\\\" -DCFG_RUNTIME_BINDIR=\\\"$(BINDIR)\\\" -DCFG_RUNTIME_SCRDIR=\\\"$(TCL_LIBRARY)\\\" -DCFG_RUNTIME_INCDIR=\\\"$(INCLUDEDIR)\\\" -DCFG_RUNTIME_DOCDIR=\\\"$(MANDIR)\\\""; }; };
++		F96D45B308F272BC004A47F5 /* tclPkgConfig.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1408F272A7004A47F5 /* tclPkgConfig.c */; settings = {COMPILER_FLAGS = "-DCFG_INSTALL_LIBDIR=\\\"lib\\\" -DCFG_INSTALL_BINDIR=\\\"bin\\\" -DCFG_INSTALL_SCRDIR=\\\"lib/tcl8.6\\\" -DCFG_INSTALL_INCDIR=\\\"include\\\" -DCFG_INSTALL_DOCDIR=\\\"man\\\" -DCFG_RUNTIME_LIBDIR=\\\"lib\\\" -DCFG_RUNTIME_BINDIR=\\\"bin\\\" -DCFG_RUNTIME_SCRDIR=\\\"lib/tcl8.6\\\" -DCFG_RUNTIME_INCDIR=\\\"include\\\" -DCFG_RUNTIME_DOCDIR=\\\"man\\\""; }; };
+ 		F96D45B608F272BC004A47F5 /* tclPosixStr.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1708F272A7004A47F5 /* tclPosixStr.c */; };
+ 		F96D45B708F272BC004A47F5 /* tclPreserve.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1808F272A7004A47F5 /* tclPreserve.c */; };
+ 		F96D45B808F272BC004A47F5 /* tclProc.c in Sources */ = {isa = PBXBuildFile; fileRef = F96D3F1908F272A7004A47F5 /* tclProc.c */; };
+--- a/unix/Makefile.in
++++ b/unix/Makefile.in
+@@ -51,7 +51,7 @@
+ DLL_INSTALL_DIR		= @DLL_INSTALL_DIR@
+ 
+ # Path name to use when installing library scripts.
+-SCRIPT_INSTALL_DIR	= $(INSTALL_ROOT)$(TCL_LIBRARY)
++SCRIPT_INSTALL_DIR	= $(INSTALL_ROOT)$(prefix)/$(TCL_LIBRARY)
+ 
+ # Path name to use when installing Tcl modules.
+ MODULE_INSTALL_DIR	= $(SCRIPT_INSTALL_DIR)/../tcl8
+@@ -190,6 +190,10 @@
+ # the second is for use when running ld directly.
+ CC_SEARCH_FLAGS	= @CC_SEARCH_FLAGS@
+ LD_SEARCH_FLAGS	= @LD_SEARCH_FLAGS@
++
++# Executables and extensions can require different loader-relative paths.
++# This override lets distributors change tclsh without affecting extensions.
++TCLSH_SEARCH_FLAGS	= ${CC_SEARCH_FLAGS}
+ 
+ # The following symbol is defined to "$(DLTEST_TARGETS)" if dynamic loading is
+ # available; this causes everything in the "dltest" subdirectory to be built
+@@ -209,7 +213,7 @@
+ #TCL_LIB_FLAG		= -ltcl
+ 
+ # support for embedded libraries on Darwin / Mac OS X
+-DYLIB_INSTALL_DIR	= $(libdir)
++DYLIB_INSTALL_DIR	= @rpath
+ 
+ #--------------------------------------------------------------------------
+ # The information below is modified by the configure script when Makefile is
+@@ -656,7 +660,7 @@
+ ${TCL_EXE}: ${TCLSH_OBJS} ${TCL_LIB_FILE} ${TCL_STUB_LIB_FILE}
+ 	${CC} ${CFLAGS} ${LDFLAGS} ${TCLSH_OBJS} \
+ 		@TCL_BUILD_LIB_SPEC@ ${TCL_STUB_LIB_FILE} ${LIBS} @EXTRA_TCLSH_LIBS@ \
+-		${CC_SEARCH_FLAGS} -o ${TCL_EXE}
++		${TCLSH_SEARCH_FLAGS} -o ${TCL_EXE}
+ 
+ # Must be empty so it doesn't conflict with rule for ${TCL_EXE} above
+ ${NATIVE_TCLSH}:
+@@ -1277,17 +1281,17 @@
+ 
+ tclPkgConfig.o: $(GENERIC_DIR)/tclPkgConfig.c
+ 	$(CC) -c $(CC_SWITCHES) \
+-		-DCFG_INSTALL_LIBDIR="\"$(LIB_INSTALL_DIR)\"" \
+-		-DCFG_INSTALL_BINDIR="\"$(BIN_INSTALL_DIR)\"" \
+-		-DCFG_INSTALL_SCRDIR="\"$(SCRIPT_INSTALL_DIR)\"" \
+-		-DCFG_INSTALL_INCDIR="\"$(INCLUDE_INSTALL_DIR)\"" \
+-		-DCFG_INSTALL_DOCDIR="\"$(MAN_INSTALL_DIR)\"" \
+-		-DCFG_RUNTIME_LIBDIR="\"$(libdir)\"" \
+-		-DCFG_RUNTIME_BINDIR="\"$(bindir)\"" \
+-		-DCFG_RUNTIME_SCRDIR="\"$(TCL_LIBRARY)\"" \
+-		-DCFG_RUNTIME_INCDIR="\"$(includedir)\"" \
+-		-DCFG_RUNTIME_DOCDIR="\"$(mandir)\"" \
+-		-DCFG_RUNTIME_DLLFILE="\"$(TCL_LIB_FILE)\"" \
++		-DCFG_INSTALL_LIBDIR="\"lib\"" \
++		-DCFG_INSTALL_BINDIR="\"bin\"" \
++		-DCFG_INSTALL_SCRDIR="\"lib/tcl$(VERSION)\"" \
++		-DCFG_INSTALL_INCDIR="\"include\"" \
++		-DCFG_INSTALL_DOCDIR="\"man\"" \
++		-DCFG_RUNTIME_LIBDIR="\"lib\"" \
++		-DCFG_RUNTIME_BINDIR="\"bin\"" \
++		-DCFG_RUNTIME_SCRDIR="\"lib/tcl$(VERSION)\"" \
++		-DCFG_RUNTIME_INCDIR="\"include\"" \
++		-DCFG_RUNTIME_DOCDIR="\"man\"" \
++		-DCFG_RUNTIME_DLLFILE="\"lib/$(TCL_LIB_FILE)\"" \
+ 		$(GENERIC_DIR)/tclPkgConfig.c
+ 
+ tclPosixStr.o: $(GENERIC_DIR)/tclPosixStr.c
+--- a/unix/configure
++++ b/unix/configure
+@@ -19111,7 +19111,7 @@
+ 
+ eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
+ 
+-test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
++test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
+ PRIVATE_INCLUDE_DIR='$(includedir)'
+ HTML_DIR='$(DISTDIR)/html'
+ 
+@@ -19242,9 +19242,9 @@
+     test -z "$TCL_MODULE_PATH"  && \
+ 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
+ elif test "$prefix/lib" != "$libdir"; then
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${libdir}:${prefix}/lib"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${libdir}"
+ else
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${prefix}/lib"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH=""
+ fi
+ 
+ #--------------------------------------------------------------------
+--- a/unix/configure.in
++++ b/unix/configure.in
+@@ -774,7 +774,7 @@
+ 
+ eval "TCL_LIB_FILE=${TCL_LIB_FILE}"
+ 
+-test -z "$TCL_LIBRARY" && TCL_LIBRARY='$(prefix)/lib/tcl$(VERSION)'
++test -z "$TCL_LIBRARY" && TCL_LIBRARY='lib/tcl$(VERSION)'
+ PRIVATE_INCLUDE_DIR='$(includedir)'
+ HTML_DIR='$(DISTDIR)/html'
+ 
+@@ -867,9 +867,9 @@
+     test -z "$TCL_MODULE_PATH"  && \
+ 	TCL_MODULE_PATH="~/Library/Tcl /Library/Tcl"
+ elif test "$prefix/lib" != "$libdir"; then
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${libdir}:${prefix}/lib"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${libdir}"
+ else
+-    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH="${prefix}/lib"
++    test -z "$TCL_PACKAGE_PATH" && TCL_PACKAGE_PATH=""
+ fi
+ 
+ #--------------------------------------------------------------------

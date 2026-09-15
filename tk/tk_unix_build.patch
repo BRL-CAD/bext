@@ -1,0 +1,12 @@
+diff -Naur --exclude=.git tk/unix/Makefile.in TK_BLD/unix/Makefile.in
+--- tk/unix/Makefile.in	2026-09-10 16:55:00.776870000 +0000
++++ TK_BLD/unix/Makefile.in	2026-09-10 17:13:18.283051000 +0000
+@@ -285,7 +285,7 @@
+ LD_SEARCH_FLAGS	= @LD_SEARCH_FLAGS@
+ 
+ # support for embedded libraries on Darwin / Mac OS X
+-DYLIB_INSTALL_DIR	= $(libdir)
++DYLIB_INSTALL_DIR	= @rpath
+ 
+ # support for building the Aqua resource file
+ TK_RSRC_FILE		= @TK_RSRC_FILE@
