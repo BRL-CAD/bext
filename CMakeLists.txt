@@ -277,10 +277,11 @@ if (NOT isMultiConfig)
   set(BUILD_TYPE_SPECIFIER "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 endif (NOT isMultiConfig)
 
-# With MSVC, some of the non-CMake subbuilds may need the vcvars bat file to
-# set up their environment.  The generated wrappers use an environment already
-# initialized by VsDevCmd when one is available, and call this compiler-relative
-# fallback otherwise.
+# With MSVC, some non-CMake subbuilds need the vcvars bat file to set up their
+# environment.  Always reinitialize the generated wrappers: a parent shell such
+# as Git Bash can reorder PATH while leaving Visual Studio's environment markers
+# intact.  The wrappers also put the selected compiler's directory first so a
+# POSIX utility named link cannot shadow MSVC's link.exe.
 if(MSVC)
 
   if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -289,7 +290,8 @@ if(MSVC)
     set(BEXT_MSVC_TARGET_ARCH x86)
   endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
 
-  get_filename_component(COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+  get_filename_component(BEXT_MSVC_COMPILER_BIN_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+  set(COMPILER_DIR "${BEXT_MSVC_COMPILER_BIN_DIR}")
   get_filename_component(COMPILER_ROOT "${COMPILER_DIR}" NAME)
   set(VCVARS_BAT "${COMPILER_DIR}/vcvars${COMPILER_ROOT}.bat")
   if(NOT EXISTS "${VCVARS_BAT}")
