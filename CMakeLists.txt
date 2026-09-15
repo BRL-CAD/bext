@@ -277,11 +277,21 @@ if (NOT isMultiConfig)
   set(BUILD_TYPE_SPECIFIER "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 endif (NOT isMultiConfig)
 
-# With MSVC, some of the non-CMake subbuilds are going to need the vcvars bat
-# file to set up the environment.
+# With MSVC, some non-CMake subbuilds need the vcvars bat file to set up their
+# environment.  Always reinitialize the generated wrappers: a parent shell such
+# as Git Bash can reorder PATH while leaving Visual Studio's environment markers
+# intact.  The wrappers also put the selected compiler's directory first so a
+# POSIX utility named link cannot shadow MSVC's link.exe.
 if(MSVC)
 
-  get_filename_component(COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(BEXT_MSVC_TARGET_ARCH x64)
+  else(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(BEXT_MSVC_TARGET_ARCH x86)
+  endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
+  get_filename_component(BEXT_MSVC_COMPILER_BIN_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+  set(COMPILER_DIR "${BEXT_MSVC_COMPILER_BIN_DIR}")
   get_filename_component(COMPILER_ROOT "${COMPILER_DIR}" NAME)
   set(VCVARS_BAT "${COMPILER_DIR}/vcvars${COMPILER_ROOT}.bat")
   if(NOT EXISTS "${VCVARS_BAT}")
@@ -291,11 +301,11 @@ if(MSVC)
       get_filename_component(COMPILER_DIR "${COMPILER_DIR}" DIRECTORY)
     endforeach(DIRS RANGE 0 5)
     set(COMPILER_DIR "${COMPILER_DIR}/Auxiliary/Build")
-    if(CMAKE_CL_64)
+    if(BEXT_MSVC_TARGET_ARCH STREQUAL "x64")
       set(VCVARS_BAT "${COMPILER_DIR}/vcvars64.bat")
-    else(CMAKE_CL_64)
+    else(BEXT_MSVC_TARGET_ARCH STREQUAL "x64")
       set(VCVARS_BAT "${COMPILER_DIR}/vcvars32.bat")
-    endif(CMAKE_CL_64)
+    endif(BEXT_MSVC_TARGET_ARCH STREQUAL "x64")
     if(NOT EXISTS "${VCVARS_BAT}")
       message(FATAL_ERROR "Could not find vcvars bat file in ${COMPILER_DIR}")
     endif(NOT EXISTS "${VCVARS_BAT}")

@@ -1,0 +1,12 @@
+diff -Naur --exclude=.git tk/win/makefile.vc TK_BLD/win/makefile.vc
+--- tk/win/makefile.vc
++++ TK_BLD/win/makefile.vc
+@@ -539,7 +539,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tkUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tkUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tkUuid.h
++	copy /b $(WIN_DIR)\tkUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tkUuid.h
+ 
+ $(TMP_DIR)\tkTest.obj: $(GENERICDIR)\tkTest.c
+ 	$(cc32) $(appcflags_nostubs) -Fo$@ $?

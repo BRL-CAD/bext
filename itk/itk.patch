@@ -1,18 +1,8 @@
-diff --git a/configure.ac b/configure.ac
---- a/configure.ac
-+++ b/configure.ac
-@@ -161,5 +161,6 @@
- TEA_PRIVATE_TCL_HEADERS
- 
- TEA_PUBLIC_TK_HEADERS
- #TEA_PRIVATE_TK_HEADERS
--TEA_PATH_X
-+# Itk uses Tk stubs and makes no direct Xlib calls.  Its X implementation is
-+# selected by Tk, so do not add a second platform X library dependency.
-diff --git a/configure b/configure
---- a/configure
-+++ b/configure
-@@ -7051,4 +7051,6 @@
+diff -Naur itk/configure ITK_BLD/configure
+--- itk/configure	2026-09-14 11:05:50.343138038 -0400
++++ ITK_BLD/configure	2026-09-14 11:04:56.453544503 -0400
+@@ -7050,7 +7050,9 @@
+     fi
      # TEA specific:
      if test x"${XLIBSW}" != x ; then
 -	PKG_LIBS="${PKG_LIBS} ${XLIBSW}"
@@ -20,22 +10,49 @@ diff --git a/configure b/configure
 +	# preserving TEA_PATH_X's platform X libraries.
 +	:
      fi
-diff --git a/generic/itkBase.c b/generic/itkBase.c
---- a/generic/itkBase.c
-+++ b/generic/itkBase.c
-@@ -132 +132 @@ Initialize(
+ 
+     fi
+diff -Naur itk/configure.ac ITK_BLD/configure.ac
+--- itk/configure.ac	2026-09-14 11:07:25.749985453 -0400
++++ ITK_BLD/configure.ac	2026-09-14 11:07:25.734985540 -0400
+@@ -162,7 +162,8 @@
+ 
+ TEA_PUBLIC_TK_HEADERS
+ #TEA_PRIVATE_TK_HEADERS
+-TEA_PATH_X
++# Itk uses Tk stubs and makes no direct Xlib calls.  Its X implementation is
++# selected by Tk, so do not add a second platform X library dependency.
+ 
+ #--------------------------------------------------------------------
+ # We need to enable the threading macros found in tcl.h and tclInt.h.
+diff -Naur itk/generic/itkBase.c ITK_BLD/generic/itkBase.c
+--- itk/generic/itkBase.c	2026-09-14 11:07:25.763985372 -0400
++++ ITK_BLD/generic/itkBase.c	2026-09-14 11:07:25.701985731 -0400
+@@ -129,7 +129,7 @@
+     if (Tk_InitStubs(interp, "8.6-", 0) == NULL) {
+ 	return TCL_ERROR;
+     };
 -    if (Itcl_InitStubs(interp, "4.1", 0) == NULL) {
 +    if (Itcl_InitStubs(interp, "4.1.1", 0) == NULL) {
-diff --git a/pkgIndex.tcl.in b/pkgIndex.tcl.in
---- a/pkgIndex.tcl.in
-+++ b/pkgIndex.tcl.in
-@@ -6 +6 @@ if {![package vsatisfies [package provide Tcl] 8.6-]} {return}
+ 	return TCL_ERROR;
+     }
+ 
+diff -Naur itk/pkgIndex.tcl.in ITK_BLD/pkgIndex.tcl.in
+--- itk/pkgIndex.tcl.in	2026-09-14 11:07:25.759985395 -0400
++++ ITK_BLD/pkgIndex.tcl.in	2026-09-14 11:07:25.716985644 -0400
+@@ -3,7 +3,7 @@
+ #
+ 
+ if {![package vsatisfies [package provide Tcl] 8.6-]} {return}
 -if {[string length [package provide Itcl]] && ![package vsatisfies [package provide Itcl] 4.1]} return
 +if {[string length [package provide Itcl]] && ![package vsatisfies [package provide Itcl] 4.1.1]} return
-diff --git a/win/makefile.vc b/win/makefile.vc
---- a/win/makefile.vc
-+++ b/win/makefile.vc
-@@ -60,18 +60,27 @@ PRJ_HEADERS = \
+ if {[package vsatisfies [package provide Tcl] 9.0-]} {
+     package ifneeded itk @PACKAGE_VERSION@ \
+ 	    [list load [file join $dir @PKG_LIB_FILE9@] Itk]
+diff -Naur itk/win/makefile.vc ITK_BLD/win/makefile.vc
+--- itk/win/makefile.vc	2026-09-14 11:07:25.785985244 -0400
++++ ITK_BLD/win/makefile.vc	2026-09-14 11:07:25.731985557 -0400
+@@ -60,28 +60,37 @@
  # In principle, we don't need the ITCL source directory, and an installed
  # ITCL should suffice. But that needs additional machinery not implemented
  # yet.
@@ -62,4 +79,28 @@ diff --git a/win/makefile.vc b/win/makefile.vc
  !include nmakehlp.out
 +!endif
  
- # Get the ITCL version from its configure.ac
+-# Get the ITCL version from its configure.ac
++# Get the ITCL version from its public header.
+ !if [echo ITCL_DOTVERSION = \> versions.vc] \
+-   && [nmakehlp -V "$(ITCL_DIR)\configure.ac" itcl >> versions.vc]
++   && [nmakehlp -V "$(ITCL_DIR)\generic\itcl.h" ITCL_PATCH_LEVEL >> versions.vc]
+ !error Could not retrieve ITCL version.
+ !endif
+-# Get the TK version from its configure.ac
+-!if [echo TK_DOTVERSION = \> versions.vc] \
+-   && [nmakehlp -V "$(TK_DIR)\configure.ac" tk >> versions.vc]
++# Get the Tk version from its public header.
++!if [echo TK_DOTVERSION = \>> versions.vc] \
++   && [nmakehlp -V "$(TK_DIR)\generic\tk.h" TK_VERSION >> versions.vc]
+ !error Could not retrieve TK version.
+ !endif
+ !include versions.vc
+@@ -140,7 +149,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\itkUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\itkUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\itkUuid.h
++	copy /b $(WIN_DIR)\itkUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\itkUuid.h
+ 
+ test: setup $(PROJECT)
+ 	@echo testing itk

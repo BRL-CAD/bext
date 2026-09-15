@@ -1,0 +1,107 @@
+--- a/generic/tclConfig.c
++++ b/generic/tclConfig.c
+@@ -44,6 +44,7 @@
+ static Tcl_ObjCmdProc QueryConfigObjCmd;
+ static void		QueryConfigDelete(ClientData clientData);
+ static Tcl_Obj *	GetConfigDict(Tcl_Interp *interp);
++static Tcl_Obj *	RelocateConfigPath(Tcl_Obj *pathPtr);
+ static void		ConfigDictDeleteProc(ClientData clientData,
+ 			    Tcl_Interp *interp);
+ 
+@@ -176,6 +177,60 @@
+ /*
+  *----------------------------------------------------------------------
+  *
++ * RelocateConfigPath --
++ *
++ *	Resolve a path embedded relative to the Tcl installation prefix.
++ *
++ * Results:
++ *	The relocated path, with a reference held by the caller, or the
++ *	original path when relocation is unnecessary or unavailable.
++ *
++ * Side effects:
++ *	None.
++ *
++ *----------------------------------------------------------------------
++ */
++
++static Tcl_Obj *
++RelocateConfigPath(
++    Tcl_Obj *pathPtr)
++{
++    Tcl_Obj *executablePtr, *splitPtr, *prefixPtr, *resultPtr;
++    const char *executableName = Tcl_GetNameOfExecutable();
++    int pathc;
++
++    Tcl_IncrRefCount(pathPtr);
++    if (Tcl_FSGetPathType(pathPtr) != TCL_PATH_RELATIVE
++	    || executableName == NULL) {
++	return pathPtr;
++    }
++
++    executablePtr = Tcl_NewStringObj(executableName, -1);
++    Tcl_IncrRefCount(executablePtr);
++    splitPtr = Tcl_FSSplitPath(executablePtr, &pathc);
++    Tcl_IncrRefCount(splitPtr);
++    Tcl_DecrRefCount(executablePtr);
++
++    if (pathc < 3) {
++	Tcl_DecrRefCount(splitPtr);
++	return pathPtr;
++    }
++
++    prefixPtr = Tcl_FSJoinPath(splitPtr, pathc - 2);
++    Tcl_IncrRefCount(prefixPtr);
++    Tcl_DecrRefCount(splitPtr);
++
++    resultPtr = Tcl_FSJoinToPath(prefixPtr, 1, &pathPtr);
++    Tcl_IncrRefCount(resultPtr);
++    Tcl_DecrRefCount(pathPtr);
++    Tcl_DecrRefCount(prefixPtr);
++    return resultPtr;
++}
++
++
++/*
++ *----------------------------------------------------------------------
++ *
+  * QueryConfigObjCmd --
+  *
+  *	Implementation of "::<package>::pkgconfig", the command to query
+@@ -199,7 +254,7 @@
+ {
+     QCCD *cdPtr = (QCCD *)clientData;
+     Tcl_Obj *pkgName = cdPtr->pkg;
+-    Tcl_Obj *pDB, *pkgDict, *val, *listPtr;
++    Tcl_Obj *pDB, *pkgDict, *val, *listPtr, *pathPtr;
+     int n, index;
+     static const char *const subcmdStrings[] = {
+ 	"get", "list", NULL
+@@ -259,8 +314,26 @@
+ 	 * Value is stored as-is in a byte array, see Bug [9b2e636361],
+ 	 * so we have to decode it first.
+ 	 */
++
+ 	value = (const char *) Tcl_GetByteArrayFromObj(val, &n);
+ 	value = Tcl_ExternalToUtfDString(venc, value, n, &conv);
++
++	/*
++	 * Tcl installation paths are embedded relative to the installation
++	 * prefix so that the tree can be moved after installation.
++	 */
++
++	if (strcmp(Tcl_GetString(pkgName), "tcl") == 0
++		&& (Tcl_StringMatch(Tcl_GetString(objv[2]), "*,runtime")
++		|| Tcl_StringMatch(Tcl_GetString(objv[2]), "*,install"))) {
++	    pathPtr = Tcl_NewStringObj(value, Tcl_DStringLength(&conv));
++	    Tcl_DStringFree(&conv);
++	    pathPtr = RelocateConfigPath(pathPtr);
++	    Tcl_SetObjResult(interp, pathPtr);
++	    Tcl_DecrRefCount(pathPtr);
++	    return TCL_OK;
++	}
++
+ 	Tcl_SetObjResult(interp, Tcl_NewStringObj(value,
+ 		Tcl_DStringLength(&conv)));
+ 	Tcl_DStringFree(&conv);

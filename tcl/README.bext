@@ -36,6 +36,21 @@ and upstream zlib selection unchanged.  The removal is also intentionally not
 part of the Windows build: Tcl's Windows makefiles use files supplied by the
 distribution's compatibility zlib tree.
 
+Windows package builds
+----------------------
+
+The Git mirror of Tcl's full source distribution can omit the ignored
+`manifest.uuid` files used by bundled package makefiles.  Bext supplies an
+`unknown` fallback for every affected package in the ExternalProject staging
+tree.  Windows UUID-header concatenation is forced to binary mode so `copy`
+does not append a text-mode end-of-file byte that newer MSVC compilers reject.
+
+Tcl's recursive NMake package rules are also patched to preserve child build
+failures, and the install wrapper verifies that each package receiving a
+manifest fallback produced its expected installed artifact.  This prevents a
+generator such as Ninja from accepting a partial Tcl package build merely
+because the final directory-stack command returned success.
+
 Validation
 ----------
 

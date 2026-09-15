@@ -1,6 +1,5 @@
-diff -Naur --exclude=.git tcl/unix/configure TCL_BLD/unix/configure
---- tcl/unix/configure	2026-09-10 16:55:00.590363000 +0000
-+++ TCL_BLD/unix/configure	2026-09-10 17:00:55.104920000 +0000
+--- a/unix/configure
++++ b/unix/configure
 @@ -5992,13 +5992,13 @@
  
  if test $zlib_ok = yes; then
@@ -91,9 +90,8 @@ diff -Naur --exclude=.git tcl/unix/configure TCL_BLD/unix/configure
  
  else
  
-diff -Naur --exclude=.git tcl/unix/configure.in TCL_BLD/unix/configure.in
---- tcl/unix/configure.in	2026-09-10 16:55:00.590431000 +0000
-+++ TCL_BLD/unix/configure.in	2026-09-10 17:00:55.107077000 +0000
+--- a/unix/configure.in
++++ b/unix/configure.in
 @@ -163,7 +163,7 @@
    AC_CHECK_TYPE([gz_header],[],[zlib_ok=no],[#include <zlib.h>])],[
    zlib_ok=no])

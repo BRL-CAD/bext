@@ -1,0 +1,16 @@
+diff -Naur itk/win/makefile.vc ITK_BLD/win/makefile.vc
+--- itk/win/makefile.vc	2026-09-14 11:07:25.785985244 -0400
++++ ITK_BLD/win/makefile.vc	2026-09-15 17:45:00.000000000 -0400
+@@ -130,5 +130,11 @@
+ 
+ # Additional default actions for install
+-install: default-install-docs-n
++install: default-install-docs-n install-itk-class-library
++
++# The generic TEA target copies only *.tcl.  Install Itk's class definitions
++# and autoload index as well so the base classes are available at runtime.
++install-itk-class-library: default-install-scripts
++	@$(CPY) $(LIBDIR)\*.itk "$(SCRIPT_INSTALL_DIR)"
++	@$(CPY) $(LIBDIR)\tclIndex "$(SCRIPT_INSTALL_DIR)"
+ 
+ # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
