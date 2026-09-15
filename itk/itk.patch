@@ -95,7 +95,23 @@ diff -Naur itk/win/makefile.vc ITK_BLD/win/makefile.vc
  !error Could not retrieve TK version.
  !endif
  !include versions.vc
-@@ -140,7 +149,7 @@
+@@ -118,8 +127,14 @@
+ # Disable standard test target because we have a custom one
+ DISABLE_TARGET_test = 1
+ !include "$(_RULESDIR)\targets.vc"
+ 
+ # Additional default actions for install
+-install: default-install-docs-n
++install: default-install-docs-n install-itk-class-library
++
++# The generic TEA target copies only *.tcl.  Install Itk's class definitions
++# and autoload index as well so the base classes are available at runtime.
++install-itk-class-library: default-install-scripts
++	@$(CPY) $(LIBDIR)\*.itk "$(SCRIPT_INSTALL_DIR)"
++	@$(CPY) $(LIBDIR)\tclIndex "$(SCRIPT_INSTALL_DIR)"
+ 
+ # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
+@@ -140,7 +155,7 @@
     git rev-parse HEAD >>$(ROOT)\manifest.uuid
  
  $(TMP_DIR)\itkUuid.h:	$(ROOT)\manifest.uuid

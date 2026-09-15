@@ -16,6 +16,11 @@ repository.  On Windows, explicit Tcl, Tk, and Itcl source directories are
 passed to nmake.  On Unix-like platforms, upstream's generated TEA configure
 logic gets the corresponding source locations from the bundled configuration.
 
+Upstream's generic Windows TEA install target copies only ``*.tcl`` library
+files.  Itk also needs its ``*.itk`` class definitions and ``tclIndex`` at
+runtime, so bext extends the nmake install target to copy them and verifies the
+complete script set before accepting the install.
+
 Itk itself makes no direct Xlib calls: all of its window-system interaction
 goes through Tk stubs.  Upstream's TEA configuration nevertheless adds the
 host X library to Itk.  Bext suppresses that unnecessary dependency so Itk

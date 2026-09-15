@@ -25,6 +25,33 @@ if (ITK_RET)
   message(FATAL_ERROR "Itk install failed:\n${CMD_OUT}\n")
 endif (ITK_RET)
 
+set(ITK_SCRIPT_INSTALL_DIR
+  "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@/itk@BEXT_ITK_BUNDLED_VERSION@"
+  )
+set(ITK_REQUIRED_SCRIPT_FILES
+  Archetype.itk
+  Toplevel.itk
+  Widget.itk
+  itk.tcl
+  pkgIndex.tcl
+  tclIndex
+  )
+set(ITK_MISSING_SCRIPT_FILES)
+foreach (ITK_REQUIRED_SCRIPT_FILE ${ITK_REQUIRED_SCRIPT_FILES})
+  if (NOT EXISTS "${ITK_SCRIPT_INSTALL_DIR}/${ITK_REQUIRED_SCRIPT_FILE}")
+    list(APPEND ITK_MISSING_SCRIPT_FILES
+      "${ITK_SCRIPT_INSTALL_DIR}/${ITK_REQUIRED_SCRIPT_FILE}"
+      )
+  endif ()
+endforeach ()
+if (ITK_MISSING_SCRIPT_FILES)
+  list(JOIN ITK_MISSING_SCRIPT_FILES "\n  " ITK_MISSING_SCRIPT_FILES_TEXT)
+  message(FATAL_ERROR
+    "Itk install did not produce required runtime scripts:\n"
+    "  ${ITK_MISSING_SCRIPT_FILES_TEXT}\n"
+    )
+endif ()
+
 message("Itk install succeeded:\n${CMD_OUT}\n")
 
 # Local Variables:
