@@ -24,10 +24,36 @@ if (ENABLE_EIGEN)
 
   RegisterDeps(EIGEN)
 
+  set(EIGEN_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/eigen_common.patch")
+  if (APPLE)
+    list(APPEND EIGEN_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/eigen_macos.patch")
+  endif (APPLE)
+  if (MSVC)
+    list(APPEND EIGEN_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/eigen_msvc.patch")
+  endif (MSVC)
+
+  set(EIGEN_PATCH_COMMAND)
+  foreach(EIGEN_PATCH_FILE IN LISTS EIGEN_PATCH_FILES)
+    if (NOT EIGEN_PATCH_COMMAND)
+      set(EIGEN_PATCH_COMMAND
+        ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${EIGEN_PATCH_FILE}
+        )
+    else ()
+      list(APPEND EIGEN_PATCH_COMMAND
+        COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS}
+          -i ${EIGEN_PATCH_FILE}
+        )
+    endif ()
+  endforeach ()
+  unset(EIGEN_PATCH_FILE)
+  unset(EIGEN_PATCH_FILES)
+
   ExternalProject_Add(EIGEN_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/eigen"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/eigen.patch
+    PATCH_COMMAND ${EIGEN_PATCH_COMMAND}
     CMAKE_ARGS
     -DBUILD_TESTING=OFF
     -DEIGEN_BUILD_DOC=OFF
@@ -61,4 +87,3 @@ endif (ENABLE_EIGEN)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

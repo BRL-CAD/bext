@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -260,7 +260,7 @@
+   export (TARGETS eigen NAMESPACE Eigen3:: FILE Eigen3Targets.cmake)
+   # Export Eigen3 package to CMake registry such that it can be easily found by
+   # CMake even if it has not been installed to a standard directory.
+-  export (PACKAGE Eigen3)
++  #export (PACKAGE Eigen3)
+ 
+   install (EXPORT Eigen3Targets NAMESPACE Eigen3:: DESTINATION ${CMAKEPACKAGE_INSTALL_DIR})
+ 

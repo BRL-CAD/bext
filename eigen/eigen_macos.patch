@@ -1,0 +1,12 @@
+--- a/Eigen/src/Core/util/Memory.h
++++ b/Eigen/src/Core/util/Memory.h
+@@ -647,6 +647,9 @@
+ // to the appropriate stack allocation function
+ #if !defined EIGEN_ALLOCA && !defined EIGEN_GPU_COMPILE_PHASE
+ #if EIGEN_OS_LINUX || EIGEN_OS_MAC || (defined alloca)
++#if EIGEN_OS_MAC
++#  include <alloca.h>
++#endif
+ #define EIGEN_ALLOCA alloca
+ #elif EIGEN_COMP_MSVC
+ #define EIGEN_ALLOCA _alloca

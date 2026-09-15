@@ -1,0 +1,15 @@
+--- a/lapack/CMakeLists.txt
++++ b/lapack/CMakeLists.txt
+@@ -20,6 +20,12 @@
+ 
+ add_custom_target(lapack)
+ include_directories(../blas)
++
++# Eigen's template-heavy complex LAPACK sources can exceed the default COFF
++# section limit when compiled with MSVC, particularly in debug builds.
++if(MSVC)
++  set_property(SOURCE complex_single.cpp complex_double.cpp APPEND PROPERTY COMPILE_OPTIONS "/bigobj")
++endif()
+ 
+ set(EigenLapack_SRCS
+   dsecnd_INT_CPU_TIME.cpp second_INT_CPU_TIME.cpp single.cpp double.cpp complex_single.cpp complex_double.cpp
