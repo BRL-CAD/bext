@@ -10,13 +10,19 @@ file(WRITE "${BUILD_SCRIPT}"
   "rem installs) so cmd can run Tcl's nmakehlp.exe from the current directory,\n"
   "rem which rules.vc relies on.  This is a no-op on default Windows systems.\n"
   "set \"NoDefaultCurrentDirectoryInExePath=\"\n"
+  "if /I \"%VSCMD_ARG_TGT_ARCH%\"==\"@BEXT_MSVC_TARGET_ARCH@\" goto :bext_msvc_environment_ready\n"
   "call \"@VCVARS_BAT@\"\n"
+  "if errorlevel 1 exit /b %ERRORLEVEL%\n"
+  ":bext_msvc_environment_ready\n"
   "cd /D \"@TCL_SRC_DIR@/win\"\n"
   "echo In Batch CC=%CC% but setting empty\n"
   "set CC=\n"
   "echo In Batch RC=%RC% but setting empty\n"
   "set RC=\n"
   "nmake -f makefile.vc INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
+  "if errorlevel 1 exit /b %ERRORLEVEL%\n"
+  "cd /D \"@BEXT_ITCL_SOURCE_DIR@/win\"\n"
+  "nmake -f makefile.vc TCLDIR=@TCL_SRC_DIR@ INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
   "exit /b %ERRORLEVEL%\n"
 )
 
@@ -28,9 +34,9 @@ execute_process(
   ERROR_VARIABLE CMD_OUT
   )
 
-if (TCL_RET)
+if (TCL_RET OR CMD_OUT MATCHES "NMAKE[ \t]*:[ \t]*fatal error")
   message(FATAL_ERROR "Tcl build failed:\n${CMD_OUT}\n")
-endif (TCL_RET)
+endif ()
 
 message("Tcl build succeeded:\n${CMD_OUT}\n")
 

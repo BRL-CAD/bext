@@ -8,13 +8,19 @@ file(WRITE "${INSTALL_SCRIPT}"
   "rem installs) so cmd can run Tcl's nmakehlp.exe from the current directory,\n"
   "rem which rules.vc relies on.  This is a no-op on default Windows systems.\n"
   "set \"NoDefaultCurrentDirectoryInExePath=\"\n"
+  "if /I \"%VSCMD_ARG_TGT_ARCH%\"==\"@BEXT_MSVC_TARGET_ARCH@\" goto :bext_msvc_environment_ready\n"
   "call \"@VCVARS_BAT@\"\n"
+  "if errorlevel 1 exit /b %ERRORLEVEL%\n"
+  ":bext_msvc_environment_ready\n"
   "cd /D \"@TCL_SRC_DIR@/win\"\n"
   "echo In Batch CC=%CC% but setting empty\n"
   "set CC=\n"
   "echo In Batch RC=%RC% but setting empty\n"
   "set RC=\n"
   "nmake -f makefile.vc install INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
+  "if errorlevel 1 exit /b %ERRORLEVEL%\n"
+  "cd /D \"@BEXT_ITCL_SOURCE_DIR@/win\"\n"
+  "nmake -f makefile.vc install TCLDIR=@TCL_SRC_DIR@ INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
   "exit /b %ERRORLEVEL%\n"
 )
 
@@ -26,9 +32,35 @@ execute_process(
   ERROR_VARIABLE CMD_OUT
   )
 
-if (TCL_RET)
+if (TCL_RET OR CMD_OUT MATCHES "NMAKE[ \t]*:[ \t]*fatal error")
   message(FATAL_ERROR "Tcl install failed:\n${CMD_OUT}\n")
-endif (TCL_RET)
+endif ()
+
+# Tcl's recursive Windows package rules historically allowed a failed child
+# nmake to be hidden by a successful popd.  In addition to fixing that rule,
+# verify the expected output from every package for which bext supplied a
+# manifest fallback.
+set(TCL_REQUIRED_PACKAGE_FILES "@TCL_REQUIRED_PACKAGE_FILES@")
+set(TCL_REQUIRED_PACKAGE_GLOBS "@TCL_REQUIRED_PACKAGE_GLOBS@")
+set(TCL_MISSING_PACKAGE_ARTIFACTS)
+foreach (TCL_REQUIRED_PACKAGE_FILE ${TCL_REQUIRED_PACKAGE_FILES})
+  if (NOT EXISTS "${TCL_REQUIRED_PACKAGE_FILE}")
+    list(APPEND TCL_MISSING_PACKAGE_ARTIFACTS "${TCL_REQUIRED_PACKAGE_FILE}")
+  endif ()
+endforeach ()
+foreach (TCL_REQUIRED_PACKAGE_GLOB ${TCL_REQUIRED_PACKAGE_GLOBS})
+  file(GLOB TCL_REQUIRED_PACKAGE_MATCHES "${TCL_REQUIRED_PACKAGE_GLOB}")
+  if (NOT TCL_REQUIRED_PACKAGE_MATCHES)
+    list(APPEND TCL_MISSING_PACKAGE_ARTIFACTS "${TCL_REQUIRED_PACKAGE_GLOB}")
+  endif ()
+endforeach ()
+if (TCL_MISSING_PACKAGE_ARTIFACTS)
+  list(JOIN TCL_MISSING_PACKAGE_ARTIFACTS "\n  " TCL_MISSING_PACKAGE_ARTIFACTS_TEXT)
+  message(FATAL_ERROR
+    "Tcl install did not produce required bundled-package artifacts:\n"
+    "  ${TCL_MISSING_PACKAGE_ARTIFACTS_TEXT}\n"
+    )
+endif ()
 
 message("Tcl install succeeded:\n${CMD_OUT}\n")
 
@@ -38,4 +70,3 @@ message("Tcl install succeeded:\n${CMD_OUT}\n")
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

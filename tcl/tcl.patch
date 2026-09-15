@@ -436,3 +436,156 @@ diff -Naur --exclude=.git tcl/win/makefile.vc TCL_BLD/win/makefile.vc
  	@$(CPY) "$(OUT_DIR)\tcl.nmake"            "$(LIB_INSTALL_DIR)\nmake\"
  	@echo Installing package http 1.0 (obsolete)
  	@$(CPY) "$(ROOT)\library\http1.0\*.tcl" \
+diff -Naur --exclude=.git tcl/pkgs/itcl4.3.7/win/makefile.vc TCL_BLD/pkgs/itcl4.3.7/win/makefile.vc
+--- tcl/pkgs/itcl4.3.7/win/makefile.vc
++++ TCL_BLD/pkgs/itcl4.3.7/win/makefile.vc
+@@ -64,7 +64,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\itclUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\itclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\itclUuid.h
++	copy /b $(WIN_DIR)\itclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\itclUuid.h
+ 
+ (TMP_DIR)\itclBase.obj: $(TMP_DIR)\itclUuid.h
+ 
+diff -Naur --exclude=.git tcl/pkgs/sqlite3.53.0/win/makefile.vc TCL_BLD/pkgs/sqlite3.53.0/win/makefile.vc
+--- tcl/pkgs/sqlite3.53.0/win/makefile.vc
++++ TCL_BLD/pkgs/sqlite3.53.0/win/makefile.vc
+@@ -31,7 +31,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\sqlite3Uuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\sqlite3Uuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\sqlite3Uuid.h
++	copy /b $(WIN_DIR)\sqlite3Uuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\sqlite3Uuid.h
+ 
+ # Preprocessor macros specific to sqlite3.
+ PRJ_DEFINES = -I"$(ROOT)\.." -D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE \
+diff -Naur --exclude=.git tcl/pkgs/tdbc1.1.13/win/makefile.vc TCL_BLD/pkgs/tdbc1.1.13/win/makefile.vc
+--- tcl/pkgs/tdbc1.1.13/win/makefile.vc
++++ TCL_BLD/pkgs/tdbc1.1.13/win/makefile.vc
+@@ -78,7 +78,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tdbcUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tdbcUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcUuid.h
++	copy /b $(WIN_DIR)\tdbcUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcUuid.h
+ 
+ .PHONY: $(OUT_DIR)\tdbcConfig.sh
+ 
+diff -Naur --exclude=.git tcl/pkgs/tdbcmysql1.1.13/win/makefile.vc TCL_BLD/pkgs/tdbcmysql1.1.13/win/makefile.vc
+--- tcl/pkgs/tdbcmysql1.1.13/win/makefile.vc
++++ TCL_BLD/pkgs/tdbcmysql1.1.13/win/makefile.vc
+@@ -107,7 +107,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tdbcMysqlUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tdbcMysqlUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcMysqlUuid.h
++	copy /b $(WIN_DIR)\tdbcMysqlUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcMysqlUuid.h
+ 
+ .PHONY: $(OUT_DIR)\tdbcConfig.sh
+ 
+diff -Naur --exclude=.git tcl/pkgs/tdbcodbc1.1.13/win/makefile.vc TCL_BLD/pkgs/tdbcodbc1.1.13/win/makefile.vc
+--- tcl/pkgs/tdbcodbc1.1.13/win/makefile.vc
++++ TCL_BLD/pkgs/tdbcodbc1.1.13/win/makefile.vc
+@@ -109,7 +109,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tdbcOdbcUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tdbcOdbcUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcOdbcUuid.h
++	copy /b $(WIN_DIR)\tdbcOdbcUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcOdbcUuid.h
+ 
+ test: test-jet test-sqlserver test-sqlite
+ 
+diff -Naur --exclude=.git tcl/pkgs/tdbcpostgres1.1.13/win/makefile.vc TCL_BLD/pkgs/tdbcpostgres1.1.13/win/makefile.vc
+--- tcl/pkgs/tdbcpostgres1.1.13/win/makefile.vc
++++ TCL_BLD/pkgs/tdbcpostgres1.1.13/win/makefile.vc
+@@ -107,7 +107,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tdbcPostgresUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tdbcPostgresUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcPostgresUuid.h
++	copy /b $(WIN_DIR)\tdbcPostgresUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tdbcPostgresUuid.h
+ 
+ test: setup $(PROJECT)
+ 	@set TCL_LIBRARY=$(TCL_LIBRARY:\=/)
+diff -Naur --exclude=.git tcl/pkgs/thread2.8.13/win/makefile.vc TCL_BLD/pkgs/thread2.8.13/win/makefile.vc
+--- tcl/pkgs/thread2.8.13/win/makefile.vc
++++ TCL_BLD/pkgs/thread2.8.13/win/makefile.vc
+@@ -56,7 +56,7 @@
+    git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\threadUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\threadUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\threadUuid.h
++	copy /b $(WIN_DIR)\threadUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\threadUuid.h
+ 
+ # Explicit dependency rules
+ $(GENERICDIR)\psGdbm.c: $(GENERICDIR)\psGdbm.h
+diff -Naur --exclude=.git tcl/win/makefile.vc TCL_BLD/win/makefile.vc
+--- tcl/win/makefile.vc
++++ TCL_BLD/win/makefile.vc
+@@ -564,41 +564,41 @@
+ pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ test-pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) test &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) test && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ install-pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) install &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) install && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ clean-pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) clean &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) clean && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ hose-pkgs:
+ 	@for /d %d in ($(PKGSDIR)\*) do \
+ 	  @if exist "%~fd\win\makefile.vc" ( \
+-	    pushd "%~fd\win" & \
+-	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) hose &\
+-	    popd \
++	    pushd "%~fd\win" && \
++	    $(MAKE) -$(MAKEFLAGS) -f makefile.vc TCLDIR=$(ROOT) hose && \
++	    popd || exit /b 1 \
+ 	  )
+ 
+ $(CAT32): $(WIN_DIR)\cat.c
+@@ -799,7 +799,7 @@
+ 	git rev-parse HEAD >>$(ROOT)\manifest.uuid
+ 
+ $(TMP_DIR)\tclUuid.h:	$(ROOT)\manifest.uuid
+-	copy $(WIN_DIR)\tclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tclUuid.h
++	copy /b $(WIN_DIR)\tclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tclUuid.h
+ 
+ $(TMP_DIR)\tclAppInit.obj: $(WIN_DIR)\tclAppInit.c
+ 	$(cc32) $(appcflags) /DUNICODE /D_UNICODE \

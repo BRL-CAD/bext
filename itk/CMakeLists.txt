@@ -55,6 +55,7 @@ if (ENABLE_ITK)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/itk"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${CMAKE_COMMAND} -DITK_SOURCE_DIR=<SOURCE_DIR> -DITK_PATCH_EXECUTABLE=${PATCH_NATIVE_EXECUTABLE} -DITK_PATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/itk.patch -P ${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/manifest.uuid <SOURCE_DIR>/manifest.uuid
       COMMAND ${CMAKE_COMMAND} -E make_directory <SOURCE_DIR>/tclconfig
       COMMAND ${CMAKE_COMMAND} -E copy ${BEXT_ITCL_BUNDLED_SOURCE_DIR}/tclconfig/install-sh <SOURCE_DIR>/tclconfig/install-sh
       CONFIGURE_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/itk_configure.cmake
@@ -67,10 +68,15 @@ if (ENABLE_ITK)
       STEP_TARGETS install
       )
   else (NOT MSVC)
+    # Itk's rules.vc is newer than Tcl 8.6's, so rules-ext.vc selects the
+    # local nmake support files.  Upstream omits the matching targets.vc;
+    # supply the complete file rather than patching one into existence.
     ExternalProject_Add(ITK_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/itk"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${CMAKE_COMMAND} -DITK_SOURCE_DIR=<SOURCE_DIR> -DITK_PATCH_EXECUTABLE=${PATCH_NATIVE_EXECUTABLE} -DITK_PATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/itk.patch -P ${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/manifest.uuid <SOURCE_DIR>/manifest.uuid
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/targets.vc <SOURCE_DIR>/win/targets.vc
       COMMAND ${CMAKE_COMMAND} -E make_directory <SOURCE_DIR>/tclconfig
       COMMAND ${CMAKE_COMMAND} -E copy ${BEXT_ITCL_BUNDLED_SOURCE_DIR}/tclconfig/install-sh <SOURCE_DIR>/tclconfig/install-sh
       CONFIGURE_COMMAND ""

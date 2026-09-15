@@ -277,9 +277,17 @@ if (NOT isMultiConfig)
   set(BUILD_TYPE_SPECIFIER "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 endif (NOT isMultiConfig)
 
-# With MSVC, some of the non-CMake subbuilds are going to need the vcvars bat
-# file to set up the environment.
+# With MSVC, some of the non-CMake subbuilds may need the vcvars bat file to
+# set up their environment.  The generated wrappers use an environment already
+# initialized by VsDevCmd when one is available, and call this compiler-relative
+# fallback otherwise.
 if(MSVC)
+
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(BEXT_MSVC_TARGET_ARCH x64)
+  else(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(BEXT_MSVC_TARGET_ARCH x86)
+  endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
 
   get_filename_component(COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
   get_filename_component(COMPILER_ROOT "${COMPILER_DIR}" NAME)
@@ -291,11 +299,11 @@ if(MSVC)
       get_filename_component(COMPILER_DIR "${COMPILER_DIR}" DIRECTORY)
     endforeach(DIRS RANGE 0 5)
     set(COMPILER_DIR "${COMPILER_DIR}/Auxiliary/Build")
-    if(CMAKE_CL_64)
+    if(BEXT_MSVC_TARGET_ARCH STREQUAL "x64")
       set(VCVARS_BAT "${COMPILER_DIR}/vcvars64.bat")
-    else(CMAKE_CL_64)
+    else(BEXT_MSVC_TARGET_ARCH STREQUAL "x64")
       set(VCVARS_BAT "${COMPILER_DIR}/vcvars32.bat")
-    endif(CMAKE_CL_64)
+    endif(BEXT_MSVC_TARGET_ARCH STREQUAL "x64")
     if(NOT EXISTS "${VCVARS_BAT}")
       message(FATAL_ERROR "Could not find vcvars bat file in ${COMPILER_DIR}")
     endif(NOT EXISTS "${VCVARS_BAT}")

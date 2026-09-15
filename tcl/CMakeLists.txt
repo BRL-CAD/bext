@@ -157,6 +157,51 @@ if (ENABLE_TCL)
       "TCLSH_SEARCH_FLAGS=-Wl,-z,origin,-R,'$$ORIGIN/../${LIB_DIR}'")
   endif ()
 
+  # The Tcl full-source distribution carries generated manifest.uuid files
+  # for its bundled packages, but those files are ignored by Tcl's Git rules
+  # and may therefore be absent from a Git-based vendor import.  The Windows
+  # package makefiles try to reconstruct them with `git rev-parse`, which
+  # cannot work in ExternalProject's copied source tree.  Supply a deterministic
+  # fallback for every affected package and record an installed artifact that
+  # will prove the package was not silently skipped.
+  set(TCL_PACKAGE_MANIFEST_SETUP_COMMANDS)
+  set(TCL_REQUIRED_PACKAGE_FILES)
+  set(TCL_REQUIRED_PACKAGE_GLOBS)
+  if (MSVC)
+    file(GLOB TCL_PACKAGE_SOURCE_DIRS LIST_DIRECTORIES true
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl/pkgs/*"
+      )
+    foreach (TCL_PACKAGE_SOURCE_DIR ${TCL_PACKAGE_SOURCE_DIRS})
+      set(TCL_PACKAGE_MAKEFILE "${TCL_PACKAGE_SOURCE_DIR}/win/makefile.vc")
+      if (EXISTS "${TCL_PACKAGE_MAKEFILE}" AND
+          NOT EXISTS "${TCL_PACKAGE_SOURCE_DIR}/manifest.uuid")
+        file(READ "${TCL_PACKAGE_MAKEFILE}" TCL_PACKAGE_MAKEFILE_CONTENTS)
+        if (TCL_PACKAGE_MAKEFILE_CONTENTS MATCHES "manifest[.]uuid")
+          get_filename_component(TCL_PACKAGE_NAME "${TCL_PACKAGE_SOURCE_DIR}" NAME)
+          list(APPEND TCL_PACKAGE_MANIFEST_SETUP_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -E copy
+              ${CMAKE_CURRENT_SOURCE_DIR}/package_manifest.uuid
+              <SOURCE_DIR>/pkgs/${TCL_PACKAGE_NAME}/manifest.uuid
+            )
+          if (TCL_PACKAGE_MAKEFILE_CONTENTS MATCHES "TM_INSTALL_DIR")
+            list(APPEND TCL_REQUIRED_PACKAGE_GLOBS
+              "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/tcl${TCL_MAJOR_VERSION}/${TCL_MAJOR_VERSION}.${TCL_MINOR_VERSION}/tdbc/sqlite3-*.tm"
+              )
+          else ()
+            list(APPEND TCL_REQUIRED_PACKAGE_FILES
+              "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${TCL_PACKAGE_NAME}/pkgIndex.tcl"
+              )
+          endif ()
+        endif ()
+      endif ()
+    endforeach ()
+    unset(TCL_PACKAGE_MAKEFILE_CONTENTS)
+    unset(TCL_PACKAGE_MAKEFILE)
+    unset(TCL_PACKAGE_NAME)
+    unset(TCL_PACKAGE_SOURCE_DIR)
+    unset(TCL_PACKAGE_SOURCE_DIRS)
+  endif ()
+
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_install.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_install.cmake @ONLY)
@@ -210,6 +255,7 @@ if (ENABLE_TCL)
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl.patch
       COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch
+      ${TCL_PACKAGE_MANIFEST_SETUP_COMMANDS}
       CONFIGURE_COMMAND ""
       BINARY_DIR ${TCL_SRC_DIR}/win
       BUILD_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake
