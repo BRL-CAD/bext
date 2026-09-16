@@ -78,6 +78,9 @@ if (GIT_SHALLOW_CLONE)
   list(APPEND git_args --recommend-shallow)
 endif (GIT_SHALLOW_CLONE)
 list(APPEND git_args -- ${project_paths})
+if (WIN32)
+  list(PREPEND git_args -c core.longpaths=true)
+endif (WIN32)
 
 execute_process(
   COMMAND ${GIT_EXECUTABLE} ${git_args}

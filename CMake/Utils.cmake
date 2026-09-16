@@ -107,17 +107,21 @@ function(git_submodule_init path checkfile)
     if (NOT GIT_EXECUTABLE)
       message(FATAL_ERROR "Need to populate Git submodule, but unable to find git executable")
     endif (NOT GIT_EXECUTABLE)
-    if (NOT GIT_SHALLOW_CLONE)
-      execute_process(
-	COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive ${path}
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      )
-    else (NOT GIT_SHALLOW_CLONE)
-      execute_process(
-	COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --recommend-shallow ${path}
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      )
-    endif (NOT GIT_SHALLOW_CLONE)
+    set(git_args submodule update --init --recursive)
+    if (GIT_SHALLOW_CLONE)
+      list(APPEND git_args --recommend-shallow)
+    endif (GIT_SHALLOW_CLONE)
+    if (WIN32)
+      list(PREPEND git_args -c core.longpaths=true)
+    endif (WIN32)
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} ${git_args} ${path}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMAND_ERROR_IS_FATAL ANY
+    )
+    if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile}")
+      message(FATAL_ERROR "Git submodule ${path} is missing ${checkfile} after checkout")
+    endif ()
     execute_process(
       COMMAND git log -1 --format=%H
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${path}

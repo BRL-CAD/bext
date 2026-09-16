@@ -106,6 +106,10 @@ sudo apt install autotools-dev autoconf
 If you enable Qt, Appleseed, or OSPRay, make sure Python 3 is installed and
 available in the build environment.
 
+Keep the source and build directories close to the drive root when possible.
+Some Windows build tools still have path length limits, even though bext enables
+Git's long path handling when it checks out submodules.
+
 # macOS
 
 Assuming XCode is installed, good to go.
