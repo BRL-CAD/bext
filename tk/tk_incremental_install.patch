@@ -1,0 +1,56 @@
+--- a/unix/Makefile.in
++++ b/unix/Makefile.in
+@@ -222,9 +222,9 @@
+ INSTALL_STRIP_PROGRAM	= strip
+ INSTALL_STRIP_LIBRARY	= strip -x
+ 
+-INSTALL			= $(SHELL) $(UNIX_DIR)/install-sh -c
++INSTALL			= $(SHELL) $(UNIX_DIR)/install-sh -c -C
+ INSTALL_PROGRAM		= ${INSTALL}
+-INSTALL_LIBRARY		= ${INSTALL}
++INSTALL_LIBRARY		= ${INSTALL} -m 644
+ INSTALL_DATA		= ${INSTALL} -m 644
+ INSTALL_DATA_DIR	= ${INSTALL} -d -m 755
+ 
+@@ -727,7 +727,6 @@
+ 	    done;
+ 	@if test "x$(TK_SHARED_BUILD)" = "x1"; then \
+ 	    echo "Creating package index $(PKG_INDEX)"; \
+-	    rm -f "$(PKG_INDEX)"; \
+ 	    (\
+ 	    echo "if {![package vsatisfies [package provide Tcl] 8.6.0]} return";\
+ 	    relative=`echo | awk '{ORS=" "; split("$(TK_PKG_DIR)",a,"/"); for (f in a) {print ".."}}'`;\
+@@ -741,11 +740,15 @@
+ 	    echo "    package ifneeded Tk $(MAJOR_VERSION).$(MINOR_VERSION)$(PATCH_LEVEL) [list load [file normalize [file join \$$dir $${relative}.. bin tk${MAJOR_VERSION}${MINOR_VERSION}.dll]]]";\
+ 	    echo "}";\
+ 	    fi \
+-	    ) > "$(PKG_INDEX)"; \
++	    ) > "$(PKG_INDEX).new"; \
++	    if cmp "$(PKG_INDEX)" "$(PKG_INDEX).new" >/dev/null 2>&1; then \
++		rm -f "$(PKG_INDEX).new"; \
++	    else \
++		mv -f "$(PKG_INDEX).new" "$(PKG_INDEX)"; \
++	    fi; \
+ 	    fi
+ 	@echo "Installing $(LIB_FILE) to $(DLL_INSTALL_DIR)/"
+ 	@@INSTALL_LIB@
+-	@chmod 555 "$(DLL_INSTALL_DIR)/$(LIB_FILE)"
+ 	@if test -f "tk${MAJOR_VERSION}${MINOR_VERSION}.dll"; then \
+ 	    $(INSTALL_LIBRARY) "tk${MAJOR_VERSION}${MINOR_VERSION}.dll" "$(DLL_INSTALL_DIR)";\
+ 	    chmod 555 "$(DLL_INSTALL_DIR)/tk${MAJOR_VERSION}${MINOR_VERSION}.dll";\
+@@ -814,8 +817,14 @@
+ 	@for i in $(TOP_DIR)/library/demos/*; \
+ 	    do \
+ 	    if [ -f $$i ] ; then \
++		dest="$(DEMO_INSTALL_DIR)/`basename $$i`"; \
+ 		sed -e '3 s|exec wish|exec wish$(VERSION)|' \
+-			$$i > "$(DEMO_INSTALL_DIR)"/`basename $$i`; \
++			$$i > "$$dest.new"; \
++		if cmp "$$dest" "$$dest.new" >/dev/null 2>&1; then \
++		    rm -f "$$dest.new"; \
++		else \
++		    mv -f "$$dest.new" "$$dest"; \
++		fi; \
+ 	    fi; \
+ 	    done;
+ 	@for i in $(DEMOPROGS); \

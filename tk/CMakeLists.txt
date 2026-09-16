@@ -87,7 +87,8 @@ if (TK_DO_BUILD)
   set(TK_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tk_manifest.patch")
   if (NOT MSVC)
     list(APPEND TK_PATCH_FILES
-      "${CMAKE_CURRENT_SOURCE_DIR}/tk_unix_build.patch")
+      "${CMAKE_CURRENT_SOURCE_DIR}/tk_unix_build.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tk_incremental_install.patch")
   endif ()
   if (WIN32)
     list(APPEND TK_PATCH_FILES

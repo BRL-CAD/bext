@@ -47,6 +47,21 @@ function(bext_write_file_list outvar filename values)
   set(${outvar} "${filename}" PARENT_SCOPE)
 endfunction()
 
+function(bext_content_fingerprints outvar root label file_list_var)
+  set(records "")
+  foreach(relative IN LISTS ${file_list_var})
+    set(path "${root}/${relative}")
+    if (IS_SYMLINK "${path}")
+      file(READ_SYMLINK "${path}" value)
+      string(APPEND records "L ${label}/${relative} ${value}\n")
+    else ()
+      file(SHA256 "${path}" value)
+      string(APPEND records "F ${label}/${relative} ${value}\n")
+    endif ()
+  endforeach()
+  set(${outvar} "${records}" PARENT_SCOPE)
+endfunction()
+
 function(bext_relative_path outvar path)
   file(RELATIVE_PATH relative "${BEXT_INSTALL_ROOT}" "${path}")
   string(REPLACE "\\" "/" relative "${relative}")
@@ -355,15 +370,6 @@ list(SORT plain_text_files)
 # install prefix intact: downstream projects replace this canonical prefix
 # with their own staging prefix after copying the finalized tree.
 set(text_paths ${text_files})
-foreach(path ${text_paths})
-  set(text_path "${BEXT_INSTALL_ROOT}/${path}")
-  if (UNIX)
-    file(CHMOD "${text_path}"
-      PERMISSIONS OWNER_READ OWNER_WRITE
-                  GROUP_READ GROUP_WRITE
-                  WORLD_READ)
-  endif ()
-endforeach()
 foreach(clear_target
     "${BEXT_SOURCE_ROOT}"
     "${BEXT_BINARY_ROOT}"
@@ -392,13 +398,6 @@ if ("${BEXT_SYSTEM_NAME}" STREQUAL "Darwin" AND
     list(APPEND binary_cleanup_paths "${BEXT_INSTALL_ROOT}/${relative}")
   endforeach()
 endif ()
-foreach(path ${binary_paths})
-  if (UNIX)
-    file(CHMOD "${path}"
-      PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-                  GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  endif ()
-endforeach()
 bext_run_binary_clear("${binary_cleanup_paths}")
 bext_run_rpath_update("${rpath_paths}")
 
@@ -408,6 +407,8 @@ bext_json_escape(platform "${BEXT_SYSTEM_NAME}")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"platform\": \"${platform}\",\n")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"install_root\": \"install\",\n")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"generated_by\": \"bext\",\n")
+bext_write_json_array("${BEXT_MANIFEST}.tmp" "files" installed_files)
+file(APPEND "${BEXT_MANIFEST}.tmp" ",\n")
 bext_write_json_array("${BEXT_MANIFEST}.tmp" "rpath" rpath_files)
 file(APPEND "${BEXT_MANIFEST}.tmp" ",\n")
 bext_write_json_array("${BEXT_MANIFEST}.tmp" "binary" binary_files)
@@ -416,7 +417,35 @@ bext_write_json_array("${BEXT_MANIFEST}.tmp" "cmake" cmake_files)
 file(APPEND "${BEXT_MANIFEST}.tmp" ",\n")
 bext_write_json_array("${BEXT_MANIFEST}.tmp" "text" plain_text_files)
 file(APPEND "${BEXT_MANIFEST}.tmp" "\n}\n")
-file(RENAME "${BEXT_MANIFEST}.tmp" "${BEXT_MANIFEST}")
+file(COPY_FILE "${BEXT_MANIFEST}.tmp" "${BEXT_MANIFEST}" ONLY_IF_DIFFERENT)
+file(REMOVE "${BEXT_MANIFEST}.tmp")
 
-file(TOUCH "${BEXT_MANIFEST}")
+# Existing files are watched by downstream builds.  This list also detects
+# additions and removals without changing its timestamp on a no-op build.
+file(GLOB_RECURSE noinstall_files
+  LIST_DIRECTORIES false
+  RELATIVE "${BEXT_NOINSTALL_ROOT}"
+  "${BEXT_NOINSTALL_ROOT}/*"
+)
+list(REMOVE_ITEM noinstall_files "build-stamp")
+list(SORT noinstall_files)
+set(noinstall_inventory "${BEXT_BINARY_ROOT}/CMakeFiles/bext-noinstall-files.txt")
+bext_write_file_list(noinstall_inventory "${noinstall_inventory}" noinstall_files)
+file(COPY_FILE "${noinstall_inventory}" "${BEXT_NOINSTALL_ROOT}/build-stamp"
+  ONLY_IF_DIFFERENT)
+
+# Finalized binaries and config files may be rewritten on every install even
+# when their resulting bytes are unchanged.  Publish one stable dependency for
+# downstream builds instead of making them watch every output timestamp.
+bext_content_fingerprints(installed_content "${BEXT_INSTALL_ROOT}" "install"
+  installed_files)
+bext_content_fingerprints(noinstall_content "${BEXT_NOINSTALL_ROOT}" "noinstall"
+  noinstall_files)
+file(SHA256 "${BEXT_MANIFEST}" manifest_digest)
+string(SHA256 content_digest
+  "${installed_content}${noinstall_content}M ${manifest_digest}\n")
+set(content_stamp "${BEXT_BINARY_ROOT}/bext-content-stamp")
+file(WRITE "${content_stamp}.tmp" "${content_digest}\n")
+file(COPY_FILE "${content_stamp}.tmp" "${content_stamp}" ONLY_IF_DIFFERENT)
+file(REMOVE "${content_stamp}.tmp")
 message(STATUS "Generated bext install manifest: ${BEXT_MANIFEST}")

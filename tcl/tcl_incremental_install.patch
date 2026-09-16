@@ -1,0 +1,60 @@
+--- a/unix/Makefile.in
++++ b/unix/Makefile.in
+@@ -153,9 +153,9 @@
+ INSTALL_STRIP_PROGRAM	= strip
+ INSTALL_STRIP_LIBRARY	= strip -x
+ 
+-INSTALL			= $(SHELL) $(UNIX_DIR)/install-sh -c
++INSTALL			= $(SHELL) $(UNIX_DIR)/install-sh -c -C
+ INSTALL_PROGRAM		= ${INSTALL}
+-INSTALL_LIBRARY		= ${INSTALL}
++INSTALL_LIBRARY		= ${INSTALL} -m 644
+ INSTALL_DATA		= ${INSTALL} -m 644
+ INSTALL_DATA_DIR	= ${INSTALL} -d -m 755
+ 
+@@ -812,7 +812,6 @@
+ 	done
+ 	@echo "Installing $(LIB_FILE) to $(DLL_INSTALL_DIR)/"
+ 	@@INSTALL_LIB@
+-	@chmod 555 "$(DLL_INSTALL_DIR)/$(LIB_FILE)"
+ 	@echo "Installing ${TCL_EXE} as $(BIN_INSTALL_DIR)/tclsh$(VERSION)${EXE_SUFFIX}"
+ 	@$(INSTALL_PROGRAM) ${TCL_EXE} "$(BIN_INSTALL_DIR)/tclsh$(VERSION)${EXE_SUFFIX}"
+ 	@echo "Installing tclConfig.sh to $(CONFIG_INSTALL_DIR)/"
+@@ -1762,7 +1761,7 @@
+ 		if [ -f $(PKG_DIR)/$$pkg/Makefile ] ; then \
+ 		    echo "Installing package '$$pkg'"; \
+ 		    ( cd $(PKG_DIR)/$$pkg; $(MAKE) install \
+-			  "DESTDIR=$(INSTALL_ROOT)"; ) || exit $$?; \
++			  "DESTDIR=$(INSTALL_ROOT)" "INSTALL_OPTIONS=-C"; ) || exit $$?; \
+ 		fi; \
+ 	    fi; \
+ 	done
+--- a/tools/genStubs.tcl
++++ b/tools/genStubs.tcl
+@@ -280,6 +280,16 @@
+     puts -nonewline $out [read $in]
+     close $in
+     close $out
++
++    set old [open $file rb]
++    set new [open ${file}.new rb]
++    set unchanged [string equal [read $old] [read $new]]
++    close $old
++    close $new
++    if {$unchanged} {
++	file delete ${file}.new
++	return
++    }
+     file rename -force ${file}.new ${file}
+     return
+ }
+--- a/pkgs/sqlite3.53.0/Makefile.in
++++ b/pkgs/sqlite3.53.0/Makefile.in
+@@ -242,7 +242,6 @@
+ 	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+ 	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
+ 	    echo "Installing $$i"; \
+-	    rm -f "$(DESTDIR)$(mandir)/mann/`basename $$i`"; \
+ 	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+ 	done
+ 
