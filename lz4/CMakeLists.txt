@@ -3,7 +3,7 @@ bext_enable(LZ4)
 
 if (ENABLE_LZ4)
 
-  git_submodule_init(lz4 CMakeLists.txt)
+  git_submodule_init(lz4 build/cmake/CMakeLists.txt)
 
   RegisterDeps(LZ4)
 
