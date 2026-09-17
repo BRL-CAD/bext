@@ -3,7 +3,7 @@ bext_enable(EXPAT)
 
 if (ENABLE_EXPAT)
 
-  git_submodule_init(libexpat CMakeLists.txt)
+  git_submodule_init(libexpat expat/CMakeLists.txt)
 
   RegisterDeps(EXPAT)
 
