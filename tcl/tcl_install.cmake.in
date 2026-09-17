@@ -18,8 +18,6 @@ file(WRITE "${INSTALL_SCRIPT}"
   "set RC=\n"
   "nmake -f makefile.vc install INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
   "if errorlevel 1 exit /b %ERRORLEVEL%\n"
-  "cd /D \"@BEXT_ITCL_SOURCE_DIR@/win\"\n"
-  "nmake -f makefile.vc install TCLDIR=@TCL_SRC_DIR@ INSTALLDIR=@CMAKE_BUNDLE_INSTALL_PREFIX@ SUFX=\n"
   "exit /b %ERRORLEVEL%\n"
 )
 

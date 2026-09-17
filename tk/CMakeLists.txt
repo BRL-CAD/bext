@@ -42,17 +42,6 @@ if (BEXT_XMIN_ROOT AND NOT DISABLE_TCL AND NOT DISABLE_TK)
   endif ()
 endif ()
 
-# Tcl selection happens first because a missing system Itk requires the whole
-# implementation-coupled stack to be bundled.  Guard that earlier decision so
-# no later option combination can silently select an unvalidated system Tk.
-if (NOT TK_DO_BUILD AND NOT DISABLE_TCL AND NOT DISABLE_TK AND NOT BEXT_TCLTK_SYSTEM_STACK)
-  message(FATAL_ERROR
-    "System Tk may be used only when its Tcl package path provides Itcl "
-    "${BEXT_ITCL_MIN_VERSION} or newer and Itk ${BEXT_ITK_MIN_VERSION} or "
-    "newer.  Enable the bundled stack with -DENABLE_TCL=ON."
-    )
-endif ()
-
 if (TK_DO_BUILD)
 
   git_submodule_init(tk unix/configure)

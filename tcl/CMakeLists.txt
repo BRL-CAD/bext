@@ -32,13 +32,6 @@ endif (APPLE)
 
 
 if (NOT ENABLE_TCL AND NOT DISABLE_TCL)
-  set(BEXT_TCLTK_SYSTEM_STACK OFF CACHE INTERNAL "System Tcl/Tk/Itcl/Itk stack passed validation" FORCE)
-  set(BEXT_ITCL_VERSION "" CACHE INTERNAL "Detected Itcl version" FORCE)
-  set(BEXT_ITK_VERSION "" CACHE INTERNAL "Detected Itk version" FORCE)
-  set(BEXT_ITCL_CONFIG_DIR "" CACHE INTERNAL
-    "Directory containing bundled itclConfig.sh" FORCE)
-  set(BEXT_ITCL_SOURCE_DIR "" CACHE INTERNAL
-    "Bundled Itcl source directory" FORCE)
 
   set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
   find_package(TCL "${TCL_VERSION}")
@@ -51,15 +44,12 @@ if (NOT ENABLE_TCL AND NOT DISABLE_TCL)
     execute_process(
       COMMAND ${TCL_TCLSH} ${CMAKE_CURRENT_SOURCE_DIR}/check_itcl.tcl ${BEXT_ITCL_MIN_VERSION}
       RESULT_VARIABLE ITCL_CHECK_RESULT
-      OUTPUT_VARIABLE ITCL_CHECK_OUTPUT
+      OUTPUT_QUIET
       ERROR_VARIABLE ITCL_CHECK_ERROR
-      OUTPUT_STRIP_TRAILING_WHITESPACE
       )
     if (ITCL_CHECK_RESULT)
       set(BEXT_SYSTEM_STACK_REASON "system Tcl does not provide Itcl ${BEXT_ITCL_MIN_VERSION} or newer")
       string(STRIP "${ITCL_CHECK_ERROR}" BEXT_SYSTEM_STACK_DETAIL)
-    else ()
-      set(BEXT_ITCL_VERSION "${ITCL_CHECK_OUTPUT}" CACHE INTERNAL "Detected Itcl version" FORCE)
     endif ()
   endif ()
 
@@ -74,16 +64,12 @@ if (NOT ENABLE_TCL AND NOT DISABLE_TCL)
       execute_process(
         COMMAND ${TCL_TCLSH} ${CMAKE_SOURCE_DIR}/tk/check_itk.tcl ${BEXT_ITK_MIN_VERSION}
         RESULT_VARIABLE ITK_CHECK_RESULT
-        OUTPUT_VARIABLE ITK_CHECK_OUTPUT
+        OUTPUT_QUIET
         ERROR_VARIABLE ITK_CHECK_ERROR
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
+          )
       if (ITK_CHECK_RESULT)
         set(BEXT_SYSTEM_STACK_REASON "system Tk does not provide Itk ${BEXT_ITK_MIN_VERSION} or newer")
         string(STRIP "${ITK_CHECK_ERROR}" BEXT_SYSTEM_STACK_DETAIL)
-      else ()
-        set(BEXT_ITK_VERSION "${ITK_CHECK_OUTPUT}" CACHE INTERNAL "Detected Itk version" FORCE)
-        set(BEXT_TCLTK_SYSTEM_STACK ON CACHE INTERNAL "System Tcl/Tk/Itcl/Itk stack passed validation" FORCE)
       endif ()
     endif ()
   endif ()
@@ -108,28 +94,13 @@ set(DISABLE_TCL "${DISABLE_TCL}" CACHE BOOL "Disable tcl build")
 if (ENABLE_TCL)
 
   git_submodule_init(tcl unix/configure)
-  if (NOT EXISTS "${BEXT_ITCL_BUNDLED_SOURCE_DIR}/configure")
-    message(FATAL_ERROR
-      "The bundled Tcl source does not contain the expected Itcl "
-      "${BEXT_ITCL_BUNDLED_VERSION} sources.  Use the complete Tcl source "
-      "distribution rather than the core-only source tree."
-      )
-  endif ()
-
   set(TCL_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD")
   set(TCL_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD-build")
 
-  set(BEXT_TCLTK_SYSTEM_STACK OFF CACHE INTERNAL "System Tcl/Tk/Itcl/Itk stack passed validation" FORCE)
-  set(BEXT_ITCL_VERSION "${BEXT_ITCL_BUNDLED_VERSION}" CACHE INTERNAL "Bundled Itcl version" FORCE)
-  set(BEXT_ITCL_CONFIG_DIR
-    "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/itcl${BEXT_ITCL_BUNDLED_VERSION}"
-    CACHE INTERNAL "Directory containing bundled itclConfig.sh" FORCE)
-  set(BEXT_ITCL_SOURCE_DIR
-    "${TCL_SRC_DIR}/pkgs/itcl${BEXT_ITCL_BUNDLED_VERSION}"
-    CACHE INTERNAL "Bundled Itcl source directory" FORCE)
-
-
   RegisterDeps(TCL)
+
+  # Tcl 8.6.18 carries Itcl 4; this branch builds Itcl 3 separately.
+  set(TCL_BUNDLED_ITCL4_PACKAGE_DIR "pkgs/itcl4.3.7")
 
   set(TCL_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/tcl_relocatable_config.patch")
@@ -208,6 +179,9 @@ if (ENABLE_TCL)
         file(READ "${TCL_PACKAGE_MAKEFILE}" TCL_PACKAGE_MAKEFILE_CONTENTS)
         if (TCL_PACKAGE_MAKEFILE_CONTENTS MATCHES "manifest[.]uuid")
           get_filename_component(TCL_PACKAGE_NAME "${TCL_PACKAGE_SOURCE_DIR}" NAME)
+          if (TCL_PACKAGE_NAME MATCHES "^itcl4[.]")
+            continue ()
+          endif ()
           list(APPEND TCL_PACKAGE_MANIFEST_SETUP_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E copy
               ${CMAKE_CURRENT_SOURCE_DIR}/package_manifest.uuid
@@ -255,6 +229,7 @@ if (ENABLE_TCL)
       # use z_brl.  Remove it only from this staging copy after patching Tcl to
       # require z_brl; the pristine source distribution remains untouched.
       COMMAND ${ZLIB_SETUP_COMMANDS}
+      COMMAND ${CMAKE_COMMAND} -E remove_directory <SOURCE_DIR>/${TCL_BUNDLED_ITCL4_PACKAGE_DIR}
       CONFIGURE_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake
 
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make
@@ -284,6 +259,7 @@ if (ENABLE_TCL)
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${TCL_PATCH_COMMAND}
       ${TCL_PACKAGE_MANIFEST_SETUP_COMMANDS}
+      COMMAND ${CMAKE_COMMAND} -E remove_directory <SOURCE_DIR>/${TCL_BUNDLED_ITCL4_PACKAGE_DIR}
       CONFIGURE_COMMAND ""
       BINARY_DIR ${TCL_SRC_DIR}/win
       BUILD_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake

@@ -1,20 +1,11 @@
 Tcl in bext
 ===========
 
-Bext builds Tcl from the complete upstream source distribution mirrored by the
-RELEASE branch of BRL-CAD/tcl.  The Tcl core Git tags are not sufficient for
-this purpose: release assembly adds the packages under pkgs, including Itcl.
-Tcl 8.6.18 supplies Itcl 4.3.7 there.  Configuration fails immediately if the
-declared Itcl source directory is absent, rather than allowing the later Itk
-build to fail with incomplete private headers or configuration data.
-
-The bundled Itcl version and the minimum system version are deliberately
-separate.  The source distribution determines the former.  The latter is the
-oldest version that passes BRL-CAD's Tcl-first and Tk-first GUI baselines as
-well as upstream Itk compatibility testing.  Itcl 4.3.0 is required for the
-workaround to Tcl 8.6.15's `Tcl_NewObjectInstance` behavior; earlier Itcl 4
-releases fail when Iwidgets classes are loaded after Tk.  A newer Tcl release
-does not by itself raise the complete system-stack requirement.
+Bext builds Tcl 8.6.18 from the complete upstream source distribution.
+That distribution includes Itcl 4.3.7, which the itcl3 branch removes from
+its ExternalProject staging copy before configuration.  Itcl 3 is built from
+its own pinned submodule, and system package selection requires the same
+major version for both Itcl and Itk.
 
 zlib selection
 --------------
@@ -60,5 +51,5 @@ A bundled-stack build must establish all of the following:
 * Tcl's configure probe resolves brl_deflateSetHeader from -lz_brl;
 * the installed Tcl library depends on libz_brl and has unresolved brl_ zlib
   symbols for that library to satisfy;
-* package require reports Itcl 4.3.7, Itk 4.2.7, and Iwidgets 4.1.1; and
+* package require reports Itcl 3.4, Itk 3.4, and Iwidgets 4.1.1; and
 * Itk's upstream suite and BRL-CAD's Tcl GUI baseline pass under Xmin.

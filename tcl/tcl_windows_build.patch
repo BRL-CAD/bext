@@ -182,17 +182,6 @@
  	@$(CPY) "$(OUT_DIR)\tcl.nmake"            "$(LIB_INSTALL_DIR)\nmake\"
  	@echo Installing package http 1.0 (obsolete)
  	@$(CPY) "$(ROOT)\library\http1.0\*.tcl" \
---- a/pkgs/itcl4.3.7/win/makefile.vc
-+++ b/pkgs/itcl4.3.7/win/makefile.vc
-@@ -64,7 +64,7 @@
-    git rev-parse HEAD >>$(ROOT)\manifest.uuid
- 
- $(TMP_DIR)\itclUuid.h:	$(ROOT)\manifest.uuid
--	copy $(WIN_DIR)\itclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\itclUuid.h
-+	copy /b $(WIN_DIR)\itclUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\itclUuid.h
- 
- (TMP_DIR)\itclBase.obj: $(TMP_DIR)\itclUuid.h
- 
 --- a/pkgs/sqlite3.53.0/win/makefile.vc
 +++ b/pkgs/sqlite3.53.0/win/makefile.vc
 @@ -31,7 +31,7 @@

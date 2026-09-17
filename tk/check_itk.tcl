@@ -17,9 +17,11 @@ if {[catch {{*}$packageHandler Itk $minimumVersion} message]} {
     exit 1
 }
 
+set requiredMajor [lindex [split $minimumVersion .] 0]
 set selectedVersion ""
 foreach version [package versions Itk] {
-    if {[package vcompare $version $minimumVersion] < 0} {
+    if {[lindex [split $version .] 0] ne $requiredMajor ||
+        [package vcompare $version $minimumVersion] < 0} {
         continue
     }
     if {$selectedVersion eq "" ||
@@ -29,7 +31,7 @@ foreach version [package versions Itk] {
 }
 
 if {$selectedVersion eq ""} {
-    puts stderr "Itk $minimumVersion or newer is required"
+    puts stderr "Itk $minimumVersion or newer in major version $requiredMajor is required"
     exit 1
 }
 
