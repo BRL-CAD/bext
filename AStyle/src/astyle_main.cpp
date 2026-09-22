@@ -957,7 +957,7 @@ void ASConsole::setAcceptEmptyInputFileList(bool state)
  */
 std::string ASConsole::getCurrentDirectory(const std::string& fileName_) const
 {
-	std::string currentDir = std::filesystem::current_path().string();
+	std::string currentDir = getPathString(std::filesystem::current_path());
 	if (currentDir.empty())
 		error("Cannot find file", fileName_.c_str());
 	return currentDir;
@@ -981,22 +981,66 @@ void ASConsole::getFileNames(const std::string& directory, const std::vector<std
 	std::vector<std::string> subDirectory;
 
 	for (const auto& entry : std::filesystem::directory_iterator(directory)) {
-		const std::string entryPath = entry.path().string();
-		const std::string entryName = entry.path().filename().string();
 
+		if (isVerbose) {
+
+			printMsg(_("Debug: loop %s\n"), sanitizeForTerminal(entry.path().string().c_str()));
+		}
 		// Skip symlinks. is_directory()/is_regular_file() below follow symlinks,
 		// so descending into a symlinked directory can escape the target tree or
 		// loop forever on a symlink cycle. entry.is_symlink() uses symlink_status
 		// and does not follow the link.
 		if (entry.is_symlink())
+		{
+
+			if (isVerbose) {
+				printMsg(_("Debug: %s\n"), "is_symlink");
+				printMsg(_("Debug: skip, is a symlink  %s\n"), sanitizeForTerminal(entry.path().string().c_str()));
+			}
+
 			continue;
+		}
+
+
+		// Skip entries whose name has no exact narrow-string representation
+		// (e.g. CJK or Cyrillic characters outside the current codepage).
+		// entryName/entryPath would then be a mismatched placeholder that
+		// cannot be opened, matched against excludes, or recursed into; going
+		// ahead with it would either mis-exclude the entry or -- worse --
+		// have a later open/exists() call fail and abort the whole run via
+		// error(), losing every other file still to be processed.
+		bool nameLossy = false;
+		const std::string entryName = getPathString(entry.path().filename(), &nameLossy);
+		if (nameLossy || entryName.empty())
+		{
+			if (isVerbose)
+				printMsg(_("Debug: %s\n"), "nameLossy");
+			// directory equals targetDirectory (shorter than mainDirectoryLength)
+			// when this fires at the top level of the scan, so substr() is only
+			// safe once directory has grown past that point via recursion.
+			const std::string displayDir = directory.length() >= mainDirectoryLength
+				 ? directory.substr(mainDirectoryLength) : directory;
+			printMsg(_("Cannot represent filename, skipping entry in  %s\n"),
+					sanitizeForTerminal(displayDir));
+			continue;
+		}
+
+		const std::string entryPath = getPathString(entry.path());
 
 		// Skip hidden or read-only files
-		if (entryName[0] == '.' || !isWriteable(entry.path()))
+		if (entryName[0] == '.' || !isWriteable(entry.path())) {
+			if (isVerbose)
+				printMsg(_("Debug: skip %s\n"), "hidden or read-only");
 			continue;
+		}
+
 
 		// If it's a directory and recursive is enabled
 		if (std::filesystem::is_directory(entry) && isRecursive) {
+
+			if (isVerbose)
+				printMsg(_("Debug: skip %s\n"), "directory and recursive is enabled");
+
 			if (isPathExcluded(entryPath))
 				printMsg(_("Exclude  %s\n"), sanitizeForTerminal(entryPath.substr(mainDirectoryLength)));
 			else
@@ -1010,9 +1054,12 @@ void ASConsole::getFileNames(const std::string& directory, const std::vector<std
 			bool isExcluded = isPathExcluded(entryPath);
 			// Save file name if wildcard match
 			for (const std::string& wildcard : wildcards) {
+				if (isVerbose)
+					printMsg(_("Debug: %s\n"), "wildcard match");
+
 				if (wildcmp(wildcard.c_str(), entryName.c_str())) {
 					if (isExcluded)
-						printMsg(_("Exclude  %s\n"), sanitizeForTerminal(entryPath.substr(mainDirectoryLength)));
+						printMsg(_("Exclude %s\n"), sanitizeForTerminal(entryPath.substr(mainDirectoryLength)));
 					else
 						fileName.emplace_back(entryPath);
 					break;
@@ -1072,16 +1119,97 @@ std::string ASConsole::getNumberFormat(int num, size_t /*lcid*/) const
 bool ASConsole::isWriteable(const std::filesystem::path& path) const
 {
 #ifdef _WIN32
-	// Windows implementation
-	DWORD attributes = GetFileAttributes(path.string().c_str());
+		// Use the wide API directly (path.c_str() is wchar_t* on Windows) so long
+		// paths and non-ASCII characters are not mangled by narrowing to the
+		// current ANSI codepage, which is what GetFileAttributesA does internally.
+		DWORD attributes = GetFileAttributesW(path.c_str());
+
+		// If the attributes could not be retrieved, don't treat the entry as
+		// read-only: that silently skips it in getFileNames() before it can be
+		// exclude-matched or processed, which is worse than assuming it's writeable.
+		if (attributes == INVALID_FILE_ATTRIBUTES)
+		{
+			// Query failed (e.g. path encoding or a transient FS issue); treating
+			// this as read-only would silently drop the entry before it ever
+			// reaches the exclude/wildcard checks. Assume writeable instead.
+			if (isVerbose)
+			{
+				std::ostringstream dbg;
+				dbg << "GetFileAttributes failed (error " << GetLastError()
+					 << ")  " << path.string();
+				printMsg(_("Debug: %s\n"), dbg.str());
+			}
+			 return true;
+		}
+
 	return !(attributes & FILE_ATTRIBUTE_READONLY);
 #else
 	// Linux implementation
 	struct stat statbuf;
-	stat(path.c_str(), &statbuf);
+	if (stat(path.c_str(), &statbuf) != 0)
+		return true;
 	return (statbuf.st_mode & S_IWUSR);
 #endif
 }
+
+/**
++ * Convert a filesystem path to a narrow std::string without throwing.
++ *
++ * std::filesystem::path::string() converts through the current C-locale
++ * codepage on Windows and throws std::system_error if a character (e.g. a
++ * CJK or Cyrillic name) cannot be represented in it -- which happens as
++ * soon as ASLocalizer switches the locale away from "C" via
++ * setlocale(LC_ALL, "") to pick up the OS regional codepage. AStyle is
++ * built without C++ exceptions, so that throw crashes the process instead
++ * of being caught. Convert through the Windows API directly instead, with
++ * lossy substitution for unmappable characters rather than failing.
++ *
++ * @param path      The filesystem path to convert.
++ * @param lossy     If not null, set to true when path contained a character
++ *                  that has no exact match in the target codepage (Windows
++ *                  only; always cleared to false on non-Windows platforms).
++ *                  The returned std::string is then a placeholder that will
++ *                  not resolve back to the original file on disk, and
++ *                  callers should treat the entry as inaccessible instead of
++ *                  acting on the mismatched path.
++ * @return          The narrow representation of path.
++ */
+std::string ASConsole::getPathString(const std::filesystem::path & path, bool* lossy /*nullptr*/) const
+ {
+	#ifdef _WIN32
+
+	if (lossy)
+		*lossy = false;
+
+	const std::wstring & wide = path.native();
+	if (wide.empty())
+		 return std::string();
+
+	int size = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, wide.c_str(), (int)wide.size(),
+		nullptr, 0, nullptr, nullptr);
+
+	if (size <= 0)
+	{
+		if (lossy)
+			*lossy = true;
+		return std::string();
+	}
+	std::string narrow(size, '\0');
+	BOOL usedDefaultChar = FALSE;
+	WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, wide.c_str(), (int)wide.size(),
+		narrow.data(), size, nullptr, &usedDefaultChar);
+
+	if (lossy && usedDefaultChar)
+		 *lossy = true;
+
+	return narrow;
+#else
+		 if (lossy)
+		*lossy = false;
+return path.string();
+	#endif
+}
+
 
 /**
  * Helper function to format a number according to the current locale.
@@ -1362,7 +1490,7 @@ void ASConsole::launchDefaultBrowser(const char* filePathIn /*nullptr*/) const
 // Return the full path name or an empty std::string if failed.
 std::string ASConsole::getFullPathName(const std::string& relativePath) const
 {
-	return std::filesystem::absolute(std::filesystem::path(relativePath)).string();
+	return getPathString(std::filesystem::absolute(std::filesystem::path(relativePath)));
 }
 
 /**

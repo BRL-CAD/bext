@@ -341,6 +341,7 @@ private:	// functions
 	bool isBomlessUtf16(const char* data, size_t dataSize) const;
 	bool isHomeOrInvalidAbsPath(const std::string& absPath) const;
 	bool isWriteable(const std::filesystem::path& path) const;
+	std::string getPathString(const std::filesystem::path& path, bool* lossy = nullptr) const;
 	void initializeOutputEOL(LineEndFormat lineEndFormat);
 	bool isOption(const std::string& arg, const char* op);
 	bool isOption(const std::string& arg, const char* a, const char* b);
