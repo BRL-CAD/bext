@@ -20,11 +20,15 @@ if (ENABLE_STRCLEAR)
 
   RegisterDeps(STRCLEAR)
 
+  # strclear is a host-side build utility that scans multi-gigabyte library
+  # trees.  It has no ABI relationship with BRL-CAD, and an MSVC Debug build
+  # is prohibitively slow because checked iterators run inside its search
+  # loops.  Always optimize this helper, including in a Debug bext tree.
   ExternalProject_Add(STRCLEAR_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/strclear"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     CMAKE_ARGS
-    ${BUILD_TYPE_SPECIFIER}
+    -DCMAKE_BUILD_TYPE=Release
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -DDATA_DIR=${DATA_DIR}
