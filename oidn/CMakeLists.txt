@@ -7,6 +7,17 @@ if (ENABLE_OIDN)
 
   RegisterDeps(OIDN)
 
+  # OIDN is always built Release, including in a Debug bext tree.  On MSVC,
+  # oneTBB's headers otherwise auto-link tbb12.lib even when the imported
+  # TBB::tbb target correctly resolves to the tree's tbb12_debug.lib.  Rely on
+  # the explicit CMake target, as OIDN's fallback FindTBB module does.
+  set(OIDN_CXX_FLAGS_ARGS)
+  if (MSVC)
+    list(APPEND OIDN_CXX_FLAGS_ARGS
+      -DCMAKE_CXX_FLAGS:STRING=/D__TBB_NO_IMPLICIT_LINKAGE=1
+      )
+  endif (MSVC)
+
   ExternalProject_Add(OIDN_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oidn"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -15,6 +26,7 @@ if (ENABLE_OIDN)
     # OIDN's debug builds are broken upstream, so it is always built Release -
     # this matches OSPRay's own superbuild recipe (dep_oidn.cmake).
     -DCMAKE_BUILD_TYPE=Release
+    ${OIDN_CXX_FLAGS_ARGS}
     -DCMAKE_PREFIX_PATH=${CMAKE_BUNDLE_INSTALL_PREFIX}
     $<$<BOOL:${ONETBB_TARGET}>:-DTBB_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
     $<$<BOOL:${ISPC_TARGET}>:-DISPC_EXECUTABLE=${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/ispc${CMAKE_EXECUTABLE_SUFFIX}>
@@ -40,6 +52,8 @@ if (ENABLE_OIDN)
     LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
     STEP_TARGETS install
     )
+
+  unset(OIDN_CXX_FLAGS_ARGS)
 
   TargetInstallDeps(OIDN OIDN_DEPENDS)
   # ISPC is only produced when a renderer group (e.g. OSPRAY) is active, so wire
