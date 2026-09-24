@@ -26,6 +26,14 @@ endif (NOT WIN32)
 # https://doc.qt.io/qt-6/configure-options.html
 set(CONFIG_EXTRA_OPTS ${CONFIG_EXTRA_OPTS} -qt-zlib -qt-libpng)
 
+# Qt's configure wrapper performs a nested CMake configure.  Preserve the
+# toolchain selected for bext instead of allowing another compiler on PATH to
+# produce an ABI-incompatible Qt build.
+list(APPEND QT_CMAKE_OPTS
+  "-DCMAKE_C_COMPILER=@CMAKE_C_COMPILER@"
+  "-DCMAKE_CXX_COMPILER=@CMAKE_CXX_COMPILER@"
+)
+
 if (QT_XMIN_ENABLED)
   list(APPEND CONFIG_EXTRA_OPTS
     -qpa xcb
