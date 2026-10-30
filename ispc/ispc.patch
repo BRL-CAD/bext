@@ -45,12 +45,19 @@ index 042e6dd..0d3a2ca 100644
 diff --git a/src/util.cpp b/src/util.cpp
 --- a/src/util.cpp
 +++ b/src/util.cpp
-@@ -51,4 +51,4 @@
- void std::__libcpp_verbose_abort(char const *format, ...)
+@@ -48,10 +48,8 @@
+ // Provide own definition of std::__libcpp_verbose_abort to avoid missing symbols error on macOS with old
+ // system libc++.1.dylib. The symbol is there for macOS 13 Ventura and later, but not macOS 12 and earlier.
+ // See #3071 for more details.
+-void std::__libcpp_verbose_abort(char const *format, ...)
 -#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-+#if defined(__APPLE__) || ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-     noexcept
- #endif
+-    noexcept
+-#endif
++// Match the host libc++ declaration rather than the linked LLVM version.
++void std::__libcpp_verbose_abort(char const *format, ...) noexcept(noexcept(std::__libcpp_verbose_abort("%s", format)))
+ {
+     va_list list;
+     va_start(list, format);
 diff --git a/cmake/GenerateBuiltins.cmake b/cmake/GenerateBuiltins.cmake
 --- a/cmake/GenerateBuiltins.cmake
 +++ b/cmake/GenerateBuiltins.cmake

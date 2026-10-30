@@ -58,9 +58,32 @@ diff -Naur OpenShadingLanguage/src/cmake/flexbison.cmake OSL_BLD/src/cmake/flexb
                        PRINT BISON_EXECUTABLE)
  checked_find_package (FLEX 2.3.35 REQUIRED
 diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmake/modules/FindLLVM.cmake
---- OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake	2024-06-26 16:05:10.532665479 -0400
-+++ OSL_BLD/src/cmake/modules/FindLLVM.cmake	2024-06-26 16:22:10.337491211 -0400
-@@ -128,7 +128,7 @@
+--- OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake
++++ OSL_BLD/src/cmake/modules/FindLLVM.cmake
+@@ -95,6 +95,22 @@
+ endif ()
+ string (REPLACE " " ";" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
+ 
++# llvm-config can report -l names for dependencies outside the compiler's
++# default library paths (for example libxml2 in a FreeBSD package prefix).
++# Resolve those names using CMake's search paths before passing them to the linker.
++set (_LLVM_SYSTEM_LIBRARIES)
++foreach (_LLVM_SYSTEM_LIBRARY IN LISTS LLVM_SYSTEM_LIBRARIES)
++    if (_LLVM_SYSTEM_LIBRARY MATCHES "^-l(.+)$")
++        find_library (_LLVM_SYSTEM_${CMAKE_MATCH_1}_LIBRARY
++                      NAMES "${CMAKE_MATCH_1}" HINTS "${LLVM_LIB_DIR}")
++        if (_LLVM_SYSTEM_${CMAKE_MATCH_1}_LIBRARY)
++            set (_LLVM_SYSTEM_LIBRARY "${_LLVM_SYSTEM_${CMAKE_MATCH_1}_LIBRARY}")
++        endif ()
++    endif ()
++    list (APPEND _LLVM_SYSTEM_LIBRARIES "${_LLVM_SYSTEM_LIBRARY}")
++endforeach ()
++set (LLVM_SYSTEM_LIBRARIES ${_LLVM_SYSTEM_LIBRARIES})
++
+ find_library ( LLVM_LIBRARY
+                NAMES LLVM-${LLVM_VERSION} LLVM
+                PATHS ${LLVM_LIB_DIR})
+@@ -128,7 +144,7 @@
  foreach (COMPONENT clangFrontend clangDriver clangSerialization
                     clangParse clangSema clangAnalysis clangAST
                     clangASTMatchers clangBasic clangEdit clangLex
@@ -69,7 +92,7 @@ diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmak
      find_library ( _CLANG_${COMPONENT}_LIBRARY
                    NAMES ${COMPONENT}
                    PATHS ${LLVM_LIB_DIR})
-@@ -156,6 +156,7 @@
+@@ -156,6 +172,7 @@
    endif ()
  endif ()
  

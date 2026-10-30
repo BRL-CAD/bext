@@ -1,0 +1,23 @@
+--- a/core/thread.h
++++ b/core/thread.h
+@@ -192,6 +192,20 @@
+     std::vector<thread_affinity_policy> oldAffinities; // original thread affinities
+   };
+ 
++#elif defined(__FreeBSD__)
++
++  // OIDN has no FreeBSD topology discovery. Returning zero selects TBB's
++  // normal scheduling while CPUEngine still honors the requested thread limit.
++  class ThreadAffinity : public Verbose
++  {
++  public:
++    ThreadAffinity(int = INT_MAX, int verbose = 0) : Verbose(verbose) {}
++
++    int getNumThreads() const { return 0; }
++    void set(int) {}
++    void restore(int) {}
++  };
++
+ #endif
+ 
+ OIDN_NAMESPACE_END

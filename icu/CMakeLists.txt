@@ -24,7 +24,7 @@ if (NOT WIN32 AND NOT APPLE)
       STEP_TARGETS install
       )
 
-    TargetInstallDeps(FMT FMT_DEPENDS)
+    TargetInstallDeps(ICU ICU_DEPENDS)
 
     # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
     configure_file(

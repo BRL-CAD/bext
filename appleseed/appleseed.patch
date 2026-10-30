@@ -149,3 +149,65 @@ diff --git a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp b/src/applese
      m_shading_system->attribute("commonspace", "world");
      m_shading_system->attribute("statistics:level", 1);
      m_shading_system->attribute(
+--- a/src/appleseed/foundation/platform/system.cpp
++++ b/src/appleseed/foundation/platform/system.cpp
+@@ -602,6 +602,20 @@
+             "=d" (regs[edx]));
+     }
+ 
++    void cpuid(std::uint32_t cpuinfo[4], const std::uint32_t index)
++    {
++        cpuinfo[eax] = index;
++        cpuinfo[ecx] = 0;
++        cpuid(cpuinfo);
++    }
++
++    std::uint64_t xgetbv(const std::int32_t index)
++    {
++        std::uint32_t eax, edx;
++        __asm__ __volatile__("xgetbv" : "=a"(eax), "=d"(edx) : "c"(index));
++        return (static_cast<std::uint64_t>(edx) << 32) | eax;
++    }
++
+ #define BIT(n)              (1UL << (n))
+ #define BITMASK(h, l)       ((BIT(h) | (BIT(h) - 1)) & ~(BIT(l) - 1))
+ #define BITFIELD(x, h, l)   (((x) & BITMASK(h, l)) >> l)
+@@ -864,6 +878,12 @@
+     }
+ }
+ 
++std::size_t System::get_l1_data_cache_count()
++{
++    // The cache-size probe does not provide the number of cache instances.
++    return 0;
++}
++
+ std::size_t System::get_l1_data_cache_size()
+ {
+     // Here and below we'd check for L1D cache size: if it's initialized,
+@@ -881,6 +901,12 @@
+     return g_x86_caches[L1D].m_line_size;
+ }
+ 
++std::size_t System::get_l2_cache_count()
++{
++    // The cache-size probe does not provide the number of cache instances.
++    return 0;
++}
++
+ std::size_t System::get_l2_cache_size()
+ {
+     if (!g_x86_caches[L1D].m_size)
+@@ -893,6 +919,12 @@
+     if (!g_x86_caches[L1D].m_size)
+         x86_get_cache_basic_info(g_x86_caches);
+     return g_x86_caches[L2].m_line_size;
++}
++
++std::size_t System::get_l3_cache_count()
++{
++    // The cache-size probe does not provide the number of cache instances.
++    return 0;
+ }
+ 
+ std::size_t System::get_l3_cache_size()

@@ -46,7 +46,7 @@ selection further.
 | `llvm` | `USE_APPLESEED`, `USE_OSPRAY` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/llvm-project) |
 | `lmdb` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/lmdb) |
 | `lz4` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/lz4) |
-| `m4` | `USE_OSPRAY` | `noinstall` | `bison`, `flex` | [repository](https://github.com/starseeker/m4.git) |
+| `m4` | `USE_OSPRAY` | `noinstall` | `bison`, `flex` | [repository](https://github.com/BRL-CAD/m4.git) |
 | `manifold` | `USE_BRLCAD` | `install` | `patch`, `clipper2` | [repository](https://github.com/BRL-CAD/manifold.git) |
 | `minizip-ng` | `USE_APPLESEED` | `install` | `patch`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/minizip-ng) |
 | `mmesh` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/mmesh.git) |

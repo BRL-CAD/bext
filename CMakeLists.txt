@@ -268,8 +268,13 @@ set(pcnt "${BEXT_BUILD_JOBS}")
 # below.  Do not also pass down the top-level generator's jobserver state:
 # GNU make encodes it in MAKEFLAGS using options that other make variants
 # (notably FreeBSD make) do not understand.
+# ICU requires GNU make, so prefer it when it has a distinct program name.
+find_program(BEXT_MAKE_EXECUTABLE NAMES gmake gnumake make)
+if (NOT BEXT_MAKE_EXECUTABLE)
+  set(BEXT_MAKE_EXECUTABLE make)
+endif ()
 set(BEXT_MAKE_COMMAND
-  ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS --unset=MFLAGS make
+  ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS --unset=MFLAGS ${BEXT_MAKE_EXECUTABLE}
   )
 
 # We want to pass the build type option to CMake builds if we're not using a
