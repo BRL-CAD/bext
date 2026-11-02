@@ -335,7 +335,6 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/Utils.cmake")
 ###############################################################################
 option(USE_APPLESEED    "Appleseed rendering system"                 OFF)
 option(USE_BRLCAD       "BRL-CAD core dependencies"                  ON)
-option(USE_BRLCAD_EXTRA "BRL-CAD dependencies that can be disabled"  ON)
 option(USE_GDAL         "GDAL terrain support"                       ON)
 option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
 option(USE_QT           "Qt graphical toolkit support"               ON)
@@ -579,7 +578,7 @@ add_project(ispc GROUPS "OSPRAY")
 
 # STEPcode - support for reading and writing STEP files
 # https://github.com/stepcode/stepcode
-add_project(stepcode GROUPS "BRLCAD_EXTRA")
+add_project(stepcode GROUPS "BRLCAD")
 
 # SQLITE3 - embeddable database
 # https://www.sqlite.org
@@ -596,7 +595,7 @@ add_project(gdal GROUPS "GDAL")
 # OpenVDB - storage and manipulation of sparse volumetric data discretized on
 # three-dimensional grids
 # https://github.com/AcademySoftwareFoundation/openvdb
-add_project(openvdb GROUPS "BRLCAD_EXTRA")
+add_project(openvdb GROUPS "BRLCAD")
 
 # tinygltf - tiny glTF library(loader/saver)
 # https://github.com/syoyo/tinygltf
@@ -613,7 +612,7 @@ add_project(assetimport GROUPS "BRLCAD")
 
 # OpenCV - Open Source Computer Vision Library
 # http://opencv.org
-add_project(opencv GROUPS "BRLCAD_EXTRA")
+add_project(opencv GROUPS "BRLCAD")
 
 # Clipper2 - A Polygon Clipping and Offsetting library
 # https://github.com/AngusJohnson/Clipper2
@@ -649,7 +648,7 @@ add_project(litehtml GROUPS "BRLCAD")
 
 # Bullet3 - collision detection/multi-physics simulation library
 # https://github.com/bulletphysics/bullet3
-add_project(bullet GROUPS "BRLCAD_EXTRA")
+add_project(bullet GROUPS "BRLCAD")
 
 # Open Shading Language (OSL) - language for programmable shading
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
