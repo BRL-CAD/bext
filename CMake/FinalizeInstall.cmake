@@ -366,14 +366,15 @@ endforeach()
 list(SORT cmake_files)
 list(SORT plain_text_files)
 
-# Replace paths that only have meaning while bext is being built.  Keep the
-# install prefix intact: downstream projects replace this canonical prefix
-# with their own staging prefix after copying the finalized tree.
+# Normalize the install prefix first, then replace its enclosing build and
+# source roots.  strclear -p preserves the replacement root, so subsequent
+# passes also leave already-correct install paths intact.
 set(text_paths ${text_files})
 foreach(clear_target
-    "${BEXT_SOURCE_ROOT}"
+    "${BEXT_INSTALL_ROOT}"
+    "${BEXT_NOINSTALL_ROOT}"
     "${BEXT_BINARY_ROOT}"
-    "${BEXT_NOINSTALL_ROOT}")
+    "${BEXT_SOURCE_ROOT}")
   bext_run_text_replace("${text_paths}" "${clear_target}" "${BEXT_INSTALL_ROOT}")
 endforeach()
 
@@ -407,6 +408,13 @@ bext_json_escape(platform "${BEXT_SYSTEM_NAME}")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"platform\": \"${platform}\",\n")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"install_root\": \"install\",\n")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"generated_by\": \"bext\",\n")
+# A consumer may reach the bundle through a different alias, or after a move.
+# Record the producer's spellings instead of trying to infer them downstream.
+file(REAL_PATH "${BEXT_INSTALL_ROOT}" real_install_root)
+set(install_prefixes "${BEXT_INSTALL_ROOT}" "${real_install_root}")
+list(REMOVE_DUPLICATES install_prefixes)
+bext_write_json_array("${BEXT_MANIFEST}.tmp" "install_prefixes" install_prefixes)
+file(APPEND "${BEXT_MANIFEST}.tmp" ",\n")
 bext_write_json_array("${BEXT_MANIFEST}.tmp" "files" installed_files)
 file(APPEND "${BEXT_MANIFEST}.tmp" ",\n")
 bext_write_json_array("${BEXT_MANIFEST}.tmp" "rpath" rpath_files)

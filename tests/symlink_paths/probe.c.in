@@ -1,0 +1,8 @@
+const char *producer_alias = "@source@/lib";
+const char *producer_real = "@real_source@/lib";
+
+int
+probe(void)
+{
+    return 42;
+}

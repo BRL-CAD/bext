@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.26)
+project(PathProbe C)
+
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+add_library(pathprobe SHARED probe.c)
+set_target_properties(pathprobe PROPERTIES VERSION 1 SOVERSION 1)
+add_library(pathprobe_static STATIC probe.c)
+add_executable(pathprobe_app main.c)
+target_link_libraries(pathprobe_app PRIVATE pathprobe)
+install(TARGETS pathprobe pathprobe_static pathprobe_app
+  RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)

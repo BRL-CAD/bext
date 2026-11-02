@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.26)
+project(PathConsumer C)
+
+list(APPEND CMAKE_MODULE_PATH "${BRLCAD_SOURCE}/misc/CMake")
+include(BRLCAD_ExternalDeps)
+include(RPath_Setup)
+# The fixture supplies an already-built bundle and needs no checkout update
+# or top-level distclean registration. All file processing is production code.
+function(bext_sha1_checks)
+endfunction()
+function(distclean)
+endfunction()
+set(BIN_DIR bin)
+set(LIB_DIR lib)
+set(INCLUDE_DIR include)
+set(BRLCAD_EXT_INSTALL_DIR "${BRLCAD_EXT_DIR}/install")
+set(BRLCAD_EXT_NOINSTALL_DIR "${BRLCAD_EXT_DIR}/noinstall")
+brlcad_bext_process()
+find_package(PathProbe REQUIRED CONFIG PATHS "${CMAKE_BINARY_DIR}/lib/cmake/PathProbe" NO_DEFAULT_PATH)
+if(NOT "${PATHPROBE_PREFIX}" STREQUAL "${CMAKE_BINARY_DIR}")
+  message(FATAL_ERROR "Package still refers to producer: ${PATHPROBE_PREFIX}")
+endif()
+add_executable(consumer main.c)
+target_link_libraries(consumer PRIVATE PathProbe::probe)
+set_target_properties(consumer PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+  INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;$ORIGIN/../lib")
+install(TARGETS consumer RUNTIME DESTINATION bin)
