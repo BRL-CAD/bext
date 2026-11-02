@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.26)
 project(PathConsumer C)
 
 list(APPEND CMAKE_MODULE_PATH "${BRLCAD_SOURCE}/misc/CMake")
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+include(TrackFiles)
+include(BRLCAD_Find_Package)
 include(BRLCAD_ExternalDeps)
 include(RPath_Setup)
 # The fixture supplies an already-built bundle and needs no checkout update
@@ -15,7 +18,14 @@ set(LIB_DIR lib)
 set(INCLUDE_DIR include)
 set(BRLCAD_EXT_INSTALL_DIR "${BRLCAD_EXT_DIR}/install")
 set(BRLCAD_EXT_NOINSTALL_DIR "${BRLCAD_EXT_DIR}/noinstall")
+cmake_path(CONVERT "$ENV{PKG_CONFIG_PATH}" TO_CMAKE_PATH_LIST caller_pkgconfig_dirs)
 brlcad_bext_process()
+cmake_path(CONVERT "$ENV{PKG_CONFIG_PATH}" TO_CMAKE_PATH_LIST pkgconfig_dirs)
+foreach(dir IN LISTS caller_pkgconfig_dirs)
+  if(NOT dir IN_LIST pkgconfig_dirs)
+    message(FATAL_ERROR "Staging removed caller pkg-config directory: ${dir}")
+  endif()
+endforeach()
 find_package(PathProbe REQUIRED CONFIG PATHS "${CMAKE_BINARY_DIR}/lib/cmake/PathProbe" NO_DEFAULT_PATH)
 if(NOT "${PATHPROBE_PREFIX}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "Package still refers to producer: ${PATHPROBE_PREFIX}")
@@ -26,3 +36,18 @@ set_target_properties(consumer PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
   INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;$ORIGIN/../lib")
 install(TARGETS consumer RUNTIME DESTINATION bin)
+
+# Exercise a Find module using pkg-config through BRL-CAD's own wrapper.
+# No staged package path is supplied by the caller.
+brlcad_find_package(PathProbePkg REQUIRED)
+if(NOT "${PATHPROBE_PKG_INCLUDE_DIRS}" STREQUAL "${CMAKE_BINARY_DIR}/include" OR
+   NOT "${PATHPROBE_PKG_LINK_LIBRARIES}" STREQUAL "${CMAKE_BINARY_DIR}/lib/libpathprobe.so" OR
+   NOT "${PATHPROBEPKG_STATUS}" STREQUAL "Bundled")
+  message(FATAL_ERROR "pkg-config did not select the staged bundle: ${PATHPROBE_PKG_LINK_LIBRARIES}")
+endif()
+add_executable(pkgconsumer main.c)
+target_link_libraries(pkgconsumer PRIVATE PkgConfig::PATHPROBE_PKG)
+set_target_properties(pkgconsumer PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+  INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;$ORIGIN/../lib")
+install(TARGETS pkgconsumer RUNTIME DESTINATION bin)

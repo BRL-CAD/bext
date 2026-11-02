@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.26)
+project(PathPkgConsumer C)
+
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+find_package(PathProbePkg REQUIRED)
+if(NOT "${PATHPROBE_PKG_INCLUDE_DIRS}" STREQUAL "${CMAKE_PREFIX_PATH}/include" OR
+   NOT "${PATHPROBE_PKG_LINK_LIBRARIES}" STREQUAL "${CMAKE_PREFIX_PATH}/lib/libpathprobe.so")
+  message(FATAL_ERROR "pkg-config did not select the finalized bundle: ${PATHPROBE_PKG_LINK_LIBRARIES}")
+endif()
+add_executable(pkgconsumer main.c)
+target_link_libraries(pkgconsumer PRIVATE PkgConfig::PATHPROBE_PKG)

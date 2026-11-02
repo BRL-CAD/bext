@@ -1,6 +1,6 @@
 #include <sys/stat.h>
 
-int probe(void);
+#include "pathprobe.h"
 
 int
 main(int argc, char **argv)
@@ -9,5 +9,5 @@ main(int argc, char **argv)
         struct stat info;
         return stat(argv[1], &info) == 0 && !(info.st_mode & S_IWUSR) ? 0 : 1;
     }
-    return probe() == 42 ? 0 : 1;
+    return probe() == PATHPROBE_ANSWER ? 0 : 1;
 }

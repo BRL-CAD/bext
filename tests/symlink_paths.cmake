@@ -29,6 +29,9 @@ file(REAL_PATH "${TEST_ROOT}" TEST_ROOT)
 message(STATUS "Integration test directory: ${TEST_ROOT}")
 # Every install belongs in its fixture, regardless of the caller's environment.
 unset(ENV{DESTDIR})
+# Discovery must succeed without a package path inherited from the caller.
+unset(ENV{PKG_CONFIG_PATH})
+unset(ENV{CMAKE_PREFIX_PATH})
 
 function(run)
   execute_process(COMMAND ${ARGV}
@@ -113,6 +116,7 @@ function(exercise root layout manifest_mode)
   file(REAL_PATH "${source}" real_source)
   configure_file("${fixtures}/probe.c.in" "${source}/probe.c" @ONLY)
   configure_file("${fixtures}/main.c" "${source}/main.c" COPYONLY)
+  configure_file("${fixtures}/pathprobe.h" "${source}/pathprobe.h" COPYONLY)
   configure_file("${fixtures}/provider.cmake.in" "${source}/CMakeLists.txt" COPYONLY)
   run("${CMAKE_COMMAND}" -S "${source}" -B "${build}" -G Ninja
     -DCMAKE_BUILD_TYPE=Release "-DCMAKE_INSTALL_PREFIX=${install}")
@@ -125,8 +129,9 @@ function(exercise root layout manifest_mode)
   file(REAL_PATH "${install}" real_install)
   set(prefixes "${source}" "${real_source}" "${build}" "${real_build}"
     "${noinstall}" "${real_noinstall}" "${install}" "${real_install}")
-  set(pc_contents "")
-  set(expected_pc "")
+  file(READ "${fixtures}/pathprobe.pc.in" pc_template)
+  string(CONFIGURE "${pc_template}" pc_contents @ONLY)
+  set(expected_pc "${pc_contents}")
   set(index 0)
   foreach(prefix IN LISTS prefixes)
     string(APPEND pc_contents "path${index}=${prefix}/lib\n")
@@ -156,6 +161,19 @@ function(exercise root layout manifest_mode)
   run("${install}/bin/pathprobe_app")
   message(STATUS "PASS: bext finalization, mixed alias/canonical paths, repeated finalization")
 
+  # Check the finalized metadata before relocation using ordinary CMake
+  # prefix discovery, without BRL-CAD's staging or package wrapper.
+  set(pkg_source "${root}/bext-pkg-consumer")
+  set(pkg_build "${root}/bext-pkg-build")
+  configure_file("${fixtures}/main.c" "${pkg_source}/main.c" COPYONLY)
+  configure_file("${fixtures}/FindPathProbePkg.cmake" "${pkg_source}/FindPathProbePkg.cmake" COPYONLY)
+  configure_file("${fixtures}/pkgconsumer.cmake.in" "${pkg_source}/CMakeLists.txt" COPYONLY)
+  run("${CMAKE_COMMAND}" -S "${pkg_source}" -B "${pkg_build}" -G Ninja
+    "-DCMAKE_PREFIX_PATH=${install}")
+  run("${CMAKE_COMMAND}" --build "${pkg_build}" -j 4)
+  run("${pkg_build}/pkgconsumer")
+  message(STATUS "PASS: find_package using pkg-config against finalized bext output")
+
   if(manifest_mode STREQUAL "legacy")
     file(READ "${manifest}" contents)
     string(JSON contents REMOVE "${contents}" install_prefixes)
@@ -181,6 +199,8 @@ function(exercise root layout manifest_mode)
   set(consumer_build "${consumer_root}/consumer-build")
   configure_file("${fixtures}/main.c" "${consumer_source}/main.c" COPYONLY)
   configure_file("${fixtures}/consumer.cmake.in" "${consumer_source}/CMakeLists.txt" COPYONLY)
+  configure_file("${fixtures}/FindPathProbePkg.cmake"
+    "${consumer_source}/FindPathProbePkg.cmake" COPYONLY)
   set(nested_prefix "${consumer_build}/lib/final")
   set(configure "${CMAKE_COMMAND}" -S "${consumer_source}" -B "${consumer_build}" -G Ninja
     "-DBRLCAD_SOURCE=${BRLCAD_SOURCE}" "-DBRLCAD_EXT_DIR=${relocated}"
@@ -194,6 +214,7 @@ function(exercise root layout manifest_mode)
   run("${CMAKE_COMMAND}" --build "${consumer_build}" -j 4)
   run("${consumer_build}/bin/pathprobe_app")
   run("${consumer_build}/bin/consumer")
+  run("${consumer_build}/bin/pkgconsumer")
   run("${consumer_build}/bin/pathprobe_app" "${bundle_lib}")
   assert_rpath("${consumer_build}/bin/pathprobe_app" "${consumer_build}/lib")
   foreach(relative bin/pathprobe_app lib/libpathprobe.so.1 lib/libpathprobe_static.a)
@@ -202,13 +223,20 @@ function(exercise root layout manifest_mode)
   set(staged_pc "${consumer_build}/lib/pkgconfig/pathprobe.pc")
   string(REPLACE "${install}" "${consumer_build}" expected_staged_pc "${expected_pc}")
   assert_text("${staged_pc}" "${expected_staged_pc}")
+  # A caller's search path must survive staging while the bundled package
+  # takes precedence over a conflicting external copy.
+  set(external_pkgconfig_dir "${root}/external-pkgconfig")
+  file(WRITE "${external_pkgconfig_dir}/pathprobe.pc"
+    "prefix=${root}/external\nName: ExternalPathProbe\nDescription: Conflicting fixture\n"
+    "Version: 9.0\nLibs: -lmissing_pathprobe\nCflags: -I\"${root}/external/include\"\n")
+  set(configure "${CMAKE_COMMAND}" -E env "PKG_CONFIG_PATH=${external_pkgconfig_dir}" ${configure})
   run(${configure})
   # Simulate an existing tree processed by older code, with newer timestamps.
   file(WRITE "${staged_pc}" "stale staging result\n")
   file(WRITE "${consumer_build}/CMakeFiles/thirdparty_processing.sha256" "old processing\n")
   run(${configure})
   assert_text("${staged_pc}" "${expected_staged_pc}")
-  message(STATUS "PASS: BRL-CAD staging, processing refresh and native consumer build")
+  message(STATUS "PASS: BRL-CAD staging, pkg-config discovery, processing refresh and consumer builds")
 
   foreach(install_mode nested staged)
     set(install_command "${CMAKE_COMMAND}" -E env --unset=DESTDIR)
@@ -231,6 +259,7 @@ function(exercise root layout manifest_mode)
     assert_text("${actual}/share/pathprobe.txt" "${prefix}/lib\n${prefix}/lib\n")
     run("${actual}/bin/pathprobe_app")
     run("${actual}/bin/consumer")
+    run("${actual}/bin/pkgconsumer")
     file_state(before "${actual}/bin/pathprobe_app")
     run(${install_command})
     file_state(after "${actual}/bin/pathprobe_app")

@@ -1,0 +1,10 @@
+prefix=@install@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: PathProbe
+Description: Symlink path integration fixture
+Version: 1.0
+Libs: -L"${libdir}" -lpathprobe
+Cflags: -I"${includedir}"

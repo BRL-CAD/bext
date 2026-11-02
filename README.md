@@ -169,8 +169,10 @@ a different alias or after the bundle has moved.  Rebuild `strclear` and finaliz
 the bundle after updating from a version that required physical paths.
 
 The ELF integration regression builds a shared library and executable, finalizes
-a bundle, moves it, and runs BRL-CAD's staging and install processing.  It requires
-CMake, Ninja, a C compiler, and built copies of both helper tools:
+a bundle, moves it, and runs BRL-CAD's staging and install processing. It also
+checks a pkg-config-based Find module through BRL-CAD's package wrapper, then
+builds and runs its consumer. It requires CMake, Ninja, a C compiler, pkg-config,
+and built copies of both helper tools:
 
 ```sh
 cmake -DBRLCAD_SOURCE=../brlcad \

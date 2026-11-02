@@ -1,0 +1,6 @@
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PATHPROBE_PKG REQUIRED IMPORTED_TARGET pathprobe>=1.0)
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(PathProbePkg
+  REQUIRED_VARS PATHPROBE_PKG_LINK_LIBRARIES PATHPROBE_PKG_INCLUDE_DIRS
+  VERSION_VAR PATHPROBE_PKG_VERSION)

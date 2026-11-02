@@ -1,4 +1,5 @@
 set(PATHPROBE_PREFIX "@install@")
 add_library(PathProbe::probe SHARED IMPORTED)
 set_target_properties(PathProbe::probe PROPERTIES
-  IMPORTED_LOCATION "@install@/lib/libpathprobe.so")
+  IMPORTED_LOCATION "@install@/lib/libpathprobe.so"
+  INTERFACE_INCLUDE_DIRECTORIES "@install@/include")

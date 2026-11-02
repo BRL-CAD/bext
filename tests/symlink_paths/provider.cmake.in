@@ -9,3 +9,4 @@ add_executable(pathprobe_app main.c)
 target_link_libraries(pathprobe_app PRIVATE pathprobe)
 install(TARGETS pathprobe pathprobe_static pathprobe_app
   RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+install(FILES pathprobe.h DESTINATION include)
