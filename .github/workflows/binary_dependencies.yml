@@ -1,6 +1,8 @@
 name: Binary dependencies
 
 on:
+  # Keep the dependency artifacts used by BRL-CAD current on every push.
+  push:
   schedule:
     # Wednesday at 02:30 UTC; unchanged commits skip the builds.
     - cron: '30 2 * * 3'
