@@ -25,7 +25,7 @@ selection further.
 | `assetimport` | `USE_BRLCAD` | `install` | `patch`, `pugixml`, `zlib` | [repository](https://github.com/BRL-CAD/assimp) |
 | `astyle` | `USE_BRLCAD` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/astyle) |
 | `boost` | `USE_APPLESEED` | `install` | `icu`, `patch`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/boost) |
-| `bullet` | `USE_BRLCAD_EXTRA` | `install` | `patch` | [repository](https://github.com/BRL-CAD/bullet3.git) |
+| `bullet` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/bullet3.git) |
 | `clipper2` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/Clipper2.git) |
 | `deflate` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/libdeflate) |
 | `eigen` | `USE_BRLCAD`, `USE_APPLESEED` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/eigen) |
@@ -55,11 +55,11 @@ selection further.
 | `oidn` | `USE_OSPRAY` | `install` | `ispc`, `onetbb` | [repository](https://github.com/BRL-CAD/oidn) |
 | `onetbb` | `USE_APPLESEED`, `USE_OSPRAY`, `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/oneTBB) |
 | `opencolorio` | `USE_APPLESEED` | `install` | `expat`, `minizip-ng`, `openexr`, `patch`, `pystring`, `yaml-cpp`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/OpenColorIO) |
-| `opencv` | `USE_BRLCAD_EXTRA` | `install` | `patch`, `png`, `zlib` | [repository](https://github.com/BRL-CAD/opencv) |
+| `opencv` | `USE_BRLCAD` | `install` | `patch`, `png`, `zlib` | [repository](https://github.com/BRL-CAD/opencv) |
 | `openexr` | `USE_APPLESEED` | `install` | `deflate`, `patch` | [repository](https://github.com/BRL-CAD/openexr) |
 | `openimageio` | `USE_APPLESEED` | `install` | `boost`, `fmt`, `jpeg`, `opencolorio`, `openexr`, `patch`, `png`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/oiio) |
 | `opennurbs` | `USE_BRLCAD` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/opennurbs) |
-| `openvdb` | `USE_BRLCAD_EXTRA` | `install` | `onetbb`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/openvdb) |
+| `openvdb` | `USE_BRLCAD` | `install` | `onetbb`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/openvdb) |
 | `osl` | `USE_APPLESEED` | `install` | `bison`, `boost`, `flex`, `llvm`, `openexr`, `openimageio`, `patch`, `pugixml`, `zlib` | [repository](https://github.com/BRL-CAD/OpenShadingLanguage) |
 | `osmesa` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/osmesa) |
 | `ospray` | `USE_OSPRAY` | `install` | `embree`, `ispc`, `oidn`, `onetbb`, `patch`, `rkcommon` | [repository](https://github.com/BRL-CAD/ospray) |
@@ -76,7 +76,7 @@ selection further.
 | `regex` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/regex) |
 | `rkcommon` | `USE_OSPRAY` | `install` | `onetbb`, `patch` | [repository](https://github.com/BRL-CAD/rkcommon) |
 | `sqlite3` | `USE_GDAL` | `install` | `patch` | [repository](https://github.com/BRL-CAD/sqlite3.git) |
-| `stepcode` | `USE_BRLCAD_EXTRA` | `install` | `lemon`, `patch`, `perplex`, `re2c` | [repository](https://github.com/BRL-CAD/stepcode) |
+| `stepcode` | `USE_BRLCAD` | `install` | `lemon`, `patch`, `perplex`, `re2c` | [repository](https://github.com/BRL-CAD/stepcode) |
 | `strclear` | always considered | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/strclear) |
 | `tcl` | `USE_TCL` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/tcl.git) |
 | `tiff` | `USE_APPLESEED`, `USE_GDAL` | `install` | `jpeg`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/libtiff) |
