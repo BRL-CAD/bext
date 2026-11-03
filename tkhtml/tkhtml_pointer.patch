@@ -1,0 +1,82 @@
+--- tkhtml/src/htmlprop.c
++++ TKHTML_BLD/src/htmlprop.c
+@@ -1030,7 +1030,7 @@
+ }
+ 
+ static unsigned char *
+-getInheritPointer (HtmlComputedValuesCreator *p, unsigned char *pVar)
++getInheritPointer (HtmlComputedValuesCreator *p, void *pVar)
+ {
+     const int values_offset = Tk_Offset(HtmlComputedValuesCreator, values);
+     const int fontkey_offset = Tk_Offset(HtmlComputedValuesCreator, fontKey);
+@@ -1040,7 +1040,7 @@
+     const int fontkey_end = fontkey_offset + sizeof(HtmlFontKey);
+ #endif
+ 
+-    int offset = pVar - (unsigned char *)p;
++    int offset = (unsigned char *)pVar - (unsigned char *)p;
+     HtmlNode *pParent = p->pParent;
+ 
+     assert(
+--- tkhtml/src/htmltable.c
++++ TKHTML_BLD/src/htmltable.c
+@@ -1155,7 +1155,7 @@
+             sRow.node.iNode = -1;
+             sRow.nChild = jj - ii;
+             sRow.apChildren = &((HtmlElementNode *)pNode)->apChildren[ii];
+-            rowIterate(pTree, &sRow, p);
++            rowIterate(pTree, &sRow.node, p);
+             assert(!sRow.pLayoutCache);
+             ii = jj - 1;
+         }
+@@ -1281,7 +1281,7 @@
+             sRowGroup.node.iNode = -1;
+             sRowGroup.nChild = jj - ii;
+             sRowGroup.apChildren = &((HtmlElementNode *)pNode)->apChildren[ii];
+-            rowGroupIterate(pTree, &sRowGroup, &sRowContext);
++            rowGroupIterate(pTree, &sRowGroup.node, &sRowContext);
+             assert(!sRowGroup.pLayoutCache);
+             ii = jj - 1;
+         }
+--- tkhtml/src/htmltree.c
++++ TKHTML_BLD/src/htmltree.c
+@@ -3075,7 +3075,7 @@
+             return;
+     }
+ 
+-    implicitCloseCount(pTree, pFragment->pCurrent, eType, &nClose);
++    implicitCloseCount(pTree, (HtmlNode *)pFragment->pCurrent, eType, &nClose);
+     for (ii = 0; ii < nClose; ii++) {
+         HtmlNode *pC = &pFragment->pCurrent->node;
+         HtmlNode *pParentC = HtmlNodeParent(pC);
+@@ -3105,7 +3105,7 @@
+     pFragment->pCurrent = pElem;
+ 
+     if (HtmlMarkup(eType)->flags & HTMLTAG_EMPTY) {
+-        nodeHandlerCallbacks(pTree, pFragment->pCurrent);
++        nodeHandlerCallbacks(pTree, &pFragment->pCurrent->node);
+         pFragment->pCurrent = (HtmlElementNode *)HtmlNodeParent(pElem);
+     }
+     if (!pFragment->pCurrent) {
+@@ -3119,10 +3119,10 @@
+     int nClose;
+     int ii;
+     HtmlFragmentContext *p = pTree->pFragment;
+-    explicitCloseCount(p->pCurrent, eType, zType, &nClose);
++    explicitCloseCount((HtmlNode *)p->pCurrent, eType, zType, &nClose);
+     for (ii = 0; ii < nClose; ii++) {
+         assert(p->pCurrent);
+-        nodeHandlerCallbacks(pTree, p->pCurrent);
++        nodeHandlerCallbacks(pTree, &p->pCurrent->node);
+         p->pCurrent = (HtmlElementNode *)HtmlNodeParent(p->pCurrent);
+     }
+     if (!p->pCurrent) {
+@@ -3147,7 +3147,7 @@
+ 
+     while (sContext.pCurrent) {
+         HtmlNode *pParent = HtmlNodeParent(sContext.pCurrent); 
+-        nodeHandlerCallbacks(pTree, sContext.pCurrent);
++        nodeHandlerCallbacks(pTree, &sContext.pCurrent->node);
+         sContext.pCurrent = (HtmlElementNode *)pParent;
+     }
+ 

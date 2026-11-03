@@ -21,13 +21,19 @@ diff -Naur PoissonRecon/Src/MyAtomic.h PoissonRecon_MSVC/Src/MyAtomic.h
  #include <Windows.h>
  #include <Psapi.h>
 diff -Naur PoissonRecon/Src/MyMiscellany.h PoissonRecon_MSVC/Src/MyMiscellany.h
---- PoissonRecon/Src/MyMiscellany.h	2025-08-15 19:33:27.067472849 -0400
-+++ PoissonRecon_MSVC/Src/MyMiscellany.h	2025-08-15 19:35:11.907745277 -0400
-@@ -37,6 +37,7 @@
+--- PoissonRecon/Src/MyMiscellany.h
++++ PoissonRecon_MSVC/Src/MyMiscellany.h
+@@ -32,11 +32,12 @@
+ #include <sstream>
+ #include <filesystem>
+ #include <string.h>
+-#include <sys/timeb.h>
+ #include <cstdio>
  #include <ctime>
  #include <chrono>
  #if defined( _WIN32 ) || defined( _WIN64 )
 +#define NOMINMAX
++#include <sys/timeb.h>
  #include <io.h>
  #include <Windows.h>
  #include <Psapi.h>

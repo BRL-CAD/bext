@@ -14,6 +14,13 @@ if (ENABLE_GDAL)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
 
+  set(_gdal_platform_options)
+  if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # GCC's shared runtime lacks the Float16 helpers; use GDAL's software fallback.
+    # GNU ld also rejects the executable-supplied environ symbol with --no-undefined.
+    set(_gdal_platform_options -DHAVE__FLOAT16=OFF -DHAS_NO_UNDEFINED=OFF)
+  endif ()
+
   ExternalProject_Add(GDAL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/gdal"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -25,6 +32,7 @@ if (ENABLE_GDAL)
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindPNG.cmake;<SOURCE_DIR>/cmake/modules/packages/FindPNG.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
+    ${_gdal_platform_options}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     -DBIN_DIR=${BIN_DIR}

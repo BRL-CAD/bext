@@ -13,12 +13,6 @@ if (NOT MSVC AND NOT APPLE)
 
     RegisterDeps(LIEF)
 
-    set(_lief_pch_options)
-    if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
-      # GCC can fail to allocate its saved precompiled-header image on FreeBSD.
-      set(_lief_pch_options -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON)
-    endif ()
-
     ExternalProject_Add(LIEF_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/LIEF"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
@@ -39,7 +33,6 @@ if (NOT MSVC AND NOT APPLE)
       -DCMAKE_INSTALL_PREFIX=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
       -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
       -DCMAKE_INSTALL_RPATH=${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${LIB_DIR}
-      ${_lief_pch_options}
       -DLIEF_USE_CCACHE=OFF
       -DLIEF_ART=OFF
       -DLIEF_ASAN=OFF

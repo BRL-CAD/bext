@@ -120,6 +120,40 @@ diff -Naur PoissonRecon/Src/Geometry.h PoissonRecon_Init/Src/Geometry.h
  		Point( void ) { memset( coords , 0 , sizeof(Real)*Dim ); }
  		Point( const Point& p ){ memcpy( coords , p.coords , sizeof(Real)*Dim ); }
  		template< class ... _Reals > Point( _Reals ... values ){ static_assert( sizeof...(values)==Dim || sizeof...(values)==0 , "[ERROR] Point::Point: Invalid number of coefficients" ) ; _init( 0 , values... ); }
+@@ -698,7 +698,7 @@
+ 			if( !simplices.size() ) MK_THROW( "No simplices provided" );
+ 
+ 			// Create a ray that intersecting the largest simplex
+-			int idx;
++			int idx = -1;
+ 			{
+ 				Real maxMeasure = 0;
+ 				for( int i=0 ; i<simplices.size() ; i++ )
+@@ -707,6 +707,7 @@
+ 					if( measure>maxMeasure ) maxMeasure = measure , idx = i;
+ 				}
+ 			}
++			if( idx<0 ) MK_THROW( "No non-degenerate simplices provided" );
+ 			Ray< Real , Dim > ray( p , simplices[idx].center() - p );
+ 			Real l = (Real)Point< Real , Dim >::SquareNorm( ray.direction );
+ 			if( !l ) MK_THROW( "point is on simplex" );
+@@ -759,7 +760,7 @@
+ 			return insideMeasure>0;
+ #else
+ 			// Create a ray that intersecting the largest simplex
+-			int idx;
++			int idx = -1;
+ 			{
+ 				Real maxMeasure = 0;
+ 				for( int i=0 ; i<simplices.size() ; i++ )
+@@ -768,6 +769,7 @@
+ 					if( measure>maxMeasure ) maxMeasure = measure , idx = i;
+ 				}
+ 			}
++			if( idx<0 ) MK_THROW( "No non-degenerate simplices provided" );
+ 			Ray< Real , Dim > ray( p , simplices[idx].center() - p );
+ 			Real l = (Real)Point< Real , Dim >::SquareNorm( ray.direction );
+ 			if( !l ) MK_THROW( "point is on simplex" );
 diff -Naur PoissonRecon/Src/RegularTree.inl PoissonRecon_Init/Src/RegularTree.inl
 --- PoissonRecon/Src/RegularTree.inl	2025-08-15 12:33:30.615697563 -0400
 +++ PoissonRecon_Init/Src/RegularTree.inl	2025-08-15 12:33:26.587709152 -0400

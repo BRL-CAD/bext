@@ -1,5 +1,16 @@
 --- opennurbs/opennurbs_defines.h	2024-09-24 16:38:32.133385132 -0400
 +++ OPENNURBS_BLD/opennurbs_defines.h	2024-09-24 16:38:07.404767216 -0400
+@@ -83,8 +83,8 @@
+ #define ON_EXTERN_DECL __declspec(dllexport)
+ #define ON_DLL_TEMPLATE
+ 
+-#elif defined(ON_COMPILER_CLANG)
+-/* compiling opennurbs as an Apple shared library */
++#elif defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
++/* GCC and Clang support explicit shared library symbol visibility. */
+ #define ON_CLASS __attribute__ ((visibility ("default")))
+ #define ON_DECL __attribute__ ((visibility ("default")))
+ #define ON_EXTERN_DECL __attribute__ ((visibility ("default")))
 @@ -102,6 +102,11 @@
  #define ON_EXTERN_DECL __declspec(dllimport)
  #define ON_DLL_TEMPLATE extern

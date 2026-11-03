@@ -11,3 +11,9 @@ if (CMAKE_GENERATOR MATCHES "Ninja")
   set(CMAKE_JOB_POOL_COMPILE bext_compile)
   set(CMAKE_JOB_POOL_LINK bext_link)
 endif ()
+
+if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" AND
+    (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
+  # GCC cannot reliably remap precompiled-header images on FreeBSD.
+  set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+endif ()
