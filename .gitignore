@@ -6,6 +6,7 @@
 /out
 
 # Temporary files
+__pycache__/
 *~
 \#*\#
 .\#*

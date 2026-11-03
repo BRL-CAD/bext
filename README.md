@@ -145,6 +145,51 @@ cmake ../bext \
   -DCMAKE_BUILD_TYPE=Release
 ```
 
+# Resource and disk limits
+
+Dependency compilation defaults to at most two jobs, with one concurrent link.
+Set `BEXT_BUILD_JOBS` and `BEXT_LINK_JOBS` to change those limits. Ninja builds
+share its global console pool for dependency configure, build, and install
+steps, so an unrestricted outer `ninja` cannot launch several expensive
+dependency builds simultaneously. Each CMake dependency also receives compile
+and link pools; Qt and non-CMake wrappers use the same compilation limit.
+With other generators, use `cmake --build ... --parallel 1` to limit outer
+dependency concurrency as well.
+
+For CI and builds on small disks, use a fresh build directory with
+`BEXT_DISCARD_WORK=ON`:
+
+```sh
+cmake --preset bundled -B build/compact \
+  -DBEXT_DISCARD_WORK=ON -DBEXT_BUILD_JOBS=2 -DBEXT_LINK_JOBS=1 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/out/compact"
+cmake --build build/compact --parallel 1
+```
+
+This mode builds one dependency at a time and deletes its generated source
+copy and compilation directory only after a successful install. Tcl/Tk/Itcl/Itk
+working trees remain until finalization. Original dependency checkouts,
+installed outputs, ExternalProject control files, and logs are retained.
+The install prefix can also remain at its default inside the build directory.
+LLVM's own working tree must still fit on disk while LLVM is being built.
+
+Repeat the build command to resume a failed build with the same inputs;
+completed dependencies are skipped, and failed working trees remain available
+for diagnosis. Logs are in `build/compact/bext-release-logs`, and available disk
+space is reported after each successful dependency. Changes to sources,
+configuration, toolchain flags, or job limits require a fresh build directory
+and install prefix. Completed installed files must remain intact. This is a
+build-time option; leave it off for ordinary incremental development.
+With Ninja and Makefile generators, `clean` resets the recorded completion
+state so the next build can reconstruct all dependencies.
+
+The offline integration tests compile small dependencies and exercise cleanup,
+failure recovery, deferred cleanup, input changes, and resource pools:
+
+```sh
+python3 CMake/tests/test_release_build.py -v
+```
+
 # Build outputs
 
 By default, `CMAKE_INSTALL_PREFIX` is the build directory.  `bext` creates two

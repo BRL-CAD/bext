@@ -6,6 +6,12 @@ if (ENABLE_LLVM)
   git_submodule_init(llvm-project llvm/CMakeLists.txt)
 
   RegisterDeps(LLVM)
+  # LLVM installs its own Ninja pools, including memory-heavy TableGen jobs.
+  set(LLVM_BUILD_LIMITS
+    -DLLVM_PARALLEL_COMPILE_JOBS=${BEXT_BUILD_JOBS}
+    -DLLVM_PARALLEL_LINK_JOBS=${BEXT_LINK_JOBS}
+    -DLLVM_PARALLEL_TABLEGEN_JOBS=${BEXT_BUILD_JOBS}
+  )
 
   # We may need one or more patches, depending on settings.  ExternalProject_Add
   # expects the first command to be "PATCH_COMMAND", with subsequent patch commands
@@ -18,6 +24,8 @@ if (ENABLE_LLVM)
   endif (TARGET ZLIB_BLD)
 
   if (WIN32)
+    # MSBuild can also parallelize compilation within each project.
+    list(APPEND LLVM_BUILD_LIMITS -DLLVM_COMPILER_JOBS=${BEXT_BUILD_JOBS})
 
     # LLVM doesn't accept an empty CMAKE_BUILD_TYPE
     get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -51,7 +59,7 @@ if (ENABLE_LLVM)
       -DLLVM_ENABLE_RUNTIMES=
       -DLLVM_ENABLE_ZSTD=OFF
       -DLLVM_ENABLE_ASSERTIONS=OFF
-      -DLLVM_PARALLEL_LINK_JOBS=1 # llvm/clang linking is memory hungry
+      ${LLVM_BUILD_LIMITS}
       -DLLVM_OPTIMIZED_TABLEGEN=ON
       -DLLVM_BUILD_LLVM_DYLIB=OFF
       -DLLVM_BUILD_LLVM_C_DYLIB=OFF
@@ -109,7 +117,7 @@ if (ENABLE_LLVM)
       -DLLVM_ENABLE_RUNTIMES=
       -DLLVM_ENABLE_ZSTD=OFF
       -DLLVM_ENABLE_ASSERTIONS=OFF
-      -DLLVM_PARALLEL_LINK_JOBS=1 # llvm/clang linking is memory hungry
+      ${LLVM_BUILD_LIMITS}
       -DLLVM_OPTIMIZED_TABLEGEN=ON
       -DLLVM_BUILD_LLVM_DYLIB=OFF
       -DLLVM_BUILD_LLVM_C_DYLIB=OFF
