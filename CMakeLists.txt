@@ -724,6 +724,9 @@ else ()
   find_program(BEXT_PLIEF_EXECUTABLE NAMES plief patchelf HINTS "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}")
 endif ()
 
+configure_file("${CMAKE_SOURCE_DIR}/CMake/RefreshSpdx.cmake"
+  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/bext/RefreshSpdx.cmake" COPYONLY)
+
 set(BEXT_INSTALL_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-manifest.json")
 set(BEXT_FINALIZE_SCRIPT "${CMAKE_SOURCE_DIR}/CMake/FinalizeInstall.cmake")
 get_property(BEXT_INSTALL_TARGETS GLOBAL PROPERTY BEXT_INSTALL_TARGETS)

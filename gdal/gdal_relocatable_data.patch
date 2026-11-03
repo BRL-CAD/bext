@@ -1,0 +1,84 @@
+--- a/port/cpl_findfile.cpp
++++ b/port/cpl_findfile.cpp
+@@ -16,6 +16,12 @@
+ 
+ #include <cstddef>
+ 
++#if defined(_WIN32)
++#include <windows.h>
++#elif defined(HAVE_DLFCN_H)
++#include <dlfcn.h>
++#endif
++
+ #include "cpl_multiproc.h"
+ #include "cpl_string.h"
+ #include "cpl_vsi.h"
+@@ -71,6 +77,38 @@
+         CPLSetTLSWithFreeFunc(CTLS_FINDFILE, pTLSData, CPLFindFileFreeTLS);
+     }
+     return pTLSData;
++}
++
++// SDK consumers may live outside GDAL's install tree.  Locate data relative
++// to the loaded library rather than to the executable or the producer prefix.
++static std::string CPLRelativeDataPath()
++{
++    std::string modulePath;
++#if defined(_WIN32)
++    HMODULE module = nullptr;
++    if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
++                              GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
++                          reinterpret_cast<LPCSTR>(&CPLRelativeDataPath), &module))
++    {
++        constexpr DWORD maximumPathLength = 32768;
++        wchar_t path[maximumPathLength];
++        const DWORD length = GetModuleFileNameW(module, path, maximumPathLength);
++        if (length > 0 && length < maximumPathLength)
++        {
++            char *utf8 = CPLRecodeFromWChar(path, CPL_ENC_UCS2, CPL_ENC_UTF8);
++            modulePath = utf8;
++            CPLFree(utf8);
++        }
++    }
++#elif defined(HAVE_DLFCN_H)
++    Dl_info info = {};
++    if (dladdr(reinterpret_cast<void *>(&CPLRelativeDataPath), &info) && info.dli_fname)
++        modulePath = info.dli_fname;
++#endif
++    if (modulePath.empty())
++        return {};
++    const std::string directory = CPLGetPathSafe(modulePath.c_str());
++    return CPLFormFilenameSafe(directory.c_str(), GDAL_DATA_RELATIVE_PATH, nullptr);
+ }
+ 
+ /************************************************************************/
+@@ -104,6 +142,9 @@
+             CPLPushFinderLocation(GDAL_PREFIX "/share/gdal");
+ #endif
+ #endif
++            const std::string relativeData = CPLRelativeDataPath();
++            if (!relativeData.empty())
++                CPLPushFinderLocation(relativeData.c_str());
+         }
+     }
+     return pTLSData;
+--- a/port/CMakeLists.txt
++++ b/port/CMakeLists.txt
+@@ -135,6 +135,17 @@
+ 
+ file(TO_CMAKE_PATH "${CMAKE_INSTALL_PREFIX}/${GDAL_RESOURCE_PATH}" INST_DATA_PATH)
+ target_compile_definitions(cpl PRIVATE INST_DATA="${INST_DATA_PATH}")
++if(WIN32)
++  set(gdal_module_dir "${CMAKE_INSTALL_BINDIR}")
++else()
++  set(gdal_module_dir "${CMAKE_INSTALL_LIBDIR}")
++endif()
++file(RELATIVE_PATH gdal_relative_data
++  "${CMAKE_INSTALL_PREFIX}/${gdal_module_dir}"
++  "${CMAKE_INSTALL_PREFIX}/${GDAL_RESOURCE_PATH}")
++set_property(SOURCE cpl_findfile.cpp APPEND PROPERTY COMPILE_DEFINITIONS
++  "GDAL_DATA_RELATIVE_PATH=\"${gdal_relative_data}\"")
++
+ 
+ if(CMAKE_INSTALL_FULL_SYSCONFDIR)
+     target_compile_definitions(cpl PRIVATE SYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")

@@ -28,6 +28,10 @@ endif (WIN32)
 
 # If we're not on Windows, set some environment variables
 if (NOT WIN32)
+  # ExternalProject's shell can retain the logical build path in PWD even
+  # when WORKING_DIRECTORY names the physical directory.  Qt's configure
+  # script uses shell pwd, so keep it from recovering the symlink spelling.
+  set(ENV{PWD} "@QT_BUILD_DIR@")
   set(qt_runtime_dirs ${QT_XMIN_RUNTIME_DIRS} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
   string(JOIN ":" qt_runtime_path ${qt_runtime_dirs})
   set(ENV{LD_LIBRARY_PATH} "${qt_runtime_path}")

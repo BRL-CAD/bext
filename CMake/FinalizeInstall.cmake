@@ -69,7 +69,7 @@ function(bext_relative_path outvar path)
 endfunction()
 
 function(bext_is_skipped path outvar)
-  if ("${path}" MATCHES "(^|/)(encodings|include|man|msgs)(/|$)")
+  if ("${path}" MATCHES "(^|/)(encodings|man|msgs)(/|$)")
     set(${outvar} TRUE PARENT_SCOPE)
   else ()
     set(${outvar} FALSE PARENT_SCOPE)
@@ -112,7 +112,7 @@ function(bext_run_binary_clear files)
   endif ()
 endfunction()
 
-function(bext_run_rpath_update files)
+function(bext_update_rpath_group files rpath)
   if (NOT files OR NOT BEXT_PLIEF)
     return()
   endif ()
@@ -127,7 +127,7 @@ function(bext_run_rpath_update files)
     message(FATAL_ERROR "Unable to query ${BEXT_PLIEF}")
   endif ()
 
-  set(rpath_args --set-rpath "${BEXT_INSTALL_ROOT}/${LIB_DIR}")
+  set(rpath_args --set-rpath "${rpath}")
   if ("${help_output}" MATCHES "--set-rpath-if-needed")
     list(APPEND rpath_args
       --set-rpath-if-needed
@@ -140,7 +140,8 @@ function(bext_run_rpath_update files)
   endif ()
 
   if ("${help_output}" MATCHES "--files")
-    set(file_list "${BEXT_BINARY_ROOT}/CMakeFiles/bext-rpath-files.txt")
+    string(SHA256 key "${rpath}")
+    set(file_list "${BEXT_BINARY_ROOT}/CMakeFiles/bext-rpath-${key}.txt")
     bext_write_file_list(file_list "${file_list}" files)
     execute_process(
       COMMAND "${BEXT_PLIEF}" ${rpath_args} --files "${file_list}"
@@ -166,6 +167,32 @@ function(bext_run_rpath_update files)
   endif ()
 endfunction()
 
+function(bext_run_rpath_update files)
+  if("${BEXT_SYSTEM_NAME}" STREQUAL "Darwin")
+    set(origin "@loader_path")
+  else()
+    set(origin "$ORIGIN")
+  endif()
+  set(groups)
+  foreach(path IN LISTS files)
+    get_filename_component(directory "${path}" DIRECTORY)
+    file(RELATIVE_PATH suffix "${directory}" "${BEXT_INSTALL_ROOT}/${LIB_DIR}")
+    if(suffix STREQUAL "")
+      set(rpath "${origin}")
+    else()
+      set(rpath "${origin}/${suffix}")
+    endif()
+    string(SHA256 key "${rpath}")
+    list(APPEND groups "${key}")
+    set(rpath_${key} "${rpath}")
+    list(APPEND files_${key} "${path}")
+  endforeach()
+  list(REMOVE_DUPLICATES groups)
+  foreach(key IN LISTS groups)
+    bext_update_rpath_group("${files_${key}}" "${rpath_${key}}")
+  endforeach()
+endfunction()
+
 function(bext_run_text_replace files target replacement)
   if (NOT files OR "${target}" STREQUAL "")
     return()
@@ -187,6 +214,19 @@ function(bext_run_text_replace files target replacement)
     message(FATAL_ERROR "strclear text replacement failed for ${target}: ${error}${output}")
   endif ()
 endfunction()
+
+# TEA configuration files describe the original source/build trees and are
+# already excluded by BRL-CAD staging.  Keep them available to the dependency
+# builds, but omit them from the finalized relocatable bundle.
+file(GLOB_RECURSE build_config_files
+  "${BEXT_INSTALL_ROOT}/*/tclConfig.sh"
+  "${BEXT_INSTALL_ROOT}/*/tkConfig.sh"
+  "${BEXT_INSTALL_ROOT}/*/itclConfig.sh"
+  "${BEXT_INSTALL_ROOT}/*/itkConfig.sh"
+  "${BEXT_INSTALL_ROOT}/*/tdbcConfig.sh")
+if(build_config_files)
+  file(REMOVE ${build_config_files})
+endif()
 
 file(MAKE_DIRECTORY "${BEXT_BINARY_ROOT}/CMakeFiles")
 file(GLOB_RECURSE installed_files
@@ -378,8 +418,28 @@ foreach(clear_target
   bext_run_text_replace("${text_paths}" "${clear_target}" "${BEXT_INSTALL_ROOT}")
 endforeach()
 
-# Clear paths before restoring the canonical bext RPATH.  Clearing the install
-# root after the RPATH update would also clear the newly written RPATH.
+# pkg-config locates metadata through pcfiledir, including after relocation.
+foreach(relative IN LISTS text_files)
+  if(NOT relative MATCHES "[.]pc$")
+    continue()
+  endif()
+  set(path "${BEXT_INSTALL_ROOT}/${relative}")
+  get_filename_component(directory "${path}" DIRECTORY)
+  file(RELATIVE_PATH to_root "${directory}" "${BEXT_INSTALL_ROOT}")
+  string(REGEX REPLACE "/+$" "" to_root "${to_root}")
+  file(READ "${path}" content)
+  string(REPLACE "${BEXT_INSTALL_ROOT}" "\${prefix}" content "${content}")
+  if(content MATCHES "(^|\n)prefix=")
+    string(REGEX REPLACE "(^|\n)prefix=[^\n]*" "\\1prefix=\${pcfiledir}/${to_root}" content "${content}")
+  else()
+    string(PREPEND content "prefix=\${pcfiledir}/${to_root}\n")
+  endif()
+  file(WRITE "${path}.tmp" "${content}")
+  file(COPY_FILE "${path}.tmp" "${path}" ONLY_IF_DIFFERENT)
+  file(REMOVE "${path}.tmp")
+endforeach()
+
+# Clear producer paths before writing RPATHs relative to each installed file.
 set(all_binary_files ${rpath_files} ${binary_files})
 set(binary_paths)
 set(rpath_paths)
@@ -401,6 +461,9 @@ if ("${BEXT_SYSTEM_NAME}" STREQUAL "Darwin" AND
 endif ()
 bext_run_binary_clear("${binary_cleanup_paths}")
 bext_run_rpath_update("${rpath_paths}")
+
+include("${CMAKE_CURRENT_LIST_DIR}/RefreshSpdx.cmake")
+bext_refresh_spdx("${BEXT_INSTALL_ROOT}")
 
 file(WRITE "${BEXT_MANIFEST}.tmp" "{\n")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"schema\": 1,\n")

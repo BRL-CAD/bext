@@ -3,8 +3,13 @@ project(PathPkgConsumer C)
 
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 find_package(PathProbePkg REQUIRED)
-if(NOT "${PATHPROBE_PKG_INCLUDE_DIRS}" STREQUAL "${CMAKE_PREFIX_PATH}/include" OR
-   NOT "${PATHPROBE_PKG_LINK_LIBRARIES}" STREQUAL "${CMAKE_PREFIX_PATH}/lib/libpathprobe.so")
+# pcfiledir-relative paths may contain .. components; compare their resolved targets.
+file(REAL_PATH "${PATHPROBE_PKG_INCLUDE_DIRS}" probe_include)
+file(REAL_PATH "${PATHPROBE_PKG_LINK_LIBRARIES}" probe_library)
+file(REAL_PATH "${CMAKE_PREFIX_PATH}" expected_root)
+file(REAL_PATH "${expected_root}/lib/libpathprobe.so" expected_library)
+if(NOT "${probe_include}" STREQUAL "${expected_root}/include" OR
+   NOT "${probe_library}" STREQUAL "${expected_library}")
   message(FATAL_ERROR "pkg-config did not select the finalized bundle: ${PATHPROBE_PKG_LINK_LIBRARIES}")
 endif()
 add_executable(pkgconsumer main.c)

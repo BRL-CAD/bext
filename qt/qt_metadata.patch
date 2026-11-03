@@ -1,0 +1,83 @@
+--- a/cmake/QtPublicSbomHelpers.cmake
++++ b/cmake/QtPublicSbomHelpers.cmake
+@@ -362,15 +362,6 @@
+     endif()
+ 
+     set(project_comment "")
+-
+-    if(arg___QT_INTERNAL_HANDLE_QT_REPO)
+-        _qt_internal_get_configure_line(configure_line)
+-        if(configure_line)
+-            set(configure_line_comment
+-                "\n${repo_project_name_lowercase} was configured with:\n    ${configure_line}\n")
+-            string(APPEND project_comment "${configure_line_comment}")
+-        endif()
+-    endif()
+ 
+     if(project_comment)
+         # Escape any potential semicolons.
+@@ -910,7 +901,6 @@
+ 
+     _qt_internal_sbom_begin_project(
+         INSTALL_SBOM_DIR "${INSTALL_SBOMDIR}"
+-        USE_GIT_VERSION
+         __QT_INTERNAL_HANDLE_QT_REPO
+         ${sbom_project_args}
+     )
+--- a/cmake/QtPublicSbomFileHelpers.cmake
++++ b/cmake/QtPublicSbomFileHelpers.cmake
+@@ -813,6 +813,15 @@
+         message(FATAL_ERROR "PATH must be set")
+     endif()
+     set(path "${arg_PATH}")
++    # Compare and replace physical paths consistently when the caller uses an alias.
++    foreach(root PROJECT_SOURCE_DIR PROJECT_BINARY_DIR CMAKE_INSTALL_PREFIX CMAKE_SYSROOT)
++        if(${root})
++            file(REAL_PATH "${${root}}" ${root})
++        endif()
++    endforeach()
++    if(IS_ABSOLUTE "${path}")
++        file(REAL_PATH "${path}" path)
++    endif()
+ 
+     set(handled FALSE)
+ 
+--- a/cmake/QtBuildInternalsExtra.cmake.in
++++ b/cmake/QtBuildInternalsExtra.cmake.in
+@@ -45,7 +45,7 @@
+ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND
+         NOT QT_BUILD_INTERNALS_NO_FORCE_SET_INSTALL_PREFIX
+         AND NOT QT_SUPERBUILD)
+-    set(qtbi_orig_prefix "@CMAKE_INSTALL_PREFIX@")
++    set(qtbi_orig_prefix "${QT_BUILD_INTERNALS_RELOCATABLE_INSTALL_PREFIX}")
+     set(qtbi_orig_staging_prefix "@CMAKE_STAGING_PREFIX@")
+     qt_internal_new_prefix(qtbi_new_prefix
+         "${QT_BUILD_INTERNALS_RELOCATABLE_INSTALL_PREFIX}"
+@@ -81,7 +81,7 @@
+ set(QT_WILL_INSTALL @QT_WILL_INSTALL@ CACHE BOOL
+     "Boolean indicating if doing a Qt prefix build (vs non-prefix build)." FORCE)
+ 
+-set(QT_SOURCE_TREE "@QT_SOURCE_TREE@" CACHE PATH
++set(QT_SOURCE_TREE "" CACHE PATH
+ "A path to the source tree of the previously configured QtBase project." FORCE)
+ 
+ # Propagate decision of building tests and examples to other repositories.
+--- a/cmake/PkgConfigLibrary.pc.in
++++ b/cmake/PkgConfigLibrary.pc.in
+@@ -1,4 +1,4 @@
+-prefix=@CMAKE_INSTALL_PREFIX@
++prefix=${pcfiledir}/../..
+ exec_prefix=${prefix}
+ bindir=${prefix}/@INSTALL_BINDIR@
+ libexecdir=${prefix}/@INSTALL_LIBEXECDIR@
+--- a/cmake/QtGenerateExtPri.cmake
++++ b/cmake/QtGenerateExtPri.cmake
+@@ -18,6 +18,8 @@
+     if(first_iteration)
+         # Add configuration-independent variables
+         set(first_iteration FALSE)
++        # Bundled third-party headers belong to Qt's private build interface.
++        set(incdir "")
+         list(JOIN incdir " " incdir)
+         list(JOIN defines " " defines)
+         string(APPEND content "QMAKE_INCDIR_${uclib} = ${incdir}

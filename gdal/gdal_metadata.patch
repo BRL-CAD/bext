@@ -1,0 +1,73 @@
+--- a/cmake/helpers/GdalGenerateConfig.cmake
++++ b/cmake/helpers/GdalGenerateConfig.cmake
+@@ -359,6 +359,13 @@
+     set(CONFIG_PLUGINDIR "${INSTALL_PLUGIN_FULL_DIR}")
+     gdal_join_and_quote(CONFIG_PLUGINDIR)
+ 
++    # Installed tools and metadata derive their root at use time.
++    foreach(var CONFIG_LIBS CONFIG_DEP_LIBS CONFIG_CFLAGS CONFIG_DATA CONFIG_PLUGINDIR)
++        string(REPLACE "${CMAKE_INSTALL_PREFIX}" "\${CONFIG_PREFIX}" ${var} "${${var}}")
++    endforeach()
++    file(RELATIVE_PATH CONFIG_BIN_TO_PREFIX
++        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}" "${CMAKE_INSTALL_PREFIX}")
++
+     # Create apps/gdal-config with execution rights from gdal-config.in
+     get_filename_component(GDAL_CONFIG_DIR "${arg_GDAL_CONFIG}" DIRECTORY)
+     file(MAKE_DIRECTORY "${GDAL_CONFIG_DIR}.tmp")
+@@ -367,5 +374,9 @@
+          DESTINATION "${GDAL_CONFIG_DIR}"
+          FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+ 
++    foreach(var CONFIG_LIBS CONFIG_DEP_LIBS CONFIG_CFLAGS CONFIG_DATA CONFIG_PLUGINDIR)
++        string(REPLACE "\${CONFIG_PREFIX}" "\${prefix}" ${var} "${${var}}")
++    endforeach()
++    set(CONFIG_PREFIX "\${pcfiledir}/../..")
+     configure_file("${GDAL_CMAKE_TEMPLATE_PATH}/gdal.pc.in" "${arg_PKG_CONFIG}" @ONLY)
+ endfunction()
+--- a/cmake/template/gdal-config.in
++++ b/cmake/template/gdal-config.in
+@@ -1,7 +1,7 @@
+ #!/bin/sh
++CONFIG_PREFIX=$(CDPATH= cd -- "$(dirname -- "$0")/@CONFIG_BIN_TO_PREFIX@" && pwd -P) || exit 1
+ CONFIG_LIBS="@CONFIG_LIBS@"
+ CONFIG_DEP_LIBS="@CONFIG_DEP_LIBS@"
+-CONFIG_PREFIX="@CONFIG_PREFIX@"
+ CONFIG_CFLAGS="@CONFIG_CFLAGS@"
+ CONFIG_DATA="@CONFIG_DATA@"
+ CONFIG_VERSION="@GDAL_VERSION@"
+--- a/cmake/template/gdal.pc.in
++++ b/cmake/template/gdal.pc.in
+@@ -1,5 +1,5 @@
+ CONFIG_VERSION=@GDAL_VERSION@
+-CONFIG_INST_PREFIX=@GDAL_PREFIX@
++CONFIG_INST_PREFIX=@CONFIG_PREFIX@
+ CONFIG_INST_LIBS=@CONFIG_LIBS@
+ CONFIG_INST_CFLAGS=@CONFIG_CFLAGS@
+ CONFIG_INST_DATA=@CONFIG_DATA@
+--- a/gdal.cmake
++++ b/gdal.cmake
+@@ -129,6 +129,15 @@
+ 
+ # Generates now port/cpl_config.h (it depends on at least iconv detection in CheckDependentLibraries)
+ configure_file(${GDAL_CMAKE_TEMPLATE_PATH}/cpl_config.h.in ${PROJECT_BINARY_DIR}/port/cpl_config.h @ONLY)
++# The compiled library owns its resource discovery policy; SDK consumers do not
++# need the producer's fallback prefix in their public configuration header.
++function(gdal_public_config_header)
++  unset(GDAL_PREFIX)
++  configure_file(${GDAL_CMAKE_TEMPLATE_PATH}/cpl_config.h.in
++    ${PROJECT_BINARY_DIR}/port/public/cpl_config.h @ONLY)
++endfunction()
++gdal_public_config_header()
++
+ 
+ set(CMAKE_C_FLAGS ${_CMAKE_C_FLAGS_backup})
+ set(CMAKE_CXX_FLAGS ${_CMAKE_CXX_FLAGS_backup})
+@@ -582,7 +591,7 @@
+ set_property(
+   TARGET ${GDAL_LIB_TARGET_NAME}
+   APPEND
+-  PROPERTY PUBLIC_HEADER ${CMAKE_CURRENT_BINARY_DIR}/port/cpl_config.h)
++  PROPERTY PUBLIC_HEADER ${CMAKE_CURRENT_BINARY_DIR}/port/public/cpl_config.h)
+ 
+ set(GDAL_DATA_FILES
+     LICENSE.TXT

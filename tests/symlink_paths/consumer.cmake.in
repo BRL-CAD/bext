@@ -40,8 +40,13 @@ install(TARGETS consumer RUNTIME DESTINATION bin)
 # Exercise a Find module using pkg-config through BRL-CAD's own wrapper.
 # No staged package path is supplied by the caller.
 brlcad_find_package(PathProbePkg REQUIRED)
-if(NOT "${PATHPROBE_PKG_INCLUDE_DIRS}" STREQUAL "${CMAKE_BINARY_DIR}/include" OR
-   NOT "${PATHPROBE_PKG_LINK_LIBRARIES}" STREQUAL "${CMAKE_BINARY_DIR}/lib/libpathprobe.so" OR
+# pcfiledir-relative paths may contain .. components; compare their resolved targets.
+file(REAL_PATH "${PATHPROBE_PKG_INCLUDE_DIRS}" probe_include)
+file(REAL_PATH "${PATHPROBE_PKG_LINK_LIBRARIES}" probe_library)
+file(REAL_PATH "${CMAKE_BINARY_DIR}" expected_root)
+file(REAL_PATH "${expected_root}/lib/libpathprobe.so" expected_library)
+if(NOT "${probe_include}" STREQUAL "${expected_root}/include" OR
+   NOT "${probe_library}" STREQUAL "${expected_library}" OR
    NOT "${PATHPROBEPKG_STATUS}" STREQUAL "Bundled")
   message(FATAL_ERROR "pkg-config did not select the staged bundle: ${PATHPROBE_PKG_LINK_LIBRARIES}")
 endif()

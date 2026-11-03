@@ -2,6 +2,8 @@
 cad_enable(QT "libqtcad")
 
 set(QT_EXTRA_PATCHES "" CACHE STRING "Additional patches to apply to bundled Qt6")
+list(PREPEND QT_EXTRA_PATCHES "${CMAKE_CURRENT_SOURCE_DIR}/qt_metadata.patch")
+list(REMOVE_DUPLICATES QT_EXTRA_PATCHES)
 set(QT_XMIN_ROOT "" CACHE PATH "Installed Xmin SDK used by bundled Qt6")
 
 if (BEXT_XMIN_ROOT AND NOT DISABLE_QT)
@@ -122,6 +124,11 @@ if (ENABLE_QT)
   set(QT_UPSTREAM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/qt/qtbase")
   set(QT_SOURCE_DIR "${QT_UPSTREAM_SOURCE_DIR}")
   set(QT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/qt6-build")
+  # Qt rejects symlinks anywhere in its build path (e.g. /home on FreeBSD).
+  # Create the directory first so REAL_PATH can resolve every component, then
+  # use that physical path in ExternalProject and all Qt wrapper scripts.
+  file(MAKE_DIRECTORY "${QT_BUILD_DIR}")
+  file(REAL_PATH "${QT_BUILD_DIR}" QT_BUILD_DIR)
   set(QT_PATCH_COMMAND)
   set(qt_patch_hash_input "")
   foreach(QT_EXTRA_PATCH IN LISTS QT_EXTRA_PATCHES)
