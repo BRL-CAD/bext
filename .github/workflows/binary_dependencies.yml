@@ -1,8 +1,8 @@
 name: Binary dependencies
 
 on:
-  push:
   schedule:
+    # Wednesday at 02:30 UTC; unchanged commits skip the builds.
     - cron: '30 2 * * 3'
   workflow_dispatch:
 
@@ -17,9 +17,16 @@ env:
   BEXT_ARCHIVE_RETENTION_DAYS: 90
 
 jobs:
+  changes:
+    permissions:
+      actions: read
+    uses: ./.github/workflows/weekly_changes.yml
+
   # Finalized package metadata retains its install prefix.  runner.temp is
   # stable between producer and consumer jobs on each pinned runner image.
   linux_release:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     name: Ubuntu GCC Release Build
     runs-on: ubuntu-24.04
     outputs:
@@ -45,10 +52,10 @@ jobs:
           sudo apt-get clean
 
       - name: Configure
-        run: cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/bext_output"
+        run: cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DBEXT_DISCARD_WORK=ON -DBEXT_BUILD_JOBS=2 -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/bext_output"
 
       - name: Build
-        run: cmake --build build --parallel 2 --verbose
+        run: cmake --build build --parallel 1 --verbose
 
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'
@@ -74,6 +81,8 @@ jobs:
           compression-level: 0
 
   windows_ninja_release:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     name: MSVC - Ninja Release build
     runs-on: windows-2025
     outputs:
@@ -98,14 +107,14 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=cl.exe -DCMAKE_CXX_COMPILER=cl.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$env:RUNNER_TEMP/bext_output"
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=cl.exe -DCMAKE_CXX_COMPILER=cl.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ALL=ON -DBEXT_DISCARD_WORK=ON -DBEXT_BUILD_JOBS=2 -DGIT_SHALLOW_CLONE=ON -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$env:RUNNER_TEMP/bext_output"
           # Ensure generated files are flushed before compilation begins.
           Write-VolumeCache C
           Write-VolumeCache D
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --parallel 2 --verbose
+        run: cmake --build build --parallel 1 --verbose
 
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'
@@ -131,6 +140,8 @@ jobs:
           compression-level: 0
 
   macos_release:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     name: macOS Clang Release Build
     runs-on: macos-15
     outputs:
@@ -149,10 +160,10 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-        run: cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/bext_output"
+        run: cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DBEXT_DISCARD_WORK=ON -DBEXT_BUILD_JOBS=2 -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/bext_output"
 
       - name: Build
-        run: cmake --build build --parallel 2 --verbose
+        run: cmake --build build --parallel 1 --verbose
 
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'

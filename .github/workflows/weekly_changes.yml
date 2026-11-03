@@ -1,0 +1,52 @@
+# Shared gate for weekly checks and binary dependency builds.  Compare SHAs,
+# rather than commit dates, so delayed schedules and old commits merged onto
+# the default branch are handled correctly.  Skipped weeks still record the
+# current SHA in run history, without relying on expiring caches or artifacts.
+name: Check for weekly changes
+
+on:
+  workflow_call:
+    outputs:
+      run:
+        description: Whether the caller should run its checks
+        value: ${{ jobs.changes.outputs.run }}
+
+permissions:
+  actions: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.changes.outputs.run }}
+    steps:
+      - name: Compare with the previous scheduled run
+        id: changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Manual dispatch and explicit re-runs bypass the weekly gate.
+            if (context.eventName !== 'schedule' || Number(process.env.GITHUB_RUN_ATTEMPT) > 1) {
+              core.setOutput('run', 'true');
+              return;
+            }
+
+            // A reusable workflow shares the caller's run ID and event context.
+            const {data: current} = await github.rest.actions.getWorkflowRun({
+              ...context.repo,
+              run_id: context.runId,
+            });
+            const {data: history} = await github.rest.actions.listWorkflowRuns({
+              ...context.repo,
+              workflow_id: current.workflow_id,
+              branch: current.head_branch,
+              event: 'schedule',
+              per_page: 2,
+            });
+            const previous = history.workflow_runs.find(run => run.id < context.runId);
+            // Count failed runs too: unchanged code is retried only on request.
+            const changed = !previous || previous.head_sha !== context.sha;
+            core.info(changed
+              ? `Running weekly checks for ${context.sha}.`
+              : `Skipping weekly checks: ${context.sha} is unchanged.`);
+            core.setOutput('run', String(changed));
