@@ -7,8 +7,8 @@ flow and option behavior, see [README.md](README.md).
 
 All builds need:
 
-* Git
-* CMake 3.19 or newer
+* Git 2.31 or newer for CMake-driven submodule population
+* CMake 3.26 or newer
 * A modern C compiler
 * A modern C++ compiler
 
@@ -21,6 +21,7 @@ Additional requirements depend on the enabled stacks:
 * `USE_QT`, `USE_APPLESEED`, or `USE_OSPRAY` need Python 3 available
   to the build.
 * `USE_OSPRAY` needs `m4`.
+* `BEXT_DISCARD_WORK=ON` needs Python 3.8 or newer.
 
 # Source checkout options
 
@@ -232,8 +233,9 @@ build scripts.
 
 # Path and directory caveats
 
-* Avoid symlinked source or build directory paths.  `bext` warns about these
-  because they can cause downstream install and rpath problems.
+* Source, build, and install paths may use symlink aliases. Finalization records
+  requested and physical install prefixes for downstream staging. See the
+  [bundle contract](MAINTAINING.md#bundle-contract) for relocation checks.
 * On non-Windows platforms, bundled Tcl/Tk builds do not support spaces in the
   source or build directory path.
 

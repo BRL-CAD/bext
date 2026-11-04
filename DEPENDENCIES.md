@@ -98,90 +98,23 @@ selection further.
   Those groups still need to be enabled explicitly.
 * A few source trees, such as `patchelf`, are present in the repository but are
   not currently added by the top-level build.
-* Run the `update_dependency_docs` target after changing project groups,
-  dependency edges, output locations, or submodule sources.  CI runs
-  `check_dependency_metadata` to detect drift, unknown edges, cycles, missing
-  source pins, and missing bundled-output license installation.
-* The `sbom` target writes an SPDX 2.3 JSON inventory to `bext.spdx.json` in
-  the build directory.  `supply_chain_check` validates metadata and produces
-  the SBOM together.
+* Metadata has two snapshot modes: committed `HEAD` (default) and staged
+  `INDEX`. All source declarations, dependency files, URLs, pins, and the
+  checked reference table come from the selected snapshot.
+* Before committing an integration, stage its inputs, run
+  `update_staged_dependency_docs`, stage this file, and run
+  `check_staged_dependency_metadata`. See the
+  [validation procedure](MAINTAINING.md#validation-and-ci) for script commands
+  that do not require a configured build.
+* `check_dependency_metadata` validates committed metadata. The `sbom` target
+  writes the committed repository inventory to `bext.spdx.json`;
+  `supply_chain_check` performs both operations. The SBOM always uses HEAD and
+  is distinct from the finalized installed bundle manifest.
 
-# Adding a dependency
+# Maintaining dependencies
 
-For maintainers, the high-level workflow for adding a new dependency to `bext`
-is:
-
-1. Decide whether the dependency belongs in `bext` at all.
-Only add repositories that are expected to support live BRL-CAD or related
-build features.  Exploratory work that may be discarded should stay in a branch
-until the dependency choice is settled.
-
-2. Prepare a source snapshot for evaluation, or the BRL-CAD-hosted repository
-for adoption.
-`bext` generally points at BRL-CAD-managed copies of upstream sources rather
-than upstream repositories directly. For early testing, a local snapshot can
-be used without adding a submodule. Record its repository URL and full commit
-ID with `bext_local_source(...)`. Before adopting the dependency, make sure
-the BRL-CAD copy has the intended `RELEASE` content, submodules handled as
-needed, and license files available for installation.
-
-3. Choose the `USE_*` group or groups that should bring the dependency into
-scope.
-This controls when the dependency is considered at all.  If none of the
-existing groups fit, add a new one only if it represents a real build profile
-that users can reason about. BRL-CAD dependencies, including optional ones,
-belong in `BRLCAD`; source availability during experiments is handled by the
-wrapper rather than a separate group.
-
-4. Add the new top-level directory and source tree.
-The directory should usually contain:
-* a local source snapshot during evaluation, or a git submodule after adoption
-* a managing `CMakeLists.txt`
-* a `<name>.deps` file listing other `bext` projects it depends on
-* any patch files or helper resources needed by the build
-
-After `git submodule add`, update `.gitmodules` to include `ignore = dirty` for
-the new entry, consistent with the existing submodules. Keep experimental
-source snapshots out of bext commits.
-
-5. Add the build logic.
-Follow the patterns used by nearby dependencies:
-* use `bext_local_source(...)` during evaluation; absent sources are skipped,
-  explicit disables are respected, and bootstrap does not fetch them
-* after adoption, replace the local-source declaration with normal selection
-  logic and use `git_submodule_init(...)` inside the enabled build block
-* use `RegisterDeps(...)`
-* decide whether the outputs belong in `install` or `noinstall`
-* copy license files into `${DOC_LICENSE_DIR}`
-* use `cad_enable(...)` before the local-source helper if component selection
-  is needed; use `bext_enable(...)` for system detection after adoption
-
-6. Register the dependency in the top-level build.
-Add `add_project(...)` to the top-level `CMakeLists.txt` in dependency order so
-that any prerequisites appear earlier in the file.
-
-7. Update the docs.
-At minimum:
-* regenerate the project table with `update_dependency_docs`
-* update `INSTALL.md` if the new dependency adds system prerequisites
-* update `NOTES.md` if the dependency needs special submodule or maintainer
-  handling
-
-8. Test the intended selection behavior and build flow.
-Check at least:
-* the default configure path for the relevant `USE_*` groups
-* `-DENABLE_ALL=ON`
-* explicit package disables and, for snapshots, absent sources and sources
-  added after the first configure
-* bootstrap selection and dependency metadata validation
-* any new or changed prerequisite detection
-* downstream use if the outputs are intended for BRL-CAD bundling
-
-9. Only after the dependency is working, commit the new submodule reference and
-the `bext` integration together.
-That keeps the repository history aligned with a working configuration rather
-than a partial experiment.
-
-For a complete example, see the
-[pugixml walkthrough](NOTES.md#example-pugixml-from-local-snapshot-to-submodule).
-For lower-level git and submodule procedures, see [NOTES.md](NOTES.md).
+See [MAINTAINING.md](MAINTAINING.md) for the dependency lifecycle, source-tag
+policy and exceptions, wrapper conventions, controlled updates, retirement,
+and validation. The
+[pugixml example](MAINTAINING.md#example-pugixml-from-local-snapshot-to-submodule)
+walks through snapshot evaluation and adoption of an upstream release.

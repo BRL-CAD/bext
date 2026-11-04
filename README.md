@@ -12,14 +12,14 @@ Clone the repository, configure with the official `auto` preset, and build:
 git clone https://github.com/BRL-CAD/bext
 cd bext
 cmake --preset auto
-cmake --build build/auto --config Release --parallel 8
+cmake --build build/auto/Release --config Release --parallel 8
 ```
 
 Submodules are populated on demand during configure.  For checkout and
 platform setup details, see [INSTALL.md](INSTALL.md).
 
-The preset workflow relies on CMake's newer preset support.  If you are using
-CMake 3.19 or 3.20, use the raw configure equivalents below.
+CMake 3.26 or newer supports both the presets and the raw configure equivalents
+below.
 
 # Optional bootstrap
 
@@ -66,6 +66,9 @@ active `USE_*` groups.  It does not turn on groups whose `USE_*` option is
 When `bext` is driven from a BRL-CAD build, `BRLCAD_COMPONENTS` can further
 narrow some BRL-CAD-related packages to only those needed by the requested
 component set.
+An explicit `ENABLE_<pkg>=OFF` prevents its local build even when that component
+is selected or `ENABLE_ALL=ON`. It does not guarantee that a suitable system
+package is installed.
 
 `USE_BRLCAD` now includes STEPcode, OpenVDB, OpenCV, and Bullet. The former
 `USE_BRLCAD_EXTRA` option has been removed; values left in an existing cache
@@ -75,27 +78,16 @@ local builds individually, use `ENABLE_STEPCODE=OFF`, `ENABLE_OPENVDB=OFF`,
 
 # Experimental dependencies
 
-When a dependency is being evaluated, sometimes it will be given a preliminary
-directory without setting up a submodule.  Testing will then take place using
-local source snapshots. This lets us evaluate the source before adding a
-submodule, while giving us a place to store the patch files and build logic
-needed to build it as part of bext.
+Experimental integrations may use local source snapshots before a submodule
+is adopted. Their wrappers are considered in the relevant active `USE_*`
+groups, but an absent snapshot is skipped even with `ENABLE_ALL=ON`.
+`ENABLE_<pkg>=OFF` or `DISABLE_<pkg>=ON` prevents its local build. An enabled
+snapshot can appear after the first configure and be picked up on the next
+one. Bootstrap does not fetch experimental sources.
 
-Register an experimental wrapper under the appropriate active `USE_*` group
-(usually `BRLCAD`) and use `bext_local_source(...)` to declare its source path,
-repository URL, and full commit ID. The wrapper builds the snapshot when its
-`CMakeLists.txt` is present and skips it when absent, even with `ENABLE_ALL=ON`.
-`ENABLE_<pkg>=OFF` or `DISABLE_<pkg>=ON` prevents the local build. The cached
-`ENABLE_<pkg>` preference is preserved when a snapshot is temporarily absent,
-so placing the source later enables it on the next configure unless explicitly
-disabled. No checkout or download is attempted, and bootstrap excludes these
-wrappers from its submodule list. The declared URL and revision supply
-provenance for the dependency table and SBOM without a `.gitmodules` entry.
-
-If the decision is made to incorporate such a dependency, its submodule will
-be added and it will become part of the "regular" bext setup. See the
-[pugixml walkthrough](NOTES.md#example-pugixml-from-local-snapshot-to-submodule)
-for both stages.
+For preparing, declaring, and adopting a snapshot, see the
+[maintainer guide](MAINTAINING.md#dependency-lifecycle) and its
+[pugixml walkthrough](MAINTAINING.md#example-pugixml-from-local-snapshot-to-submodule).
 
 # Official profiles
 
@@ -126,7 +118,7 @@ cmake --preset everything
 Build using the preset's build directory:
 
 ```sh
-cmake --build build/auto --config Release --parallel 8
+cmake --build build/auto/Release --config Release --parallel 8
 ```
 
 # Raw configure equivalents
@@ -252,7 +244,8 @@ parent directory containing both `install/` and `noinstall/`.
 
 # Using the build outputs with BRL-CAD
 
-If you used the `auto` preset, `BRLCAD_EXT_DIR` should be `../bext/build/auto`.
+If you used the `auto` preset, `BRLCAD_EXT_DIR` should be
+`../bext/build/auto/Release`.
 Configure BRL-CAD with:
 
 ```sh
@@ -278,5 +271,6 @@ cmake ../brlcad \
   setup caveats
 * [DEPENDENCIES.md](DEPENDENCIES.md) - package-to-group reference, output
   classification, and dependency addition workflow
-* [NOTES.md](NOTES.md) - maintainer notes and submodule procedures
+* [MAINTAINING.md](MAINTAINING.md) - dependency lifecycle, wrapper conventions,
+  validation, and troubleshooting
 * [XMIN.md](XMIN.md) - testing-only headless X11 support using Xmin
