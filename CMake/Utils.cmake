@@ -144,6 +144,13 @@ endfunction(git_submodule_init path)
 # the components directly specified by the user to BRL-CAD's configure.
 ###############################################################################
 function(cad_enable pname components)
+  # Explicit local-build exclusions take precedence over component selection
+  # and ENABLE_ALL. Keep the preference in the cache across reconfigures.
+  if (DISABLE_${pname})
+    set(ENABLE_${pname} OFF PARENT_SCOPE)
+    set(DISABLE_${pname} ON PARENT_SCOPE)
+    return()
+  endif ()
   if (DEFINED BRLCAD_COMPONENTS)
 
     # To avoid problems passing multiple components in, we support using ':' as
@@ -151,11 +158,6 @@ function(cad_enable pname components)
     # TODO: If this doesn't cut it we'll probably have to pass in a file
     # containing a list and read that.
     string(REPLACE ":" ";" BRLCAD_COMPONENTS "${BRLCAD_COMPONENTS}")
-
-    # In case the component list changed, make sure we're
-    # not using a cached result.
-    unset(ENABLE_${pname} CACHE)
-    unset(DISABLE_${pname} CACHE)
 
     set(acomponents ${components})
 
@@ -172,6 +174,14 @@ function(cad_enable pname components)
 
     # If we're a component build and this component
     # isn't enabled, it's a definite off
+    if (NOT DEFINED ENABLE_${pname})
+      # Custom wrappers may cache their effective OFF decision. Remove only
+      # these generated defaults after the wrapper finishes, never user OFFs.
+      set_property(DIRECTORY APPEND PROPERTY BEXT_COMPONENT_DEFAULTS "ENABLE_${pname}")
+    endif ()
+    if (NOT DEFINED DISABLE_${pname})
+      set_property(DIRECTORY APPEND PROPERTY BEXT_COMPONENT_DEFAULTS "DISABLE_${pname}")
+    endif ()
     set(ENABLE_${pname} OFF)
     set(DISABLE_${pname} ON)
   endif (DEFINED BRLCAD_COMPONENTS)
@@ -210,24 +220,27 @@ macro(bext_enable pname)
   string(TOUPPER "${pname}" upname)
   #string(TOLOWER "${pname}" lpname)
 
-  bext_enable_all_default(${upname} ${pname})
+  if (DISABLE_${upname})
+    # Component exclusions are effective decisions, not cached user choices.
+    set(ENABLE_${upname} OFF)
+  else ()
+    bext_enable_all_default(${upname} ${pname})
 
-  if (NOT ENABLE_${upname} AND NOT DISABLE_${upname})
+    if (NOT ENABLE_${upname})
 
-    # This is an optional probe: a "not found" result is the normal, expected
-    # path that simply turns on the local build below, and the configure
-    # summary already reports which packages are built locally vs. found on the
-    # system.  Pass QUIET so a missing package does not emit CMake's verbose
-    # "could not find a package configuration file" warning, which is noise
-    # here rather than something the developer needs to act on.
-    find_package(${pname} QUIET)
+      # This is an optional probe: a "not found" result is the normal, expected
+      # path that simply turns on the local build below, and the configure
+      # summary already reports which packages are built locally vs. found on
+      # the system. QUIET avoids verbose warnings for missing system packages.
+      find_package(${pname} QUIET)
 
-    if (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
-      set(ENABLE_${upname} "ON" CACHE BOOL "Enable ${pname} build")
-    endif (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
+      if (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
+        set(ENABLE_${upname} "ON" CACHE BOOL "Enable ${pname} build")
+      endif (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
 
-  endif (NOT ENABLE_${upname} AND NOT DISABLE_${upname})
-  set(ENABLE_${upname} "${ENABLE_${upname}}" CACHE BOOL "Enable ${pname} build")
+    endif ()
+    set(ENABLE_${upname} "${ENABLE_${upname}}" CACHE BOOL "Enable ${pname} build")
+  endif ()
 endmacro(bext_enable pname)
 
 ###############################################################################
@@ -335,12 +348,21 @@ endfunction(bext_print_configure_summary)
 # The primary add_project function used to add individual dependency
 # directories.
 ###############################################################################
+function(_bext_clear_component_defaults pname)
+  get_property(defaults DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${pname}"
+    PROPERTY BEXT_COMPONENT_DEFAULTS)
+  foreach(name IN LISTS defaults)
+    unset(${name} CACHE)
+  endforeach ()
+endfunction()
+
 function(add_project pname)
   cmake_parse_arguments(A "" "" "GROUPS" ${ARGN})
   string(TOUPPER "${pname}" UPNAME)
   string(REPLACE "-" "_" UPNAME "${UPNAME}")
   if (NOT A_GROUPS)
     add_subdirectory(${pname})
+    _bext_clear_component_defaults(${pname})
     _bext_summary_project_uses_local_build(local_build ${pname} ${UPNAME})
     if (local_build)
       _bext_summary_append(BEXT_SUMMARY_LOCAL_PROJECTS ${pname})
@@ -361,6 +383,7 @@ function(add_project pname)
       else ()
         add_subdirectory(${pname})
       endif ()
+      _bext_clear_component_defaults(${pname})
       set(is_added TRUE)
       set(${UPNAME}_ADDED 1 PARENT_SCOPE)
       break()
@@ -384,7 +407,11 @@ function(add_project pname)
       set(STALE_INSTALL_WARN TRUE PARENT_SCOPE)
     endif (ENABLE_${UPNAME})
     execute_process(COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/${pname})
-    unset(ENABLE_${UPNAME} CACHE)
+    # Preserve explicit OFF preferences when a group is disabled and enabled
+    # again. Other cached build decisions can be reconsidered when it returns.
+    if (ENABLE_${UPNAME})
+      unset(ENABLE_${UPNAME} CACHE)
+    endif ()
   endif (NOT is_added)
 endfunction(add_project pname)
 

@@ -106,6 +106,10 @@ install(FILES payload DESTINATION share/probe)
         self.assertIn('local source snapshot is absent', output)
 
     def test_snapshot_provenance_and_bootstrap_without_submodule(self):
+        self.run_command('git', 'init', '-q', self.source)
+        self.run_command('git', '-C', self.source, 'add', '.')
+        self.run_command('git', '-C', self.source, '-c', 'user.name=Selection Test',
+                         '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Snapshot wrapper')
         script = self.root / 'inventory.cmake'
         script.write_text('''
 include("@SOURCE@/CMake/BextDependencyInventory.cmake")
@@ -145,6 +149,84 @@ message(STATUS "PROVENANCE=${urls}|${revisions}")
         output = self.configure('OFF', '-DUSE_BRLCAD_EXTRA=ON')
         groups = next(line for line in output.splitlines() if 'active USE_* groups:' in line)
         self.assertNotIn('BRLCAD_EXTRA', groups)
+
+    def component_wrapper(self, local=True):
+        wrapper = self.wrapper / 'CMakeLists.txt'
+        text = wrapper.read_text()
+        if local:
+            text = 'cad_enable(PROBE "libgcv")\n' + text
+        else:
+            declaration = text.splitlines()[1]
+            text = text.replace(declaration, 'cad_enable(PROBE "libgcv")\nbext_enable(PROBE)')
+            modules = self.source / 'CMake'
+            modules.mkdir()
+            (modules / 'FindPROBE.cmake').write_text('set(PROBE_FOUND FALSE)\n')
+            text = 'list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")\n' + text
+        wrapper.write_text(text)
+        self.snapshot()
+
+    def test_snapshot_off_wins_over_components_enable_all_and_group_changes(self):
+        self.component_wrapper()
+        self.configure('OFF', '-DENABLE_PROBE=OFF', '-DENABLE_ALL=ON', '-DBRLCAD_COMPONENTS=libgcv')
+        self.configure('OFF', '-DBRLCAD_COMPONENTS=other')
+        self.configure('OFF', '-DUSE_BRLCAD=OFF')
+        self.configure('OFF', '-DUSE_BRLCAD=ON', '-DBRLCAD_COMPONENTS=other:libgcv')
+        self.assertIn('ENABLE_PROBE:BOOL=OFF', (self.build / 'CMakeCache.txt').read_text())
+
+    def test_normal_wrapper_off_wins_over_components_and_enable_all(self):
+        self.component_wrapper(local=False)
+        self.configure('OFF', '-DENABLE_PROBE=OFF', '-DENABLE_ALL=ON', '-DBRLCAD_COMPONENTS=libgcv')
+        self.configure('OFF', '-UBRLCAD_COMPONENTS')
+        self.assertRegex((self.build / 'CMakeCache.txt').read_text(), r'ENABLE_PROBE:[^=\n]+=OFF')
+
+    def test_component_exclusions_do_not_become_cached_package_preferences(self):
+        self.component_wrapper(local=False)
+        self.configure('OFF', '-DBRLCAD_COMPONENTS=other')
+        self.configure('ON', '-DBRLCAD_COMPONENTS=libgcv')
+        self.configure('OFF', '-DBRLCAD_COMPONENTS=other')
+        self.configure('ON', '-UBRLCAD_COMPONENTS')
+
+    def test_custom_wrapper_component_exclusion_does_not_cache_off(self):
+        self.component_wrapper()
+        wrapper = self.wrapper / 'CMakeLists.txt'
+        text = wrapper.read_text()
+        declaration = next(line for line in text.splitlines() if line.startswith('bext_local_source('))
+        text = text.replace(declaration, '''
+if(NOT DEFINED ENABLE_PROBE AND NOT DISABLE_PROBE)
+  set(ENABLE_PROBE ON)
+endif()
+set(ENABLE_PROBE "${ENABLE_PROBE}" CACHE BOOL "Build custom dependency")
+set(DISABLE_PROBE "${DISABLE_PROBE}" CACHE BOOL "Disable custom dependency")
+''')
+        wrapper.write_text(text)
+        self.configure('OFF', '-DBRLCAD_COMPONENTS=other')
+        self.configure('ON', '-DBRLCAD_COMPONENTS=libgcv')
+        self.configure('OFF', '-DENABLE_PROBE=OFF', '-DENABLE_ALL=ON')
+        self.configure('OFF', '-DBRLCAD_COMPONENTS=other')
+        self.configure('OFF', '-DBRLCAD_COMPONENTS=libgcv')
+
+    def test_component_selection_preserves_explicit_disable(self):
+        self.component_wrapper()
+        self.configure('OFF', '-DDISABLE_PROBE=ON', '-DENABLE_ALL=ON', '-DBRLCAD_COMPONENTS=libgcv')
+        self.configure('OFF', '-DBRLCAD_COMPONENTS=other:libgcv')
+        self.configure('ON', '-DDISABLE_PROBE=OFF')
+
+    def test_tk_off_is_respected_without_brlcad_group(self):
+        (self.wrapper / 'CMakeLists.txt').write_text(
+            'set(USE_BRLCAD OFF)\nset(ENABLE_TK OFF CACHE BOOL "Disable Tk")\n'
+            'set(BEXT_XMIN_ROOT "unused-sdk")\n'
+            'include("' + SOURCE.as_posix() + '/tk/CMakeLists.txt")\n'
+            'if(TARGET TK_BLD)\nmessage(FATAL_ERROR "Tk was explicitly disabled")\nendif()\n')
+        self.configure('OFF', '-DENABLE_ALL=ON')
+
+    def test_qt_off_wins_over_components_enable_all_and_xmin_profile(self):
+        (self.wrapper / 'CMakeLists.txt').write_text(
+            'set(ENABLE_QT OFF CACHE BOOL "Disable Qt")\n'
+            'set(BRLCAD_COMPONENTS libqtcad)\nset(BEXT_XMIN_ROOT "unused-sdk")\n'
+            'set(QT_XMIN_ROOT "unused-sdk" CACHE PATH "Qt SDK")\n'
+            'include("' + SOURCE.as_posix() + '/qt/CMakeLists.txt")\n'
+            'if(TARGET Qt6_BLD OR ENABLE_QT)\nmessage(FATAL_ERROR "Qt was explicitly disabled")\nendif()\n')
+        self.configure('OFF', '-DENABLE_ALL=ON')
 
 
 if __name__ == '__main__':

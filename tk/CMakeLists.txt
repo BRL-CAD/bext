@@ -4,6 +4,10 @@
 set(TK_EXTRA_PATCHES "" CACHE STRING "Additional patches to apply to bundled Tk on Unix")
 set(TK_CONFIGURE_ARGS "" CACHE STRING "Additional arguments for bundled Tk's Unix configure script")
 
+if (DEFINED ENABLE_TK AND NOT ENABLE_TK)
+  set(DISABLE_TK ON)
+endif ()
+
 if (USE_BRLCAD)
 
   # Decide if we're using Tk
@@ -18,15 +22,15 @@ if (USE_BRLCAD)
 
 else (USE_BRLCAD)
 
-  if (NOT DISABLE_TCL)
+  if (NOT DISABLE_TCL AND NOT DISABLE_TK)
     if (NOT TK_LIBRARY OR TARGET TCL_BLD)
       set(TK_DO_BUILD 1)
     else (NOT TK_LIBRARY OR TARGET TCL_BLD)
       set(TK_DO_BUILD 0)
     endif (NOT TK_LIBRARY OR TARGET TCL_BLD)
-  else (NOT DISABLE_TCL)
+  else ()
     set(TK_DO_BUILD 0)
-  endif (NOT DISABLE_TCL)
+  endif ()
 
 endif(USE_BRLCAD)
 
