@@ -228,8 +228,9 @@ preferences. Custom wrappers must preserve the same override precedence.
 | `add_project(name GROUPS "...")` | Register a wrapper after its prerequisites and within all relevant consumer groups. |
 | `cad_enable(PKG "component;...")` | Apply BRL-CAD component selection while preserving explicit local-build exclusions. Call before package selection. |
 | `bext_enable(Package)` | Probe a system package and choose a local fallback when allowed. Match the actual find-module or config-package name. |
-| `bext_local_source(PKG path url revision)` | Build a permitted, present CMake snapshot; skip an absent one. Cache the preference separately from availability. |
-| `git_submodule_init(path checkfile)` | Populate an adopted source when its checkfile is absent, using bext's Git mappings. Call inside the enabled block. |
+| `bext_local_source(PKG path url revision)` | Build a permitted, present CMake snapshot; skip an absent one. Cache the preference separately from availability. Does not track source or patch changes. |
+| `git_submodule_init(path checkfile [PATCH_FILES ...] [PATCH_COMMAND_VAR var])` | Populate an adopted source when its checkfile is absent, using bext's Git mappings. Track its revision and the ordered patch list; reset the wrapper build directory when that state changes. Call inside the enabled block. |
+| `bext_patch_command(var patch-file...)` | Assemble ordered patch commands using the shared patch tool and options. Does not register change tracking or reset staged sources. |
 | `RegisterDeps(PKG)` | Read `<wrapper>.deps`, require prerequisites to have been considered earlier, and expose `*_TARGET` flags. |
 | `TargetInstallDeps(PKG PKG_DEPENDS)` | Make the external project's configure step wait for locally built prerequisite install steps. |
 
@@ -259,10 +260,10 @@ non-CMake sources; the snapshot helper currently checks for `CMakeLists.txt`.
 * Keep adaptations against an upstream release in focused, ordered patch files.
   State the reason and upstream status where useful. Exercise a clean copy and
   repeated builds; regenerated staged sources must receive the same patches.
-* Use the shared `PATCH_EXECUTABLE` command list and `PATCH_OPTIONS` rather than
-  assuming a platform patch executable or GNU-only flags. The shared wrapper
-  handles applicability checks and reject artifacts. Itk's custom patch driver
-  is an example for integrations needing additional processing.
+* Use the shared patch-command builder described below. It preserves
+  `PATCH_EXECUTABLE` and `PATCH_OPTIONS`, including the wrapper's applicability
+  checks and reject artifacts, without assuming a platform patch executable
+  or GNU-only flags.
 * Pass the selected compilers, build configuration, install prefix, and library
   directory. CMake ExternalProject builds receive the common policy floor and
   resource settings through the shared wrapper. Preserve generator expressions
@@ -279,6 +280,56 @@ non-CMake sources; the snapshot helper currently checks for `CMakeLists.txt`.
   driver requires an install step for every managed external project. Its
   root-level forwarding targets also make excluded wrappers reachable by
   native MSBuild; wrapper source project files are a separate build layer.
+
+### Patch lists and rebuilds
+
+For an adopted submodule, declare one ordered list of all patches that affect
+its staged source. Pass that list to `git_submodule_init` before generating
+files in the wrapper build directory or calling `ExternalProject_Add`:
+
+```cmake
+set(PKG_PATCH_FILES
+  "${CMAKE_CURRENT_SOURCE_DIR}/pkg.patch"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pkg_install.patch")
+git_submodule_init(source CMakeLists.txt
+  PATCH_FILES ${PKG_PATCH_FILES}
+  PATCH_COMMAND_VAR PKG_PATCH_COMMAND)
+
+ExternalProject_Add(PKG_BLD
+  URL "${CMAKE_CURRENT_SOURCE_DIR}/source"
+  PATCH_COMMAND ${PKG_PATCH_COMMAND}
+  # Other build and install arguments follow.
+)
+```
+
+The initializer registers the patch files as CMake configure dependencies and
+records their absolute paths and content hashes, in order, alongside the
+source commit. On a later configure, a changed revision, patch list, or patch
+content resets the wrapper's generated build directory so ExternalProject
+stages a fresh source copy and reapplies the patches. Keep
+`${PKG_PATCH_COMMAND}` unquoted when passing its command list to
+`ExternalProject_Add`. `PATCH_COMMAND_VAR` requires a nonempty `PATCH_FILES`
+list; omit both arguments for an unpatched dependency.
+Uncommitted edits inside the source checkout do not change its recorded
+commit; use a fresh build when testing those edits too.
+
+For a custom patch driver, still register every input with `PATCH_FILES`,
+including platform-specific and install-step patches, but omit
+`PATCH_COMMAND_VAR` and supply the custom `PATCH_COMMAND`. Itk demonstrates
+this pattern. Use `bext_patch_command` separately when the standard commands
+must be combined with additional patch-step operations; use the same ordered
+list for tracking and execution.
+
+For an experimental, non-submodule snapshot, keep `bext_local_source` for
+selection and provenance. Assemble its patch command with
+`bext_patch_command` and patch a staged copy via `URL`, leaving the original
+snapshot intact. Do not add `git_submodule_init` to obtain patch tracking:
+that would declare a submodule to bootstrap and metadata tools before one
+exists. `bext_local_source` has no `PATCH_FILES` or `PATCH_COMMAND_VAR`
+handling, and `bext_patch_command` only assembles commands. After changing
+snapshot contents, its recorded revision, or patches, recreate the dedicated
+experimental build tree before retesting. Reconfiguring or using
+`BUILD_ALWAYS` alone does not refresh an already patched source copy.
 
 ## Updating a dependency
 
@@ -327,9 +378,11 @@ the version/import changes.
 Review changes since the old pin, refresh patches against the selected release,
 check notices and optional dependencies, and build the wrapper and its
 consumers. Use a fresh build after source, toolchain, or configuration changes
-when prior outputs could mask a result. Source revision stamps may reset a
-wrapper's generated build directory; they do not prove an old install tree has
-been purged of obsolete products.
+when prior outputs could mask a result. Changes to a submodule revision or
+registered patch list/content reset its wrapper's generated build directory
+at configure time; they do not prove an old install tree has been purged of
+obsolete products. For non-submodule experiments, follow the fresh-build rule
+under [patch lists and rebuilds](#patch-lists-and-rebuilds).
 
 Stage only the intended gitlinks and integration changes, inspect the staged
 submodule diff, and run INDEX validation. Commit the release tag/version,
@@ -462,7 +515,7 @@ when assessing fallback selection.
 | Symptom | Where to look and what to do |
 | --- | --- |
 | Wrong source revision | Compare HEAD, index, and submodule checkout separately. Review mirror mappings and align the checkout explicitly. |
-| Patch failure | Inspect the ExternalProject patch step, shared `patch-rejects` artifacts, patch order, and the selected upstream release. Reproduce on a fresh staged copy. |
+| Patch failure or an edit not taking effect | Inspect the ExternalProject patch step, shared `patch-rejects` artifacts, patch order, and the selected upstream release. Register every submodule patch in `PATCH_FILES`. For a non-submodule snapshot, recreate the experimental build tree after patch/source edits. |
 | Configure/build/install failure | Identify the failing layer and dependency; inspect its ExternalProject stamp/log directory. `EXT_BUILD_VERBOSE=ON` exposes step output. |
 | Missing `*_BLD.vcxproj` before dependency configure | Inspect superbuild target discovery and forwarding targets, rather than deleting upstream IDE project files. |
 | Staged metadata differs from a check | Select INDEX mode, stage every intended input and the regenerated table, and resolve index conflicts. HEAD intentionally describes the committed state. |
@@ -536,17 +589,22 @@ add_project(pugixml GROUPS "BRLCAD;APPLESEED")
 ```
 
 Use this experimental `pugixml/CMakeLists.txt`. The literal revision declaration
-is provenance, not a request to fetch it. Add a `PATCH_COMMAND` using the shared
-patch tool if the release needs adaptations, following the wrapper conventions.
+is provenance, not a request to fetch it. This release needs no adaptations
+for the example, so its patch list starts empty. If testing an adaptation, add
+its patch file to that list in application order; the command builder also
+accepts an empty list.
 
 ```cmake
 bext_local_source(PUGIXML pugixml https://github.com/zeux/pugixml c8033ce9d039e7f9d134877c363397b3cfe20816)
 
 if (ENABLE_PUGIXML)
   RegisterDeps(PUGIXML)
+  set(PUGIXML_PATCH_FILES)
+  bext_patch_command(PUGIXML_PATCH_COMMAND ${PUGIXML_PATCH_FILES})
   ExternalProject_Add(PUGIXML_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/pugixml"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${PUGIXML_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBUILD_SHARED_LIBS=ON
@@ -572,7 +630,10 @@ if (ENABLE_PUGIXML)
 endif ()
 ```
 
-Configure an incremental test tree and build the target:
+Configure a dedicated incremental test tree and build the target. Before
+repeating this sequence after snapshot or patch edits, remove that disposable
+tree with `cmake -E rm -rf build/pugixml-eval`. The plain source under
+`pugixml/pugixml` is preserved:
 
 ```sh
 cmake --preset minimal -B build/pugixml-eval -DENABLE_PUGIXML=ON
@@ -614,6 +675,20 @@ Add the initializer inside the enabled block before `RegisterDeps`:
 ```cmake
 git_submodule_init(pugixml CMakeLists.txt)
 ```
+
+If the experiment added patches, retain the nonempty `PUGIXML_PATCH_FILES`
+list and replace both the standalone `bext_patch_command` call and the
+initializer above with:
+
+```cmake
+git_submodule_init(pugixml CMakeLists.txt
+  PATCH_FILES ${PUGIXML_PATCH_FILES}
+  PATCH_COMMAND_VAR PUGIXML_PATCH_COMMAND)
+```
+
+Define the list before the initializer, and retain
+`PATCH_COMMAND ${PUGIXML_PATCH_COMMAND}` in `ExternalProject_Add`. The adopted
+wrapper now tracks patch changes as well as the submodule revision.
 
 Verify system discovery using the package's actual naming or an appropriate
 find module; a new dependency's component list must reflect its consumers.

@@ -85,6 +85,11 @@ groups, but an absent snapshot is skipped even with `ENABLE_ALL=ON`.
 snapshot can appear after the first configure and be picked up on the next
 one. Bootstrap does not fetch experimental sources.
 
+Patched snapshots use `bext_patch_command` with a staged source copy. Unlike
+adopted submodules registered with `PATCH_FILES`, snapshots have no automatic
+patch-change tracking; recreate their dedicated test build after source or
+patch edits. See [patch lists and rebuilds](MAINTAINING.md#patch-lists-and-rebuilds).
+
 For preparing, declaring, and adopting a snapshot, see the
 [maintainer guide](MAINTAINING.md#dependency-lifecycle) and its
 [pugixml walkthrough](MAINTAINING.md#example-pugixml-from-local-snapshot-to-submodule).
