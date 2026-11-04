@@ -792,12 +792,28 @@ add_custom_target(update_dependency_docs
     -P ${CMAKE_SOURCE_DIR}/CMake/GenerateDependencyDocs.cmake
   VERBATIM
 )
+add_custom_target(check_staged_dependency_metadata
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_INVENTORY_MODE=INDEX
+    -DBEXT_DOC_MODE=CHECK
+    -P ${CMAKE_SOURCE_DIR}/CMake/GenerateDependencyDocs.cmake
+  VERBATIM
+)
+add_custom_target(update_staged_dependency_docs
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_INVENTORY_MODE=INDEX
+    -DBEXT_DOC_MODE=WRITE
+    -P ${CMAKE_SOURCE_DIR}/CMake/GenerateDependencyDocs.cmake
+  VERBATIM
+)
 
 # Logic for generating a Software Bill of Materials (SBOM)
-# from bext repository information.
+# from committed bext repository information. Regenerate on each request:
+# a new commit or gitlink pin can change HEAD without touching wrapper files.
 set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
-add_custom_command(
-  OUTPUT "${BEXT_SBOM_OUTPUT}"
+add_custom_target(sbom
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DBEXT_SBOM_OUTPUT=${BEXT_SBOM_OUTPUT}
@@ -808,9 +824,9 @@ add_custom_command(
     ${CMAKE_SOURCE_DIR}/CMakeLists.txt
     ${CMAKE_SOURCE_DIR}/.gitmodules
     ${BEXT_GRAPH_DEPENDS}
+  BYPRODUCTS "${BEXT_SBOM_OUTPUT}"
   VERBATIM
 )
-add_custom_target(sbom DEPENDS "${BEXT_SBOM_OUTPUT}")
 add_custom_target(supply_chain_check
   DEPENDS check_dependency_metadata sbom
 )

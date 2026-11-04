@@ -36,6 +36,9 @@ jobs:
       - name: Validate dependency selection and optional snapshots
         run: python3 CMake/tests/test_dependency_selection.py -v
 
+      - name: Validate committed and staged dependency metadata
+        run: python3 CMake/tests/test_dependency_metadata.py -v
+
       - name: Validate dependency metadata and documentation
         run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_DOC_MODE=CHECK -P CMake/GenerateDependencyDocs.cmake
 

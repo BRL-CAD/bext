@@ -4,6 +4,9 @@ endif()
 if (NOT DEFINED BEXT_SBOM_OUTPUT)
   message(FATAL_ERROR "BEXT_SBOM_OUTPUT is required")
 endif()
+if (DEFINED BEXT_INVENTORY_MODE AND NOT BEXT_INVENTORY_MODE STREQUAL "HEAD")
+  message(FATAL_ERROR "SBOM generation requires BEXT_INVENTORY_MODE=HEAD; use GenerateDependencyDocs.cmake with INDEX for staged validation")
+endif ()
 
 include("${BEXT_SOURCE_DIR}/CMake/BextDependencyInventory.cmake")
 bext_collect_dependency_inventory("${BEXT_SOURCE_DIR}")
@@ -22,16 +25,7 @@ function(_bext_spdx_id out project)
   set(${out} "SPDXRef-Package-${id}" PARENT_SCOPE)
 endfunction()
 
-execute_process(
-  COMMAND git rev-parse HEAD
-  WORKING_DIRECTORY "${BEXT_SOURCE_DIR}"
-  RESULT_VARIABLE git_result
-  OUTPUT_VARIABLE bext_revision
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-if (NOT git_result EQUAL 0)
-  message(FATAL_ERROR "Unable to determine the bext revision")
-endif()
+get_property(bext_revision GLOBAL PROPERTY BEXT_INVENTORY_REVISION)
 string(TIMESTAMP created "%Y-%m-%dT%H:%M:%SZ" UTC)
 
 get_filename_component(sbom_dir "${BEXT_SBOM_OUTPUT}" DIRECTORY)

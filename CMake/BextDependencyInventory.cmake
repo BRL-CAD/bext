@@ -1,7 +1,38 @@
 # Derive bext dependency metadata from the existing build files.  This module
 # deliberately does not introduce a manifest: CMakeLists.txt, per-project
-# .deps files, wrapper install settings, .gitmodules, and the Git index remain
-# the sources of truth.
+# .deps files, wrapper install settings, and .gitmodules remain the sources of
+# truth. HEAD describes a committed inventory; INDEX validates staged changes.
+
+function(bext_inventory_read_file out source_dir path)
+  get_property(revision GLOBAL PROPERTY BEXT_INVENTORY_REVISION)
+  execute_process(
+    COMMAND git show "${revision}:${path}"
+    WORKING_DIRECTORY "${source_dir}"
+    RESULT_VARIABLE result OUTPUT_VARIABLE content ERROR_VARIABLE error
+  )
+  if (NOT result EQUAL 0)
+    message(FATAL_ERROR "Unable to read metadata ${path} from ${BEXT_INVENTORY_MODE}: ${error}")
+  endif ()
+  set(${out} "${content}" PARENT_SCOPE)
+endfunction()
+
+function(_bext_inventory_read_lines out source_dir path)
+  bext_inventory_read_file(content "${source_dir}" "${path}")
+  string(REPLACE ";" "\\;" lines "${content}")
+  string(REPLACE "\r" "" lines "${lines}")
+  string(REPLACE "\n" ";" lines "${lines}")
+  set(${out} "${lines}" PARENT_SCOPE)
+endfunction()
+
+function(_bext_inventory_has_file out path)
+  get_property(files GLOBAL PROPERTY BEXT_INVENTORY_FILES)
+  list(FIND files "${path}" index)
+  if (index EQUAL -1)
+    set(${out} FALSE PARENT_SCOPE)
+  else ()
+    set(${out} TRUE PARENT_SCOPE)
+  endif ()
+endfunction()
 
 function(_bext_inventory_key out value)
   string(TOUPPER "${value}" key)
@@ -27,15 +58,23 @@ function(_bext_inventory_submodule_lookup out_url out_sha source_dir path)
     list(GET parts 0 entry_path)
     if ("${entry_path}" STREQUAL "${path}")
       list(GET parts 1 entry_url)
+      get_property(revision GLOBAL PROPERTY BEXT_INVENTORY_REVISION)
+      if (BEXT_INVENTORY_MODE STREQUAL "INDEX")
+        set(command git --literal-pathspecs ls-files --stage -- "${path}")
+        set(pattern "^160000 ([0-9a-f]+) 0\t[^\n]+$")
+      else ()
+        set(command git --literal-pathspecs ls-tree "${revision}" -- "${path}")
+        set(pattern "^160000 commit ([0-9a-f]+)\t[^\n]+$")
+      endif ()
       execute_process(
-        COMMAND git ls-tree HEAD -- "${path}"
+        COMMAND ${command}
         WORKING_DIRECTORY "${source_dir}"
         RESULT_VARIABLE tree_result
         OUTPUT_VARIABLE tree_line
         OUTPUT_STRIP_TRAILING_WHITESPACE
       )
-      if (NOT tree_result EQUAL 0 OR NOT tree_line MATCHES "^[0-9]+ commit ([0-9a-f]+)")
-        message(FATAL_ERROR "Unable to read pinned commit for submodule ${path}")
+      if (NOT tree_result EQUAL 0 OR NOT tree_line MATCHES "${pattern}")
+        message(FATAL_ERROR "Unable to read pinned commit for submodule ${path} from ${BEXT_INVENTORY_MODE}; stage its gitlink for INDEX validation")
       endif()
       set(${out_url} "${entry_url}" PARENT_SCOPE)
       set(${out_sha} "${CMAKE_MATCH_1}" PARENT_SCOPE)
@@ -48,12 +87,35 @@ endfunction()
 
 function(bext_collect_dependency_inventory source_dir)
   get_filename_component(source_dir "${source_dir}" ABSOLUTE)
-  if (NOT EXISTS "${source_dir}/CMakeLists.txt" OR NOT EXISTS "${source_dir}/.gitmodules")
-    message(FATAL_ERROR "${source_dir} is not a bext source tree")
-  endif()
+  if (NOT DEFINED BEXT_INVENTORY_MODE)
+    set(BEXT_INVENTORY_MODE HEAD)
+  endif ()
+  if (BEXT_INVENTORY_MODE STREQUAL "HEAD")
+    execute_process(COMMAND git rev-parse --verify HEAD
+      WORKING_DIRECTORY "${source_dir}" RESULT_VARIABLE result
+      OUTPUT_VARIABLE revision OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if (NOT result EQUAL 0)
+      message(FATAL_ERROR "Unable to resolve HEAD in ${source_dir}")
+    endif ()
+    set(command git ls-tree -r --name-only "${revision}")
+  elseif (BEXT_INVENTORY_MODE STREQUAL "INDEX")
+    # git show :0:path selects stage zero and rejects conflicted entries.
+    set(revision ":0")
+    set(command git ls-files)
+  else ()
+    message(FATAL_ERROR "Unknown BEXT_INVENTORY_MODE ${BEXT_INVENTORY_MODE}; expected HEAD or INDEX")
+  endif ()
+  set_property(GLOBAL PROPERTY BEXT_INVENTORY_REVISION "${revision}")
+  execute_process(COMMAND ${command} WORKING_DIRECTORY "${source_dir}"
+    RESULT_VARIABLE result OUTPUT_VARIABLE files OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (NOT result EQUAL 0)
+    message(FATAL_ERROR "Unable to list ${BEXT_INVENTORY_MODE} metadata in ${source_dir}")
+  endif ()
+  string(REPLACE "\n" ";" files "${files}")
+  set_property(GLOBAL PROPERTY BEXT_INVENTORY_FILES "${files}")
 
   # Read submodule paths and URLs without requiring submodules to be populated.
-  file(STRINGS "${source_dir}/.gitmodules" gitmodule_lines)
+  _bext_inventory_read_lines(gitmodule_lines "${source_dir}" .gitmodules)
   set(submodules)
   set(current_path "")
   foreach(line ${gitmodule_lines})
@@ -67,7 +129,7 @@ function(bext_collect_dependency_inventory source_dir)
   endforeach()
   set_property(GLOBAL PROPERTY BEXT_INVENTORY_SUBMODULES "${submodules}")
 
-  file(STRINGS "${source_dir}/CMakeLists.txt" top_lines)
+  _bext_inventory_read_lines(top_lines "${source_dir}" CMakeLists.txt)
   set(projects)
   foreach(line ${top_lines})
     string(STRIP "${line}" stripped)
@@ -87,11 +149,12 @@ function(bext_collect_dependency_inventory source_dir)
 
   set(all_providers)
   foreach(project ${projects})
-    set(wrapper "${source_dir}/${project}/CMakeLists.txt")
-    if (NOT EXISTS "${wrapper}")
+    set(wrapper "${project}/CMakeLists.txt")
+    _bext_inventory_has_file(has_wrapper "${wrapper}")
+    if (NOT has_wrapper)
       message(FATAL_ERROR "Project ${project} has no wrapper CMakeLists.txt")
     endif()
-    file(READ "${wrapper}" wrapper_text)
+    bext_inventory_read_file(wrapper_text "${source_dir}" "${wrapper}")
 
     if (wrapper_text MATCHES "-DCMAKE_INSTALL_PREFIX=\\$\\{CMAKE_BUNDLE_INSTALL_PREFIX\\}" OR
         wrapper_text MATCHES "--prefix=\\$\\{CMAKE_BUNDLE_INSTALL_PREFIX\\}")
@@ -117,9 +180,10 @@ function(bext_collect_dependency_inventory source_dir)
     _bext_inventory_set("${project}" HAS_LICENSE "${has_license}")
 
     set(deps)
-    set(depfile "${source_dir}/${project}/${project}.deps")
-    if (EXISTS "${depfile}")
-      file(STRINGS "${depfile}" dep_lines)
+    set(depfile "${project}/${project}.deps")
+    _bext_inventory_has_file(has_deps "${depfile}")
+    if (has_deps)
+      _bext_inventory_read_lines(dep_lines "${source_dir}" "${depfile}")
       foreach(dep ${dep_lines})
         string(STRIP "${dep}" dep)
         if (dep AND NOT dep MATCHES "^#")
@@ -220,5 +284,6 @@ function(bext_collect_dependency_inventory source_dir)
   endforeach()
 
   list(SORT projects)
+  set(BEXT_INVENTORY_MODE "${BEXT_INVENTORY_MODE}" PARENT_SCOPE)
   set(BEXT_INVENTORY_PROJECTS "${projects}" PARENT_SCOPE)
 endfunction()
