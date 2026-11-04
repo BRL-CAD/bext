@@ -41,7 +41,6 @@
       "cacheVariables": {
         "USE_APPLESEED": "OFF",
         "USE_BRLCAD": "ON",
-        "USE_BRLCAD_EXTRA": "ON",
         "USE_GDAL": "ON",
         "USE_OSPRAY": "OFF",
         "USE_QT": "ON",
@@ -56,7 +55,6 @@
         "ENABLE_ALL": "ON",
         "USE_APPLESEED": "OFF",
         "USE_BRLCAD": "ON",
-        "USE_BRLCAD_EXTRA": "ON",
         "USE_GDAL": "ON",
         "USE_OSPRAY": "OFF",
         "USE_QT": "ON",
@@ -66,11 +64,10 @@
     {
       "name": "profile-minimal",
       "hidden": true,
-      "description": "Core BRL-CAD profile without extras, GDAL, Qt, Tcl/Tk, Appleseed, or OSPRay.",
+      "description": "BRL-CAD dependency group without GDAL, Qt, Tcl/Tk, Appleseed, or OSPRay.",
       "cacheVariables": {
         "USE_APPLESEED": "OFF",
         "USE_BRLCAD": "ON",
-        "USE_BRLCAD_EXTRA": "OFF",
         "USE_GDAL": "OFF",
         "USE_OSPRAY": "OFF",
         "USE_QT": "OFF",
@@ -85,7 +82,6 @@
         "ENABLE_ALL": "ON",
         "USE_APPLESEED": "ON",
         "USE_BRLCAD": "ON",
-        "USE_BRLCAD_EXTRA": "ON",
         "USE_GDAL": "ON",
         "USE_OSPRAY": "ON",
         "USE_QT": "ON",

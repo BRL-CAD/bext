@@ -295,7 +295,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/Utils.cmake")
 # given package is set, that package will be built.
 ###############################################################################
 option(USE_APPLESEED    "Appleseed rendering system"                 OFF)
-option(USE_BRLCAD       "BRL-CAD core dependencies"                  ON)
+option(USE_BRLCAD       "BRL-CAD dependencies"                       ON)
 option(USE_GDAL         "GDAL terrain support"                       ON)
 option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
 option(USE_QT           "Qt graphical toolkit support"               ON)

@@ -33,6 +33,9 @@ jobs:
       - name: Validate build scheduling and working-tree cleanup
         run: python3 CMake/tests/test_release_build.py -v
 
+      - name: Validate dependency selection and optional snapshots
+        run: python3 CMake/tests/test_dependency_selection.py -v
+
       - name: Validate dependency metadata and documentation
         run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_DOC_MODE=CHECK -P CMake/GenerateDependencyDocs.cmake
 

@@ -53,7 +53,6 @@ Build selection happens in three layers:
 Default `USE_*` values:
 
 * `USE_BRLCAD=ON`
-* `USE_BRLCAD_EXTRA=ON`
 * `USE_GDAL=ON`
 * `USE_QT=ON`
 * `USE_TCL=ON`
@@ -68,19 +67,35 @@ When `bext` is driven from a BRL-CAD build, `BRLCAD_COMPONENTS` can further
 narrow some BRL-CAD-related packages to only those needed by the requested
 component set.
 
+`USE_BRLCAD` now includes STEPcode, OpenVDB, OpenCV, and Bullet. The former
+`USE_BRLCAD_EXTRA` option has been removed; values left in an existing cache
+or passed on the command line no longer control those packages. To skip their
+local builds individually, use `ENABLE_STEPCODE=OFF`, `ENABLE_OPENVDB=OFF`,
+`ENABLE_OPENCV=OFF`, and `ENABLE_BULLET=OFF`.
+
 # Experimental dependencies
 
 When a dependency is being evaluated, sometimes it will be given a preliminary
 directory without setting up a submodule.  Testing will then take place using
-local source snapshots - this avoids having bext history depend on a repo
-SHA1 before we're sure we need it, but gives us a place to store patch files
-and build logic that are needed to properly build it as part of bext.
+local source snapshots. This lets us evaluate the source before adding a
+submodule, while giving us a place to store the patch files and build logic
+needed to build it as part of bext.
 
-Within `USE_BRLCAD_EXTRA`, each wrapper enables its build when the source is
-present and disables it when absent. No checkout or download is attempted.
+Register an experimental wrapper under the appropriate active `USE_*` group
+(usually `BRLCAD`) and use `bext_local_source(...)` to declare its source path,
+repository URL, and full commit ID. The wrapper builds the snapshot when its
+`CMakeLists.txt` is present and skips it when absent, even with `ENABLE_ALL=ON`.
+`ENABLE_<pkg>=OFF` or `DISABLE_<pkg>=ON` prevents the local build. The cached
+`ENABLE_<pkg>` preference is preserved when a snapshot is temporarily absent,
+so placing the source later enables it on the next configure unless explicitly
+disabled. No checkout or download is attempted, and bootstrap excludes these
+wrappers from its submodule list. The declared URL and revision supply
+provenance for the dependency table and SBOM without a `.gitmodules` entry.
 
 If the decision is made to incorporate such a dependency, its submodule will
-be added and it will become part of the "regular" bext setup.
+be added and it will become part of the "regular" bext setup. See the
+[pugixml walkthrough](NOTES.md#example-pugixml-from-local-snapshot-to-submodule)
+for both stages.
 
 # Official profiles
 
@@ -90,10 +105,14 @@ The supported configure entry points are:
   when found
 * `bundled` - standard BRL-CAD-oriented profile with bundled/local builds
   preferred for all active groups
-* `minimal` - core BRL-CAD profile without extras, GDAL, Qt, Tcl/Tk,
+* `minimal` - BRL-CAD dependency group without GDAL, Qt, Tcl/Tk,
   Appleseed, or OSPRay
 * `everything` - all current groups enabled with bundled/local builds
   preferred throughout
+
+`minimal` includes STEPcode, OpenVDB, OpenCV, and Bullet through `USE_BRLCAD`.
+Use the individual `ENABLE_<pkg>=OFF` overrides above if those local builds
+are not wanted.
 
 Use them like this:
 
@@ -128,7 +147,6 @@ cmake ../bext -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
 
 ```sh
 cmake ../bext \
-  -DUSE_BRLCAD_EXTRA=OFF \
   -DUSE_GDAL=OFF \
   -DUSE_QT=OFF \
   -DUSE_TCL=OFF \

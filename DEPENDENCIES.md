@@ -116,36 +116,45 @@ Only add repositories that are expected to support live BRL-CAD or related
 build features.  Exploratory work that may be discarded should stay in a branch
 until the dependency choice is settled.
 
-2. Prepare the BRL-CAD-hosted source repository first.
+2. Prepare a source snapshot for evaluation, or the BRL-CAD-hosted repository
+for adoption.
 `bext` generally points at BRL-CAD-managed copies of upstream sources rather
-than upstream repositories directly.  Before wiring anything into `bext`, make
-sure the BRL-CAD copy has the intended `RELEASE` content, submodules handled as
+than upstream repositories directly. For early testing, a local snapshot can
+be used without adding a submodule. Record its repository URL and full commit
+ID with `bext_local_source(...)`. Before adopting the dependency, make sure
+the BRL-CAD copy has the intended `RELEASE` content, submodules handled as
 needed, and license files available for installation.
 
 3. Choose the `USE_*` group or groups that should bring the dependency into
 scope.
 This controls when the dependency is considered at all.  If none of the
 existing groups fit, add a new one only if it represents a real build profile
-that users can reason about.
+that users can reason about. BRL-CAD dependencies, including optional ones,
+belong in `BRLCAD`; source availability during experiments is handled by the
+wrapper rather than a separate group.
 
-4. Add the new top-level directory and git submodule.
+4. Add the new top-level directory and source tree.
 The directory should usually contain:
-* the upstream source as a git submodule
+* a local source snapshot during evaluation, or a git submodule after adoption
 * a managing `CMakeLists.txt`
 * a `<name>.deps` file listing other `bext` projects it depends on
 * any patch files or helper resources needed by the build
 
 After `git submodule add`, update `.gitmodules` to include `ignore = dirty` for
-the new entry, consistent with the existing submodules.
+the new entry, consistent with the existing submodules. Keep experimental
+source snapshots out of bext commits.
 
 5. Add the build logic.
 Follow the patterns used by nearby dependencies:
-* use `git_submodule_init(...)`
+* use `bext_local_source(...)` during evaluation; absent sources are skipped,
+  explicit disables are respected, and bootstrap does not fetch them
+* after adoption, replace the local-source declaration with normal selection
+  logic and use `git_submodule_init(...)` inside the enabled build block
 * use `RegisterDeps(...)`
 * decide whether the outputs belong in `install` or `noinstall`
 * copy license files into `${DOC_LICENSE_DIR}`
-* use `bext_enable(...)`, `cad_enable(...)`, or custom logic as needed to
-  respect system detection and BRL-CAD component selection
+* use `cad_enable(...)` before the local-source helper if component selection
+  is needed; use `bext_enable(...)` for system detection after adoption
 
 6. Register the dependency in the top-level build.
 Add `add_project(...)` to the top-level `CMakeLists.txt` in dependency order so
@@ -153,7 +162,7 @@ that any prerequisites appear earlier in the file.
 
 7. Update the docs.
 At minimum:
-* add the project to this file
+* regenerate the project table with `update_dependency_docs`
 * update `INSTALL.md` if the new dependency adds system prerequisites
 * update `NOTES.md` if the dependency needs special submodule or maintainer
   handling
@@ -162,6 +171,9 @@ At minimum:
 Check at least:
 * the default configure path for the relevant `USE_*` groups
 * `-DENABLE_ALL=ON`
+* explicit package disables and, for snapshots, absent sources and sources
+  added after the first configure
+* bootstrap selection and dependency metadata validation
 * any new or changed prerequisite detection
 * downstream use if the outputs are intended for BRL-CAD bundling
 
@@ -170,4 +182,6 @@ the `bext` integration together.
 That keeps the repository history aligned with a working configuration rather
 than a partial experiment.
 
+For a complete example, see the
+[pugixml walkthrough](NOTES.md#example-pugixml-from-local-snapshot-to-submodule).
 For lower-level git and submodule procedures, see [NOTES.md](NOTES.md).

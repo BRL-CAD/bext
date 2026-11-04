@@ -192,15 +192,17 @@ endfunction(cad_enable pname components)
 # Local snapshots are optional until their upstreams become submodules.  The
 # source URL and revision also supply provenance to the dependency inventory.
 function(bext_local_source pname path url revision)
-  if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${path}/CMakeLists.txt" AND NOT DISABLE_${pname})
-    set(enabled ON)
-  else ()
-    set(enabled OFF)
-    if (NOT DISABLE_${pname})
+  # Cache the user's preference, not source availability.  An absent snapshot
+  # must be reconsidered on the next configure without losing an explicit OFF.
+  set(ENABLE_${pname} ON CACHE BOOL "Build the local ${pname} snapshot when present")
+  set(enabled OFF)
+  if (ENABLE_${pname} AND NOT DISABLE_${pname})
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${path}/CMakeLists.txt")
+      set(enabled ON)
+    else ()
       message(STATUS "${pname}: local source ${path} is absent; build disabled")
     endif ()
   endif ()
-  set(ENABLE_${pname} ${enabled} CACHE BOOL "Build the local ${pname} snapshot when present" FORCE)
   set(ENABLE_${pname} ${enabled} PARENT_SCOPE)
 endfunction()
 
@@ -256,9 +258,13 @@ function(_bext_summary_project_uses_local_build out pname upname)
     set(local_build TRUE)
   endif (TARGET ${upname}_BLD)
 
-  if (DEFINED ENABLE_${upname} AND ENABLE_${upname})
+  # Read the wrapper's effective decision, which may differ from the cached
+  # preference when an optional local snapshot is absent or disabled.
+  get_directory_property(project_enabled DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${pname}"
+    DEFINITION ENABLE_${upname})
+  if (project_enabled)
     set(local_build TRUE)
-  endif (DEFINED ENABLE_${upname} AND ENABLE_${upname})
+  endif ()
 
   if ("${pname}" STREQUAL "flexbison")
     if (TARGET FLEX_BLD OR TARGET BISON_BLD)
@@ -294,11 +300,11 @@ endfunction(_bext_summary_list_to_string out values)
 
 function(bext_print_configure_summary)
   set(active_groups)
-  foreach(grp APPLESEED BRLCAD BRLCAD_EXTRA GDAL OSPRAY QT TCL)
+  foreach(grp APPLESEED BRLCAD GDAL OSPRAY QT TCL)
     if (USE_${grp})
       list(APPEND active_groups ${grp})
     endif (USE_${grp})
-  endforeach(grp APPLESEED BRLCAD BRLCAD_EXTRA GDAL OSPRAY QT TCL)
+  endforeach(grp APPLESEED BRLCAD GDAL OSPRAY QT TCL)
 
   get_property(local_projects GLOBAL PROPERTY BEXT_SUMMARY_LOCAL_PROJECTS)
   get_property(system_projects GLOBAL PROPERTY BEXT_SUMMARY_SYSTEM_PROJECTS)

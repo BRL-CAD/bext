@@ -364,539 +364,173 @@ bext to manage when and how the directory is populated based on build
 settings, as well as providing a convenient(ish) mechanism for updating
 submodule references as needed (see above).
 
-As an example, we document below the steps taken for the geogram library from
-https://github.com/BrunoLevy/geogram  (which we're no longer actively bundling,
-but it still serves as a good illustration.)  After creating a full fork of the
-project via github and verifying actions were not enabled, we clone the new
-repository recursively to get the source code of all submodules:
+# Example: pugixml from local snapshot to submodule
 
-```
-$ git clone --recursive git@github.com:BRL-CAD/geogram.git
-```
+The current [pugixml wrapper](pugixml/CMakeLists.txt) is a compact example: it
+builds an XML library with no library prerequisites, installs a license, and is
+used by AssetImport and the rendering stack. Pugixml is already integrated;
+the steps below illustrate how to bring a new dependency through the same
+stages, rather than adding a second copy to an existing checkout.
 
-Once we have the geogram clone, we enter the directory and create our RELEASE
-branch (since the upstream doesn't have such a branch, we don't have to worry
-about a conflict - if that branch name becomes a problem in the future we can
-adjust.)
+Start with the prepared BRL-CAD fork. For reproducibility, this example uses
+commit `c8033ce9d039e7f9d134877c363397b3cfe20816`, the pugixml revision pinned
+when this example was written. For a new dependency, substitute the commit
+that you actually evaluate. Confirm that the source tree is self-contained
+and that optional features and their licenses have been reviewed before
+proceeding. If there are nested submodules, replace them with committed source
+copies in the fork's `RELEASE` branch as discussed above.
 
-```
-$ cd geogram
-geogram (main)$ git branch -c RELEASE
-geogram (main)$ git checkout RELEASE
-```
-
-We can see geogram has a number of submodules:
-
-```
-geogram (RELEASE)$ git submodule
-57a8140c8e9cb71d5f01824aa0e934bf71f34e9d src/lib/geogram/third_party/amgcl (1.4.3-13-g57a8140)
-b4a91513317119ff71a1186906a052da0e535913 src/lib/geogram/third_party/libMeshb (RELEASE7.5-64-gb4a9151)
-4296cc91b5c8c26d4e7d7aac0cee2b194ffc5800 src/lib/geogram/third_party/rply (v1.1.4-1-g4296cc9)
-f8f805f04631323c8a75accc009eb9701f5ca027 src/lib/geogram_gfx/third_party/imgui (v1.89.7-docking-35-gf8f805f0)
-3eaf1255b29fdf5c2895856c7be7d7185ef2b241 src/lib/third_party/glfw (3.3-781-g3eaf1255)
+```sh
+git clone --branch RELEASE https://github.com/BRL-CAD/pugixml "$HOME/pugixml-eval"
+git -C "$HOME/pugixml-eval" checkout --detach c8033ce9d039e7f9d134877c363397b3cfe20816
+cmake -S "$HOME/pugixml-eval" -B "$HOME/pugixml-eval-build" \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+  -DPUGIXML_BUILD_TESTS=OFF
+cmake --build "$HOME/pugixml-eval-build" --config Release --parallel 2
 ```
 
-The first order of business is to convert those into committed source trees in
-this repository.  Removing a submodule from git isn't as simple as removing the
-directory itself - there are a couple specific commands that must be run.  Before
-we do so, however, we want to make local copies of the contents of the submodules
-we are going to clear so we can re-add them as standard file check-ins (see
-https://stackoverflow.com/a/16162000):
+In bext, create the wrapper directory and its dependency file. Even though
+pugixml needs no other libraries, list `PATCH` to follow the wrapper convention
+and support future patches:
 
-```
-geogram (RELEASE)$ mkdir ~/geogram_submodules
-geogram (RELEASE)$ mv src/lib/geogram/third_party/amgcl ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/geogram/third_party/libMeshb ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/geogram/third_party/rply ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/geogram_gfx/third_party/imgui ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/third_party/glfw ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/geogram/third_party/amgcl ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/geogram/third_party/libMeshb ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/geogram/third_party/rply ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/geogram_gfx/third_party/imgui ~/geogram_submodules/
-geogram (RELEASE)$ mv src/lib/third_party/glfw ~/geogram_submodules/
-geogram (RELEASE)$ git submodule deinit -f src/lib/geogram/third_party/amgcl
-Submodule 'src/lib/geogram/third_party/amgcl' (https://github.com/ddemidov/amgcl.git) unregistered for path 'src/lib/geogram/third_party/amgcl'
-geogram (RELEASE)$ git submodule deinit -f src/lib/geogram/third_party/libMeshb
-Submodule 'src/lib/geogram/third_party/libMeshb' (https://github.com/LoicMarechal/libMeshb.git) unregistered for path 'src/lib/geogram/third_party/libMeshb'
-geogram (RELEASE)$ git submodule deinit -f src/lib/geogram/third_party/rply
-Submodule 'src/lib/geogram/third_party/rply' (https://github.com/diegonehab/rply.git) unregistered for path 'src/lib/geogram/third_party/rply'
-geogram (RELEASE)$ git submodule deinit -f src/lib/geogram_gfx/third_party/imgui 
-Submodule 'src/lib/geogram_gfx/third_party/imgui' (https://github.com/ocornut/imgui.git) unregistered for path 'src/lib/geogram_gfx/third_party/imgui'
-geogram (RELEASE)$ git submodule deinit -f src/lib/third_party/glfw
-Submodule 'src/lib/third_party/glfw' (https://github.com/glfw/glfw.git) unregistered for path 'src/lib/third_party/glfw'
-geogram (RELEASE)$ rm -rf .git/modules/src/lib/geogram/third_party/amgcl
-geogram (RELEASE)$ rm -rf .git/modules/src/lib/geogram/third_party/libMeshb
-geogram (RELEASE)$ rm -rf .git/modules/src/lib/geogram/third_party/rply
-geogram (RELEASE)$ rm -rf .git/modules/src/lib/geogram_gfx/third_party/imgui
-geogram (RELEASE)$ rm -rf .git/modules/src/lib/third_party/glfw
-geogram (RELEASE)$ git rm --cached src/lib/geogram/third_party/amgcl
-rm 'src/lib/geogram/third_party/amgcl'
-geogram (RELEASE)$ git rm --cached src/lib/geogram/third_party/libMeshb
-rm 'src/lib/geogram/third_party/libMeshb'
-geogram (RELEASE)$ git rm --cached src/lib/geogram/third_party/rply
-rm 'src/lib/geogram/third_party/rply'
-geogram (RELEASE)$ git rm --cached src/lib/geogram_gfx/third_party/imgui
-rm 'src/lib/geogram_gfx/third_party/imgui'
-geogram (RELEASE)$ git rm --cached src/lib/third_party/glfw
-rm 'src/lib/third_party/glfw'
-geogram (RELEASE)$ git status
-On branch RELEASE
-Your branch is up to date with 'origin/main'.
-
-Changes to be committed:
-  (use "git restore --staged <file>..." to unstage)
-	deleted:    src/lib/geogram/third_party/amgcl
-	deleted:    src/lib/geogram/third_party/libMeshb
-	deleted:    src/lib/geogram/third_party/rply
-	deleted:    src/lib/geogram_gfx/third_party/imgui
-	deleted:    src/lib/third_party/glfw
-geogram (RELEASE)$ git commit -m "Remove git submodules"
+```sh
+mkdir -p pugixml/pugixml
+printf 'PATCH\n' > pugixml/pugixml.deps
+git -C "$HOME/pugixml-eval" archive HEAD | tar -x -C pugixml/pugixml
 ```
 
-If we check, we now see that no submodules are reported:
+The archive is a plain source snapshot, with no submodule or nested `.git`
+directory. Keep this source copy out of bext commits. Only the wrapper,
+dependency file, and any patches belong in the experimental integration.
 
-```
-geogram (RELEASE)$ git submodule
-```
+Register the project in the top-level `CMakeLists.txt` before its consumers,
+including AssetImport and OSL. Use the groups that actually consume it:
 
-Next we restore the copies of the source code made earlier to the working tree:
-
-```
-geogram (RELEASE)$ mv ~/geogram_submodules/amgcl/\* src/lib/geogram/third_party/amgcl/
-geogram (RELEASE)$ mv ~/geogram_submodules/libMeshb/\* src/lib/geogram/third_party/libMeshb/
-geogram (RELEASE)$ mv ~/geogram_submodules/rply/\* src/lib/geogram/third_party/rply/
-geogram (RELEASE)$ mv ~/geogram_submodules/imgui/\* src/lib/geogram_gfx/third_party/imgui/
-geogram (RELEASE)$ mv ~/geogram_submodules/glfw/\* src/lib/third_party/glfw/
-geogram (RELEASE)$ git status
-On branch RELEASE
-Your branch is ahead of 'origin/main' by 1 commit.
-  (use "git push" to publish your local commits)
-
-Untracked files:
-  (use "git add <file>..." to include in what will be committed)
-	src/lib/geogram/third_party/amgcl/
-	src/lib/geogram/third_party/libMeshb/
-	src/lib/geogram/third_party/rply/
-	src/lib/geogram_gfx/third_party/imgui/
-	src/lib/third_party/glfw/
-geogram (RELEASE)$ git add -A
-geogram (RELEASE)$ git status
-On branch RELEASE
-Your branch is ahead of 'origin/main' by 1 commit.
-  (use "git push" to publish your local commits)
-
-Changes to be committed:
-  (use "git restore --staged <file>..." to unstage)
-	new file:   src/lib/geogram/third_party/amgcl/CMakeLists.txt
-	new file:   src/lib/geogram/third_party/amgcl/LICENSE.md
-        <snip>
-geogram (RELEASE)$ git commit -m "Commit files from former git submodules"
-[RELEASE 27f3c3ccf] Commit files from former git submodules
- 1061 files changed, 393698 insertions(+)
- create mode 100644 src/lib/geogram/third_party/amgcl/CMakeLists.txt
- <snip>
+```cmake
+# pugixml - XML processing library
+# https://pugixml.org/
+add_project(pugixml GROUPS "BRLCAD;APPLESEED")
 ```
 
-Once this step is complete, we have a "stand-alone" version of geogram and we push the
-RELEASE branch back to github:
+For the experimental `pugixml/CMakeLists.txt`, declare the source with
+`bext_local_source`. Keep that declaration on one line with literal arguments
+so bootstrap and the dependency inventory can read it without evaluating the
+wrapper. The URL and full commit ID record provenance; they do not cause a
+checkout or download.
 
-```
-geogram (RELEASE)$ git push origin HEAD
-Enumerating objects: 1231, done.
-Counting objects: 100% (1231/1231), done.
-Delta compression using up to 12 threads
-Compressing objects: 100% (1195/1195), done.
-Writing objects: 100% (1223/1223), 7.12 MiB | 8.99 MiB/s, done.
-Total 1223 (delta 254), reused 23 (delta 1), pack-reused 0
-remote: Resolving deltas: 100% (254/254), completed with 6 local objects.
-remote: 
-remote: Create a pull request for 'RELEASE' on GitHub by visiting:
-remote:      https://github.com/BRL-CAD/geogram/pull/new/RELEASE
-remote: 
-To https://github.com/BRL-CAD/geogram.git
- * [new branch]          HEAD -> RELEASE
-```
+```cmake
+bext_local_source(PUGIXML pugixml https://github.com/BRL-CAD/pugixml c8033ce9d039e7f9d134877c363397b3cfe20816)
 
-The RELEASE branch is now visible on the https://github.com/BRL-CAD/geogram project page.
+if (ENABLE_PUGIXML)
+  RegisterDeps(PUGIXML)
 
-Looking over the project contents, we see there are a number of third party components
-we either don't want to or can't use.  HLBFGS and triangle.c are for noncommercial use
-only, and must be removed.  Tetgen uses the AGPL and is incompatible with BRL-CAD's
-licensing, so it too must be removed.
-
-```
-geogram (RELEASE)$ git rm -r src/lib/geogram/third_party/HLBFGS
-geogram (RELEASE)$ git rm -r src/lib/geogram/third_party/triangle
-geogram (RELEASE)$ git rm -r src/lib/geogram/third_party/tetgen
-geogram (RELEASE)$ git commit -m "Remove sources for optional third party components with incompatible licenses"
-[RELEASE 296fdc244] Remove sources for optional third party components with incompatible licenses
- 21 files changed, 94593 deletions(-)
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/HLBFGS.cpp
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/HLBFGS.h
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/HLBFGS_BLAS.cpp
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/HLBFGS_BLAS.h
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/ICFS.cpp
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/ICFS.h
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/LineSearch.cpp
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/LineSearch.h
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/Lite_Sparse_Matrix.cpp
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/Lite_Sparse_Matrix.h
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/README.txt
- delete mode 100644 src/lib/geogram/third_party/HLBFGS/Sparse_Entry.h
- delete mode 100644 src/lib/geogram/third_party/tetgen/README.txt
- delete mode 100644 src/lib/geogram/third_party/tetgen/Tetgen1.6/README
- delete mode 100644 src/lib/geogram/third_party/tetgen/Tetgen1.6/tetgen.cpp
- delete mode 100644 src/lib/geogram/third_party/tetgen/Tetgen1.6/tetgen.h
- delete mode 100755 src/lib/geogram/third_party/tetgen/tetgen.cpp
- delete mode 100755 src/lib/geogram/third_party/tetgen/tetgen.h
- delete mode 100644 src/lib/geogram/third_party/triangle/README
- delete mode 100644 src/lib/geogram/third_party/triangle/triangle.c
- delete mode 100644 src/lib/geogram/third_party/triangle/triangle.h
-geogram (RELEASE)$ git push origin HEAD
-```
-
-Next, we determine how to build the project without the components we either
-don't want to or cannot use.  We will use build system options provided by the
-upstream build if available - if alterations to the build logic are necessary
-we will collect those into a patch file and use that .  This generally involves
-turning off any extra features we don't want to simplify the build and
-dependency requirements as much as possible.  In geogram's case, we tell it to
-turn off graphics and build the library only, as well as disabling all the
-optional third party components:
-
-```
-geogram (RELEASE)$ mkdir build && cd build
-build (RELEASE)$ cmake ..  -DGEOGRAM_LIB_ONLY=ON -DGEOGRAM_WITH_GRAPHICS=OFF -DGEOGRAM_WITH_LUA=OFF -DGEOGRAM_WITH_HLBFGS=OFF -DGEOGRAM_WITH_TETGEN=OFF -DGEOGRAM_WITH_TRIANGLE=OFF -DCMAKE_BUILD_TYPE=Release
-CMake Deprecation Warning at CMakeLists.txt:5 (cmake_minimum_required):
-  Compatibility with CMake < 3.5 will be removed from a future version of
-  CMake.
-
-  Update the VERSION argument <min> value or use a ...<max> suffix to tell
-  CMake that the project does not need compatibility with older versions.
-
-
--- The C compiler identification is GNU 12.2.1
--- The CXX compiler identification is GNU 12.2.1
--- Detecting C compiler ABI info
--- Detecting C compiler ABI info - done
--- Check for working C compiler: /usr/bin/cc - skipped
--- Detecting C compile features
--- Detecting C compile features - done
--- Detecting CXX compiler ABI info
--- Detecting CXX compiler ABI info - done
--- Check for working CXX compiler: /usr/bin/c++ - skipped
--- Detecting CXX compile features
--- Detecting CXX compile features - done
--- Doxygen >= 1.7.0 not found, cannot generate documentation
-CMake Deprecation Warning at doc/CMakeLists.txt:7 (cmake_minimum_required):
-  Compatibility with CMake < 3.5 will be removed from a future version of
-  CMake.
-
-  Update the VERSION argument <min> value or use a ...<max> suffix to tell
-  CMake that the project does not need compatibility with older versions.
-
-
--- Configuring done (0.7s)
--- Generating done (0.1s)
--- Build files have been written to: /geogram/build
-build (RELEASE)$ make
-[  0%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/libMeshb/sources/libmeshb7.c.o
-[  0%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/rply/rply.c.o
-[  0%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/zlib/adler32.c.o
-[  0%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/zlib/compress.c.o
-[  1%] Building C object src/lib/geogram/third_party/CMakeFiles/geogram_third_party.dir/zlib/crc32.c.o
-<snip>
-```
-
-One thing we spot when building starts is that there is a local zlib copy in geogram.  That's not necessarily
-a problem if it does not cause a conflict (for example, we allow Qt to use its own zlib since that is much
-simpler than trying to inject our version into their build and they isoloate their version) but it's something to
-be aware of as a source of potential issues.  If it DOES cause a problem, we may have to alter geogram's build
-to reference our zlib, if we are building a local copy.
-
-After the library is complete, we use ldd to check and see if any system
-libraries were linked that either already are or will need to be supplied by
-bext are used:
-
-```
-geogram/build (RELEASE) $ ldd lib/libgeogram.so
-	linux-vdso.so.1 (0x00007fff0db46000)
-	libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007efc63200000)
-	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007efc63515000)
-	libgomp.so.1 => /lib/x86_64-linux-gnu/libgomp.so.1 (0x00007efc63ef3000)
-	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007efc63ecf000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007efc62e00000)
-	/lib64/ld-linux-x86-64.so.2 (0x00007efc63f6a000)
-```
-
-At least for Linux, all the linked libraries appear to be system libs and not dependencies we may need
-to supply ourselves, which is good.  If geogram was going to require us to add more dependencies to avoid
-the requirement to install system packages, we would have to repeat the above process for each of the
-proposed dependencies as well before we would be ready to move on to bext.
-
-Since we appear to have what we need, the next step takes place in the bext repository.
-We create a new top level directory - in this case "geogram" - and add it to the toplevel
-CMakeLists.txt file.
-
-```
-bext (main) $ mkdir geogram
-bext (main) $ <manually edit CMakeLists.txt to add the following>
-# Geogram - a programming library with geometric algorithms
-# https://github.com/BrunoLevy/geogram
-add_project(geogram GROUPS "BRLCAD_EXTRA")
-```
-
-We create a default "geogram.deps" file to list build dependencies for the bext superbuild.
-By default everything depends on at least PATCH - if geogram ultimately needs other bext
-components as well, they will be added later
-
-```
-bext (main) $ echo -e "PATCH\\n" > geogram/geogram.deps
-```
-
-Based on the above compilation, we know we will need to pass some geogram specific arguments
-to configure.  Using one of the other CMakeLists.txt files as a template, we create the following
-geogram/CMakeLists.txt file:
-
-```
-set(ENABLE_GEOGRAM "${ENABLE_GEOGRAM}" CACHE BOOL "Enable Geogram build")
-
-if (ENABLE_GEOGRAM)
-
-  git_submodule_init(geogram CMakeLists.txt)
-
-  RegisterDeps(GEOGRAM)
-
-  ExternalProject_Add(GEOGRAM_BLD
-    URL "${CMAKE_CURRENT_SOURCE_DIR}/geogram"
+  ExternalProject_Add(PUGIXML_BLD
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/pugixml"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/geogram.patch
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
-    -DBIN_DIR=${BIN_DIR}
-    -DLIB_DIR=${LIB_DIR}
-    -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DBUILD_SHARED_LIBS=ON
+    -DPUGIXML_BUILD_SHARED_AND_STATIC_LIBS=${BUILD_STATIC_LIBS}
+    -DPUGIXML_BUILD_TESTS=OFF
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
     -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}
-    -DGEOGRAM_LIB_ONLY=ON
-    -DGEOGRAM_WITH_GRAPHICS=OFF
-    -DGEOGRAM_WITH_LUA=OFF
-    -DGEOGRAM_WITH_HLBFGS=OFF
-    -DGEOGRAM_WITH_TETGEN=OFF
-    -DGEOGRAM_WITH_TRIANGLE=OFF
     LOG_CONFIGURE ${EXT_BUILD_QUIET}
     LOG_BUILD ${EXT_BUILD_QUIET}
     LOG_INSTALL ${EXT_BUILD_QUIET}
     LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
     STEP_TARGETS install
-    )
+  )
 
-  TargetInstallDeps(GEOGRAM GEOGRAM_DEPENDS)
-
-  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
-  file(MAKE_DIRECTORY ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other)
+  TargetInstallDeps(PUGIXML PUGIXML_DEPENDS)
   configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/geogram/LICENSE
-    ${CMAKE_BUNDLE_INSTALL_PREFIX}/doc/legal/other/geogram.txt
+    ${CMAKE_CURRENT_SOURCE_DIR}/pugixml/LICENSE.md
+    ${DOC_LICENSE_DIR}/pugixml.txt
     COPYONLY
-    )
-
-endif (ENABLE_GEOGRAM)
-
-# Local Variables:
-# tab-width: 8
-# mode: cmake
-# indent-tabs-mode: t
-# End:
-# ex: shiftwidth=2 tabstop=8
+  )
+endif ()
 ```
 
-By default the PATCH\_COMMAND line is commented out - at this stage we don't know if we need to
-apply any patches or not.  We will definitely need to copy at least the LICENSE file.  In this
-case we will probably also want to append some of the other third party licenses used by geogram
-into it for completeness, so we may end up either scripting that or making our own custom file
-to store in geogram/.   The latter is less ideal as it will have to be manually updated each time
-we update geogram, but that might be simpler than a complex and fragile scripting solution - it
-will require investigation.
+The helper defaults to building a present snapshot and skips an absent one,
+even with `ENABLE_ALL=ON` or `ENABLE_PUGIXML=ON`. An explicit
+`ENABLE_PUGIXML=OFF` or `DISABLE_PUGIXML=ON` prevents the local build. The cached
+`ENABLE_PUGIXML` value records the preference, while the normal variable used
+by the wrapper records whether a build is possible on this configure. That
+allows a missing source to appear on the next configure without a cached
+automatic `OFF` blocking it. If `cad_enable` is used to select components,
+call it before `bext_local_source` so its `DISABLE_PUGIXML` decision is honored.
+Do not call `bext_enable` after the helper during this stage: normal system
+probing and submodule fallback belong to the adopted dependency.
 
-The other item of note here is that we need find\_package to locate geogram.  By default CMake
-does not bundle a module for this, and geogram is not one of the projects that uses the newer
-project-provided CMake information convention for find\_package, so we will have to supply a
-FindGeogram.cmake file.  In this case geogram itself has such a file in geogram/cmake/FindGeogram.cmake
-so that is our starting point - we add it to the bext collection of CMake find\_package files:
+There should be no `git_submodule_init` call in the experimental wrapper.
+Remove it rather than leaving a commented call: source metadata readers may
+still interpret it as a submodule declaration. Bootstrap excludes wrappers
+with a local-source declaration, and the inventory uses that declaration for
+the dependency table and SBOM without requiring `.gitmodules` changes.
 
-```
-bext (main) $ cp ~/geogram/cmake/FindGeogram.cmake CMake/
-```
+Test the wrapper with the targeted build:
 
-Although it is not immediately necessary for this stage of the setup, there is something we
-should verify and correct about the FindGeogram.cmake file.  The bext setup requires that
-find\_package respect \*\_ROOT variables to allow us to point search paths to our local copies
-of libs rather than system versions, and it is common for more obscure cmake files to not
-be set up to search in this fashion.  Accordingly, we alter FindGeogram.cmake
-to add GEOGRAM\_ROOT to the set of search paths.  This will eventually be necessary for the
-copy added to the main BRL-CAD build, as well as for any new dependencies that need to link
-against the local copy of geogram in the future.
-
-For the initial test, we comment out the git\_submodule\_init line and manually position a copy
-of the geogram source tree in geogram/geogram to simulate a submodule clone.  For this test
-we only are interested in building geogram and its requirements, rather than all of bext,
-so we run make with the GEOGRAM_BLD target.
-
-```
-bext (main) $ cp -r ~/geogram geogram/
-bext (main) $ mkdir build && cd build
-build (main) $ cmake .. -DENABLE_ALL=ON -DCMAKE_BUILD_TYPE=Release
-build (main) $ make GEOGRAM_BLD
-[  0%] Creating directories for 'PATCH_BLD'
-[  0%] No download step for 'PATCH_BLD'
-[ 20%] No update step for 'PATCH_BLD'
-[ 20%] No patch step for 'PATCH_BLD'
-[ 20%] Performing configure step for 'PATCH_BLD'
--- PATCH_BLD configure command succeeded.  See also bext/build/patch/PATCH_BLD-prefix/src/PATCH_BLD-stamp/PATCH_BLD-configure-*.log
-[ 40%] Performing build step for 'PATCH_BLD'
--- PATCH_BLD build command succeeded.  See also bext/build/patch/PATCH_BLD-prefix/src/PATCH_BLD-stamp/PATCH_BLD-build-*.log
-[ 40%] Performing install step for 'PATCH_BLD'
--- PATCH_BLD install command succeeded.  See also bext/build/patch/PATCH_BLD-prefix/src/PATCH_BLD-stamp/PATCH_BLD-install-*.log
-[ 40%] Built target PATCH_BLD-install
-[ 60%] Creating directories for 'GEOGRAM_BLD'
-[ 60%] Performing download step (DIR copy) for 'GEOGRAM_BLD'
-[ 60%] No update step for 'GEOGRAM_BLD'
-[ 80%] No patch step for 'GEOGRAM_BLD'
-[ 80%] Performing configure step for 'GEOGRAM_BLD'
--- GEOGRAM_BLD configure command succeeded.  See also bext/build/geogram/GEOGRAM_BLD-prefix/src/GEOGRAM_BLD-stamp/GEOGRAM_BLD-configure-*.log
-[ 80%] Performing build step for 'GEOGRAM_BLD'
--- GEOGRAM_BLD build command succeeded.  See also bext/build/geogram/GEOGRAM_BLD-prefix/src/GEOGRAM_BLD-stamp/GEOGRAM_BLD-build-*.log
-[ 80%] Performing install step for 'GEOGRAM_BLD'
--- GEOGRAM_BLD install command succeeded.  See also bext/build/geogram/GEOGRAM_BLD-prefix/src/GEOGRAM_BLD-stamp/GEOGRAM_BLD-install-*.log
-[ 80%] Built target GEOGRAM_BLD-install
-[100%] Completed 'GEOGRAM_BLD'
-[100%] Built target GEOGRAM_BLD
+```sh
+cmake --preset minimal -B build/pugixml-eval -DENABLE_PUGIXML=ON
+cmake --build build/pugixml-eval --target PUGIXML_BLD --config Release --parallel 2
+cmake --build build/pugixml-eval --target update_dependency_docs
+cmake --build build/pugixml-eval --target supply_chain_check
+cmake -DPROFILE=minimal -DLIST_ONLY=ON -P CMake/BextBootstrap.cmake
 ```
 
-Once we have a successful completion, we inspect the contents of install:
+Other dependencies in active groups are still considered during configure;
+the explicit build target limits compilation to pugixml and its prerequisites.
+Inspect `build/pugixml-eval/install` for headers, libraries, CMake package
+files, and `share/doc/legal/other/pugixml.txt`. Check that unrelated tools and
+examples are not installed. Repeat with the snapshot absent, with
+`ENABLE_PUGIXML=OFF`, and with `ENABLE_ALL=ON` in fresh build directories.
+An absent or disabled snapshot must produce no `PUGIXML_BLD` target, and
+bootstrap must not try to fetch its source. Also test placing the snapshot
+into a previously configured tree and reconfiguring it.
 
-```
-bext/build (main) $ ls -R ~/install/
-```
+When adopting the dependency, first preserve any local work outside the
+wrapper directory. Move the snapshot aside and add the submodule, pinned to
+the revision that was tested:
 
-One thing to note is that a lot of the third party headers have been installed,
-including lua (although we disabled it) and zlib.  It might be possible to trim
-the installed set of headers down if the subset of geogram we are interested in
-doesn't require all of them, but it would also require patching the build logic
-so it's not a step to take without some motivation.  The zlib headers are concerning
-if there's a risk of them getting incorporated into other builds instead of our
-bundled zlib, but their location in include/geogram1/geogram/third_party/zlib should
-help avoid accidental incorporation so for the moment we can wait and see. The
-total file size for all the geogram headers is about 5M, which isn't enough to
-justify a cleanup attempt without more pressing functional concerns.
-
-Once everything looks like it should, we are ready to remove the working geogram
-copy and add it properly as a submodule per the instructions at the top of this
-file:
-
-```
-bext (main) $ rm -rf geogram/geogram && cd geogram
-bext/geogram (main) $ git submodule add -b RELEASE https://github.com/BRL-CAD/geogram.git
-bext/geogram (main) $ cd ..
-bext (main) $ echo "        ignore = dirty" >> .gitmodules
+```sh
+mv pugixml/pugixml "$HOME/pugixml-tested-snapshot"
+git submodule add -b RELEASE https://github.com/BRL-CAD/pugixml pugixml/pugixml
+git -C pugixml/pugixml checkout --detach c8033ce9d039e7f9d134877c363397b3cfe20816
 ```
 
-Then add all the new and updated files to git for committing, and make the
-commit - geogram will now be present as a dependency in bext.
+Add `ignore = dirty` to this dependency's entry in `.gitmodules`. Replace the
+local-source declaration with the normal selection logic:
 
-```
-bext (main) $ git add .gitmodules CMakeLists.txt CMake/ geogram/
-bext (main) $ git status
-On branch main
-Your branch is up to date with 'origin/main'.
-
-Changes to be committed:
-  (use "git restore --staged <file>..." to unstage)
-	modified:   .gitmodules
-	new file:   CMake/FindGeogram.cmake
-	modified:   CMakeLists.txt
-	new file:   geogram/CMakeLists.txt
-	new file:   geogram/geogram
-	new file:   geogram/geogram.deps
-bext (main) $ git commit -m "Add geogram geometry library to bext"
-[main 07d979f] Add geogram geometry library to bext
- 6 files changed, 227 insertions(+)
- create mode 100644 CMake/FindGeogram.cmake
- create mode 100644 geogram/CMakeLists.txt
- create mode 160000 geogram/geogram
- create mode 100644 geogram/geogram.deps
-bext (main) $ git push
+```cmake
+cad_enable(PUGIXML "libgcv;librt")
+bext_enable(PUGIXML)
 ```
 
-The final "git push" step publishes the new addition to the public github bext
-repository, and will also kick off a continuous integration test build on
-Windows, Mac and Linux.  Because we tested only on Linux above, it is very
-common to see build issues on one or both of Windows and Mac - any issues
-should be immediately fixed, to keep bext building on all three platforms.
-In the case of severe issues, comment out the add\_project line in the toplevel
-bext CMakeLists.txt file corresponding to the new addition until the problems
-can be resolved.
+Inside `if (ENABLE_PUGIXML)`, before `RegisterDeps`, add:
 
-Having added the dependency successfully to bext, the next step is to set up
-the main BRL-CAD build to make use of it.  The FindGeogram.cmake file needs
-to be added to BRL-CAD's misc/CMake folder, and the following code needs to be
-added to misc/CMake/BRLCAD_ExternalDeps.cmake in order for the main BRL-CAD
-build to be able to find a bundled Geogram:
-
-```
-# Geogram - a programming library with geometric algorithms
-# https://github.com/BrunoLevy/geogram
-find_package_reset(GEOGRAM RESET_TP)
-set(GEOGRAM_ROOT "${CMAKE_BINARY_DIR}")
-find_package(Geogram)
+```cmake
+git_submodule_init(pugixml CMakeLists.txt)
 ```
 
-Because the Geogram headers will trigger compiler warnings for a BRL-CAD build,
-we also need to identify "geogram" as a pattern on which to use the SYSTEM
-keyword when it is used in include_directories calls:
+The component list above follows the current pugixml wrapper. A new dependency
+must use the BRL-CAD components that actually need it. System detection must
+also match its package naming: verify that `bext_enable` finds an installed
+package, or supply a suitable find module or custom selection logic. A find
+module should honor the dependency's `*_ROOT` hint and provide the include
+paths, libraries, and imported targets that consumers need.
 
-```
-set(SYS_INCLUDE_PATTERNS ${SYS_INCLUDE_PATTERNS} geogram)
-list(REMOVE_DUPLICATES SYS_INCLUDE_PATTERNS)
-set(SYS_INCLUDE_PATTERNS ${SYS_INCLUDE_PATTERNS} geogram CACHE STRING "Bundled system include dirs" FORCE)
-```
+Use a fresh build directory for the adopted wrapper so experimental cache
+preferences do not mask default system detection. Test system and bundled
+selection, explicit local-build overrides, relevant `BRLCAD_COMPONENTS`, and
+all supported platforms. Regenerate the dependency table and SBOM and confirm
+that bootstrap now lists the project. Commit the integration and tested
+submodule reference together after those checks pass.
 
-We also need to add "Geogram" to the BUNDLED_LABELS list and GEOGRAM_LIBRARY to
-the BUNDLED_VARS list in misc/CMake/BRLCAD_Summary.cmake - they both need to be
-in the same relative positions in their respective lists.  This will allow the
-BRL-CAD configure summary to report on the status of the dependency automatically.
-By convention we keep the labels alphabetized.
-
-Note that the bext build takes responsibility for making third party
-dependencies relocatable by leveraging LIEF, but if the upstream project ends
-up encoding fixed install paths rather than using relative lookups it may
-happen that a working install copy fails to work when copied into
-the main BRL-CAD build.  If and when that happens, the original sources must be
-patched to allow for relocatable execution (we have to do this for Tcl, for
-example.) This should be done via patch file, and if the upstream project will
-take them push the necessary changes upstream to simplify incorporating new
-versions down the road.
-
-Once the dependency is looking stable and useful, it's time to circle back and
-test the build logic for various configurations - system verisons of
-dependencies (if any), bundled versions of dependencies (if any), installing a
-system version of geogram and verifying that the FindGeogram.cmake file
-successfully detects it and our build logic disables the local build, and
-checking that the BRL-CAD FindGeogram.cmake and build logic also work in both
-configurations.  Unfortunately, especially given the huge number of projects
-bext manages when everything is enabled, it's not practical to test all
-combinations of system and local for all projects.  Generally speaking, the
-most important configurations are ENABLE_ALL=ON, system detection on a
-"vanilla" Linux box with just the minimal system development headers for X11
-et. al., and system detection on a Linux box with a lot of system versions of
-libraries present.  (For projects like geogram that have minimal entanglement
-with other elements of bext it's more practical to check all configurations
-using the GEOGRAM_BLD build target, but that won't always be possible -
-build logic for projects like OSPray and Appleseed has the potential to
-encounter a vast set of possible mixes of system and bundled libs.)
-
+Finally, test the BRL-CAD consumers against both system and bext installations.
+Use the normal build to finalize the bundle before testing downstream use;
+the individual `PUGIXML_BLD` target does not finalize the full output tree.
+Check relocation by moving the installed bundle and rebuilding a consumer
+against it. If upstream package files or runtime lookups embed fixed paths,
+patch the source build and offer those fixes upstream where possible.
