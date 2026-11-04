@@ -93,9 +93,11 @@ git -C <fresh-verification-directory> checkout --detach <verified-commit>
 git -C <fresh-verification-directory> rev-parse HEAD
 ```
 
-The checked-out commit must match the recorded upstream release commit. A failed
-verification blocks the bext pin update; use the preserved source to complete
-or repair the BRL-CAD copy first.
+For a tag-based candidate, the checked-out commit must match the recorded
+upstream release commit. For a maintained-source exception, verify the prepared
+BRL-CAD commit instead and retain its upstream version/import provenance. A
+failed verification blocks the bext pin update; use the preserved source to
+complete or repair the BRL-CAD copy first.
 
 Use bext patches for build-system adaptations, symbol/library naming, install
 layout, and compatibility fixes. Prefer upstream fixes when practical. If an
@@ -295,6 +297,26 @@ git -C <dependency>/<source> rev-parse '<release-tag>^{commit}'
 git -C <dependency>/<source> checkout --detach <verified-commit>
 git -C <dependency>/<source> status --short
 ```
+
+For a maintained-source exception, use the branch that holds the BRL-CAD
+adaptation to identify a candidate during independent source verification.
+Netpbm uses `brlcad`: verify a fresh clone from `BRL-CAD/netpbm`, resolve
+`origin/brlcad`, and check out that exact commit there before changing bext.
+Then fetch the branch into bext's submodule and select the verified commit:
+
+```sh
+git -C netpbm/netpbm fetch --no-tags origin brlcad
+git -C netpbm/netpbm checkout --detach <verified-brlcad-commit>
+git -C netpbm/netpbm status --short
+```
+
+Use the commit already verified, even if the branch advances during the update.
+The exception branch and the upstream import can identify different commits;
+select the maintained BRL-CAD subset rather than the full upstream import.
+Review the subset diff against the previous bext pin and its upstream ancestry.
+Check that its recorded provenance and generated build version agree with the
+imported release. A new import may leave the retained library sources unchanged
+while still correcting version information or provenance.
 
 The origin above must be the BRL-CAD source already verified during preparation;
 do not fetch from upstream inside bext as a substitute for completing the

@@ -70,6 +70,13 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(NETPBM REQUIRED_VARS NETPBM_LIBRARY NETPBM_INC
 
 if(NETPBM_FOUND)
     set(NETPBM_INCLUDE_DIRS ${NETPBM_INCLUDE_DIR})
+    # Keep unqualified includes usable, but also provide the root required by
+    # the installed headers' own netpbm/... includes and namespaced consumers.
+    get_filename_component(_NETPBM_INCLUDE_PARENT "${NETPBM_INCLUDE_DIR}" DIRECTORY)
+    if(EXISTS "${_NETPBM_INCLUDE_PARENT}/netpbm/pam.h")
+      list(PREPEND NETPBM_INCLUDE_DIRS "${_NETPBM_INCLUDE_PARENT}")
+    endif()
+    unset(_NETPBM_INCLUDE_PARENT)
 
     if(NOT NETPBM_LIBRARIES)
       set(NETPBM_LIBRARIES ${NETPBM_LIBRARY})
