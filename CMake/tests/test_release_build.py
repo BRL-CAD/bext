@@ -3,11 +3,14 @@
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 
 MODULE = Path(__file__).resolve().parents[1]
@@ -170,6 +173,49 @@ bext_configure_release_build()
         self.compile()
         self.assertEqual(log, (self.build / 'bext-release-logs/FIRST_BLD.log').read_bytes())
         self.assertFalse((self.build / 'SECOND_BLD-prefix/src/SECOND_BLD-build').exists())
+
+    def test_discard_removes_readonly_test_fixture(self):
+        self.fixture()
+        with (self.source / 'first/CMakeLists.txt').open('a') as output:
+            output.write('''
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt" "Read_only")
+file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
+  PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+''')
+        self.configure()
+        self.compile()
+        self.assertFalse((self.build / 'FIRST_BLD-prefix/src/FIRST_BLD-build').exists())
+        self.assertTrue(list((self.prefix / 'install/lib').glob('*first*')))
+        self.assertIn('up to date', self.compile())
+
+    def test_readonly_cleanup_retries_windows_deletion(self):
+        path = self.root / 'readonly.txt'
+        path.write_text('Read_only')
+        path.chmod(stat.S_IREAD)
+        self.addCleanup(lambda: path.exists() and path.chmod(stat.S_IREAD | stat.S_IWRITE))
+        error = PermissionError('Access is denied')
+        # Exercise Windows recovery on every host; actual deletion is still real.
+        with mock.patch.object(driver, 'os', wraps=os) as windows:
+            windows.name = 'nt'
+            driver.remove_readonly(windows.unlink, path, (PermissionError, error, None))
+            windows.unlink.assert_called_once_with(path)
+        self.assertFalse(path.exists())
+
+    def test_readonly_cleanup_preserves_other_errors(self):
+        path = self.root / 'writable.txt'
+        path.write_text('Writable')
+        for error in (PermissionError('File is locked'), OSError('Other error')):
+            with self.subTest(error=error):
+                with mock.patch.object(driver, 'os', wraps=os) as windows:
+                    windows.name = 'nt'
+                    with self.assertRaises(type(error)) as raised:
+                        driver.remove_readonly(windows.unlink, path,
+                                               (type(error), error, None))
+                    self.assertIs(raised.exception, error)
+                    windows.chmod.assert_not_called()
+                    windows.unlink.assert_not_called()
+        self.assertTrue(path.exists())
 
     def test_deferred_tcl_stack_survives_until_finalization(self):
         self.fixture(deferred=True)

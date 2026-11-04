@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import uuid
@@ -59,12 +60,26 @@ def work_paths(plan, project):
     return paths
 
 
+def remove_readonly(function, path, exc_info):
+    """Retry Windows file deletion after clearing a read-only attribute."""
+    error = exc_info[1]
+    if (os.name != 'nt' or not isinstance(error, PermissionError)
+            or function not in (os.unlink, os.remove)):
+        raise error
+    mode = os.lstat(path).st_mode
+    if not stat.S_ISREG(mode) or mode & stat.S_IWRITE:
+        raise error
+    os.chmod(path, mode | stat.S_IWRITE)
+    function(path)
+
+
 def discard(plan, project):
     # Recheck after the build, since a dependency could have created symlinks.
     for path in work_paths(plan, project):
         if path.exists():
             print('Discarding ' + str(path), flush=True)
-            shutil.rmtree(path)
+            # onerror supports the driver's Python 3.8 minimum (onexc needs 3.12).
+            shutil.rmtree(path, onerror=remove_readonly)
 
 
 def signature(plan):
