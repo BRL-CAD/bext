@@ -37,8 +37,6 @@ if (ENABLE_QT)
 
   option(QT_ALLOW_HEADLESS "Allow building Qt without a window-capable platform plugin" OFF)
 
-  git_submodule_init(qt qtbase/configure)
-
   set(QT_XMIN_ENABLED OFF)
   set(QT_XMIN_DIR "")
   set(QT_XMIN_RUNTIME_DIRS "")
@@ -126,7 +124,6 @@ if (ENABLE_QT)
   # use that physical path in ExternalProject and all Qt wrapper scripts.
   file(MAKE_DIRECTORY "${QT_BUILD_DIR}")
   file(REAL_PATH "${QT_BUILD_DIR}" QT_BUILD_DIR)
-  set(QT_PATCH_COMMAND)
   set(qt_patch_hash_input "")
   foreach(QT_EXTRA_PATCH IN LISTS QT_EXTRA_PATCHES)
     if (NOT IS_ABSOLUTE "${QT_EXTRA_PATCH}")
@@ -137,16 +134,15 @@ if (ENABLE_QT)
     endif ()
     file(SHA256 "${QT_EXTRA_PATCH}" qt_patch_hash)
     string(APPEND qt_patch_hash_input "${QT_EXTRA_PATCH}:${qt_patch_hash}\n")
-    if (NOT QT_PATCH_COMMAND)
-      set(QT_PATCH_COMMAND
-        PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${QT_EXTRA_PATCH}
-      )
-    else ()
-      list(APPEND QT_PATCH_COMMAND
-        COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${QT_EXTRA_PATCH}
-      )
-    endif ()
   endforeach()
+  set(QT_TRACKED_PATCH_FILES
+    ${QT_EXTRA_PATCHES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/qtsvg.patch")
+  git_submodule_init(qt qtbase/configure
+    PATCH_FILES ${QT_TRACKED_PATCH_FILES})
+  bext_patch_command(QT_PATCH_COMMAND ${QT_EXTRA_PATCHES})
+  bext_patch_command(QTSVG_PATCH_COMMAND
+    "${CMAKE_CURRENT_SOURCE_DIR}/qtsvg.patch")
   string(SHA256 QT_PATCH_SIGNATURE "${qt_patch_hash_input}")
 
   # Make ExternalProject's configure rule sensitive to both the selected
@@ -181,7 +177,7 @@ if (ENABLE_QT)
     ${QT_SOURCE_ARGUMENTS}
     BINARY_DIR "${QT_BUILD_DIR}"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    ${QT_PATCH_COMMAND}
+    PATCH_COMMAND ${QT_PATCH_COMMAND}
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CBT} -DQT_ALLOW_HEADLESS=${QAH} -DBEXT_QT_TARGET_SYSTEM_NAME=${CMAKE_SYSTEM_NAME} -DQT_CONFIG_SIGNATURE=${QT_CONFIG_SIGNATURE} -P ${CMAKE_CURRENT_BINARY_DIR}/qt_config.cmake
     BUILD_COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CBT} -P ${CMAKE_CURRENT_BINARY_DIR}/qt_build.cmake
     INSTALL_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/qt_install.cmake
@@ -214,7 +210,7 @@ if (ENABLE_QT)
   ExternalProject_Add(Qt6Svg_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/qt/qtsvg"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/qtsvg.patch
+    PATCH_COMMAND ${QTSVG_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/CMake/FindZLIB.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}

@@ -7,14 +7,17 @@ bext_enable(RE2C)
 
 if (ENABLE_RE2C)
 
-  git_submodule_init(re2c CMakeLists.txt)
+  set(RE2C_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/re2c.patch")
+  git_submodule_init(re2c CMakeLists.txt
+    PATCH_FILES ${RE2C_PATCH_FILES}
+    PATCH_COMMAND_VAR RE2C_PATCH_COMMAND)
 
   RegisterDeps(RE2C)
 
   ExternalProject_Add(RE2C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/re2c"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/re2c.patch
+    PATCH_COMMAND ${RE2C_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DRE2C_BUILD_RE2GO=OFF

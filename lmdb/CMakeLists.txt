@@ -7,14 +7,17 @@ bext_enable(LMDB)
 
 if (ENABLE_LMDB)
 
-  git_submodule_init(lmdb libraries/liblmdb/mdb.c)
+  set(LMDB_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/lmdb.patch")
+  git_submodule_init(lmdb libraries/liblmdb/mdb.c
+    PATCH_FILES ${LMDB_PATCH_FILES}
+    PATCH_COMMAND_VAR LMDB_PATCH_COMMAND)
 
   RegisterDeps(LMDB)
 
   ExternalProject_Add(LMDB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lmdb"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lmdb.patch
+    PATCH_COMMAND ${LMDB_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}

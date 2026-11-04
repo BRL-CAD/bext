@@ -8,7 +8,10 @@ bext_enable(TIFF)
 
 if (ENABLE_TIFF)
 
-  git_submodule_init(libtiff CMakeLists.txt)
+  set(TIFF_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tiff.patch")
+  git_submodule_init(libtiff CMakeLists.txt
+    PATCH_FILES ${TIFF_PATCH_FILES}
+    PATCH_COMMAND_VAR TIFF_PATCH_COMMAND)
 
   RegisterDeps(TIFF)
   if (TARGET ZLIB_BLD)
@@ -18,7 +21,7 @@ if (ENABLE_TIFF)
   ExternalProject_Add(TIFF_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libtiff"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tiff.patch
+    PATCH_COMMAND ${TIFF_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/FindZLIB.cmake
     CMAKE_ARGS
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>

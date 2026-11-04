@@ -16,7 +16,10 @@ set(ENABLE_ASTYLE "${ENABLE_ASTYLE}" CACHE BOOL "Enable astyle build")
 
 if (ENABLE_ASTYLE)
 
-  git_submodule_init(astyle AStyle/CMakeLists.txt)
+  set(ASTYLE_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/astyle.patch")
+  git_submodule_init(astyle AStyle/CMakeLists.txt
+    PATCH_FILES ${ASTYLE_PATCH_FILES}
+    PATCH_COMMAND_VAR ASTYLE_PATCH_COMMAND)
 
   RegisterDeps(ASTYLE)
 
@@ -24,7 +27,7 @@ if (ENABLE_ASTYLE)
     URL "${CMAKE_CURRENT_SOURCE_DIR}/astyle"
     SOURCE_SUBDIR AStyle
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/astyle.patch
+    PATCH_COMMAND ${ASTYLE_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}

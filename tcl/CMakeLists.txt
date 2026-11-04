@@ -117,7 +117,26 @@ set(DISABLE_TCL "${DISABLE_TCL}" CACHE BOOL "Disable tcl build")
 
 if (ENABLE_TCL)
 
-  git_submodule_init(tcl unix/configure)
+  set(TCL_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/tcl_relocatable_config.patch")
+  if (NOT MSVC)
+    list(APPEND TCL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_unix_build.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_incremental_install.patch")
+  endif ()
+  if (WIN32)
+    list(APPEND TCL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_windows_build.patch")
+  endif ()
+  list(APPEND TCL_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
+  if (TARGET ZLIB_BLD)
+    list(APPEND TCL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl-z_brl.patch")
+  endif ()
+  git_submodule_init(tcl unix/configure
+    PATCH_FILES ${TCL_PATCH_FILES}
+    PATCH_COMMAND_VAR TCL_PATCH_COMMAND)
   if (NOT EXISTS "${BEXT_ITCL_BUNDLED_SOURCE_DIR}/configure")
     message(FATAL_ERROR
       "The bundled Tcl source does not contain the expected Itcl "
@@ -141,36 +160,6 @@ if (ENABLE_TCL)
 
   RegisterDeps(TCL)
 
-  set(TCL_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/tcl_relocatable_config.patch")
-  if (NOT MSVC)
-    list(APPEND TCL_PATCH_FILES
-      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_unix_build.patch"
-      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_incremental_install.patch")
-  endif ()
-  if (WIN32)
-    list(APPEND TCL_PATCH_FILES
-      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_windows_build.patch")
-  endif ()
-  list(APPEND TCL_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
-
-  set(TCL_PATCH_COMMAND)
-  foreach(TCL_PATCH_FILE IN LISTS TCL_PATCH_FILES)
-    if (NOT TCL_PATCH_COMMAND)
-      set(TCL_PATCH_COMMAND
-        ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TCL_PATCH_FILE}
-        )
-    else ()
-      list(APPEND TCL_PATCH_COMMAND
-        COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS}
-          -i ${TCL_PATCH_FILE}
-        )
-    endif ()
-  endforeach ()
-  unset(TCL_PATCH_FILE)
-  unset(TCL_PATCH_FILES)
-
   set(TCL_EXCLUDED_PACKAGES)
   set(TCL_PACKAGE_PRUNE_COMMANDS)
   if (NOT BEXT_TCL_ENABLE_DATABASE_PACKAGES)
@@ -193,8 +182,7 @@ if (ENABLE_TCL)
 
   if (TARGET ZLIB_BLD)
     set(ZLIB_SETUP_COMMANDS
-      ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tcl-z_brl.patch
-      COMMAND ${CMAKE_COMMAND};-E;remove_directory;<SOURCE_DIR>/compat/zlib
+      ${CMAKE_COMMAND};-E;remove_directory;<SOURCE_DIR>/compat/zlib
       )
   endif (TARGET ZLIB_BLD)
 

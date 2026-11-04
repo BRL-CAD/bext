@@ -3,7 +3,10 @@ bext_enable(OSPRAY)
 
 if (ENABLE_OSPRAY)
 
-  git_submodule_init(ospray CMakeLists.txt)
+  set(OSPRAY_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/ospray.patch")
+  git_submodule_init(ospray CMakeLists.txt
+    PATCH_FILES ${OSPRAY_PATCH_FILES}
+    PATCH_COMMAND_VAR OSPRAY_PATCH_COMMAND)
 
   RegisterDeps(OSPRAY)
 
@@ -22,7 +25,7 @@ if (ENABLE_OSPRAY)
     # compatibility, so a non-EXACT find accepts 1.15.2 for a 1.14.0 request (and
     # ospray's own installed config already uses find_dependency without EXACT).
     # The patch drops the EXACT keyword from the build-time find_package.
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/ospray.patch
+    PATCH_COMMAND ${OSPRAY_PATCH_COMMAND}
     CMAKE_ARGS
     -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
     ${BUILD_TYPE_SPECIFIER}

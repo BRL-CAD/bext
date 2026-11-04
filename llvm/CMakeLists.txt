@@ -3,7 +3,15 @@ bext_enable(LLVM)
 
 if (ENABLE_LLVM)
 
-  git_submodule_init(llvm-project llvm/CMakeLists.txt)
+  set(LLVM_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch")
+  if (TARGET ZLIB_BLD)
+    list(APPEND LLVM_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/llvm_z_brl.patch")
+  endif ()
+  git_submodule_init(llvm-project llvm/CMakeLists.txt
+    PATCH_FILES ${LLVM_PATCH_FILES}
+    PATCH_COMMAND_VAR LLVM_PATCH_COMMAND)
 
   RegisterDeps(LLVM)
   # LLVM installs its own Ninja pools, including memory-heavy TableGen jobs.
@@ -13,14 +21,8 @@ if (ENABLE_LLVM)
     -DLLVM_PARALLEL_TABLEGEN_JOBS=${BEXT_BUILD_JOBS}
   )
 
-  # We may need one or more patches, depending on settings.  ExternalProject_Add
-  # expects the first command to be "PATCH_COMMAND", with subsequent patch commands
-  # starting with COMMAND.  Use a variable initialized to PATCH_COMMAND, with each
-  # activation of a patch flipping the variable to COMMAND for subsequent uses.
-  set(PATCH_CMD "PATCH_COMMAND")
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
-    set(Z_BRL_PATCH_CMD "COMMAND;${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/llvm_z_brl.patch")
   endif (TARGET ZLIB_BLD)
 
   if (WIN32)
@@ -42,9 +44,8 @@ if (ENABLE_LLVM)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/llvm-project"
       SOURCE_SUBDIR llvm
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch"
+      PATCH_COMMAND ${LLVM_PATCH_COMMAND}
       COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/Modules/FindZLIB.cmake
-      ${Z_BRL_PATCH_CMD}
       CMAKE_ARGS
       -C ${CMAKE_CURRENT_SOURCE_DIR}/llvm_targets.cmake
       ${BUILD_TYPE_SPECIFIER}
@@ -100,9 +101,8 @@ if (ENABLE_LLVM)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/llvm-project"
       SOURCE_SUBDIR llvm
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch"
+      PATCH_COMMAND ${LLVM_PATCH_COMMAND}
       COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/Modules/FindZLIB.cmake
-      ${Z_BRL_PATCH_CMD}
       CMAKE_ARGS
       -C ${CMAKE_CURRENT_SOURCE_DIR}/llvm_targets.cmake
       -DCMAKE_BUILD_TYPE=Release

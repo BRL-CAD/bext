@@ -7,7 +7,13 @@ bext_enable(Bullet)
 
 if (ENABLE_BULLET)
 
-  git_submodule_init(bullet3 CMakeLists.txt)
+  set(BULLET_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/bullet_cmake.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/bullet_wdocumentation.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/bullet_metadata.patch")
+  git_submodule_init(bullet3 CMakeLists.txt
+    PATCH_FILES ${BULLET_PATCH_FILES}
+    PATCH_COMMAND_VAR BULLET_PATCH_COMMAND)
 
   RegisterDeps(BULLET)
 
@@ -47,9 +53,7 @@ if (ENABLE_BULLET)
   ExternalProject_Add(BULLET_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/bullet3"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/bullet_cmake.patch
-          COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/bullet_wdocumentation.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/bullet_metadata.patch
+    PATCH_COMMAND ${BULLET_PATCH_COMMAND}
     CMAKE_ARGS ${BULLET_CMAKE_ARGS}
     -DBUILD_UNIT_TESTS=OFF
     LOG_CONFIGURE ${EXT_BUILD_QUIET}

@@ -9,7 +9,10 @@ if (ENABLE_ISPC)
   # gcc-multilib
   # g++-multilib
 
-  git_submodule_init(ispc CMakeLists.txt)
+  set(ISPC_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/ispc.patch")
+  git_submodule_init(ispc CMakeLists.txt
+    PATCH_FILES ${ISPC_PATCH_FILES}
+    PATCH_COMMAND_VAR ISPC_PATCH_COMMAND)
 
   RegisterDeps(ISPC)
   if (TARGET ZLIB_BLD)
@@ -87,7 +90,7 @@ if (ENABLE_ISPC)
   # with the native compiler above.
   ExternalProject_Add(ISPC_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/ispc"
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/ispc.patch
+    PATCH_COMMAND ${ISPC_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/FindZLIB.cmake
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     CMAKE_ARGS

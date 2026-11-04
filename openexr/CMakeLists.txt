@@ -3,14 +3,17 @@ bext_enable(OPENEXR)
 
 if (ENABLE_OPENEXR)
 
-  git_submodule_init(openexr CMakeLists.txt)
+  set(OPENEXR_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/openexr.patch")
+  git_submodule_init(openexr CMakeLists.txt
+    PATCH_FILES ${OPENEXR_PATCH_FILES}
+    PATCH_COMMAND_VAR OPENEXR_PATCH_COMMAND)
 
   RegisterDeps(OPENEXR)
 
   ExternalProject_Add(OPENEXR_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/openexr"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/openexr.patch
+    PATCH_COMMAND ${OPENEXR_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DOPENEXR_BUILD_TOOLS=OFF

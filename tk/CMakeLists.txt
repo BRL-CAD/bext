@@ -59,8 +59,6 @@ endif ()
 
 if (TK_DO_BUILD)
 
-  git_submodule_init(tk unix/configure)
-
   RegisterDeps(TK)
 
   if (NOT DEFINED TCL_VERSION)
@@ -116,27 +114,18 @@ if (TK_DO_BUILD)
       "TK_EXTRA_PATCHES and TK_CONFIGURE_ARGS are supported only on Unix")
   endif ()
 
-  set(TK_PATCH_COMMAND)
   set(tk_patch_hash_input "")
   foreach(TK_PATCH_FILE IN LISTS TK_PATCH_FILES)
     if (NOT MSVC)
       file(SHA256 "${TK_PATCH_FILE}" tk_patch_hash)
       string(APPEND tk_patch_hash_input "${TK_PATCH_FILE}:${tk_patch_hash}\n")
     endif ()
-    if (NOT TK_PATCH_COMMAND)
-      set(TK_PATCH_COMMAND
-        ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${TK_PATCH_FILE}
-        )
-    else ()
-      list(APPEND TK_PATCH_COMMAND
-        COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS}
-          -i ${TK_PATCH_FILE}
-        )
-    endif ()
   endforeach ()
+  git_submodule_init(tk unix/configure
+    PATCH_FILES ${TK_PATCH_FILES}
+    PATCH_COMMAND_VAR TK_PATCH_COMMAND)
   unset(TK_EXTRA_PATCH)
   unset(TK_PATCH_FILE)
-  unset(TK_PATCH_FILES)
 
   if (NOT MSVC)
     string(SHA256 TK_PATCH_SIGNATURE "${tk_patch_hash_input}")

@@ -7,7 +7,12 @@ bext_enable(MANIFOLD)
 
 if (ENABLE_MANIFOLD)
 
-  git_submodule_init(manifold include/manifold/manifold.h)
+  set(MANIFOLD_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/manifold_static.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/manifold_alloc.patch")
+  git_submodule_init(manifold include/manifold/manifold.h
+    PATCH_FILES ${MANIFOLD_PATCH_FILES}
+    PATCH_COMMAND_VAR MANIFOLD_PATCH_COMMAND)
 
   RegisterDeps(MANIFOLD)
 
@@ -16,8 +21,7 @@ if (ENABLE_MANIFOLD)
   ExternalProject_Add(MANIFOLD_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/manifold"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/manifold_static.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/manifold_alloc.patch
+    PATCH_COMMAND ${MANIFOLD_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     $<$<BOOL:${CLIPPER2_TARGET}>:-DClipper2_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>

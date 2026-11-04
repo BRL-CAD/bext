@@ -7,7 +7,10 @@ bext_enable(OpenCV)
 
 if (ENABLE_OPENCV)
 
-  git_submodule_init(opencv CMakeLists.txt)
+  set(OPENCV_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/opencv.patch")
+  git_submodule_init(opencv CMakeLists.txt
+    PATCH_FILES ${OPENCV_PATCH_FILES}
+    PATCH_COMMAND_VAR OPENCV_PATCH_COMMAND)
 
   RegisterDeps(OPENCV)
   if (TARGET ZLIB_BLD)
@@ -17,7 +20,7 @@ if (ENABLE_OPENCV)
   ExternalProject_Add(OPENCV_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/opencv"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opencv.patch
+    PATCH_COMMAND ${OPENCV_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindPNG.cmake;<SOURCE_DIR>/cmake/FindPNG.cmake
     CMAKE_ARGS

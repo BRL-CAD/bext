@@ -100,7 +100,28 @@ endmacro(TargetInstallDeps root)
 # amount of source code if it isn't needed.  Define a convenience function
 # to use in the project to populate the submodule checkouts if needed.
 ###############################################################################
+function(bext_patch_command output_var)
+  set(patch_command)
+  foreach(patch_file IN LISTS ARGN)
+    get_filename_component(patch_file "${patch_file}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    if (patch_command)
+      list(APPEND patch_command COMMAND)
+    endif ()
+    list(APPEND patch_command
+      "${PATCH_EXECUTABLE}" -E -p1 ${PATCH_OPTIONS} -i "${patch_file}")
+  endforeach()
+  set(${output_var} "${patch_command}" PARENT_SCOPE)
+endfunction()
+
 function(git_submodule_init path checkfile)
+  cmake_parse_arguments(GSI "" "PATCH_COMMAND_VAR" "PATCH_FILES" ${ARGN})
+  if (GSI_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "Unknown git_submodule_init arguments: ${GSI_UNPARSED_ARGUMENTS}")
+  endif ()
+  if (GSI_PATCH_COMMAND_VAR AND NOT GSI_PATCH_FILES)
+    message(FATAL_ERROR "git_submodule_init PATCH_COMMAND_VAR requires PATCH_FILES")
+  endif ()
+
   string(REGEX REPLACE "[^A-Za-z0-9_+.-]" "_" stamp_name "${path}")
   set(sha1_stamp "${CMAKE_CURRENT_BINARY_DIR}/build_sha1_${stamp_name}.txt")
   if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile}")
@@ -108,32 +129,43 @@ function(git_submodule_init path checkfile)
     if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${path}/${checkfile}")
       message(FATAL_ERROR "Git submodule ${path} is missing ${checkfile} after checkout")
     endif ()
-    execute_process(
-      COMMAND git log -1 --format=%H
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${path}
-      OUTPUT_VARIABLE GIT_SHA1
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    file(WRITE "${sha1_stamp}" ${GIT_SHA1})
-  else ()
-    execute_process(
-      COMMAND git log -1 --format=%H
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${path}
-      OUTPUT_VARIABLE GIT_SHA1
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    if (EXISTS "${sha1_stamp}" )
-      file(READ "${sha1_stamp}" BUILD_SHA1)
-      if (NOT "${BUILD_SHA1}" MATCHES "${GIT_SHA1}")
-	message("Outdated sha1 stamp found for ${path}: resetting build directory ${CMAKE_CURRENT_BINARY_DIR}")
-	execute_process(
-	  COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}
-	  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/..
-	)
-	file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-      endif (NOT "${BUILD_SHA1}" MATCHES "${GIT_SHA1}")
-    endif()
-    file(WRITE "${sha1_stamp}" ${GIT_SHA1})
+  endif ()
+
+  execute_process(
+    COMMAND git log -1 --format=%H
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+    OUTPUT_VARIABLE SOURCE_STATE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  set(normalized_patch_files)
+  foreach(patch_file IN LISTS GSI_PATCH_FILES)
+    get_filename_component(patch_file "${patch_file}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    if (NOT EXISTS "${patch_file}")
+      message(FATAL_ERROR "Patch file does not exist: ${patch_file}")
+    endif ()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${patch_file}")
+    file(SHA256 "${patch_file}" patch_sha256)
+    string(APPEND SOURCE_STATE "\n${patch_file}:${patch_sha256}")
+    list(APPEND normalized_patch_files "${patch_file}")
+  endforeach()
+
+  if (EXISTS "${sha1_stamp}")
+    file(READ "${sha1_stamp}" BUILD_SOURCE_STATE)
+    if (NOT "${BUILD_SOURCE_STATE}" STREQUAL "${SOURCE_STATE}")
+      message("Outdated source stamp found for ${path}: resetting build directory ${CMAKE_CURRENT_BINARY_DIR}")
+      execute_process(
+        COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/..
+      )
+      file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    endif ()
+  endif ()
+  file(WRITE "${sha1_stamp}" "${SOURCE_STATE}")
+
+  if (GSI_PATCH_COMMAND_VAR)
+    bext_patch_command(patch_command ${normalized_patch_files})
+    set(${GSI_PATCH_COMMAND_VAR} "${patch_command}" PARENT_SCOPE)
   endif ()
 endfunction(git_submodule_init path)
 

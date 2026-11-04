@@ -7,7 +7,10 @@ bext_enable(PROJ)
 
 if (ENABLE_PROJ)
 
-  git_submodule_init(PROJ CMakeLists.txt)
+  set(PROJ_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/proj.patch")
+  git_submodule_init(PROJ CMakeLists.txt
+    PATCH_FILES ${PROJ_PATCH_FILES}
+    PATCH_COMMAND_VAR PROJ_PATCH_COMMAND)
 
   RegisterDeps(PROJ)
 
@@ -23,7 +26,7 @@ if (ENABLE_PROJ)
   ExternalProject_Add(PROJ_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/PROJ"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/proj.patch
+    PATCH_COMMAND ${PROJ_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${CMAKE_CURRENT_SOURCE_DIR}/../CMake/FindSQLite3.cmake;<SOURCE_DIR>/cmake/FindSQLite3.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}

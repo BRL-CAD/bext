@@ -20,14 +20,17 @@ set(ENABLE_GTE "${ENABLE_GTE}" CACHE BOOL "Enable GeometricTools build")
 
 if (ENABLE_GTE)
 
-  git_submodule_init(GeometricTools GTE/CMakeLists.txt)
+  set(GTE_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/gte.patch")
+  git_submodule_init(GeometricTools GTE/CMakeLists.txt
+    PATCH_FILES ${GTE_PATCH_FILES}
+    PATCH_COMMAND_VAR GTE_PATCH_COMMAND)
 
   RegisterDeps(GTE)
 
   ExternalProject_Add(GTE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/GeometricTools"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/gte.patch
+    PATCH_COMMAND ${GTE_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DCMAKE_INSTALL_PREFIX=${CMAKE_NOBUNDLE_INSTALL_PREFIX}

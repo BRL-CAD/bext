@@ -7,7 +7,10 @@ bext_enable(STEPCODE)
 
 if (ENABLE_STEPCODE)
 
-  git_submodule_init(stepcode CMakeLists.txt)
+  set(STEPCODE_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/stepcode_complex_string_pool.patch")
+  git_submodule_init(stepcode CMakeLists.txt PATCH_FILES ${STEPCODE_PATCH_FILES})
+  bext_patch_command(STEPCODE_PATCH_COMMAND ${STEPCODE_PATCH_FILES})
 
   RegisterDeps(STEPCODE)
 
@@ -18,7 +21,7 @@ if (ENABLE_STEPCODE)
     URL "${CMAKE_CURRENT_SOURCE_DIR}/stepcode"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${CMAKE_COMMAND};-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/stepcode;-DDEST_DIR=<SOURCE_DIR>;-P;${CMAKE_CURRENT_SOURCE_DIR}/RefreshSource.cmake
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/stepcode_complex_string_pool.patch
+    COMMAND ${STEPCODE_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}

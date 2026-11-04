@@ -7,7 +7,37 @@ bext_enable(OPENNURBS)
 
 if (ENABLE_OPENNURBS)
 
-  git_submodule_init(opennurbs opennurbs.h)
+  set(OPENNURBS_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_android_uuid.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_brep_cpp.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_brep_h.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_cmake.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_compress.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_defines_h.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_defines_cpp.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_example_brep.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_example_gl.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_file_utilities.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_font.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_memory.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_locale.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_object_history.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_optimize.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_polyline.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_precompiledheader.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_string_format.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_string_scan.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_system.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_system_runtime.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_uuid.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_version_number.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_x.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_zlib.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_post_effects.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_3dm_attributes.patch")
+  git_submodule_init(opennurbs opennurbs.h
+    PATCH_FILES ${OPENNURBS_PATCH_FILES}
+    PATCH_COMMAND_VAR OPENNURBS_PATCH_COMMAND)
 
   RegisterDeps(OPENNURBS)
   if (TARGET ZLIB_BLD)
@@ -17,35 +47,9 @@ if (ENABLE_OPENNURBS)
   ExternalProject_Add(OPENNURBS_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_android_uuid.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_brep_cpp.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_brep_h.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_cmake.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_compress.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_defines_h.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_defines_cpp.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_example_brep.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_example_gl.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_file_utilities.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_font.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_memory.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_locale.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_object_history.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_optimize.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_polyline.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_precompiledheader.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_string_format.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_string_scan.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_system.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_system_runtime.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_uuid.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_version_number.patch
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/opennurbs_x.cpp <SOURCE_DIR>
+    PATCH_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/opennurbs_x.cpp <SOURCE_DIR>
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/addfiles/opennurbs_x.h <SOURCE_DIR>
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_x.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_zlib.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_post_effects.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_3dm_attributes.patch
+    COMMAND ${OPENNURBS_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/CMake/FindZLIB.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}

@@ -20,10 +20,6 @@ set(ENABLE_EIGEN "${ENABLE_EIGEN}" CACHE BOOL "Enable Eigen build")
 
 if (ENABLE_EIGEN)
 
-  git_submodule_init(eigen CMakeLists.txt)
-
-  RegisterDeps(EIGEN)
-
   set(EIGEN_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/eigen_common.patch")
   if (APPLE)
     list(APPEND EIGEN_PATCH_FILES
@@ -34,21 +30,11 @@ if (ENABLE_EIGEN)
       "${CMAKE_CURRENT_SOURCE_DIR}/eigen_msvc.patch")
   endif (MSVC)
 
-  set(EIGEN_PATCH_COMMAND)
-  foreach(EIGEN_PATCH_FILE IN LISTS EIGEN_PATCH_FILES)
-    if (NOT EIGEN_PATCH_COMMAND)
-      set(EIGEN_PATCH_COMMAND
-        ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${EIGEN_PATCH_FILE}
-        )
-    else ()
-      list(APPEND EIGEN_PATCH_COMMAND
-        COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS}
-          -i ${EIGEN_PATCH_FILE}
-        )
-    endif ()
-  endforeach ()
-  unset(EIGEN_PATCH_FILE)
-  unset(EIGEN_PATCH_FILES)
+  git_submodule_init(eigen CMakeLists.txt
+    PATCH_FILES ${EIGEN_PATCH_FILES}
+    PATCH_COMMAND_VAR EIGEN_PATCH_COMMAND)
+
+  RegisterDeps(EIGEN)
 
   ExternalProject_Add(EIGEN_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/eigen"

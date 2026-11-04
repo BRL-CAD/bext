@@ -3,14 +3,17 @@ bext_enable(XERCES_C)
 
 if (ENABLE_XERCES_C)
 
-  git_submodule_init(xerces-c CMakeLists.txt)
+  set(XERCES_C_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/xerces-c.patch")
+  git_submodule_init(xerces-c CMakeLists.txt
+    PATCH_FILES ${XERCES_C_PATCH_FILES}
+    PATCH_COMMAND_VAR XERCES_C_PATCH_COMMAND)
 
   RegisterDeps(XERCES_C)
 
   ExternalProject_Add(XERCES_C_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/xerces-c"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/xerces-c.patch
+    PATCH_COMMAND ${XERCES_C_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DICU_ROOT=$<$<BOOL:${ICU_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>

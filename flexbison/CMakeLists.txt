@@ -11,7 +11,10 @@ set(ENABLE_BISON "${ENABLE_BISON}" CACHE BOOL "Enable GNU Bison build")
 
 if (WIN32 AND ENABLE_FLEX)
 
-  git_submodule_init(winflexbison CMakeLists.txt)
+  set(WINFLEXBISON_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/winflexbison.patch")
+  git_submodule_init(winflexbison CMakeLists.txt
+    PATCH_FILES ${WINFLEXBISON_PATCH_FILES}
+    PATCH_COMMAND_VAR WINFLEXBISON_PATCH_COMMAND)
 
   set(FLEX_DEPENDS PATCH)
   TargetVars(FLEX_DEPENDS)
@@ -20,7 +23,7 @@ if (WIN32 AND ENABLE_FLEX)
   ExternalProject_Add(FLEX_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/winflexbison"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/winflexbison.patch
+    PATCH_COMMAND ${WINFLEXBISON_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}
@@ -43,7 +46,10 @@ endif (WIN32 AND ENABLE_FLEX)
 if (NOT WIN32)
   if (ENABLE_FLEX)
 
-    git_submodule_init(flex autogen.sh)
+    set(FLEX_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/flex.patch")
+    git_submodule_init(flex autogen.sh
+      PATCH_FILES ${FLEX_PATCH_FILES}
+      PATCH_COMMAND_VAR FLEX_PATCH_COMMAND)
 
     set(FLEX_DEPENDS PATCH)
     TargetVars(FLEX_DEPENDS)
@@ -54,7 +60,7 @@ if (NOT WIN32)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/flex"
       BUILD_IN_SOURCE ON
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/flex.patch
+      PATCH_COMMAND ${FLEX_PATCH_COMMAND}
       CONFIGURE_COMMAND ${FLEX_SRC_DIR}/autogen.sh
       COMMAND ${FLEX_SRC_DIR}/configure --prefix=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
       BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}

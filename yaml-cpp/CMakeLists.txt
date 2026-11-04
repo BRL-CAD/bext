@@ -3,14 +3,17 @@ bext_enable(YAML_CPP)
 
 if (ENABLE_YAML_CPP)
 
-  git_submodule_init(yaml-cpp CMakeLists.txt)
+  set(YAML_CPP_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp.patch")
+  git_submodule_init(yaml-cpp CMakeLists.txt
+    PATCH_FILES ${YAML_CPP_PATCH_FILES}
+    PATCH_COMMAND_VAR YAML_CPP_PATCH_COMMAND)
 
   RegisterDeps(YAML_CPP)
 
   ExternalProject_Add(YAML_CPP_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp.patch
+    PATCH_COMMAND ${YAML_CPP_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}

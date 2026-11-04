@@ -3,14 +3,17 @@ bext_enable(PYSTRING)
 
 if (ENABLE_PYSTRING)
 
-  git_submodule_init(pystring CMakeLists.txt)
+  set(PYSTRING_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/pystring.patch")
+  git_submodule_init(pystring CMakeLists.txt
+    PATCH_FILES ${PYSTRING_PATCH_FILES}
+    PATCH_COMMAND_VAR PYSTRING_PATCH_COMMAND)
 
   RegisterDeps(PYSTRING)
 
   ExternalProject_Add(PYSTRING_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/pystring"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/pystring.patch
+    PATCH_COMMAND ${PYSTRING_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}

@@ -3,7 +3,9 @@ bext_enable(OIDN)
 
 if (ENABLE_OIDN)
 
-  git_submodule_init(oidn CMakeLists.txt)
+  set(OIDN_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/oidn.patch")
+  git_submodule_init(oidn CMakeLists.txt PATCH_FILES ${OIDN_PATCH_FILES})
+  bext_patch_command(OIDN_FILE_PATCH_COMMAND ${OIDN_PATCH_FILES})
   if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/oidn/weights/rt_alb.tza")
     bext_git_submodule_update("${CMAKE_CURRENT_SOURCE_DIR}/oidn" -- weights)
     if (NOT BEXT_GIT_UPDATE_RESULT STREQUAL "0" OR
@@ -53,7 +55,7 @@ if (ENABLE_OIDN)
       -DOIDN_WEIGHTS_REVISION:STRING=${OIDN_WEIGHTS_REVISION}
       -DOIDN_WEIGHTS_MEDIA_ROOT:STRING=${OIDN_WEIGHTS_MEDIA_ROOT}
       -P "${CMAKE_CURRENT_SOURCE_DIR}/HydrateWeights.cmake"
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/oidn.patch
+    COMMAND ${OIDN_FILE_PATCH_COMMAND}
     CMAKE_ARGS
     -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
     # OIDN's debug builds are broken upstream, so it is always built Release -

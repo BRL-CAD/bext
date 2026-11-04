@@ -4,14 +4,17 @@ bext_enable(LITEHTML)
 
 if (ENABLE_LITEHTML)
 
-  git_submodule_init(litehtml CMakeLists.txt)
+  set(LITEHTML_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/litehtml.patch")
+  git_submodule_init(litehtml CMakeLists.txt
+    PATCH_FILES ${LITEHTML_PATCH_FILES}
+    PATCH_COMMAND_VAR LITEHTML_PATCH_COMMAND)
 
   RegisterDeps(LITEHTML)
 
   ExternalProject_Add(LITEHTML_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/litehtml"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE} -E -p1 ${PATCH_OPTIONS} -i ${CMAKE_CURRENT_SOURCE_DIR}/litehtml.patch
+    PATCH_COMMAND ${LITEHTML_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     # These archives are linked into shared CAD libraries.

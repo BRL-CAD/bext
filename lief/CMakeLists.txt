@@ -9,20 +9,24 @@ if (NOT MSVC AND NOT APPLE)
 
   if (ENABLE_LIEF)
 
-    git_submodule_init(LIEF CMakeLists.txt)
+    set(LIEF_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/lief_cmake.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/lief_fscale_macro_fix.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/lief_major_minor_macro_fix.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/lief_elf_phdr_relocation.patch")
+    git_submodule_init(LIEF CMakeLists.txt
+      PATCH_FILES ${LIEF_PATCH_FILES}
+      PATCH_COMMAND_VAR LIEF_PATCH_COMMAND)
 
     RegisterDeps(LIEF)
 
     ExternalProject_Add(LIEF_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/LIEF"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief_cmake.patch
-      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief_fscale_macro_fix.patch
-      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief_major_minor_macro_fix.patch
+      PATCH_COMMAND ${LIEF_PATCH_COMMAND}
       # FreeBSD linkers can emit multiple BSS-like LOAD segments.  LIEF 1.0
       # rejects those binaries during PHDR relocation, and its gap relocator
       # can extend a LOAD beyond the next segment's virtual address.
-      COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lief_elf_phdr_relocation.patch
       CMAKE_ARGS
       ${BUILD_TYPE_SPECIFIER}
       -DBIN_DIR=${BIN_DIR}

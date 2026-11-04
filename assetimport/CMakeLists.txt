@@ -9,7 +9,12 @@ bext_enable(ASSETIMPORT)
 
 if (ENABLE_ASSETIMPORT)
 
-  git_submodule_init(assimp CMakeLists.txt)
+  set(ASSETIMPORT_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/assetimport_CMake.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assetimport_stb.patch")
+  git_submodule_init(assimp CMakeLists.txt
+    PATCH_FILES ${ASSETIMPORT_PATCH_FILES}
+    PATCH_COMMAND_VAR ASSETIMPORT_PATCH_COMMAND)
 
   RegisterDeps(ASSETIMPORT)
   if (TARGET ZLIB_BLD)
@@ -19,8 +24,7 @@ if (ENABLE_ASSETIMPORT)
   ExternalProject_Add(ASSETIMPORT_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/assimp"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/assetimport_CMake.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/assetimport_stb.patch
+    PATCH_COMMAND ${ASSETIMPORT_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;remove;<SOURCE_DIR>/cmake-modules/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake-modules/FindZLIB.cmake
     CMAKE_ARGS

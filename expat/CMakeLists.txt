@@ -3,7 +3,10 @@ bext_enable(EXPAT)
 
 if (ENABLE_EXPAT)
 
-  git_submodule_init(libexpat expat/CMakeLists.txt)
+  set(EXPAT_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/expat.patch")
+  git_submodule_init(libexpat expat/CMakeLists.txt
+    PATCH_FILES ${EXPAT_PATCH_FILES}
+    PATCH_COMMAND_VAR EXPAT_PATCH_COMMAND)
 
   RegisterDeps(EXPAT)
 
@@ -11,7 +14,7 @@ if (ENABLE_EXPAT)
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libexpat"
     SOURCE_SUBDIR expat
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/expat.patch
+    PATCH_COMMAND ${EXPAT_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DEXPAT_SHARED_LIBS=ON

@@ -7,7 +7,14 @@ bext_enable(GDAL)
 
 if (ENABLE_GDAL)
 
-  git_submodule_init(gdal CMakeLists.txt)
+  set(GDAL_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/gdal.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/gdal_setjmp.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/gdal_metadata.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/gdal_relocatable_data.patch")
+  git_submodule_init(gdal CMakeLists.txt
+    PATCH_FILES ${GDAL_PATCH_FILES}
+    PATCH_COMMAND_VAR GDAL_PATCH_COMMAND)
 
   RegisterDeps(GDAL)
   if (TARGET ZLIB_BLD)
@@ -24,10 +31,7 @@ if (ENABLE_GDAL)
   ExternalProject_Add(GDAL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/gdal"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/gdal.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/gdal_setjmp.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/gdal_metadata.patch
-    COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/gdal_relocatable_data.patch
+    PATCH_COMMAND ${GDAL_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/modules/packages/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindPNG.cmake;<SOURCE_DIR>/cmake/modules/packages/FindPNG.cmake
     CMAKE_ARGS

@@ -39,14 +39,17 @@ set(ENABLE_TKHTML "${ENABLE_TKHTML}" CACHE BOOL "Enable Tkhtml build")
 
 if (ENABLE_TKHTML)
 
-  git_submodule_init(tkhtml CMakeLists.txt)
+  set(TKHTML_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tkhtml_pointer.patch")
+  git_submodule_init(tkhtml CMakeLists.txt
+    PATCH_FILES ${TKHTML_PATCH_FILES}
+    PATCH_COMMAND_VAR TKHTML_PATCH_COMMAND)
 
   RegisterDeps(TKHTML)
 
   ExternalProject_Add(TKHTML_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/tkhtml"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/tkhtml_pointer.patch
+    PATCH_COMMAND ${TKHTML_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=$<IF:$<BOOL:${WIN32}>,${LIB_DIR},${BIN_DIR}>

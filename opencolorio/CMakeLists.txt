@@ -3,7 +3,10 @@ bext_enable(OPENCOLORIO)
 
 if (ENABLE_OPENCOLORIO)
 
-  git_submodule_init(OpenColorIO CMakeLists.txt)
+  set(OPENCOLORIO_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/opencolorio.patch")
+  git_submodule_init(OpenColorIO CMakeLists.txt
+    PATCH_FILES ${OPENCOLORIO_PATCH_FILES}
+    PATCH_COMMAND_VAR OPENCOLORIO_PATCH_COMMAND)
 
   RegisterDeps(OPENCOLORIO)
   if (TARGET ZLIB_BLD)
@@ -13,7 +16,7 @@ if (ENABLE_OPENCOLORIO)
   ExternalProject_Add(OPENCOLORIO_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/OpenColorIO"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/opencolorio.patch
+    PATCH_COMMAND ${OPENCOLORIO_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/share/cmake/modules/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;remove;<SOURCE_DIR>/share/cmake/modules/Findminizip-ng.cmake
     COMMAND ${CMAKE_COMMAND};-E;remove;<SOURCE_DIR>/share/cmake/modules/Findyaml-cpp.cmake

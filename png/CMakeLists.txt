@@ -20,7 +20,10 @@ set(ENABLE_PNG "${ENABLE_PNG}" CACHE BOOL "Enable png build")
 
 if (ENABLE_PNG)
 
-  git_submodule_init(libpng CMakeLists.txt)
+  set(PNG_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/png.patch")
+  git_submodule_init(libpng CMakeLists.txt
+    PATCH_FILES ${PNG_PATCH_FILES}
+    PATCH_COMMAND_VAR PNG_PATCH_COMMAND)
 
   RegisterDeps(PNG)
   if (TARGET ZLIB_BLD)
@@ -30,7 +33,7 @@ if (ENABLE_PNG)
   ExternalProject_Add(PNG_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libpng"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/png.patch
+    PATCH_COMMAND ${PNG_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/CMake/FindZLIB.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}

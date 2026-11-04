@@ -28,7 +28,12 @@ if (ENABLE_ITK)
       )
   endif ()
 
-  git_submodule_init(itk configure)
+  set(ITK_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/itk.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/itk_install.patch")
+  git_submodule_init(itk configure PATCH_FILES ${ITK_PATCH_FILES})
+  list(GET ITK_PATCH_FILES 0 ITK_SOURCE_PATCH_FILE)
+  list(GET ITK_PATCH_FILES 1 ITK_INSTALL_PATCH_FILE)
 
   RegisterDeps(ITK)
 
@@ -56,8 +61,8 @@ if (ENABLE_ITK)
     "-DITK_PATCH_EXECUTABLE=${PATCH_NATIVE_EXECUTABLE}"
     "-DITK_PATCH_CHECK_OPTION=${PATCH_CHECK_OPTION}"
     "-DITK_PATCH_REJECT_DIR=${PATCH_REJECT_DIR}"
-    "-DITK_PATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/itk.patch"
-    "-DITK_INSTALL_PATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/itk_install.patch"
+    "-DITK_PATCH_FILE=${ITK_SOURCE_PATCH_FILE}"
+    "-DITK_INSTALL_PATCH_FILE=${ITK_INSTALL_PATCH_FILE}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake"
     )
 

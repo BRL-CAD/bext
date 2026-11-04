@@ -3,7 +3,10 @@ bext_enable(Boost)
 
 if (ENABLE_BOOST)
 
-  git_submodule_init(boost CMakeLists.txt)
+  set(BOOST_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/boost_cmake.patch")
+  git_submodule_init(boost CMakeLists.txt
+    PATCH_FILES ${BOOST_PATCH_FILES}
+    PATCH_COMMAND_VAR BOOST_PATCH_COMMAND)
 
   RegisterDeps(BOOST)
 
@@ -15,7 +18,7 @@ if (ENABLE_BOOST)
   ExternalProject_Add(BOOST_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/boost"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/boost_cmake.patch
+    PATCH_COMMAND ${BOOST_PATCH_COMMAND}
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/libs/iostreams/cmake/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/boost/FindICU.cmake;<SOURCE_DIR>/libs/locale/cmake/FindICU.cmake
     CMAKE_ARGS

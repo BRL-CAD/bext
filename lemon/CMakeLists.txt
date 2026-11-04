@@ -7,14 +7,17 @@ bext_enable(LEMON)
 
 if (ENABLE_LEMON)
 
-  git_submodule_init(lemon lemon.c)
+  set(LEMON_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/lemon_cmake.patch")
+  git_submodule_init(lemon lemon.c
+    PATCH_FILES ${LEMON_PATCH_FILES}
+    PATCH_COMMAND_VAR LEMON_PATCH_COMMAND)
 
   RegisterDeps(LEMON)
 
   ExternalProject_Add(LEMON_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/lemon"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/lemon_cmake.patch
+    PATCH_COMMAND ${LEMON_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}

@@ -17,14 +17,17 @@ set(ENABLE_SQLite3 "${ENABLE_SQLite3}" CACHE BOOL "Enable SQLite3 build")
 
 if (ENABLE_SQLite3)
 
-  git_submodule_init(sqlite3 sqlite3.c)
+  set(SQLITE3_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3.patch")
+  git_submodule_init(sqlite3 sqlite3.c
+    PATCH_FILES ${SQLITE3_PATCH_FILES}
+    PATCH_COMMAND_VAR SQLITE3_PATCH_COMMAND)
 
   RegisterDeps(SQLITE3)
 
   ExternalProject_Add(SQLITE3_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/sqlite3.patch
+    PATCH_COMMAND ${SQLITE3_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}
