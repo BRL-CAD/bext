@@ -174,8 +174,9 @@ def build(plan):
     logs = root / 'bext-release-logs'
     logs.mkdir(exist_ok=True)
 
-    def run(target):
-        command = [plan['cmake'], '--build', str(root), '--target', target, '--parallel', '1']
+    def run(target, build_target=None):
+        command = [plan['cmake'], '--build', str(root), '--target', build_target or target,
+                   '--parallel', '1']
         if plan['config']:
             command += ['--config', plan['config']]
         print('Building ' + target, flush=True)
@@ -194,7 +195,7 @@ def build(plan):
     for project in plan['projects']:
         if project['name'] in state['completed']:
             continue
-        run(project['name'])
+        run(project['name'], project['build_target'])
         if not project['deferred']:
             discard(plan, project)
         state['completed'].append(project['name'])

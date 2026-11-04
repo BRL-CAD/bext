@@ -106,6 +106,9 @@ jobs:
       - name: Add cl.exe to PATH
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Validate excluded dependency targets with MSBuild
+        run: python CMake/tests/test_release_build.py ReleaseBuildTests.test_excluded_wrappers_visual_studio -v
+
       - name: Configure
         shell: cmd
         run: |

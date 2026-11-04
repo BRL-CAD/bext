@@ -40,7 +40,7 @@ class ReleaseBuildTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0, result.stdout)
         return result.stdout
 
-    def fixture(self, deferred=False):
+    def fixture(self, deferred=False, nested=False):
         names = ['FIRST', 'SECOND'] + (['TCL', 'TK', 'ITK'] if deferred else [])
         for name in names:
             upstream = self.source / name.lower()
@@ -87,8 +87,9 @@ include("@MODULE@/BextReleaseBuild.cmake")
 '''.replace('@MODULE@', MODULE.as_posix())
         for index, name in enumerate(names):
             failure = self.failure if name == 'SECOND' else self.root / 'never-fail'
-            cmake += '''ExternalProject_Add(@NAME@_BLD
-  URL "${CMAKE_CURRENT_SOURCE_DIR}/@name@"
+            wrapper = '''ExternalProject_Add(@NAME@_BLD
+  URL "${CMAKE_SOURCE_DIR}/@name@"
+  PREFIX "${CMAKE_BINARY_DIR}/@NAME@_BLD-prefix"
   BUILD_ALWAYS ${EXT_BUILD_ALWAYS}
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DEXPECT_DISCARD=${BEXT_DISCARD_WORK}
@@ -99,7 +100,14 @@ include("@MODULE@/BextReleaseBuild.cmake")
   STEP_TARGETS install LOG_CONFIGURE ON LOG_BUILD ON LOG_INSTALL ON LOG_OUTPUT_ON_FAILURE ON)
 '''.replace('@NAME@', name).replace('@name@', name.lower()).replace('@FAILURE@', failure.as_posix())
             if index:
-                cmake += 'ExternalProject_Add_StepDependencies(' + name + '_BLD configure ' + names[index - 1] + '_BLD-install)\n'
+                wrapper += 'ExternalProject_Add_StepDependencies(' + name + '_BLD configure ' + names[index - 1] + '_BLD-install)\n'
+            if nested:
+                directory = self.source / 'wrappers' / name.lower()
+                directory.mkdir(parents=True)
+                (directory / 'CMakeLists.txt').write_text(wrapper)
+                cmake += 'add_subdirectory(wrappers/' + name.lower() + ' EXCLUDE_FROM_ALL)\n'
+            else:
+                cmake += wrapper
         finalize = '''
 if(@DEFERRED@)
   foreach(name TCL TK ITK)
@@ -308,6 +316,49 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         self.configure(generator='Ninja Multi-Config')
         self.compile()
         self.assertIn('up to date', self.compile())
+
+    def check_excluded_wrappers(self, generator, config):
+        self.source = self.root / ('source-' + config)
+        self.source.mkdir()
+        self.build = self.root / ('build-' + config)
+        self.prefix = self.root / ('output-' + config)
+        self.fixture(nested=True)
+        self.configure(generator=generator, extra=(
+            '-DCMAKE_BUILD_TYPE=' + config, '-DCMAKE_CONFIGURATION_TYPES=' + config))
+        plan = json.loads((self.build / ('bext-release-' + config + '.json')).read_text())
+        for project in plan['projects']:
+            self.assertEqual(project['build_target'], 'bext_release_' + project['name'])
+        if generator.startswith('Visual Studio'):
+            for project in plan['projects']:
+                self.assertTrue((self.build / (project['build_target'] + '.vcxproj')).is_file())
+            self.assertFalse((self.build / 'FIRST_BLD.vcxproj').exists())
+            self.assertTrue((self.build / 'wrappers/first/FIRST_BLD.vcxproj').is_file())
+        output = self.run_command('cmake', '--build', self.build, '--config', config,
+                                  '--parallel', '1')
+        self.assertIn('Building FIRST_BLD', output)
+        self.assertIn('Building SECOND_BLD', output)
+        self.assertTrue((self.prefix / 'finalized').is_file())
+        for project in plan['projects']:
+            self.assertFalse(Path(project['source_dir']).exists())
+            self.assertFalse(Path(project['binary_dir']).exists())
+        self.assertIn('up to date', self.run_command(
+            'cmake', '--build', self.build, '--config', config, '--parallel', '1'))
+
+    def test_excluded_wrappers_multiconfig(self):
+        for config in ('Release', 'Debug'):
+            with self.subTest(config=config):
+                self.check_excluded_wrappers('Ninja Multi-Config', config)
+
+    @unittest.skipUnless(os.name == 'nt', 'Visual Studio requires Windows')
+    def test_excluded_wrappers_visual_studio(self):
+        capabilities = json.loads(self.run_command('cmake', '-E', 'capabilities'))
+        generators = [item['name'] for item in capabilities['generators']
+                      if item['name'].startswith('Visual Studio')]
+        self.assertTrue(generators, 'CMake must support a Visual Studio generator')
+        generator = max(generators, key=lambda name: int(name.split()[2]))
+        for config in ('Release', 'Debug'):
+            with self.subTest(config=config):
+                self.check_excluded_wrappers(generator, config)
 
     @unittest.skipUnless(shutil.which('gmake') or shutil.which('make'), 'make is required')
     def test_makefiles(self):

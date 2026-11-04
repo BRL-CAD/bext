@@ -151,6 +151,15 @@ function(bext_configure_release_build)
     set(record "{}")
     _bext_json_quote(quoted "${project}")
     string(JSON record SET "${record}" name "${quoted}")
+    # Excluded wrapper directories may not appear in the root Visual Studio
+    # solution. Give the driver a root-level project with an explicit target
+    # dependency so MSBuild can reach the wrapper's generated project file.
+    # These forwarding targets are not part of the default build.
+    set(build_target "bext_release_${project}")
+    add_custom_target(${build_target})
+    add_dependencies(${build_target} ${project})
+    _bext_json_quote(quoted "${build_target}")
+    string(JSON record SET "${record}" build_target "${quoted}")
     foreach(field SOURCE_DIR BINARY_DIR STAMP_DIR TMP_DIR LOG_DIR)
       ExternalProject_Get_Property(${project} ${field})
       _bext_json_quote(quoted "${${field}}")
