@@ -7,7 +7,11 @@ bext_enable(OpenCV)
 
 if (ENABLE_OPENCV)
 
-  set(OPENCV_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/opencv.patch")
+  # Classic Intel's flag conflict handling drops AVX2 when adding POPCNT.
+  # IntelLLVM needs OpenCV's independent GCC/Clang ISA flags instead.
+  set(OPENCV_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/opencv.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opencv_intelllvm.patch")
   git_submodule_init(opencv CMakeLists.txt
     PATCH_FILES ${OPENCV_PATCH_FILES}
     PATCH_COMMAND_VAR OPENCV_PATCH_COMMAND)
