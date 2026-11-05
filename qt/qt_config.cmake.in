@@ -32,9 +32,8 @@ if (NOT WIN32)
   # when WORKING_DIRECTORY names the physical directory.  Qt's configure
   # script uses shell pwd, so keep it from recovering the symlink spelling.
   set(ENV{PWD} "@QT_BUILD_DIR@")
-  set(qt_runtime_dirs ${QT_XMIN_RUNTIME_DIRS} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
-  string(JOIN ":" qt_runtime_path ${qt_runtime_dirs})
-  set(ENV{LD_LIBRARY_PATH} "${qt_runtime_path}")
+  include("@CMAKE_CURRENT_SOURCE_DIR@/qt_runtime.cmake")
+  bext_qt_set_runtime_path(${QT_XMIN_RUNTIME_DIRS} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
   set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
   set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
 endif (NOT WIN32)

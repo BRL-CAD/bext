@@ -1,0 +1,10 @@
+# Qt tools need matching Qt libraries first and compiler runtimes afterwards.
+function(bext_qt_set_runtime_path)
+  set(qt_runtime_dirs ${ARGN})
+  list(FILTER qt_runtime_dirs EXCLUDE REGEX "^$")
+  if (NOT "$ENV{LD_LIBRARY_PATH}" STREQUAL "")
+    list(APPEND qt_runtime_dirs "$ENV{LD_LIBRARY_PATH}")
+  endif ()
+  string(JOIN ":" qt_runtime_path ${qt_runtime_dirs})
+  set(ENV{LD_LIBRARY_PATH} "${qt_runtime_path}")
+endfunction()

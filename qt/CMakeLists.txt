@@ -150,8 +150,12 @@ if (ENABLE_QT)
   # Qt's generated build tree before reconfiguring.
   file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/qt_config.cmake.in"
     qt_config_template_hash)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/qt_runtime.cmake")
+  file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/qt_runtime.cmake"
+    qt_runtime_script_hash)
   string(SHA256 QT_CONFIG_SIGNATURE
-    "${QT_PATCH_SIGNATURE}|${QT_XMIN_ENABLED}|${QT_XMIN_ROOT}|${QT_XMIN_DIR}|${qt_config_template_hash}|${CMAKE_BUILD_TYPE}")
+    "${QT_PATCH_SIGNATURE}|${QT_XMIN_ENABLED}|${QT_XMIN_ROOT}|${QT_XMIN_DIR}|${qt_config_template_hash}|${qt_runtime_script_hash}|${CMAKE_BUILD_TYPE}")
 
   set(QT_SOURCE_ARGUMENTS SOURCE_DIR "${QT_SOURCE_DIR}")
   if (QT_EXTRA_PATCHES)

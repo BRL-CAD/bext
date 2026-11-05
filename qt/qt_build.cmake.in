@@ -3,9 +3,8 @@
 # putting that directory first makes tools such as qtwaylandscanner fail with
 # missing Qt symbol versions while a newer Qt is being built.
 if (NOT WIN32)
-  set(qt_runtime_dirs "@QT_XMIN_RUNTIME_DIRS@" "@QT_BUILD_DIR@/@LIB_DIR@" "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
-  string(JOIN ":" qt_runtime_path ${qt_runtime_dirs})
-  set(ENV{LD_LIBRARY_PATH} "${qt_runtime_path}")
+  include("@CMAKE_CURRENT_SOURCE_DIR@/qt_runtime.cmake")
+  bext_qt_set_runtime_path("@QT_XMIN_RUNTIME_DIRS@" "@QT_BUILD_DIR@/@LIB_DIR@" "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
 endif (NOT WIN32)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "" OR "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
