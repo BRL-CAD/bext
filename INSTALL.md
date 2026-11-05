@@ -23,6 +23,79 @@ Additional requirements depend on the enabled stacks:
 * `USE_OSPRAY` needs `m4`.
 * `BEXT_DISCARD_WORK=ON` needs Python 3.8 or newer.
 
+# Intel oneAPI on Linux
+
+IntelLLVM 2026.2 has been validated with the `everything` profile using
+Ninja and Release builds. Install native GCC/G++ development files as well
+as the Intel C and C++ compilers. Use a separate build directory when
+changing compilers or the GNU runtime selected by the Intel drivers.
+
+Run the following examples in Bash from the bext source directory. Set
+`oneapi_root` to your oneAPI installation directory, then initialize the
+environment:
+
+```sh
+source "$oneapi_root/setvars.sh"
+export CC=icx
+export CXX=icpx
+```
+
+Initialize this environment before configuring, building, testing, or
+running downstream applications in each new shell. Intel-built libraries
+and tools need shared runtimes such as `libsvml` and `libimf`; configuring
+CMake once does not initialize the environment for later commands.
+
+## Native GCC runtime selection
+
+On systems with several GCC installations, the Intel driver can select a
+cross compiler's C++ headers and libraries. Inspect `icpx -v` if a basic
+C++ link fails. If necessary, force the runtime selected by the native
+`gcc` driver with local compiler wrappers:
+
+```sh
+gcc_runtime_dir="$(dirname "$(gcc -print-libgcc-file-name)")"
+mkdir -p .build_intel/toolchain
+for compiler in icx icpx; do
+  compiler_path="$(command -v "$compiler")"
+  printf '#!/usr/bin/env bash\nexec %q --gcc-install-dir=%q "$@"\n' \
+    "$compiler_path" "$gcc_runtime_dir" \
+    > ".build_intel/toolchain/$compiler"
+done
+chmod +x .build_intel/toolchain/icx .build_intel/toolchain/icpx
+export CC="$PWD/.build_intel/toolchain/icx"
+export CXX="$PWD/.build_intel/toolchain/icpx"
+```
+
+Create these wrappers after initializing oneAPI, and keep its compiler
+directory on `PATH`. Pass the wrapper paths through `CC` and `CXX`; do not
+prepend their directory to `PATH`. The wrappers carry the GNU selection
+into nested dependency builds, which do not all inherit the top-level
+`CMAKE_C_FLAGS` and `CMAKE_CXX_FLAGS` values.
+
+## Build the dependency bundle
+
+In the initialized shell, using either the Intel drivers directly or the
+wrappers above:
+
+```sh
+cmake --preset everything -S . -B .build_intel -G Ninja \
+  -DCMAKE_INSTALL_PREFIX="$PWD/.build_intel" \
+  -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
+  -DBEXT_BUILD_JOBS=4 -DBEXT_LINK_JOBS=1 -DEXT_BUILD_ALWAYS=OFF
+cmake --build .build_intel --parallel 4
+```
+
+This enables all six `USE_*` groups and `ENABLE_ALL`. The completed bundle
+is in `.build_intel/install`, with build-only assets in
+`.build_intel/noinstall`. Wait for manifest finalization to finish before
+using the bundle in BRL-CAD or IBRT.
+
+The dependency recipes apply the required IntelLLVM compiler, arithmetic,
+and aliasing adjustments. Keep the same compiler selection and Release
+configuration when building downstream projects. BRL-CAD's
+`doc/README.Linux` and IBRT's `docs/building.md` describe their configure,
+test, and runtime commands.
+
 # Source checkout options
 
 Default clone:
