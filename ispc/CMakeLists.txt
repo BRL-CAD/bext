@@ -9,7 +9,9 @@ if (ENABLE_ISPC)
   # gcc-multilib
   # g++-multilib
 
-  set(ISPC_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/ispc.patch")
+  set(ISPC_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ispc.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ispc_cpu_intrinsics.patch")
   git_submodule_init(ispc CMakeLists.txt
     PATCH_FILES ${ISPC_PATCH_FILES}
     PATCH_COMMAND_VAR ISPC_PATCH_COMMAND)
@@ -57,12 +59,11 @@ if (ENABLE_ISPC)
       )
   endif (FLEX_TARGET)
 
-  # Select the compiler used to build ispc itself.  ispc only forces clang on
-  # UNIX (see its CMakeLists.txt); on Windows it happily builds with MSVC, which
-  # is in fact the conventional Windows toolchain for ispc.  We therefore switch
-  # to the bundled LLVM clang only where the platform SDK is expected to be
-  # compatible with that bundled compiler.
-  if (LLVM_TARGET AND NOT WIN32 AND NOT APPLE)
+  # Intel-built LLVM archives reference Intel runtimes.  Keep IntelLLVM as
+  # ISPC's host compiler so its driver supplies those libraries at link time.
+  # Other supported Unix builds use the bundled Clang when LLVM is local.
+  if (LLVM_TARGET AND NOT WIN32 AND NOT APPLE AND
+      NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     set(ISPC_C_COMPILER "${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
     set(ISPC_CXX_COMPILER "${CMAKE_BUNDLE_INSTALL_PREFIX}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
   else ()

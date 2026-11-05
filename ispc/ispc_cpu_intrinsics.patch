@@ -1,0 +1,68 @@
+--- a/src/isa.h
++++ b/src/isa.h
+@@ -53,18 +53,25 @@
+ #if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+ 
+ #if defined(_MSC_VER)
+-// __cpuid() and __cpuidex() are defined on Windows in <intrin.h> for x86/x64.
+ #include <intrin.h>
+-#else
+-// On *nix they need to be defined manually through inline assembler.
+-static void __cpuid(int info[4], int infoType) {
++#endif
++
++// Keep portable helpers separate from compiler-reserved intrinsic names.
++static void ispc_cpuid(int info[4], int infoType) {
++#if defined(_MSC_VER)
++    __cpuid(info, infoType);
++#else
+     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
+-}
+-
+-static void __cpuidex(int info[4], int level, int count) {
++#endif
++}
++
++static void ispc_cpuidex(int info[4], int level, int count) {
++#if defined(_MSC_VER)
++    __cpuidex(info, level, count);
++#else
+     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(level), "2"(count));
+-}
+-#endif // !defined(_MSC_VER)
++#endif
++}
+ 
+ static int xgetbv() {
+ #if defined(_MSC_VER)
+@@ -105,18 +112,18 @@
+ // the current system can run.
+ UNUSED_ATTR static enum ISA get_x86_isa() {
+     int info[4];
+-    __cpuid(info, 1);
++    ispc_cpuid(info, 1);
+     UNUSED_ATTR int max_level = info[0];
+ 
+     // Call cpuid with eax=7, ecx=0
+     int info2[4];
+-    __cpuidex(info2, 7, 0);
++    ispc_cpuidex(info2, 7, 0);
+ 
+     int info3[4] = {0, 0, 0, 0};
+     int max_subleaf = info2[0];
+     // Call cpuid with eax=7, ecx=1
+     if (max_subleaf >= 1) {
+-        __cpuidex(info3, 7, 1);
++        ispc_cpuidex(info3, 7, 1);
+     }
+ 
+     // clang-format off
+@@ -205,7 +212,7 @@
+ 
+             int info_avx10[4] = {0, 0, 0, 0};
+             if (max_level >= 24) {
+-                __cpuidex(info_avx10, 0x24, 0);
++                ispc_cpuidex(info_avx10, 0x24, 0);
+             }
+             int avx10_ver = info_avx10[1] & 0xFF;
+             int avx10_2 = avx10_ver >= 2;
