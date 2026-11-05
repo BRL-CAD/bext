@@ -1,0 +1,29 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -65,7 +65,26 @@
+ # Need to look at what it was doing and find another solution
+ cmake_policy(SET CMP0120 OLD)
+ include (WriteCompilerDetectionHeader)
++set(compiler_detection_options)
++if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
++    # The deprecated module cannot describe IntelLLVM. These features are all
++    # required by the C++14 standard enforced above, including for consumers.
++    list(APPEND compiler_detection_options
++        ALLOW_UNKNOWN_COMPILERS
++        PROLOG [=[
++#if defined(__INTEL_LLVM_COMPILER)
++#  define APPLESEED_COMPILER_CXX_FINAL 1
++#  define APPLESEED_COMPILER_CXX_NOEXCEPT 1
++#  define APPLESEED_COMPILER_CXX_CONSTEXPR 1
++#  define APPLESEED_COMPILER_CXX_DEFAULTED_FUNCTIONS 1
++#  define APPLESEED_COMPILER_CXX_DELETED_FUNCTIONS 1
++#  define APPLESEED_COMPILER_CXX_GENERALIZED_INITIALIZERS 1
++#  define APPLESEED_COMPILER_CXX_ATTRIBUTE_DEPRECATED 1
++#endif
++]=])
++endif ()
+ write_compiler_detection_header (
+     FILE ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/platform/compilerfeatures.h
+     PREFIX APPLESEED
++    ${compiler_detection_options}
+     COMPILERS GNU Clang MSVC AppleClang

@@ -3,7 +3,10 @@ bext_enable(APPLESEED)
 
 if (ENABLE_APPLESEED)
 
-  set(APPLESEED_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/appleseed.patch")
+  set(APPLESEED_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/appleseed.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/appleseed_intelllvm.patch"
+    )
   git_submodule_init(appleseed CMakeLists.txt
     PATCH_FILES ${APPLESEED_PATCH_FILES}
     PATCH_COMMAND_VAR APPLESEED_PATCH_COMMAND)
@@ -22,6 +25,13 @@ if (ENABLE_APPLESEED)
       -DUSE_F16C=OFF
       )
   endif ()
+  set(APPLESEED_CXX_FLAGS_ARGS)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    # Vector headers index adjacent struct members as arrays, requiring
+    # relaxed alias analysis when built with IntelLLVM.
+    list(APPEND APPLESEED_CXX_FLAGS_ARGS
+      -DCMAKE_CXX_FLAGS:STRING=-fno-strict-aliasing)
+  endif ()
 
   ExternalProject_Add(APPLESEED_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/appleseed"
@@ -31,6 +41,7 @@ if (ENABLE_APPLESEED)
     -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
     ${BUILD_TYPE_SPECIFIER}
     ${APPLESEED_SIMD_ARGS}
+    ${APPLESEED_CXX_FLAGS_ARGS}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     -DBOOST_ROOT=$<$<BOOL:${BOOST_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
