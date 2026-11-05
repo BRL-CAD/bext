@@ -1,0 +1,17 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -3,6 +3,14 @@
+ project(opennurbs C CXX)
+ 
++# Surface predicates require precise arithmetic even when the compiler
++# defaults to unsafe floating-point optimizations.
++include(CheckCXXCompilerFlag)
++check_cxx_compiler_flag("-fno-fast-math" OPENNURBS_NO_FAST_MATH)
++if(OPENNURBS_NO_FAST_MATH)
++  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-fno-fast-math>")
++endif()
++
+ # Where to look for CMake modules
+ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
+ 
+ # specify the C++ standard
