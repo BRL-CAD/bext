@@ -1,0 +1,12 @@
+--- a/share/cmake/utils/Compilers.cmake
++++ b/share/cmake/utils/Compilers.cmake
+@@ -11,7 +11,8 @@
+ 
+ if(MSVC)
+     set(USE_MSVC ON)
+-elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
++elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang" OR
++       CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+     set(USE_CLANG ON)
+ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+     set(USE_GCC ON)

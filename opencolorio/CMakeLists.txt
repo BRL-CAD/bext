@@ -3,7 +3,9 @@ bext_enable(OPENCOLORIO)
 
 if (ENABLE_OPENCOLORIO)
 
-  set(OPENCOLORIO_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/opencolorio.patch")
+  set(OPENCOLORIO_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/opencolorio.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opencolorio_intelllvm.patch")
   git_submodule_init(OpenColorIO CMakeLists.txt
     PATCH_FILES ${OPENCOLORIO_PATCH_FILES}
     PATCH_COMMAND_VAR OPENCOLORIO_PATCH_COMMAND)
