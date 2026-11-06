@@ -130,13 +130,41 @@ if (ENABLE_TCL)
   endif ()
   list(APPEND TCL_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
+  set(TCL_INPUT_FILES)
+  set(TCL_SQLITE_SETUP_COMMANDS)
+  if (BEXT_TCL_ENABLE_DATABASE_PACKAGES)
+    set(TCL_SQLITE_SOURCE_DIR "${PROJECT_SOURCE_DIR}/sqlite3/sqlite3")
+    if (NOT EXISTS "${TCL_SQLITE_SOURCE_DIR}/sqlite3.c")
+      bext_git_submodule_update("${PROJECT_SOURCE_DIR}" -- sqlite3/sqlite3)
+    endif ()
+    set(TCL_SQLITE_SETUP_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/tcl_sqlite3.cmake.in")
+    list(APPEND TCL_INPUT_FILES "${TCL_SQLITE_SETUP_TEMPLATE}")
+    foreach(TCL_SQLITE_FILE IN ITEMS sqlite3.c sqlite3.h sqlite3ext.h)
+      list(APPEND TCL_INPUT_FILES "${TCL_SQLITE_SOURCE_DIR}/${TCL_SQLITE_FILE}")
+    endforeach ()
+    file(STRINGS "${TCL_SQLITE_SOURCE_DIR}/sqlite3.h" TCL_SQLITE_VERSION_LINE
+      REGEX "^#define SQLITE_VERSION[ \t]+\"[0-9.]+\"" LIMIT_COUNT 1)
+    if (NOT TCL_SQLITE_VERSION_LINE)
+      message(FATAL_ERROR "Cannot determine Tcl's SQLite engine version")
+    endif ()
+    string(REGEX REPLACE ".*\"([0-9.]+)\".*" "\\1"
+      TCL_SQLITE_VERSION "${TCL_SQLITE_VERSION_LINE}")
+    list(APPEND TCL_SQLITE_SETUP_COMMANDS
+      COMMAND ${CMAKE_COMMAND} -DTCL_PACKAGE_DIR=<SOURCE_DIR>/pkgs/sqlite3.53.0
+        -P ${CMAKE_CURRENT_BINARY_DIR}/tcl_sqlite3.cmake)
+  endif ()
   if (TARGET ZLIB_BLD)
     list(APPEND TCL_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/tcl-z_brl.patch")
   endif ()
   git_submodule_init(tcl unix/configure
     PATCH_FILES ${TCL_PATCH_FILES}
+    INPUT_FILES ${TCL_INPUT_FILES}
     PATCH_COMMAND_VAR TCL_PATCH_COMMAND)
+  if (BEXT_TCL_ENABLE_DATABASE_PACKAGES)
+    configure_file("${TCL_SQLITE_SETUP_TEMPLATE}"
+      "${CMAKE_CURRENT_BINARY_DIR}/tcl_sqlite3.cmake" @ONLY)
+  endif ()
   if (NOT EXISTS "${BEXT_ITCL_BUNDLED_SOURCE_DIR}/configure")
     message(FATAL_ERROR
       "The bundled Tcl source does not contain the expected Itcl "
@@ -238,14 +266,19 @@ if (ENABLE_TCL)
               "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/tcl${TCL_MAJOR_VERSION}/${TCL_MAJOR_VERSION}.${TCL_MINOR_VERSION}/tdbc/sqlite3-*.tm"
               )
           else ()
+            # The SQLite engine patch updates the installed package version
+            # while retaining the release's source directory name.
+            string(REPLACE "sqlite3.53.0" "sqlite${TCL_SQLITE_VERSION}"
+              TCL_PACKAGE_INSTALL_NAME "${TCL_PACKAGE_NAME}")
             list(APPEND TCL_REQUIRED_PACKAGE_FILES
-              "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${TCL_PACKAGE_NAME}/pkgIndex.tcl"
+              "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${TCL_PACKAGE_INSTALL_NAME}/pkgIndex.tcl"
               )
           endif ()
         endif ()
       endif ()
     endforeach ()
     unset(TCL_PACKAGE_MAKEFILE_CONTENTS)
+    unset(TCL_PACKAGE_INSTALL_NAME)
     unset(TCL_PACKAGE_MAKEFILE)
     unset(TCL_PACKAGE_EXCLUDED)
     unset(TCL_PACKAGE_NAME)
@@ -272,6 +305,7 @@ if (ENABLE_TCL)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/tcl"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${TCL_PATCH_COMMAND}
+      ${TCL_SQLITE_SETUP_COMMANDS}
       ${TCL_PACKAGE_PRUNE_COMMANDS}
       # Tcl's fallback zlib can silently supply headers even when we intend to
       # use z_brl.  Remove it only from this staging copy after patching Tcl to
@@ -305,6 +339,7 @@ if (ENABLE_TCL)
       URL "${CMAKE_CURRENT_SOURCE_DIR}/tcl"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${TCL_PATCH_COMMAND}
+      ${TCL_SQLITE_SETUP_COMMANDS}
       ${TCL_PACKAGE_MANIFEST_SETUP_COMMANDS}
       ${TCL_PACKAGE_PRUNE_COMMANDS}
       CONFIGURE_COMMAND ""

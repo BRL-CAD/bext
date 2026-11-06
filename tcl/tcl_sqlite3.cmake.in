@@ -1,0 +1,52 @@
+if (NOT DEFINED TCL_PACKAGE_DIR OR NOT IS_DIRECTORY "${TCL_PACKAGE_DIR}")
+  message(FATAL_ERROR "TCL_PACKAGE_DIR must name the staged SQLite Tcl package")
+endif ()
+
+set(sqlite_source_dir "@TCL_SQLITE_SOURCE_DIR@")
+set(sqlite_version "@TCL_SQLITE_VERSION@")
+foreach(sqlite_file IN ITEMS sqlite3.c sqlite3.h sqlite3ext.h)
+  file(COPY_FILE "${sqlite_source_dir}/${sqlite_file}"
+    "${TCL_PACKAGE_DIR}/compat/sqlite3/${sqlite_file}" ONLY_IF_DIFFERENT)
+endforeach()
+
+# Tcl's distribution accepts leap seconds, unlike stock SQLite. Preserve
+# that behavior while using the maintained engine, rather than copying an
+# older date parser over security fixes in the new source.
+function(replace_required variable before after)
+  string(FIND "${${variable}}" "${before}" match)
+  if (match EQUAL -1)
+    message(FATAL_ERROR "SQLite source changed; review Tcl compatibility: ${before}")
+  endif ()
+  string(REPLACE "${before}" "${after}" replaced "${${variable}}")
+  set(${variable} "${replaced}" PARENT_SCOPE)
+endfunction()
+
+set(amalgamation "${TCL_PACKAGE_DIR}/compat/sqlite3/sqlite3.c")
+file(READ "${amalgamation}" sqlite_source)
+replace_required(sqlite_source
+  "a   b   c   d   e      f */" "a   b   c   d   e      f   g */")
+replace_required(sqlite_source
+  "aMx[] = { 12, 14, 24, 31, 59, 14712 };"
+  "aMx[] = { 12, 14, 24, 31, 59, 14712, 60 };")
+replace_required(sqlite_source
+  "zFormat[2]<='f'" "zFormat[2]<='g'")
+replace_required(sqlite_source
+  "getDigits(zDate, \"20e\", &s)" "getDigits(zDate, \"20g\", &s)")
+file(WRITE "${amalgamation}" "${sqlite_source}")
+
+# Both TEA and NMake obtain their package version from configure.ac. Keep
+# its generated configure script in sync without requiring Autoconf.
+file(READ "${TCL_PACKAGE_DIR}/configure.ac" configure_source)
+string(REGEX MATCH "AC_INIT\\(\\[sqlite\\],\\[([0-9.]+)\\]\\)"
+  version_declaration "${configure_source}")
+if (NOT version_declaration)
+  message(FATAL_ERROR "Cannot determine the staged SQLite Tcl package version")
+endif ()
+set(old_version "${CMAKE_MATCH_1}")
+foreach(configure_file IN ITEMS configure.ac configure)
+  set(configure_path "${TCL_PACKAGE_DIR}/${configure_file}")
+  file(READ "${configure_path}" configure_source)
+  string(REPLACE "${old_version}" "${sqlite_version}"
+    configure_source "${configure_source}")
+  file(WRITE "${configure_path}" "${configure_source}")
+endforeach()

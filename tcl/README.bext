@@ -51,6 +51,37 @@ manifest fallback produced its expected installed artifact.  This prevents a
 generator such as Ninja from accepting a partial Tcl package build merely
 because the final directory-stack command returned success.
 
+SQLite engine maintenance
+-------------------------
+
+When BEXT_TCL_ENABLE_DATABASE_PACKAGES is ON, tcl_sqlite3.cmake.in copies the
+maintained bext SQLite amalgamation and headers into Tcl's staging tree.
+The existing Tcl binding remains compatible with Tcl 8.6; upgrading the
+engine does not require Tcl 9 or building a separate SQLite library.
+
+The setup script derives the version from bext's SQLite header and updates
+both configure.ac and the generated configure script so Unix and Windows
+package indexes identify the new version.  The source
+directory retains its upstream name, pkgs/sqlite3.53.0; the installed package
+is sqlite3.54.1.  Windows installation checks account for that difference.
+The script retains Tcl's leap-second timestamp support, which stock SQLite
+does not provide.  Other engine behavior follows the maintained SQLite
+release.  Source, header, and setup-script changes
+invalidate the Tcl build tree.  When database packages are disabled, no
+SQLite source is copied and those package directories are removed from the
+staging tree as before.
+
+After building with database packages enabled, check both versions using the
+installed tclsh (not a system interpreter):
+
+  puts [package require sqlite3]
+  sqlite3 db :memory:
+  puts [db onecolumn {select sqlite_version()}]
+  puts [db onecolumn {pragma integrity_check}]
+  db close
+
+Both version queries must report 3.54.1, and integrity_check must report ok.
+
 Validation
 ----------
 
