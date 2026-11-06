@@ -3,7 +3,7 @@ on a more minimal subset for easier compilation.
 
 Sources are from:  https://download.qt.io/official_releases/qt/
 
-Current version present:  6.11.1
+Current version present:  6.12.0
 
 
 Building on Redhat 8 and derivatives (tested with Rocky Linux 8)
@@ -28,3 +28,19 @@ dnf update
 
 dnf install libXrender-devel libX11-devel libXext-devel libXfixes-devel libXi-devel freetype-devel fontconfig-devel mesa-libGL-devel libxcb-devel xcb-util-cursor-devel xcb-util-devel xcb-util-image-devel xcb-util-keysyms-devel xcb-util-renderutil-devel xcb-util-wm-devel libxkbcommon-devel libxkbcommon-x11-devel
 
+
+Security patches
+----------------
+
+qt_CVE-2026-105924.patch is the official Qt 6.12 CBOR/JSON empty-URL fix:
+https://download.qt.io/official_releases/qt/6.12/CVE-2026-105924-qtbase-6.12.diff
+It is applied to the build staging copy through QT_EXTRA_PATCHES.
+The source mirror contains the unmodified Qt Base and SVG 6.12.0 archives.
+
+SQLite selection
+----------------
+
+Qt Base's source archive includes SQLite 3.53.4, but bext configures Qt with
+-system-sqlite and SQLite3_ROOT pointing to its dependency installation.
+The SQL plugin uses the maintained standalone SQLite library rather than
+compiling Qt's private copy.

@@ -1,6 +1,5 @@
-diff -Naur qtsvg/CMakeLists.txt Qt6Svg_BLD/CMakeLists.txt
---- qtsvg/CMakeLists.txt	2023-12-19 20:56:21.873344047 -0500
-+++ Qt6Svg_BLD/CMakeLists.txt	2023-12-20 10:28:48.591993474 -0500
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
 @@ -11,6 +11,8 @@
      LANGUAGES CXX C
  )
@@ -10,9 +9,9 @@ diff -Naur qtsvg/CMakeLists.txt Qt6Svg_BLD/CMakeLists.txt
  find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS BuildInternals)
  
  # This should be called as early as possible, just after find_package(BuildInternals) where it is
-@@ -28,4 +30,19 @@
-     find_package(Qt6 ${PROJECT_VERSION} QUIET CONFIG OPTIONAL_COMPONENTS ZlibPrivate)
- endif()
+@@ -20,4 +22,19 @@
+ find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS Core)
+ find_package(Qt6 ${PROJECT_VERSION} QUIET CONFIG OPTIONAL_COMPONENTS Gui Widgets Xml Network)
  
 +# Convenience function
 +function(flag_strip flag_var_name flag_value)
@@ -30,19 +29,18 @@ diff -Naur qtsvg/CMakeLists.txt Qt6Svg_BLD/CMakeLists.txt
 +endforeach(config ${configs})
 +
  qt_build_repo()
-diff -Naur qtsvg/src/svg/CMakeLists.txt Qt6Svg_BLD/src/svg/CMakeLists.txt
---- qtsvg/src/svg/CMakeLists.txt	2023-12-19 20:56:21.877344964 -0500
-+++ Qt6Svg_BLD/src/svg/CMakeLists.txt	2023-12-20 10:19:52.104033439 -0500
-@@ -12,6 +12,8 @@
+--- a/src/svg/CMakeLists.txt
++++ b/src/svg/CMakeLists.txt
+@@ -11,6 +11,8 @@
+ elseif(NOT TARGET WrapZLIB::WrapZLIB)
      qt_find_package(WrapZLIB PROVIDED_TARGETS WrapZLIB::WrapZLIB)
  endif()
- 
-+find_package(ZLIB)
 +
++find_package(ZLIB)
+ 
  qt_internal_add_module(Svg
      SOURCES
-         qsvgfont.cpp qsvgfont_p.h
-@@ -43,6 +45,7 @@
+@@ -44,6 +46,7 @@
      PUBLIC_LIBRARIES
          Qt::Core
          Qt::Gui
