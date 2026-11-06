@@ -1,7 +1,7 @@
 diff -Naur sqlite3.orig/CMakeLists.txt SQLITE3_BLD/CMakeLists.txt
 --- sqlite3.orig/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
 +++ SQLITE3_BLD/CMakeLists.txt	2023-09-17 12:22:10.246469660 -0400
-@@ -0,0 +1,110 @@
+@@ -0,0 +1,122 @@
 +#                     C M A K E L I S T S . T X T
 +# BRL-CAD
 +#
@@ -36,7 +36,7 @@ diff -Naur sqlite3.orig/CMakeLists.txt SQLITE3_BLD/CMakeLists.txt
 +# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 +# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#
-+# Build file for sqlite (above license applies to only this file - lmdb is
++# Build file for sqlite (above license applies to only this file - SQLite is
 +# covered by its own license.)
 +#
 +# SQLite is an in-process library that implements a self-contained, serverless,
@@ -75,12 +75,24 @@ diff -Naur sqlite3.orig/CMakeLists.txt SQLITE3_BLD/CMakeLists.txt
 +endif (HAVE_M_LIBRARY)
 +
 +# https://www.sqlite.org/howtocompile.html
-+add_definitions(-DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_ENABLE_RTREE=1)
++add_definitions(
++  -DSQLITE_OMIT_LOAD_EXTENSION
++  -DSQLITE_ENABLE_COLUMN_METADATA=1
++  -DSQLITE_ENABLE_RTREE=1
++  )
 +set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
++
++file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3.h" SQLITE_VERSION_LINE
++  REGEX "^#define SQLITE_VERSION[ \t]+\"[0-9.]+\"" LIMIT_COUNT 1)
++if (NOT SQLITE_VERSION_LINE)
++  message(FATAL_ERROR "Cannot determine SQLite version from sqlite3.h")
++endif ()
++string(REGEX REPLACE ".*\"([0-9.]+)\".*" "\\1"
++  SQLITE_VERSION "${SQLITE_VERSION_LINE}")
 +
 +add_library(libsqlite3 SHARED sqlite3.c)
 +set_target_properties(libsqlite3 PROPERTIES PREFIX "")
-+set_target_properties(libsqlite3 PROPERTIES VERSION 3.41.2 SOVERSION 3)
++set_target_properties(libsqlite3 PROPERTIES VERSION ${SQLITE_VERSION} SOVERSION 3)
 +target_link_libraries(libsqlite3 PRIVATE Threads::Threads ${M_LIBRARY})
 +set_property(TARGET libsqlite3 APPEND PROPERTY COMPILE_DEFINITIONS "SQLITE_ENABLE_RTREE")
 +set_property(TARGET libsqlite3 APPEND PROPERTY COMPILE_DEFINITIONS "SQLITE_DLL_EXPORTS")
