@@ -34,6 +34,11 @@ if (ENABLE_OPENCV)
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
     $<$<BOOL:${ZLIB_TARGET}>:-DZLIB_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
     $<$<BOOL:${PNG_TARGET}>:-DPNG_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    $<$<BOOL:${TIFF_TARGET}>:-DTIFF_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    # FindTIFF's nested config search uses the mixed-case package name.
+    # Clear an earlier system result so reconfiguration honors this prefix.
+    $<$<BOOL:${TIFF_TARGET}>:-UTiff_DIR>
+    $<$<BOOL:${TIFF_TARGET}>:-DTiff_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -DCMAKE_INSTALL_LIBDIR:PATH=${LIB_DIR}
@@ -51,8 +56,10 @@ if (ENABLE_OPENCV)
     -DBUILD_ITT=OFF
     -DBUILD_JAVA=OFF
     -DBUILD_JPEG=OFF
+    -DBUILD_PNG=OFF
     -DBUILD_PERF_TESTS=OFF
-    -DBUILD_TIFF=ON
+    -DBUILD_TIFF=OFF
+    -DBUILD_ZLIB=OFF
     -DBUILD_TESTS=OFF
     -DBUILD_opencv_apps=OFF
     -DBUILD_opencv_calib3d=OFF
