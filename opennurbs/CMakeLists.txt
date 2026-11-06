@@ -25,6 +25,7 @@ if (ENABLE_OPENNURBS)
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_optimize.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_polyline.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_precompiledheader.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_revsurface.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_string_format.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_string_scan.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_system.patch"

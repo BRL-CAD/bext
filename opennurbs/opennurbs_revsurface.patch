@@ -1,0 +1,11 @@
+--- a/opennurbs_revsurface.cpp
++++ b/opennurbs_revsurface.cpp
+@@ -1772,7 +1772,7 @@
+     for ( int ii = i?1:0; ii <= 4; ii++ )
+     {
+       u = 0.25*((4-ii)*s[i] + ii*s[i+1]);
+-      for ( int j = 0; j <= sc1; j++ )
++      for ( int j = 0; j < sc1; j++ )
+       {
+         for ( int jj = j?1:0; jj <= 4; jj++ )
+         {
