@@ -943,15 +943,50 @@ BEXT_VEX_SCANNER_TESTS=1 python3 CMake/tests/test_vex_scanners.py -v
 
 The scanner tests make no database updates and are skipped by default.
 
+Scanner summaries record the observed/tested tool versions, database metadata,
+input and VEX hashes, recognized package count, and identities the scanner did
+not recognize. Grype's companion `grype.packages.cdx.json` retains its parsed
+packages, including those without vulnerabilities; Trivy uses its package list.
+A nonempty input with zero recognized packages produces an `incomplete`
+summary and a failing command. Partial recognition is visible in `coverage`.
+Recognition itself does not establish advisory coverage. `--timeout` bounds
+each scanner invocation (default 1800 seconds).
+
+The supply-chain CI workflow runs offline tests on pushes and pull
+requests in the validator environment. Scheduled/manual scanner jobs populate
+databases before running positive controls and VEX isolation tests. Weekly CI
+retains both source formats and projection coverage. Binary dependency
+jobs validate both finalized formats, projections, and ownership before
+packaging. Archives include source and finalized SBOMs, installation controls,
+ownership manifests, project generators, VEX reports/evidence, and OpenVEX when
+generated. Missing or mismatched companions fail packaging; rerun
+`bext_finalize` after changing source metadata before publishing an archive.
+Only files recorded by the native install manifests enter the archive's
+`install` tree; unrecorded installer helpers remain outside the release.
+
 ### Reusing bext evidence in BRL-CAD
 
-BRL-CAD can import `bext-vex-evidence.json`, combine its canonical SPDX source
-inventory with its own finalized component manifest, and generate statements
-for its final package selection:
+BRL-CAD's SBOM integration imports `bext-vex-evidence.json` during installation.
+Prebuilt archives include the matching project generators and policy fragments
+under `noinstall/share/bext/supply-chain`; BRL-CAD finds those automatically.
+These distribution copies come from the dependency-local policies; edit the
+owning dependency folders rather than the generated copies.
+For older archives, set `BRLCAD_EXT_SOURCE_DIR` to the matching bext checkout,
+or set `BRLCAD_SBOM_TOOLS_DIR` explicitly to its `CMake` directory. Python 3.8 or newer
+is required when importing evidence; `Python3_EXECUTABLE` can select the private
+validation environment described above. Missing generators fail configuration
+when the dependency build supplies evidence.
+
+The install hook retains the full file-level `brlcad.spdx.json` audit and emits
+`brlcad-component-manifest.json`, package-level `brlcad.build.spdx.json` and
+`brlcad.build.cdx.json`, scanner projections, evidence, and a review report.
+It emits `brlcad.openvex.json` only when installed reviewed packages exist.
+For manual regeneration with a file-level inventory:
 
 ```sh
 python3 CMake/GenerateVex.py \
   --product brlcad --author https://brlcad.org/ \
+  --package-view \
   --sbom build/brlcad.spdx.json \
   --manifest build/brlcad-component-manifest.json \
   --install-root build/install \
@@ -968,13 +1003,31 @@ renames an imported SPDX package ID, include its original bext ID as
 relative to the final install root, and files must have explicit owners.
 
 Only decisions established by the exported build can be reused. Imported
-component files may be omitted or relocated, but each retained file must
-match an exported SHA-256 hash. Changed or additional component artifacts
-require new evidence. Reused statements receive the new product's build
-qualifiers. Product-scoped reviews require local reanalysis, and system
+component files may be omitted or relocated. Retained files must match an
+exported SHA-256 hash or an explicit installation transformation receipt.
+BRL-CAD captures receipts for its controlled RPATH, path cleanup, signing,
+and legacy SPDX subset refresh steps. A receipt binds the exact source
+evidence, reviewed input hash, final installed hash, and pipeline script
+hashes. Installer stamps must establish changed copies before final path
+cleanup begins; an arbitrary changed file cannot acquire a receipt merely
+because it has the same name or version. These receipts are trusted build
+inputs, like the source capture records, rather than external signatures.
+
+Supply a captured receipt with `--import-transformations` when invoking the
+generator manually. Keep `brlcad-vex-transformations.json` with the installed
+inventories and evidence; the review report records its SHA-256. Missing,
+stale, or mismatched receipts leave changed files needing review. Changed
+source facts still require review. Reused statements receive the new
+product's build qualifiers. Product-scoped reviews require local reanalysis,
+and system
 libraries cannot inherit a bext-built library's decision by version match.
-This supplies the import interface; BRL-CAD's own build integration must
-provide its final inventory and ownership manifest.
+The package views retain package relationships and omit file entries and
+verification codes. Keep the original file-level SPDX audit with them: its
+namespace and SHA-256 are recorded in the review report. The ownership manifest
+maps all files, and VEX evidence retains reviewed components' final file hashes.
+Generate reports outside the
+installation, then copy the companions into its documentation directory so
+metadata does not become evidence for itself.
 
 Release the matching SPDX, CycloneDX, OpenVEX, and evidence files together,
 using the project's existing release publication and signing process.
@@ -1000,7 +1053,6 @@ install the tested Go tools under the build directory:
 
 ```sh
 mkdir -p build/sbom-tools/bin
-GOBIN="$PWD/build/sbom-tools/bin" go127 install github.com/anchore/grype/cmd/grype@v0.121.2
 GOBIN="$PWD/build/sbom-tools/bin" go127 install github.com/anchore/syft/cmd/syft@v1.57.0
 GOBIN="$PWD/build/sbom-tools/bin" go127 install github.com/interlynk-io/sbomqs/v2@v2.1.3
 build/sbom-tools/venv/bin/python -m pip install sbomdiff==0.6.0 sbom2dot==0.3.2

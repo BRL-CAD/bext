@@ -368,12 +368,30 @@ def review_failures(review, capture, artifacts, proof=None):
     return reasons
 
 
-def import_failures(previous, current):
-    # Downstream packages may omit files, but a changed or additional artifact
-    # needs new evidence. Matching only a library's version is insufficient.
+def import_bindings(previous, current, transformations):
     originals = {item['sha256'] for item in previous}
-    return [f'Imported component artifact differs: {item["path"]}'
-            for item in current if item['sha256'] not in originals]
+    result = {}
+    for item in current:
+        receipt = transformations.get(item['path'], {})
+        if (item['sha256'] in originals or
+                (receipt.get('sourceSha256') in originals and receipt.get('sha256') == item['sha256'])):
+            result[item['path']] = item['sha256']
+    return result
+
+
+def package_view(source):
+    result = copy.deepcopy(source)
+    identifiers = {package['SPDXID'] for package in result['packages']} | {'SPDXRef-DOCUMENT'}
+    for package in result['packages']:
+        package['filesAnalyzed'] = False
+        for field in ('packageVerificationCode', 'hasFiles'):
+            package.pop(field, None)
+    for field in ('files', 'snippets'):
+        result.pop(field, None)
+    result['relationships'] = [relationship for relationship in result['relationships']
+                               if relationship['spdxElementId'] in identifiers
+                               and relationship['relatedSpdxElement'] in identifiers]
+    return result
 
 
 def build_inventory(source, manifest, files, product):
@@ -445,7 +463,7 @@ def build_inventory(source, manifest, files, product):
 
 
 def generate(source, manifest, install_root, evidence, aliases, product, author,
-             imported=False, proof=None):
+             imported=False, proof=None, transformations=None):
     files = installed_files(manifest, install_root)
     inventory, selected, original_ids, builds, identity, context = build_inventory(
         source, manifest, files, product)
@@ -457,7 +475,11 @@ def generate(source, manifest, install_root, evidence, aliases, product, author,
         if capture:
             dates.append(timestamp(capture['capturedAt']))
         artifacts = files.get(component, [])
-        inherited_failures = import_failures(entry.get('files', []), artifacts) if imported else []
+        component_transforms = {name: record for (owner, name), record in (transformations or {}).items()
+                                if owner == component}
+        bindings = import_bindings(entry.get('files', []), artifacts, component_transforms) if imported else {}
+        inherited_failures = [f'Imported component artifact differs: {item["path"]}'
+                              for item in artifacts if item['path'] not in bindings] if imported else []
         applied_reviews = []
         for review in entry['reviews']:
             key = (component, review['package'], review['vulnerability'])
@@ -472,14 +494,11 @@ def generate(source, manifest, install_root, evidence, aliases, product, author,
                 item.update(result='not_installed', reasons=[])
                 report.append(item)
                 continue
-            # Imported evidence already records the verified finalized bytes;
-            # its original pre-processing hashes need not match a downstream
-            # install path. The byte-subset check supplies that binding.
+            # Imported bytes must match their reviewed inputs or a captured
+            # installation transformation with both hashes bound to this file.
             current_capture = copy.deepcopy(capture)
             if imported and current_capture:
-                current_capture['installedArtifacts'] = {
-                    item['path']: item['sha256'] for item in artifacts
-                    if item['sha256'] in {old['sha256'] for old in entry.get('files', [])}}
+                current_capture['installedArtifacts'] = bindings
             component_proof = proof.get(component) if proof is not None else None
             reasons = review_failures(review, current_capture, artifacts, component_proof) + inherited_failures
             if review['scope'] == 'product' and (

@@ -8,7 +8,7 @@
     "schema": {"const": "https://brlcad.org/schema/bext-component-manifest-v2"},
     "platform": {"type": "string", "minLength": 1},
     "install_root": {"const": "install"},
-    "generated_by": {"const": "bext"},
+    "generated_by": {"enum": ["bext", "brlcad"]},
     "files": {
       "type": "array",
       "items": {

@@ -9,7 +9,8 @@ import sys
 import tempfile
 
 from BextVex import (SCHEMA_VERSION, exported_evidence, generate, json_text,
-                     load_evidence, read_json)
+                     file_digest, load_evidence, package_view, read_json)
+from InstallTransformations import read_transformations
 from ProjectSbom import DEFAULT_ALIASES, alias_sources, project_inventory, read_aliases
 from ValidateSbom import component_index
 
@@ -54,13 +55,19 @@ def main():
     mode.add_argument('--registry', type=Path)
     mode.add_argument('--import-evidence', type=Path)
     parser.add_argument('--proof', type=Path)
+    parser.add_argument('--import-transformations', type=Path,
+                        help='Captured install transformations bound to the imported evidence')
     parser.add_argument('--output-dir', type=Path, required=True)
     parser.add_argument('--product', default='bext')
     parser.add_argument('--author', default='https://brlcad.org/')
     parser.add_argument('--aliases', type=Path, default=DEFAULT_ALIASES)
     parser.add_argument('--profile', default='conan')
     parser.add_argument('--cmake', default='cmake')
+    parser.add_argument('--package-view', action='store_true',
+                        help='Generate package views; retain the original file-level input inventory separately')
     args = parser.parse_args()
+    if args.import_transformations and not args.import_evidence:
+        parser.error('--import-transformations requires --import-evidence')
     if not re.fullmatch(r'[a-z][a-z0-9_-]*', args.product):
         parser.error('--product must be a lowercase product name')
     if not re.fullmatch(r'[a-z][a-z0-9_-]*', args.profile):
@@ -84,7 +91,7 @@ def main():
     destinations = {(args.output_dir / name).resolve() for name in names}
     if any(path and path.resolve() in destinations
            for path in (args.sbom, args.manifest, args.registry, args.import_evidence,
-                        args.proof, *alias_sources(args.aliases))):
+                        args.proof, args.import_transformations, *alias_sources(args.aliases))):
         parser.error('Generation inputs must be separate from its outputs')
     for name in names:
         (args.output_dir / name).unlink(missing_ok=True)
@@ -92,11 +99,19 @@ def main():
         source = read_json(args.sbom)
         if source.get('spdxVersion') != 'SPDX-2.3':
             raise ValueError('A canonical SPDX 2.3 source inventory is required')
+        file_inventory = None
+        if args.package_view:
+            file_inventory = {'document': source['documentNamespace'], 'sha256': file_digest(args.sbom)}
+            source = package_view(source)
+        elif source.get('files') or any(package.get('filesAnalyzed') for package in source['packages']):
+            raise ValueError('Use --package-view with an installed file-level inventory; keep the original document')
         aliases, alias_digest = read_aliases(args.aliases, args.profile)
         if args.registry:
             evidence = load_evidence(read_json(args.registry))
         else:
             evidence = exported_evidence(read_json(args.import_evidence))
+        transformations = (read_transformations(args.import_transformations, file_digest(args.import_evidence))
+                           if args.import_transformations else None)
         proof = None
         if args.proof:
             if args.import_evidence:
@@ -107,7 +122,16 @@ def main():
             proof = document['components']
         inventory, vex, exported, report = generate(
             source, read_json(args.manifest), args.install_root, evidence,
-            aliases, args.product, args.author, imported=bool(args.import_evidence), proof=proof)
+            aliases, args.product, args.author, imported=bool(args.import_evidence), proof=proof,
+            transformations=transformations)
+        if args.import_transformations:
+            report['installTransformations'] = {'file': args.import_transformations.name,
+                                              'sha256': file_digest(args.import_transformations),
+                                              'files': len(transformations)}
+        if file_inventory:
+            report['fileInventory'] = file_inventory
+            inventory['comment'] += (' This package view retains file-level checksums and ownership '
+                                     'in its original inventory and companion ownership manifest.')
         with tempfile.TemporaryDirectory(prefix='vex-', dir=args.output_dir) as temporary:
             directory = Path(temporary)
             write_outputs(directory, args.product, inventory, vex, exported, report,
