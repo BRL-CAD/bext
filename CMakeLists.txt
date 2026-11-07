@@ -862,10 +862,12 @@ add_custom_target(sbom_copyright_candidates
 # from committed bext repository information. Regenerate on each request:
 # a new commit or gitlink pin can change HEAD without touching wrapper files.
 set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
+set(BEXT_CYCLONEDX_OUTPUT "${CMAKE_BINARY_DIR}/bext.cdx.json")
 add_custom_target(sbom
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DBEXT_SBOM_OUTPUT=${BEXT_SBOM_OUTPUT}
+    -DBEXT_CYCLONEDX_OUTPUT=${BEXT_CYCLONEDX_OUTPUT}
     -DBEXT_SBOM_ALLOW_DIRTY=${BEXT_SBOM_ALLOW_DIRTY}
     -P ${CMAKE_SOURCE_DIR}/CMake/GenerateSbom.cmake
   COMMAND ${CMAKE_COMMAND}
@@ -874,10 +876,12 @@ add_custom_target(sbom
   DEPENDS
     ${CMAKE_SOURCE_DIR}/CMake/BextDependencyInventory.cmake
     ${CMAKE_SOURCE_DIR}/CMake/GenerateSbom.cmake
+    ${CMAKE_SOURCE_DIR}/CMake/BextCycloneDx.cmake
+    ${CMAKE_SOURCE_DIR}/CMake/BextSbomJson.cmake
     ${CMAKE_SOURCE_DIR}/CMakeLists.txt
     ${CMAKE_SOURCE_DIR}/.gitmodules
     ${BEXT_GRAPH_DEPENDS}
-  BYPRODUCTS "${BEXT_SBOM_OUTPUT}"
+  BYPRODUCTS "${BEXT_SBOM_OUTPUT}" "${BEXT_CYCLONEDX_OUTPUT}"
   VERBATIM
 )
 add_dependencies(bext_finalize sbom)
@@ -891,10 +895,33 @@ endif()
 add_custom_target(supply_chain_check
   DEPENDS check_dependency_metadata sbom sbom_metadata_report
 )
+find_program(BEXT_SBOM_PYTHON NAMES python3 python)
+if(BEXT_SBOM_PYTHON)
+  add_custom_target(sbom_validate
+    COMMAND "${BEXT_SBOM_PYTHON}" "${CMAKE_SOURCE_DIR}/CMake/ValidateSbom.py"
+      --spdx "${BEXT_SBOM_OUTPUT}" --cyclonedx "${BEXT_CYCLONEDX_OUTPUT}"
+    DEPENDS sbom
+    VERBATIM
+  )
+  add_custom_target(sbom_scan_inputs DEPENDS sbom)
+  foreach(format spdx cdx)
+    add_custom_command(TARGET sbom_scan_inputs POST_BUILD
+      COMMAND "${BEXT_SBOM_PYTHON}" "${CMAKE_SOURCE_DIR}/CMake/ProjectSbom.py"
+        --input "${CMAKE_BINARY_DIR}/bext.${format}.json"
+        --output "${CMAKE_BINARY_DIR}/bext.conan.${format}.json"
+        --report "${CMAKE_BINARY_DIR}/bext.conan.${format}.coverage.json"
+      BYPRODUCTS
+        "${CMAKE_BINARY_DIR}/bext.conan.${format}.json"
+        "${CMAKE_BINARY_DIR}/bext.conan.${format}.coverage.json"
+      VERBATIM
+    )
+  endforeach()
+endif()
 add_custom_target(sbom_regress
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DBEXT_SBOM_OUTPUT=${CMAKE_BINARY_DIR}/bext-test.spdx.json
+    -DBEXT_CYCLONEDX_OUTPUT=${CMAKE_BINARY_DIR}/bext-test.cdx.json
     -P ${CMAKE_SOURCE_DIR}/CMake/TestSbom.cmake
   VERBATIM
 )

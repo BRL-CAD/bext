@@ -428,3 +428,8 @@ foreach(required_heading
     message(FATAL_ERROR "SBOM metadata report omitted ${required_heading}")
   endif()
 endforeach()
+if(BEXT_CYCLONEDX_OUTPUT)
+  include("${CMAKE_CURRENT_LIST_DIR}/BextCycloneDx.cmake")
+  file(READ "${BEXT_SBOM_OUTPUT}" final_inventory)
+  bext_write_cyclonedx("${BEXT_CYCLONEDX_OUTPUT}" "${final_inventory}")
+endif()

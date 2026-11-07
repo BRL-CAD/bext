@@ -28,7 +28,8 @@ class DependencyMetadataTests(unittest.TestCase):
         modules = self.source / 'CMake'
         modules.mkdir()
         for name in ('BextDependencyInventory.cmake', 'GenerateDependencyDocs.cmake',
-                     'GenerateSbom.cmake', 'ValidateSbom.cmake'):
+                     'GenerateSbom.cmake', 'ValidateSbom.cmake',
+                     'BextSbomJson.cmake', 'BextCycloneDx.cmake'):
             shutil.copyfile(MODULE / name, modules / name)
         (self.source / 'CMakeLists.txt').write_text('add_project(probe GROUPS "BRLCAD;APPLESEED")\n')
         (self.source / '.gitmodules').write_text(
@@ -158,13 +159,19 @@ endforeach()
         self.inventory('HEAD')
         self.git('commit', '-qm', 'Review probe license')
         output = self.source / 'sbom.json'
+        cyclonedx_output = self.source / 'sbom.cdx.json'
         self.command('cmake', f'-DBEXT_SOURCE_DIR={self.source}',
                      f'-DBEXT_SBOM_OUTPUT={output}', '-DBEXT_SBOM_ALLOW_DIRTY=ON',
+                     f'-DBEXT_CYCLONEDX_OUTPUT={cyclonedx_output}',
                      '-P', MODULE / 'GenerateSbom.cmake')
         document = json.loads(output.read_text(encoding='utf-8'))
         self.assertEqual(document['packages'][0]['name'], 'Reviewed probe')
         self.assertEqual(document['hasExtractedLicensingInfos'][0]['extractedText'],
                          license_text)
+        cyclonedx = json.loads(cyclonedx_output.read_text())
+        self.assertEqual(cyclonedx['components'][0]['name'], 'Reviewed probe')
+        self.assertEqual(cyclonedx['components'][0]['evidence']['licenses'][0]
+                         ['license']['text']['content'], license_text)
 
     def test_local_license_snapshot_requires_current_reviewed_revision(self):
         evidence = self.source / 'probe/license.txt'
@@ -229,6 +236,7 @@ function(add_project)
 endfunction()
 add_project(probe GROUPS "BRLCAD;APPLESEED")
 set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
+set(BEXT_CYCLONEDX_OUTPUT "${CMAKE_BINARY_DIR}/bext.cdx.json")
 set(BEXT_SBOM_ALLOW_DIRTY ON)
 ''' + target)
         self.git('add', 'CMakeLists.txt')
@@ -237,12 +245,16 @@ set(BEXT_SBOM_ALLOW_DIRTY ON)
         self.command('cmake', '-S', self.source, '-B', build, '-G', 'Ninja')
         self.command('cmake', '--build', build, '--target', 'sbom')
         first = json.loads((build / 'bext.spdx.json').read_text())
+        first_cyclonedx = json.loads((build / 'bext.cdx.json').read_text())
         self.pin('probe', self.second)
         self.git('commit', '-qm', 'Update only the dependency pin')
         self.command('cmake', '--build', build, '--target', 'sbom')
         second = json.loads((build / 'bext.spdx.json').read_text())
+        second_cyclonedx = json.loads((build / 'bext.cdx.json').read_text())
         self.assertNotEqual(first['documentNamespace'], second['documentNamespace'])
         self.assertEqual(second['packages'][0]['versionInfo'], self.second)
+        self.assertNotEqual(first_cyclonedx['serialNumber'], second_cyclonedx['serialNumber'])
+        self.assertEqual(second_cyclonedx['components'][0]['version'], self.second)
         self.assertIn('/' + self.git('rev-parse', 'HEAD').strip(), second['documentNamespace'])
 
 
