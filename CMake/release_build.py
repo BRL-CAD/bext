@@ -82,6 +82,18 @@ def discard(plan, project):
             shutil.rmtree(path, onerror=remove_readonly)
 
 
+def preserve_selector_caches(project):
+    for cache in project.get('selector_caches', []):
+        source = Path(cache['cache'])
+        destination = Path(cache['preserved_cache'])
+        if not source.is_file():
+            raise OSError('Installed SBOM selector cache is unavailable: ' + str(source))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(destination.name + '.tmp')
+        shutil.copyfile(source, temporary)
+        temporary.replace(destination)
+
+
 def signature(plan):
     digest = hashlib.sha256(json.dumps(plan, sort_keys=True).encode())
     cache = Path(plan['build_root']) / 'CMakeCache.txt'
@@ -196,6 +208,7 @@ def build(plan):
         if project['name'] in state['completed']:
             continue
         run(project['name'], project['build_target'])
+        preserve_selector_caches(project)
         if not project['deferred']:
             discard(plan, project)
         state['completed'].append(project['name'])

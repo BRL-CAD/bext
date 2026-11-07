@@ -20,6 +20,8 @@ if (ENABLE_LLVM)
     -DLLVM_PARALLEL_LINK_JOBS=${BEXT_LINK_JOBS}
     -DLLVM_PARALLEL_TABLEGEN_JOBS=${BEXT_BUILD_JOBS}
   )
+  bext_component_ownership(llvm "^bin/(clang[^/]*|llvm-[^/]*)([.]exe)?$")
+  bext_install_exclude("^bin/(clang[^/]*|llvm-[^/]*)([.]exe)?$")
 
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")

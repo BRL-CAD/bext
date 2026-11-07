@@ -179,7 +179,8 @@ ordinary wrapper selection. Add
 entries, while retaining explicit dirty-source checks during maintenance.
 A `branch = RELEASE` entry is not required for a tag-based pin.
 
-Stage the wrapper, patches, dependency edges, top-level registration,
+Stage the wrapper, its `BextPackage.cmake` descriptor, patches, dependency
+edges, top-level registration,
 `.gitmodules`, and gitlink. Generate and check the staged metadata as described
 below before committing the integration. After committing, generate the
 committed SBOM and repeat the committed metadata check. The required source
@@ -246,6 +247,15 @@ it, remove the local-source declaration and add the submodule initializer
 inside the enabled block.
 
 Bootstrap and metadata tools inspect declarations without evaluating wrappers.
+Declare package groups, output role, providers, and SBOM assertions in the
+wrapper's `BextPackage.cmake`; keep its groups consistent with `add_project`.
+See DEPENDENCIES.md's SBOM contract for identity, license evidence, contained
+packages, and installed-file ownership requirements.
+When the installed package set depends on completed upstream configuration,
+keep that selection logic in `<dependency>/SbomSelection.cmake` and register it
+from the dependency wrapper with `bext_sbom_selector`. Set `TARGET` to the
+owning ExternalProject; discard builds snapshot its registered configure cache
+after installation and before removing the project's working tree.
 Keep top-level `add_project` calls and source declarations on individual lines
 with literal names, paths, URLs, and full commit IDs. Remove obsolete initializer
 calls rather than leaving them commented: current metadata readers may still
@@ -431,10 +441,22 @@ parts of the delivery workflow.
 ### Validate the candidate before committing
 
 Metadata has two explicit input modes. `HEAD` (the default) reads committed
-wrappers, `.deps` files, URLs, gitlinks, and the reference table from the same
+wrappers, package descriptors, repository-local evidence, `.deps` files, URLs,
+gitlinks, and the reference table from the same
 resolved commit. `INDEX` reads their staged versions, rejects conflicted entries,
 and supports a new submodule before an integration commit. Neither mode reads
-unstaged source metadata. Checks do not require populated dependency sources.
+unstaged repository metadata. The SBOM descriptors also inspect Qt attribution
+and Tcl/OpenImageIO aggregate license evidence in populated source trees.
+Initialize those submodules at the candidate pins before checking the full
+repository inventory or generating its SBOM:
+
+```sh
+git submodule update --init -- qt/qt tcl/tcl openimageio/oiio
+```
+
+The isolated metadata regression fixtures remain offline and do not need
+dependency checkouts. When validating staged pin changes, align the inspected
+source trees with the staged pins as well.
 
 Stage the integration inputs, then regenerate the table from that staged
 snapshot. WRITE updates the working-tree table while preserving surrounding

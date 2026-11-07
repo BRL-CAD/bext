@@ -9,6 +9,13 @@ if (ENABLE_EMBREE)
     PATCH_COMMAND_VAR EMBREE_PATCH_COMMAND)
 
   RegisterDeps(EMBREE)
+  if (MSVC)
+    # Embree deliberately installs the redistributable MSVC runtime.  Other
+    # projects may record the same files in their native install manifests;
+    # keep one stable owner for the shared copies.
+    bext_component_ownership(embree
+      "^bin/(msvcp140|vcruntime140(_1)?)[.]dll$")
+  endif (MSVC)
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)

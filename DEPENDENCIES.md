@@ -31,9 +31,9 @@ selection further.
 | `eigen` | `USE_BRLCAD`, `USE_APPLESEED` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/eigen) |
 | `embree` | `USE_APPLESEED`, `USE_OSPRAY` | `install` | `onetbb`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/embree) |
 | `expat` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/libexpat) |
-| `flexbison` | `USE_APPLESEED`, `USE_OSPRAY` | `noinstall` | — | [repository](https://github.com/BRL-CAD/winflexbison) |
+| `flexbison` | `USE_APPLESEED`, `USE_OSPRAY` | `noinstall` | — | [repository](https://github.com/BRL-CAD/bison) |
 | `fmt` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/fmt) |
-| `gdal` | `USE_GDAL` | `install` | `patch`, `png`, `proj`, `sqlite3`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/gdal) |
+| `gdal` | `USE_GDAL` | `install` | `patch`, `jpeg`, `png`, `proj`, `sqlite3`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/gdal) |
 | `gte` | `USE_BRLCAD` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/GeometricTools) |
 | `icu` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/icu) |
 | `ispc` | `USE_OSPRAY` | `install` | `bison`, `flex`, `patch`, `llvm`, `m4`, `ncurses`, `zlib` | [repository](https://github.com/BRL-CAD/ispc) |
@@ -55,9 +55,9 @@ selection further.
 | `oidn` | `USE_OSPRAY` | `install` | `ispc`, `onetbb` | [repository](https://github.com/BRL-CAD/oidn) |
 | `onetbb` | `USE_APPLESEED`, `USE_OSPRAY`, `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/oneTBB) |
 | `opencolorio` | `USE_APPLESEED` | `install` | `expat`, `minizip-ng`, `openexr`, `patch`, `pystring`, `yaml-cpp`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/OpenColorIO) |
-| `opencv` | `USE_BRLCAD` | `install` | `patch`, `png`, `zlib` | [repository](https://github.com/BRL-CAD/opencv) |
+| `opencv` | `USE_BRLCAD` | `install` | `patch`, `png`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/opencv) |
 | `openexr` | `USE_APPLESEED` | `install` | `deflate`, `patch` | [repository](https://github.com/BRL-CAD/openexr) |
-| `openimageio` | `USE_APPLESEED` | `install` | `boost`, `fmt`, `jpeg`, `opencolorio`, `openexr`, `patch`, `png`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/oiio) |
+| `openimageio` | `USE_APPLESEED` | `install` | `boost`, `fmt`, `jpeg`, `opencolorio`, `openexr`, `patch`, `png`, `pugixml`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/oiio) |
 | `opennurbs` | `USE_BRLCAD` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/opennurbs) |
 | `openvdb` | `USE_BRLCAD` | `install` | `onetbb`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/openvdb) |
 | `osl` | `USE_APPLESEED` | `install` | `bison`, `boost`, `flex`, `llvm`, `openexr`, `openimageio`, `patch`, `pugixml`, `zlib` | [repository](https://github.com/BRL-CAD/OpenShadingLanguage) |
@@ -71,7 +71,7 @@ selection further.
 | `proj` | `USE_GDAL` | `install` | `patch`, `sqlite3` | [repository](https://github.com/BRL-CAD/PROJ) |
 | `pugixml` | `USE_BRLCAD`, `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/pugixml) |
 | `pystring` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/pystring) |
-| `qt` | `USE_QT` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/qt) |
+| `qt` | `USE_QT` | `install` | `patch`, `jpeg`, `png`, `sqlite3`, `zlib` | [repository](https://github.com/BRL-CAD/qt) |
 | `re2c` | `USE_BRLCAD` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/re2c) |
 | `regex` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/regex) |
 | `rkcommon` | `USE_OSPRAY` | `install` | `onetbb`, `patch` | [repository](https://github.com/BRL-CAD/rkcommon) |
@@ -110,6 +110,124 @@ selection further.
   writes the committed repository inventory to `bext.spdx.json`;
   `supply_chain_check` performs both operations. The SBOM always uses HEAD and
   is distinct from the finalized installed bundle manifest.
+* SBOM generation rejects a dirty checkout by default. Use
+  `BEXT_SBOM_ALLOW_DIRTY=ON` only for a deliberate non-release build; its
+  namespace records a dirty-tree fingerprint.
+* Each dependency records its canonical package identity, upstream version,
+  source download location, PURL, CPE, declared license, and staged legal
+  filenames in its own
+  `<dependency>/BextPackage.cmake`.  Entries are optional, so unknown facts
+  remain `NOASSERTION` rather than being guessed.  `GROUPS` are registered in
+  the descriptor and repeated on top-level `add_project(...)` calls for profile
+  readability; configuration rejects any mismatch.
+* A declared license must identify the staged upstream license file and pin the
+  SHA-256 of its LF-normalized contents.  The inventory checks that hash when
+  the submodule is populated.  This does not replace the initial human review
+  that maps the text to an SPDX expression, but it prevents that reviewed
+  assertion from silently surviving a later license-file change.
+* `COPYRIGHT_TEXT` records an exact reviewed package-level assertion; use
+  `NONE` only for an explicit public-domain dedication.  For larger reviewed
+  aggregates, `COPYRIGHT_FILE` and `COPYRIGHT_SHA256` provide pinned evidence.
+  `COPYRIGHT_REVIEWED_REVISION` ties either form to the source revision and
+  forces re-review when that source changes.  Unknown or incomplete ownership
+  remains `NOASSERTION` rather than being inferred from repository ownership,
+  commit authors, or license names.
+* Use `LICENSE_FILES` with matching `LICENSE_SHA256S` when more than one notice
+  supports an aggregate expression.  Repository-relative paths begin with
+  `@/`; reviewed snapshots in `<dependency>/licenses/` keep custom license text
+  available when CI does not populate source submodules.  Every such snapshot
+  requires `REVIEWED_REVISION`, so changing the pinned source forces review even
+  offline. Pair a verbatim snapshot with `LICENSE_SOURCE_FILE` and
+  `LICENSE_SOURCE_SHA256`; populated source trees then also verify its upstream
+  origin.
+* License text that does not satisfy the SPDX matching guidelines uses a
+  document-local `LicenseRef-*` identifier and is embedded in
+  `hasExtractedLicensingInfos`; it is not assigned the nearest "BSD-like" or
+  "MIT-like" identifier.  Netpbm's reduced BRL-CAD notice uses this mechanism.
+* `LICENSE_CONCLUDED` records the license option selected for the bext build
+  when it is more specific than the upstream declaration.  Qt runtime modules
+  are concluded as `LGPL-3.0-only`.  Tests and examples are disabled; the
+  required Qt build tools (including `moc`, `rcc`, and `uic`) are recorded
+  separately as `GPL-3.0-only WITH Qt-GPL-exception-1.0` and are not runtime
+  components.
+* Large REUSE-managed sources may use a reviewed aggregate snapshot rather
+  than requiring Python during ordinary CMake SBOM generation.  Pin the
+  snapshot with `REVIEWED_REVISION`; changing the dependency revision then
+  fails validation until a maintainer regenerates and reviews the aggregate
+  with the canonical `reuse` tool.  Qt uses this model for its source container.
+* PURLs identify the canonical upstream release so vulnerability databases can
+  match the package.  The SPDX download location remains the exact BRL-CAD fork
+  archive and `packageSourceInfo` records the upstream/fork relationship.  A
+  wrong CPE is more harmful than no CPE, particularly when product names
+  collide.  `CPE_STATUS` records one of `NVD_EXACT`, `NVD_PRODUCT`,
+  `NOT_APPLICABLE`, or `UNRESOLVED`.  An exact NVD dictionary entry uses
+  `NVD_EXACT`.  If NVD has an unambiguous vendor/product identity but not the
+  local release, use `NVD_PRODUCT`, construct a non-wildcard CPE with the local
+  `VERSION`, and record a reviewed, non-deprecated dictionary entry in
+  `CPE_PRODUCT_EVIDENCE`.  Validation requires its part, vendor, and product to
+  match the emitted CPE.  Before accepting that mapping, compare the NVD title,
+  vendor, upstream home page, and affected-product descriptions to guard
+  against namesakes.  Never copy a suite CPE to child modules.  Use
+  `NOT_APPLICABLE` with `CPE_COMMENT` for reviewed forks, embedded subpaths, or
+  niche tools for which CPE is inappropriate; omitted status is conservatively
+  treated as `UNRESOLVED`.  Use `PURL_BASE` for commit-addressed packages; the
+  generator appends the pinned source revision automatically, avoiding a second
+  revision value that must be updated by hand.  A bundled, modified component
+  may also set `PURL_SUBPATH` to identify its exact directory in that revision.
+  Use a complete `PURL` with an explicit `VERSION` when an authoritative
+  upstream release identifier exists.
+* NVD represents Qt with the suite-level `qt:qt` product rather than dependable
+  module identities.  The Qt source aggregate therefore carries that CPE and
+  contains the precisely identified Qt Base, Qt SVG, and build-tool packages.
+  A suite match is a review lead, not a claim that every contained module is
+  affected; consult the Qt advisory and patch paths before deciding whether the
+  configured modules are vulnerable.  The child packages intentionally retain
+  module-specific PURLs and do not repeat the suite CPE.
+* Qt's structured `qt_attribution.json` records are the source of truth for its
+  security-critical embedded third-party names, versions, upstream locations,
+  and PURLs.  They are emitted as packages contained by the Qt source aggregate
+  alongside the Qt Base and Qt SVG packages.  At final installation,
+  `qt/SbomSelection.cmake` reads Qt's completed feature cache and records
+  which bundled implementations were actually selected.  Downstream installed
+  SBOM generation retains only those package identifiers; system implementations
+  and source copies disabled by configuration are not reported as embedded
+  code.  A missing Qt feature cache fails finalization rather than reverting to
+  an over-inclusive SBOM.
+* Dependencies with configuration-sensitive bundled packages register a local
+  `SbomSelection.cmake` implementation using `bext_sbom_selector` in their
+  wrapper. The registration names its owning ExternalProject target so compact
+  builds can preserve the completed configure cache before discarding that
+  project's work tree. Finalization invokes the serialized registrations
+  generically; it does not contain dependency names or build-tree cache paths.
+* `bext_sbom_subcomponent` records independently licensed code bundled inside a
+  pinned source and emits an SPDX `CONTAINS` relationship.  `PURPOSE` maps to
+  `primaryPackagePurpose`; `SCOPE` records `BUILD`, `RUNTIME`, or `BOTH` in the
+  package comment.  Without an override, `install` sources are runtime libraries
+  and `noinstall` sources are build applications.
+* The non-failing `sbom_metadata_report` target writes
+  `sbom-metadata-gaps.md` in the build directory.  It lists missing PURLs,
+  declared and concluded licenses, copyright assertions, and upstream
+  locations.  It also separates exact NVD CPEs, established NVD product
+  identities, reviewed not-applicable cases, and unresolved mappings so
+  maintainers can review them incrementally without treating unknown metadata
+  as a release failure.
+* The optional `sbom_copyright_candidates` target uses `git grep` over tracked
+  source files and writes `sbom-copyright-candidates.md` in the build directory.
+  Its deduplicated lines are review leads only: generated text, incidental
+  examples, and notices belonging to excluded code must not be copied into
+  `COPYRIGHT_TEXT` without checking the package contents actually represented.
+* `CMake/BextComponentManifest.schema.json` is the versioned contract used by
+  bext and downstream BRL-CAD installs to attribute every staged file. Consumers
+  parse it as JSON and reject unknown schema identifiers.  Files intentionally
+  excluded from downstream staging are outside this ownership contract; every
+  other file must have exactly one active bext component owner.  Its `packages`
+  entries associate format-neutral package identifiers and SPDX identifiers
+  with components, identify each component's primary package, and include only
+  packages selected by the completed dependency configuration.
+  Finalization derives the current install set from active projects' native
+  install manifests and explicit wrapper ownership rules.  Pre-existing files
+  outside that set are preserved, listed in `bext-untracked-install-files.txt`,
+  and excluded from both downstream staging and installed SBOM attribution.
 
 # Maintaining dependencies
 

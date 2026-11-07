@@ -59,6 +59,14 @@ endif ()
 
 if (TK_DO_BUILD)
 
+  bext_component_ownership(tk
+    "^bin/(tk|wish)[^/]*"
+    "^include/(X11/|tk)[^/]*"
+    "^lib/tk[^/]*(/|$)"
+    "^lib/libtk(stub)?[0-9.][^/]*$"
+    "^lib/pkgconfig/tk[.]pc$"
+  )
+
   RegisterDeps(TK)
 
   if (NOT DEFINED TCL_VERSION)

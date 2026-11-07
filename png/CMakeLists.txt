@@ -20,6 +20,10 @@ set(ENABLE_PNG "${ENABLE_PNG}" CACHE BOOL "Enable png build")
 
 if (ENABLE_PNG)
 
+  # Current libpng honors SKIP_INSTALL_EXECUTABLES, but keep stale outputs
+  # from older build trees out of downstream packages as well.
+  bext_install_exclude("(^|/)(bin|libexec)/(pngfix|png-fix-itxt)([.]exe)?$")
+
   set(PNG_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/png.patch")
   git_submodule_init(libpng CMakeLists.txt
     PATCH_FILES ${PNG_PATCH_FILES}

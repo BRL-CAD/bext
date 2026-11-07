@@ -7,6 +7,14 @@ bext_enable(GDAL)
 
 if (ENABLE_GDAL)
 
+  bext_sbom_selector(gdal
+    TARGET GDAL_BLD
+    SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/SbomSelection.cmake"
+    FUNCTION bext_gdal_selected_packages
+    CACHE "${CMAKE_CURRENT_BINARY_DIR}/GDAL_BLD-prefix/src/GDAL_BLD-build/CMakeCache.txt")
+
+  bext_component_ownership(gdal "^share/bash-completion/completions/(gdal|ogr|nearblack|projinfo|sozip)")
+
   set(GDAL_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/gdal.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/gdal_setjmp.patch"
@@ -52,12 +60,16 @@ if (ENABLE_GDAL)
     -DBUILD_TESTING=OFF
     -DGDAL_INST_DATA_DIR=${CMAKE_BUNDLE_INSTALL_PREFIX}/${DATA_DIR}/gdal
     -DGDAL_USE_EXTERNAL_LIBS=OFF
-    -DGDAL_USE_INTERNAL_LIBS=ON # GEOTIFF, GIF, JPEG, JSONC, LERC, OPENCAD, PNG, QHULL, TIFF, ZLIB
+    -DGDAL_USE_INTERNAL_LIBS=ON # GEOTIFF, GIF, JSONC, LERC, OPENCAD, QHULL, SHAPELIB
     # TODO - we can't just be hard-setting this - USE_*_INTERNAL flags need to
     # key on which build targets we have
     -DGDAL_USE_ZLIB_INTERNAL=OFF
     -DGDAL_USE_ZLIB=ON
     $<$<BOOL:${ZLIB_TARGET}>:-DZLIB_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DGDAL_USE_JPEG_INTERNAL=OFF
+    -DGDAL_USE_JPEG12_INTERNAL=OFF
+    -DGDAL_USE_JPEG=ON
+    $<$<BOOL:${JPEG_TARGET}>:-DJPEG_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DGDAL_USE_PNG_INTERNAL=OFF
     -DGDAL_USE_PNG=ON
     $<$<BOOL:${PNG_TARGET}>:-DPNG_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>

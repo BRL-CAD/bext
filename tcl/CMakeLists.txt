@@ -117,6 +117,22 @@ set(DISABLE_TCL "${DISABLE_TCL}" CACHE BOOL "Disable tcl build")
 
 if (ENABLE_TCL)
 
+  set(TCL_COMPONENT_OWNERSHIP
+    "^bin/tcl[^/]*"
+    "^include/(itcl|tcl)[^/]*"
+    "^lib/(dde|itcl|nmake|reg[0-9]|tcl|thread)[^/]*(/|$)"
+    "^lib/lib(tcl|itcl)(stub)?[0-9.][^/]*$"
+    "^lib/pkgconfig/tcl[.]pc$"
+  )
+  if (BEXT_TCL_ENABLE_DATABASE_PACKAGES)
+    list(APPEND TCL_COMPONENT_OWNERSHIP
+      "^include/tdbc[^/]*"
+      "^lib/(sqlite3|tdbc)[^/]*(/|$)"
+      )
+  endif ()
+  bext_component_ownership(tcl ${TCL_COMPONENT_OWNERSHIP})
+  unset(TCL_COMPONENT_OWNERSHIP)
+
   set(TCL_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/tcl_relocatable_config.patch")
   if (NOT MSVC)
@@ -207,6 +223,22 @@ if (ENABLE_TCL)
     endforeach ()
     unset(TCL_EXCLUDED_PACKAGE)
   endif ()
+
+  # Bundled Itcl and Thread still install manuals even when Tcl's own
+  # documentation is disabled.  Include optional packages only when built.
+  file(GLOB TCL_PACKAGE_SOURCE_DIRS LIST_DIRECTORIES true
+    "${CMAKE_CURRENT_SOURCE_DIR}/tcl/pkgs/*")
+  foreach(TCL_PACKAGE_SOURCE_DIR IN LISTS TCL_PACKAGE_SOURCE_DIRS)
+    get_filename_component(TCL_PACKAGE_NAME "${TCL_PACKAGE_SOURCE_DIR}" NAME)
+    if (NOT TCL_PACKAGE_NAME IN_LIST TCL_EXCLUDED_PACKAGES)
+      bext_component_manpage_ownership(tcl
+        "${TCL_PACKAGE_SOURCE_DIR}/doc/*.n"
+        "${TCL_PACKAGE_SOURCE_DIR}/doc/man/*.n")
+    endif ()
+  endforeach()
+  unset(TCL_PACKAGE_NAME)
+  unset(TCL_PACKAGE_SOURCE_DIR)
+  unset(TCL_PACKAGE_SOURCE_DIRS)
 
   if (TARGET ZLIB_BLD)
     set(ZLIB_SETUP_COMMANDS

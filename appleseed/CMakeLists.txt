@@ -3,6 +3,12 @@ bext_enable(APPLESEED)
 
 if (ENABLE_APPLESEED)
 
+  bext_sbom_selector(appleseed
+    TARGET APPLESEED_BLD
+    SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/SbomSelection.cmake"
+    FUNCTION bext_appleseed_selected_packages
+    CACHE "${CMAKE_CURRENT_BINARY_DIR}/APPLESEED_BLD-prefix/src/APPLESEED_BLD-build/CMakeCache.txt")
+
   set(APPLESEED_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/appleseed.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/appleseed_intelllvm.patch"
