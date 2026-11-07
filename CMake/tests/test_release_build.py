@@ -41,6 +41,8 @@ class ReleaseBuildTests(unittest.TestCase):
         return result.stdout
 
     def fixture(self, deferred=False, nested=False):
+        (self.source / 'SbomSelection.cmake').write_text(
+            'function(fixture_packages)\nendfunction()\n')
         names = ['FIRST', 'SECOND'] + (['TCL', 'TK', 'ITK'] if deferred else [])
         for name in names:
             upstream = self.source / name.lower()
@@ -84,6 +86,7 @@ set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/install")
 set(CMAKE_NOBUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/noinstall")
 file(MAKE_DIRECTORY "${CMAKE_NOBUNDLE_INSTALL_PREFIX}")
 include("@MODULE@/BextReleaseBuild.cmake")
+include("@MODULE@/Utils.cmake")
 '''.replace('@MODULE@', MODULE.as_posix())
         for index, name in enumerate(names):
             failure = self.failure if name == 'SECOND' else self.root / 'never-fail'
@@ -108,7 +111,25 @@ include("@MODULE@/BextReleaseBuild.cmake")
                 cmake += 'add_subdirectory(wrappers/' + name.lower() + ' EXCLUDE_FROM_ALL)\n'
             else:
                 cmake += wrapper
+            if name == 'FIRST':
+                cmake += '''bext_sbom_selector(first
+  TARGET FIRST_BLD
+  SCRIPT "${CMAKE_SOURCE_DIR}/SbomSelection.cmake"
+  FUNCTION fixture_packages
+  CACHE "${CMAKE_BINARY_DIR}/FIRST_BLD-prefix/src/FIRST_BLD-build/CMakeCache.txt")
+'''
         finalize = '''
+if(EXPECT_DISCARD)
+  file(GLOB selector_caches "@BUILD@/CMakeFiles/bext-sbom-selector-caches/*.cache")
+  list(LENGTH selector_caches selector_cache_count)
+  if(NOT selector_cache_count EQUAL 1)
+    message(FATAL_ERROR "Expected one preserved selector cache")
+  endif()
+  file(READ "${selector_caches}" selector_cache)
+  if(NOT selector_cache MATCHES "CMAKE_PROJECT_NAME:STATIC=FIRST")
+    message(FATAL_ERROR "Preserved selector cache is invalid")
+  endif()
+endif()
 if(@DEFERRED@)
   foreach(name TCL TK ITK)
     if(NOT EXISTS "@BUILD@/${name}_BLD-prefix/src/${name}_BLD-build")
@@ -128,7 +149,8 @@ if(BEXT_DISCARD_WORK)
   set(finalize_all)
 endif()
 add_custom_target(bext_finalize ${finalize_all}
-  COMMAND ${CMAKE_COMMAND} -P "${CMAKE_SOURCE_DIR}/finalize.cmake"
+  COMMAND ${CMAKE_COMMAND} -DEXPECT_DISCARD=${BEXT_DISCARD_WORK}
+    -P "${CMAKE_SOURCE_DIR}/finalize.cmake"
   DEPENDS @INSTALLS@)
 bext_configure_release_build()
 '''.replace('@INSTALLS@', ' '.join(name + '_BLD-install' for name in names))

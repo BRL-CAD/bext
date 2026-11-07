@@ -7,6 +7,17 @@ bext_enable(OpenCV)
 
 if (ENABLE_OPENCV)
 
+  bext_sbom_selector(opencv
+    TARGET OPENCV_BLD
+    SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/SbomSelection.cmake"
+    FUNCTION bext_opencv_selected_packages
+    CACHE "${CMAKE_CURRENT_BINARY_DIR}/OPENCV_BLD-prefix/src/OPENCV_BLD-build/CMakeCache.txt")
+
+  bext_install_exclude(
+    "(^|/)(bin|libexec)/opencv_version(_win32)?([.]exe)?$"
+    "(^|/)(bin|libexec)/setup_vars_opencv[^/]*[.](cmd|sh)$"
+  )
+
   # Classic Intel's flag conflict handling drops AVX2 when adding POPCNT.
   # IntelLLVM needs OpenCV's independent GCC/Clang ISA flags instead.
   set(OPENCV_PATCH_FILES

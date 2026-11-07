@@ -53,3 +53,19 @@
  #define CPL_NOSANITIZE_UNSIGNED_INT_OVERFLOW                                   \
      __attribute__((no_sanitize("unsigned-integer-overflow")))
  #else
+--- a/port/include_fast_float.h
++++ b/port/include_fast_float.h
+@@ -5,11 +5,9 @@
+ #pragma GCC system_header
+ #endif
+ 
+-// Detect if there's a system fast_float library available
+-#if defined(__has_include) && !defined(USE_SYSTEM_FAST_FLOAT)
+-#if __has_include("fast_float/fast_float.h")
++// Use the system copy only when the enclosing build explicitly requests it.
++#if defined(GDAL_USE_SYSTEM_FAST_FLOAT) && GDAL_USE_SYSTEM_FAST_FLOAT
+ #define USE_SYSTEM_FAST_FLOAT 1
+ #endif
+-#endif
+ 
+ #ifdef __clang__

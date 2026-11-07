@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brlcad.org/schema/bext-component-manifest-v2",
+  "title": "BRL-CAD external dependency component ownership manifest",
+  "type": "object",
+  "required": ["schema", "platform", "install_root", "generated_by", "files", "packages"],
+  "properties": {
+    "schema": {"const": "https://brlcad.org/schema/bext-component-manifest-v2"},
+    "platform": {"type": "string", "minLength": 1},
+    "install_root": {"const": "install"},
+    "generated_by": {"const": "bext"},
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "component"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "component": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["component", "id", "spdx_id", "primary"],
+        "additionalProperties": false,
+        "properties": {
+          "component": {"type": "string", "minLength": 1},
+          "id": {"type": "string", "minLength": 1},
+          "spdx_id": {"type": "string", "pattern": "^SPDXRef-[A-Za-z0-9.-]+$"},
+          "primary": {"type": "boolean"}
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

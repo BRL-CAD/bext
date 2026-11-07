@@ -36,12 +36,27 @@ if (NOT WIN32)
   bext_qt_set_runtime_path(${QT_XMIN_RUNTIME_DIRS} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
   set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
   set(ENV{LDFLAGS} "-L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+else()
+  set(ENV{PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@BIN_DIR@;$ENV{PATH}")
 endif (NOT WIN32)
 
-# Qt has its own solution for zlib and png - rather than trying to
-# coax it into using ours, just go with their solution:
-# https://doc.qt.io/qt-6/configure-options.html
-set(CONFIG_EXTRA_OPTS ${CONFIG_EXTRA_OPTS} -qt-zlib -qt-libpng)
+# Reuse the libraries already built and staged by bext.  Supplying bext's find
+# modules is necessary because its collision-avoiding zlib and libpng filenames
+# are intentionally different from upstream defaults.
+list(APPEND CONFIG_EXTRA_OPTS
+  -system-zlib
+  -system-libpng
+  -system-libjpeg
+  -system-sqlite
+)
+list(APPEND QT_CMAKE_OPTS
+  "-DCMAKE_PREFIX_PATH=@CMAKE_BUNDLE_INSTALL_PREFIX@"
+  "-DCMAKE_MODULE_PATH=@CMAKE_SOURCE_DIR@/CMake"
+  "-DZLIB_ROOT=@CMAKE_BUNDLE_INSTALL_PREFIX@"
+  "-DPNG_ROOT=@CMAKE_BUNDLE_INSTALL_PREFIX@"
+  "-DJPEG_ROOT=@CMAKE_BUNDLE_INSTALL_PREFIX@"
+  "-DSQLite3_ROOT=@CMAKE_BUNDLE_INSTALL_PREFIX@"
+)
 
 # Qt's configure wrapper performs a nested CMake configure.  Preserve the
 # toolchain selected for bext instead of allowing another compiler on PATH to
@@ -74,7 +89,6 @@ if (QT_XMIN_ENABLED)
     -no-fontconfig
     -qt-freetype
     -qt-harfbuzz
-    -qt-libjpeg
     -no-dbus
     -no-glib
     -opengl

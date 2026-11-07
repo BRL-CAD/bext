@@ -67,7 +67,12 @@ if (ENABLE_OIDN)
     $<$<BOOL:${ISPC_TARGET}>:-DISPC_EXECUTABLE=${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/ispc${CMAKE_EXECUTABLE_SUFFIX}>
     -DOIDN_APPS=OFF
     -DOIDN_ZIP_MODE=ON
+    -DOIDN_DEVICE_CPU_ONEDNN=OFF
+    -DOIDN_DEVICE_CUDA=OFF
+    -DOIDN_DEVICE_HIP=OFF
     -DOIDN_DEVICE_SYCL=OFF
+    -DOIDN_FILTER_RT=ON
+    -DOIDN_FILTER_RTLIGHTMAP=ON
     # Force a shared OIDN even though bext defaults BUILD_STATIC_LIBS=ON: OSPRay's
     # denoiser module (and OSPRay's own superbuild) expect shared OIDN, and a
     # static OIDN risks its self-registering CPU device being stripped by the

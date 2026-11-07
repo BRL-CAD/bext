@@ -40,10 +40,23 @@ jobs:
         run: python3 CMake/tests/test_dependency_metadata.py -v
 
       - name: Validate dependency metadata and documentation
-        run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_DOC_MODE=CHECK -P CMake/GenerateDependencyDocs.cmake
+        # Source attribution and aggregate license evidence are checked against
+        # these pinned trees; the remaining metadata is repository-local.
+        run: |
+          git submodule update --init --depth 1 -- qt/qt tcl/tcl openimageio/oiio
+          cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_DOC_MODE=CHECK -P CMake/GenerateDependencyDocs.cmake
 
       - name: Generate SPDX SBOM
-        run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_SBOM_OUTPUT="$RUNNER_TEMP/bext.spdx.json" -P CMake/GenerateSbom.cmake
+        run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_SBOM_OUTPUT="$RUNNER_TEMP/bext.spdx.json" -P CMake/TestSbom.cmake
+
+      - name: Validate SPDX SBOM
+        run: |
+          cmake -DBEXT_SBOM_INPUT="$RUNNER_TEMP/bext.spdx.json" -P CMake/ValidateSbom.cmake
+          if command -v pyspdxtools >/dev/null 2>&1; then
+            pyspdxtools --infile "$RUNNER_TEMP/bext.spdx.json" --version SPDX-2.3
+          else
+            echo "pyspdxtools is not installed; skipping optional external validation"
+          fi
 
       - name: Upload SPDX SBOM
         uses: actions/upload-artifact@v4

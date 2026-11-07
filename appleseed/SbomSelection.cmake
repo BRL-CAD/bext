@@ -1,0 +1,33 @@
+function(_bext_appleseed_cache_bool output cache_file variable)
+  file(STRINGS "${cache_file}" cache_lines REGEX "^${variable}:BOOL=")
+  if(cache_lines)
+    list(GET cache_lines 0 cache_line)
+    string(REGEX REPLACE "^[^=]*=" "" cache_value "${cache_line}")
+  else()
+    set(cache_value OFF)
+  endif()
+  if(cache_value)
+    set(${output} TRUE PARENT_SCOPE)
+  else()
+    set(${output} FALSE PARENT_SCOPE)
+  endif()
+endfunction()
+
+function(bext_appleseed_selected_packages output cache_file)
+  if(NOT EXISTS "${cache_file}")
+    set(${output} "" PARENT_SCOPE)
+    return()
+  endif()
+  set(packages
+    SPDXRef-Package-appleseed-appleseed
+    SPDXRef-Package-appleseed-appleseed-src-thirdparty-bcd
+    SPDXRef-Package-appleseed-appleseed-src-thirdparty-murmurhash3
+  )
+  _bext_appleseed_cache_bool(has_python2 "${cache_file}" WITH_PYTHON2_BINDINGS)
+  _bext_appleseed_cache_bool(has_python3 "${cache_file}" WITH_PYTHON3_BINDINGS)
+  if(has_python2 OR has_python3)
+    list(APPEND packages SPDXRef-Package-appleseed-appleseed-src-thirdparty-glad)
+  endif()
+  list(SORT packages)
+  set(${output} "${packages}" PARENT_SCOPE)
+endfunction()

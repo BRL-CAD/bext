@@ -17,6 +17,8 @@ set(ENABLE_SQLite3 "${ENABLE_SQLite3}" CACHE BOOL "Enable SQLite3 build")
 
 if (ENABLE_SQLite3)
 
+  bext_install_exclude("(^|/)(bin|libexec)/sqlite3([.]exe)?$")
+
   set(SQLITE3_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3.patch")
   git_submodule_init(sqlite3 sqlite3.c
     PATCH_FILES ${SQLITE3_PATCH_FILES}

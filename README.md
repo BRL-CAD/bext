@@ -184,7 +184,8 @@ cmake --build build/compact --parallel 1
 This mode builds one dependency at a time and deletes its generated source
 copy and compilation directory only after a successful install. Tcl/Tk/Itcl/Itk
 working trees remain until finalization. Original dependency checkouts,
-installed outputs, ExternalProject control files, and logs are retained.
+installed outputs, ExternalProject control files, logs, and the small configure
+cache snapshots needed for installed SBOM selection are retained.
 The install prefix can also remain at its default inside the build directory.
 LLVM's own working tree must still fit on disk while LLVM is being built.
 
