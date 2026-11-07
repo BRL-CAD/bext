@@ -1,0 +1,22 @@
+Lemon parser generator and parser template public-domain notices
+
+From lemon.c:
+
+The author of this program disclaims copyright.
+
+From lempar.c:
+
+The author disclaims copyright to this source code.  In place of
+a legal notice, here is a blessing:
+
+   May you do good and not evil.
+   May you find forgiveness for yourself and forgive others.
+   May you share freely, never taking more than you give.
+
+From lemon.html section 7.0:
+
+All of the source code to Lemon, including the template parser file
+"lempar.c" and the documentation file "lemon.html" are in the public
+domain. You can use the code for any purpose and without attribution.
+
+The code comes with no warranty. If it breaks, you get to keep both pieces.

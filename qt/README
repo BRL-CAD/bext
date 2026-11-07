@@ -43,7 +43,8 @@ SQLite selection
 Qt Base's source archive includes SQLite 3.53.4, but bext configures Qt with
 -system-sqlite and SQLite3_ROOT pointing to its dependency installation.
 The SQL plugin uses the maintained standalone SQLite library rather than
-compiling Qt's private copy.
+compiling Qt's private copy. The source SBOM still inventories that private
+copy; the build selection excludes it when system_sqlite is enabled.
 
 FreeBSD compiler runtime checks
 ------------------------------

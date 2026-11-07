@@ -1,0 +1,23 @@
+bext_package(sqlite3 OUTPUT install GROUPS GDAL)
+
+bext_sbom_component("sqlite3/sqlite3"
+  VERSION "3.54.1"
+  UPSTREAM_URL "https://sqlite.org/src"
+  PURL "pkg:generic/sqlite@3.54.1"
+  CPE "cpe:2.3:a:sqlite:sqlite:3.54.1:*:*:*:*:*:*:*"
+  CPE_STATUS "NVD_PRODUCT"
+  CPE_PRODUCT_EVIDENCE "cpe:2.3:a:sqlite:sqlite:3.8.8.3:*:*:*:*:*:*:*"
+)
+
+bext_sbom_component("sqlite3/sqlite3"
+  COPYRIGHT_TEXT "NONE"
+  COPYRIGHT_REVIEWED_REVISION "b7dd4ceb2815cb1432775c2844fe3d3136e90c23"
+  LICENSE "LicenseRef-SQLite-Public-Domain"
+  LICENSE_NAME "SQLite public-domain dedication"
+  LICENSE_FILE "@/sqlite3/licenses/sqlite3.txt"
+  LICENSE_SHA256 "05b720fa5e7c5bd8c039c6d0e37158c7bfc069f2e6462bbb4408f987e982783a"
+  LICENSE_SOURCE_FILE "./LICENSE"
+  LICENSE_SOURCE_SHA256 "05b720fa5e7c5bd8c039c6d0e37158c7bfc069f2e6462bbb4408f987e982783a"
+  REVIEWED_REVISION "b7dd4ceb2815cb1432775c2844fe3d3136e90c23"
+  PURPOSE "LIBRARY"
+)

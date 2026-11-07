@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.26)
+
 if (NOT DEFINED BEXT_SOURCE_DIR)
   message(FATAL_ERROR "BEXT_SOURCE_DIR is required")
 endif()

@@ -147,8 +147,31 @@ function(exercise root layout manifest_mode)
   file(WRITE "${install}/include/pathprobe_config.h"
     "/* Public SDK configuration. */\n")
   set(manifest "${output}/bext-install-manifest.json")
+  # Supply the metadata inputs for this one-provider fixture. Inventory
+  # generation has separate tests; this regression exercises finalization
+  # and relocation without populating the full dependency repository.
+  file(MAKE_DIRECTORY "${source}/CMake")
+  file(WRITE "${source}/CMake/BextDependencyInventory.cmake" [=[
+function(bext_collect_dependency_inventory)
+endfunction()
+function(bext_inventory_package_records out)
+  set(${out} "pathprobe|pathprobe/source|SPDXRef-Package-pathprobe-source|TRUE" PARENT_SCOPE)
+endfunction()
+]=])
+  file(WRITE "${build}/active-components.txt" "pathprobe\n")
+  file(WRITE "${build}/component-ownership.txt" "pathprobe|.*\n")
+  file(WRITE "${build}/install-exclude.txt" "")
+  file(WRITE "${build}/sbom-selectors.cmake" "set(BEXT_SBOM_SELECTOR_IDS)\n")
+  file(WRITE "${build}/bext.spdx.json" "{}\n")
   set(finalize "${CMAKE_COMMAND}"
     "-DBEXT_INSTALL_ROOT=${install}" "-DBEXT_MANIFEST=${manifest}"
+    "-DBEXT_INSTALL_EXCLUDE_MANIFEST=${output}/bext-install-exclude.json"
+    "-DBEXT_INSTALL_EXCLUDE_RULES=${build}/install-exclude.txt"
+    "-DBEXT_COMPONENT_MANIFEST=${output}/bext-component-manifest.json"
+    "-DBEXT_COMPONENT_OWNERSHIP_RULES=${build}/component-ownership.txt"
+    "-DBEXT_ACTIVE_COMPONENTS=${build}/active-components.txt"
+    "-DBEXT_SBOM_SELECTORS=${build}/sbom-selectors.cmake"
+    "-DBEXT_SBOM=${build}/bext.spdx.json"
     "-DBEXT_SOURCE_ROOT=${source}" "-DBEXT_BINARY_ROOT=${build}"
     "-DBEXT_NOINSTALL_ROOT=${noinstall}" "-DBEXT_STRCLEAR=${STRCLEAR}"
     "-DBEXT_PLIEF=${PLIEF}" -DBIN_DIR=bin -DLIB_DIR=lib

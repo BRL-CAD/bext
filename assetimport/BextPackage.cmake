@@ -1,0 +1,142 @@
+bext_package(assetimport OUTPUT install GROUPS BRLCAD)
+
+bext_sbom_component("assetimport/assimp"
+  UPSTREAM_URL "https://github.com/assimp/assimp"
+  PURL_BASE "pkg:github/assimp/assimp"
+)
+
+bext_sbom_component("assetimport/assimp" NAME "assimp")
+
+bext_sbom_component("assetimport/assimp"
+  LICENSE "BSD-3-Clause"
+  LICENSE_FILE "./LICENSE"
+  LICENSE_SHA256 "21195d410708b82757d3e34c3a40c427f6e59339da862e9480d4fcdc79b7a1bd"
+  LICENSE_COMMENT "Test-model exceptions are not built, and bundled runtime contributions are represented separately."
+  PURPOSE "LIBRARY"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/poly2tri"
+  NAME "Poly2Tri"
+  UPSTREAM_URL "https://github.com/jhasse/poly2tri"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/poly2tri"
+  LICENSE "BSD-3-Clause"
+  LICENSE_FILE "contrib/poly2tri/LICENSE"
+  LICENSE_SHA256 "578790e1377a270831ede8c64d7c92d411b6e5a55ce32fbb84a35b376af25ee0"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/openddlparser"
+  NAME "OpenDDL Parser"
+  VERSION "0.4.0"
+  UPSTREAM_URL "https://github.com/kimkulling/openddl-parser"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/openddlparser"
+  LICENSE "MIT"
+  LICENSE_FILE "contrib/openddlparser/LICENSE"
+  LICENSE_SHA256 "656597ef86119e4a526fb8621e0112b95051cf9d63a311b09b3a73346da00ead"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/rapidjson"
+  NAME "RapidJSON"
+  VERSION "1.1.0"
+  UPSTREAM_URL "https://github.com/Tencent/rapidjson"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/rapidjson"
+  LICENSE "MIT AND BSD-3-Clause"
+  LICENSE_FILE "contrib/rapidjson/license.txt"
+  LICENSE_SHA256 "a140e5d46fe734a1c78f1a3c3ef207871dd75648be71fdda8e309b23ab8b1f32"
+  LICENSE_COMMENT "Assimp compiles RapidJSON headers, not bin/jsonchecker, which is the only JSON-license directory identified by RapidJSON's notice."
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/utf8cpp"
+  NAME "utf8cpp"
+  VERSION "3.2.3"
+  UPSTREAM_URL "https://github.com/nemtrif/utfcpp"
+  PURL "pkg:github/nemtrif/utfcpp@v3.2.3"
+  LICENSE "BSL-1.0"
+  LICENSE_FILE "contrib/utf8cpp/doc/LICENSE"
+  LICENSE_SHA256 "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/clipper"
+  NAME "Clipper"
+  UPSTREAM_URL "https://www.angusj.com/clipper2/Docs/Overview.htm"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/clipper"
+  LICENSE "BSL-1.0"
+  LICENSE_FILE "contrib/clipper/License.txt"
+  LICENSE_SHA256 "1bc8ddf91ba50e4186abb6b2339910e4529471ad8181b7cf2a5026c09ce09294"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/earcut-hpp"
+  NAME "earcut.hpp"
+  UPSTREAM_URL "https://github.com/mapbox/earcut.hpp"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/earcut-hpp"
+  LICENSE "ISC"
+  LICENSE_FILE "contrib/earcut-hpp/LICENSE"
+  LICENSE_SHA256 "828f2aed51b6526881a236758ec9b08cd69928fbfc70346d9d44a0b3a3444fe1"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/unzip"
+  NAME "MiniZip unzip"
+  VERSION "1.1"
+  UPSTREAM_URL "https://www.winimage.com/zLibDll/minizip.html"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/unzip"
+  LICENSE "Zlib"
+  LICENSE_FILE "contrib/unzip/unzip.h"
+  LICENSE_SHA256 "2ff9df0b1da7499adc806bc0ec098ef1c7b9d361a8fd5b08a98299a1a4e88399"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/zip"
+  NAME "zip"
+  UPSTREAM_URL "https://github.com/kuba--/zip"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/zip"
+  COPYRIGHT_TEXT "NONE"
+  LICENSE "Unlicense"
+  LICENSE_FILE "contrib/zip/UNLICENSE"
+  LICENSE_SHA256 "6a872e74952f8f332fc8eec087bf08ada61c4ef5cab5266de3a6dfb3e0ee309e"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/Open3DGC"
+  NAME "Open3DGC"
+  UPSTREAM_URL "https://github.com/assimp/assimp/tree/master/contrib/Open3DGC"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/Open3DGC"
+  LICENSE "MIT"
+  LICENSE_FILE "contrib/Open3DGC/o3dgcCommon.h"
+  LICENSE_SHA256 "b9d5f7597f1370a83030c94f782e159c1fceba613d8c7115a1dc4c4fdc0045de"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("assetimport/assimp" "contrib/stb"
+  NAME "stb_image"
+  VERSION "2.30"
+  UPSTREAM_URL "https://github.com/nothings/stb"
+  PURL_BASE "pkg:github/assimp/assimp"
+  PURL_SUBPATH "contrib/stb"
+  LICENSE "MIT OR Unlicense"
+  LICENSE_FILE "contrib/stb/stb_image.h"
+  LICENSE_SHA256 "594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
