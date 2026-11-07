@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/AcademySoftwareFoundation/OpenColorIO@v2.3.2",
+      "targetPurl": "pkg:conan/opencolorio@2.3.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/4662ebbdeba0348dffb6e7580dd4d2d1af3c6467/recipes/opencolorio/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same opencolorio 2.3.2 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

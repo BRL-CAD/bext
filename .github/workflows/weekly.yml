@@ -42,10 +42,16 @@ jobs:
       - name: Validate SBOM formats and advisory projections
         run: python3 CMake/tests/test_sbom_formats.py -v
 
+      - name: Validate VEX evidence and generation
+        run: python3 CMake/tests/test_vex_generation.py -v
+
       - name: Install SBOM validators
         run: |
           python3 -m venv "$RUNNER_TEMP/sbom-tools"
           "$RUNNER_TEMP/sbom-tools/bin/python" -m pip install -r CMake/sbom-requirements.txt
+
+      - name: Validate component manifest schema
+        run: '"$RUNNER_TEMP/sbom-tools/bin/python" CMake/tests/test_component_manifest.py -v'
 
       - name: Validate dependency metadata and documentation
         # Source attribution and aggregate license evidence are checked against

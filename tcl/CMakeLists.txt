@@ -117,6 +117,12 @@ set(DISABLE_TCL "${DISABLE_TCL}" CACHE BOOL "Disable tcl build")
 
 if (ENABLE_TCL)
 
+  bext_sbom_selector(tcl
+    TARGET TCL_BLD
+    SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/SbomSelection.cmake"
+    FUNCTION bext_tcl_selected_packages
+    CACHE "${CMAKE_BINARY_DIR}/CMakeCache.txt")
+
   set(TCL_COMPONENT_OWNERSHIP
     "^bin/tcl[^/]*"
     "^include/(itcl|tcl)[^/]*"
@@ -146,7 +152,8 @@ if (ENABLE_TCL)
   endif ()
   list(APPEND TCL_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
-  set(TCL_INPUT_FILES)
+  set(TCL_INPUT_FILES "${CMAKE_CURRENT_LIST_FILE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/BuildSettings.cmake")
   set(TCL_SQLITE_SETUP_COMMANDS)
   if (BEXT_TCL_ENABLE_DATABASE_PACKAGES)
     set(TCL_SQLITE_SOURCE_DIR "${PROJECT_SOURCE_DIR}/sqlite3/sqlite3")
@@ -388,6 +395,8 @@ if (ENABLE_TCL)
 
   endif (NOT MSVC)
 
+  # Downstream toolkit builds still need this staged implementation tree.
+  set_property(TARGET TCL_BLD PROPERTY BEXT_RETAIN_WORK_UNTIL_FINALIZE TRUE)
   TargetInstallDeps(TCL TCL_DEPENDS)
 
   # Scripts expect a non-versioned tclsh program, but the Tcl build doesn't provide one,
@@ -403,6 +412,8 @@ if (ENABLE_TCL)
       DEPENDS TCL_BLD-install
       )
   endif (MSVC)
+
+  set_property(GLOBAL APPEND PROPERTY BEXT_INSTALL_FIXUP_TARGETS tclsh_cpy)
 
   # The library file permissions end up a bit strange - fix them
   find_program(CHMOD_EXECUTABLE chmod)
@@ -421,6 +432,7 @@ if (ENABLE_TCL)
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${LIB_PREFIX}tclstub${TCL_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}
       DEPENDS TCL_BLD-install
       )
+    set_property(GLOBAL APPEND PROPERTY BEXT_INSTALL_FIXUP_TARGETS tcl_permissionsfix)
   endif (CHMOD_EXECUTABLE)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX

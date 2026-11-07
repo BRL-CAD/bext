@@ -111,6 +111,7 @@ if (ENABLE_ITK)
       )
   endif (NOT MSVC)
 
+  set_property(TARGET ITK_BLD PROPERTY BEXT_RETAIN_WORK_UNTIL_FINALIZE TRUE)
   TargetInstallDeps(ITK ITK_DEPENDS)
 
   configure_file(

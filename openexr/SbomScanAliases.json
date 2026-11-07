@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/AcademySoftwareFoundation/openexr@v3.2.4",
+      "targetPurl": "pkg:conan/openexr@3.2.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/2dd5b2b4115c9829753b175818ca16f60106190e/recipes/openexr/3.x/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same openexr 3.2.4 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

@@ -285,6 +285,14 @@ list(SORT BEXT_GRAPH_PROJECT_FILES)
 ###############################################################################
 include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/Utils.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/BextDependencyInventory.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/BextVex.cmake")
+
+# Load shared settings before wrappers select implementation-coupled stacks.
+file(GLOB BEXT_PACKAGE_SETTINGS CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/*/BuildSettings.cmake")
+foreach(package_settings IN LISTS BEXT_PACKAGE_SETTINGS)
+  include("${package_settings}")
+endforeach()
 
 
 ###############################################################################
@@ -628,18 +636,6 @@ add_project(embree GROUPS "APPLESEED;OSPRAY")
 # TCL - scripting language.  For Tcl/Tk builds we want
 # static lib building on so we get the stub libraries.
 # https://www.tcl.tk
-set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
-# Tcl 8.6.18 bundles Itcl 4.3.7.  Itk remains a separate upstream project.
-# Keep the compatibility floors distinct from the bundled versions so a newer
-# system installation can be used without changing the versions we ship.
-set(BEXT_ITCL_MIN_VERSION "4.3.0")
-set(BEXT_ITCL_BUNDLED_VERSION "4.3.7")
-set(BEXT_ITCL_BUNDLED_SOURCE_DIR
-  "${CMAKE_SOURCE_DIR}/tcl/tcl/pkgs/itcl${BEXT_ITCL_BUNDLED_VERSION}"
-  )
-set(BEXT_ITK_MIN_VERSION "4.2.3")
-set(BEXT_ITK_BUNDLED_VERSION "4.2.7")
-set(BEXT_TK_COMPONENTS "archer;mged;bwish;rtwizard;brlman")
 add_project(tcl GROUPS "TCL")
 add_project(tk GROUPS "TCL")
 add_project(itk GROUPS "TCL")
@@ -714,6 +710,9 @@ list(SORT BEXT_ACTIVE_COMPONENTS)
 string(REPLACE ";" "\n" BEXT_ACTIVE_COMPONENTS_TEXT "${BEXT_ACTIVE_COMPONENTS}")
 file(WRITE "${BEXT_ACTIVE_COMPONENTS_FILE}" "${BEXT_ACTIVE_COMPONENTS_TEXT}\n")
 bext_write_sbom_selectors("${BEXT_SBOM_SELECTORS_FILE}")
+set(BEXT_VEX_REGISTRY "${CMAKE_BINARY_DIR}/CMakeFiles/bext-vex/registry.json")
+set(BEXT_VEX_PROOF "${CMAKE_BINARY_DIR}/CMakeFiles/bext-vex/finalization.json")
+bext_configure_vex("${BEXT_VEX_REGISTRY}")
 set(BEXT_FINALIZE_SCRIPT "${CMAKE_SOURCE_DIR}/CMake/FinalizeInstall.cmake")
 get_property(BEXT_INSTALL_TARGETS GLOBAL PROPERTY BEXT_INSTALL_TARGETS)
 list(REMOVE_DUPLICATES BEXT_INSTALL_TARGETS)
@@ -723,6 +722,11 @@ if (BEXT_DISCARD_WORK)
   set(BEXT_FINALIZE_ALL)
 endif ()
 add_custom_target(bext_finalize ${BEXT_FINALIZE_ALL}
+  COMMAND "${BEXT_VEX_PYTHON}" "${CMAKE_SOURCE_DIR}/CMake/CaptureVexEvidence.py"
+    --before-finalize "${BEXT_VEX_REGISTRY}"
+    --install-root "${CMAKE_BUNDLE_INSTALL_PREFIX}" --output "${BEXT_VEX_PROOF}"
+    --previous-evidence "${CMAKE_INSTALL_PREFIX}/bext-vex-evidence.json"
+    --previous-vex "${CMAKE_INSTALL_PREFIX}/bext.openvex.json"
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_INSTALL_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DBEXT_MANIFEST=${BEXT_INSTALL_MANIFEST}
@@ -742,16 +746,33 @@ add_custom_target(bext_finalize ${BEXT_FINALIZE_ALL}
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -P ${BEXT_FINALIZE_SCRIPT}
+  COMMAND "${BEXT_VEX_PYTHON}" "${CMAKE_SOURCE_DIR}/CMake/GenerateVex.py"
+    --sbom "${BEXT_SBOM_OUTPUT}" --manifest "${BEXT_COMPONENT_MANIFEST}"
+    --install-root "${CMAKE_BUNDLE_INSTALL_PREFIX}"
+    --registry "${BEXT_VEX_REGISTRY}" --proof "${BEXT_VEX_PROOF}"
+    --output-dir "${CMAKE_INSTALL_PREFIX}" --cmake "${CMAKE_COMMAND}"
   DEPENDS ${BEXT_INSTALL_TARGETS}
   VERBATIM
 )
+get_property(BEXT_VEX_TARGETS GLOBAL PROPERTY BEXT_VEX_TARGETS)
+if(BEXT_VEX_TARGETS)
+  add_dependencies(bext_finalize ${BEXT_VEX_TARGETS})
+endif()
+add_custom_target(vex_scan
+  COMMAND "${BEXT_VEX_PYTHON}" "${CMAKE_SOURCE_DIR}/CMake/ScanVex.py"
+    --input "${CMAKE_INSTALL_PREFIX}/bext.build.spdx.json"
+    --vex "${CMAKE_INSTALL_PREFIX}/bext.openvex.json"
+    --output-dir "${CMAKE_BINARY_DIR}/bext-vex-scans"
+  DEPENDS bext_finalize
+  VERBATIM)
 if (TARGET STRCLEAR_BLD-install)
   add_dependencies(bext_finalize STRCLEAR_BLD-install)
 endif ()
 if (TARGET PLIEF_BLD-install)
   add_dependencies(bext_finalize PLIEF_BLD-install)
 endif ()
-foreach(fixup tclsh_cpy tcl_permissionsfix tk_permissionsfix)
+get_property(BEXT_INSTALL_FIXUP_TARGETS GLOBAL PROPERTY BEXT_INSTALL_FIXUP_TARGETS)
+foreach(fixup IN LISTS BEXT_INSTALL_FIXUP_TARGETS)
   if (TARGET ${fixup})
     add_dependencies(bext_finalize ${fixup})
   endif ()
@@ -884,6 +905,7 @@ add_custom_target(sbom
   VERBATIM
 )
 add_dependencies(bext_finalize sbom)
+
 find_program(BEXT_SPDX_VALIDATOR NAMES pyspdxtools)
 if(BEXT_SPDX_VALIDATOR)
   add_custom_command(TARGET sbom POST_BUILD

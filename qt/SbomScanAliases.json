@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/PCRE2Project/pcre2@pcre2-10.47",
+      "targetPurl": "pkg:conan/pcre2@10.47",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/pcre2/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same PCRE2 10.47 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/PCRE2Project/pcre2@pcre2-10.48",
+      "targetPurl": "pkg:conan/pcre2@10.48",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/pcre2/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same PCRE2 10.48 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/freetype/freetype@VER-2-14-3",
+      "targetPurl": "pkg:conan/freetype@2.14.3",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/freetype/meson/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same Freetype 2 2.14.3 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/mity/md4c@release-0.5.2",
+      "targetPurl": "pkg:conan/md4c@0.5.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/d7fc0cd8e380faba82115df5d73dc574807c42fb/recipes/md4c/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same MD4C 0.5.2 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/mity/md4c@release-0.5.3",
+      "targetPurl": "pkg:conan/md4c@0.5.3",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/d7fc0cd8e380faba82115df5d73dc574807c42fb/recipes/md4c/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same MD4C 0.5.3 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

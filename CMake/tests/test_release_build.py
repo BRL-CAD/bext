@@ -104,6 +104,8 @@ include("@MODULE@/Utils.cmake")
 '''.replace('@NAME@', name).replace('@name@', name.lower()).replace('@FAILURE@', failure.as_posix())
             if index:
                 wrapper += 'ExternalProject_Add_StepDependencies(' + name + '_BLD configure ' + names[index - 1] + '_BLD-install)\n'
+            if deferred and name in ('TCL', 'TK', 'ITK'):
+                wrapper += f'set_property(TARGET {name}_BLD PROPERTY BEXT_RETAIN_WORK_UNTIL_FINALIZE TRUE)\n'
             if nested:
                 directory = self.source / 'wrappers' / name.lower()
                 directory.mkdir(parents=True)
@@ -120,6 +122,11 @@ include("@MODULE@/Utils.cmake")
 '''
         finalize = '''
 if(EXPECT_DISCARD)
+  file(GLOB_RECURSE native_manifests "@BUILD@/*/install_manifest.txt")
+  list(LENGTH native_manifests native_manifest_count)
+  if(native_manifest_count LESS @COUNT@)
+    message(FATAL_ERROR "Native install manifests were lost before finalization")
+  endif()
   file(GLOB selector_caches "@BUILD@/CMakeFiles/bext-sbom-selector-caches/*.cache")
   list(LENGTH selector_caches selector_cache_count)
   if(NOT selector_cache_count EQUAL 1)
@@ -141,7 +148,7 @@ if(EXISTS "@FAIL_FINALIZE@")
   message(FATAL_ERROR "Requested finalization failure")
 endif()
 file(WRITE "@PREFIX@/finalized" "done")
-'''.replace('@DEFERRED@', 'TRUE' if deferred else 'FALSE').replace('@BUILD@', self.build.as_posix()).replace('@PREFIX@', self.prefix.as_posix()).replace('@FAIL_FINALIZE@', self.final_failure.as_posix())
+'''.replace('@COUNT@', str(len(names))).replace('@DEFERRED@', 'TRUE' if deferred else 'FALSE').replace('@BUILD@', self.build.as_posix()).replace('@PREFIX@', self.prefix.as_posix()).replace('@FAIL_FINALIZE@', self.final_failure.as_posix())
         (self.source / 'finalize.cmake').write_text(finalize)
         cmake += '''
 set(finalize_all ALL)
@@ -181,6 +188,10 @@ bext_configure_release_build()
                 self.assertFalse(Path(project[key]).exists())
             self.assertTrue(Path(project['stamp_dir']).is_dir())
             self.assertTrue(Path(project['tmp_dir']).is_dir())
+            manifest = Path(project['preserved_install_manifest'])
+            self.assertTrue(manifest.is_file())
+            for name in manifest.read_text().splitlines():
+                self.assertTrue(Path(name).exists())
         self.assertTrue((self.source / 'first/first.c').is_file())
         self.assertTrue(list((self.prefix / 'install/lib').glob('*first*')))
         self.assertTrue((self.build / 'bext-release-logs/FIRST_BLD.log').is_file())

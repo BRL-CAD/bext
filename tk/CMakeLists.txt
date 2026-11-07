@@ -224,8 +224,11 @@ if (TK_DO_BUILD)
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${LIB_PREFIX}tkstub${TCL_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}
       DEPENDS TK_BLD-install
       )
+    set_property(GLOBAL APPEND PROPERTY BEXT_INSTALL_FIXUP_TARGETS tk_permissionsfix)
   endif (CHMOD_EXECUTABLE)
 
+  # Itk consumes private Tk implementation interfaces from this tree.
+  set_property(TARGET TK_BLD PROPERTY BEXT_RETAIN_WORK_UNTIL_FINALIZE TRUE)
   TargetInstallDeps(TK TK_DEPENDS)
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX

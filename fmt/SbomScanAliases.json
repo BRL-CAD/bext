@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/fmtlib/fmt@10.2.1",
+      "targetPurl": "pkg:conan/fmt@10.2.1",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/fmt/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same fmt 10.2.1 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

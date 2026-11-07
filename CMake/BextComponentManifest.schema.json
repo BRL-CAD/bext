@@ -25,13 +25,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["component", "id", "spdx_id", "primary"],
+        "required": ["component", "id", "spdx_id", "primary", "output"],
         "additionalProperties": false,
         "properties": {
           "component": {"type": "string", "minLength": 1},
           "id": {"type": "string", "minLength": 1},
           "spdx_id": {"type": "string", "pattern": "^SPDXRef-[A-Za-z0-9.-]+$"},
-          "primary": {"type": "boolean"}
+          "primary": {"type": "boolean"},
+          "output": {"enum": ["install", "noinstall"]},
+          "source_spdx_id": {"$ref": "#/properties/packages/items/properties/spdx_id"}
         }
       }
     }

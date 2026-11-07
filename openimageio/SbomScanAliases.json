@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/AcademySoftwareFoundation/OpenImageIO@v2.5.12.0",
+      "targetPurl": "pkg:conan/openimageio@2.5.12.0",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/5cc80c47dd9e139a036d972debae9246fc39083d/recipes/openimageio/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same OpenImageIO 2.5.12.0 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

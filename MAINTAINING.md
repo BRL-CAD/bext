@@ -256,6 +256,22 @@ keep that selection logic in `<dependency>/SbomSelection.cmake` and register it
 from the dependency wrapper with `bext_sbom_selector`. Set `TARGET` to the
 owning ExternalProject; discard builds snapshot its registered configure cache
 after installation and before removing the project's working tree.
+Keep shared package compatibility settings in `<dependency>/BuildSettings.cmake`.
+The root build discovers these before configuring wrappers so coupled stacks
+can inspect one another's requirements. Keep package-specific SBOM checks in
+`<dependency>/tests/Sbom.cmake`, defining `bext_test_<dependency>_sbom(sbom)`;
+`CMake/TestSbom.cmake` discovers and calls them using the shared assertions.
+Synthetic format and vulnerability fixtures remain with the generic tool tests.
+
+Wrappers register post-install fixup targets with the global
+`BEXT_INSTALL_FIXUP_TARGETS` property. Set an ExternalProject's
+`BEXT_RETAIN_WORK_UNTIL_FINALIZE` target property when downstream builds still
+need its staged implementation tree. The release driver does not maintain a
+list of special package names. Dependency-local `PrepareInstall.cmake` hooks
+run before final inventory collection; `FinalizeInstall.cmake` hooks run after
+binary processing. Hooks run only for active components, with the finalizer's
+install-root variables available, and must preserve the bundle contract.
+
 Keep top-level `add_project` calls and source declarations on individual lines
 with literal names, paths, URLs, and full commit IDs. Remove obsolete initializer
 calls rather than leaving them commented: current metadata readers may still
@@ -565,9 +581,20 @@ when selecting advisory aliases; do not infer identity from a local fork's
 name. Tools can still require a package ecosystem identity such as Conan
 instead of an upstream GitHub PURL.
 
-`CMake/SbomScanAliases.json` records exact source PURL to advisory PURL mappings,
-grouped by the ecosystem types accepted by a profile. The initial `conan`
-profile is useful with Trivy and can also be supplied to other consumers.
+Dependency-local `SbomScanAliases.json` files record exact source PURL to
+advisory PURL mappings. Put mappings with the upstream dependency's wrapper,
+or with the vendoring wrapper when that upstream has no separate wrapper.
+A shared upstream identity needs only one authoritative mapping, even when
+multiple components contain it. `CMake/SbomScanProfiles.json` defines the
+ecosystem types accepted by each profile. The initial `conan` profile is
+useful with Trivy and can also be supplied to other consumers.
+
+The projector discovers these catalogs without a central dependency list.
+Identical mappings shared by catalogs are accepted; conflicting mappings and
+duplicate entries within a catalog are rejected. The aggregate digest depends
+on the selected mappings, not their filesystem locations. `--aliases` can
+select another bext source root or an explicit self-contained catalog with
+its own `profiles` and `aliases` fields.
 Every entry includes pinned recipe evidence identifying the same upstream
 release and an explanation of the mapping. New versions require new evidence;
 the projection rejects mismatched versions and ambiguous aliases. Do not map
@@ -599,6 +626,216 @@ Mapping coverage is not proof of advisory database coverage. Compare those
 reports with actual scanner package counts; consumers may deduplicate repeated
 occurrences of the same upstream release. An empty vulnerability result is
 meaningful only with understood scan coverage.
+
+### Build inventories and VEX
+
+A configured build requires Python 3.8 or newer for finalization. The
+standalone source-inventory commands still require only CMake. Finalization
+now generates build inventories and OpenVEX automatically:
+
+```sh
+cmake --build build/release --target bext_finalize
+```
+
+For `BEXT_DISCARD_WORK=ON`, build the normal `bext_release` target instead.
+The post-install evidence step runs before source and build directories are
+discarded; its receipt survives in the top-level build directory. Reviews and
+build logic are covered by the immutable release-plan input checks.
+
+Alongside the install tree and component manifests, the configured install
+prefix receives:
+
+* `bext.build.spdx.json` and `bext.build.cdx.json`: finalized installed
+  dependencies, with build-specific identities.
+* `bext.build.conan.spdx.json` and `bext.build.conan.cdx.json`: scanner
+  projections, with corresponding `.coverage.json` reports.
+* `bext.openvex.json`: applicability statements for installed reviewed
+  components. No document is emitted when there are no such components,
+  because OpenVEX requires a nonempty statement list.
+* `bext-vex-evidence.json`: portable review records, captured source facts,
+  finalized file hashes, and the decisions established by this build.
+* `bext-vex-report.json`: applied reviews, reviews needing attention,
+  components not installed, and packages with no review records.
+
+Validate a finalized ownership manifest with the SBOM validation environment:
+
+```sh
+python3 CMake/ValidateSbom.py \
+  --component-manifest build/release/bext-component-manifest.json
+```
+
+Every package record declares `output` as `install` or `noinstall`.
+The schema also accepts `source_spdx_id` for downstream identity remapping.
+
+Canonical source inventories remain unchanged. An installed-product inventory
+excludes `noinstall` tools and packages removed by build selectors, including
+Tcl database packages when those are disabled. It describes bundled artifacts;
+system dependencies require separate provenance and inventory work.
+
+Each built package retains its upstream PURL in annotations or properties and
+adds a `bext_build` qualifier to its primary PURL. This qualifier fingerprints
+the finalized files, platform, package provenance, and product context. Tcl's
+private SQLite and the standalone SQLite library therefore receive distinct
+identities. Conan projections preserve the qualifier. The OpenVEX document
+names both the canonical and mapped qualified PURLs, allowing both scanner
+views to use the same decisions without asserting anything about every copy
+of that upstream release.
+
+### Maintaining applicability reviews
+
+Maintain reviewed decisions in each wrapper's `VexReviews.json`. These are
+review inputs, not scanner ignore lists. The initial records cover SQLite's
+CLI `.recover` finding (`CVE-2026-119586`) for the standalone and Tcl libraries,
+and Qt's patched CBOR issue (`CVE-2026-105924`). The SQLite shell implementation
+is absent from the shipped libraries; the shell build tool remains outside
+the bundled output. Qt's `fixed` decision requires the reviewed patch in the
+staged source. Neither conclusion is inferred from a version string alone.
+
+Each catalog has `schemaVersion: 1`, the wrapper `component`, its
+ExternalProject `target`, and a nonempty `reviews` list. Each review records:
+
+* A stable `id`, canonical SPDX `package` ID and unqualified `sourcePurl`,
+  CVE `vulnerability`, `status`, `scope`, `impactStatement`, UTC `reviewedAt`,
+  and HTTPS `references` supporting the analysis.
+* A standard OpenVEX `justification` for `not_affected`, or an
+  `actionStatement` for `affected`.
+* `conditions.sources`: reviewed submodule paths and full Git revisions.
+* `conditions.inputs`: allowed source-preparation input paths and SHA-256
+  hashes, including wrapper logic, patches, and files copied into sources.
+  `requiredInputs` identifies the inputs that must actually be used. An
+  unexpected applied patch also invalidates a review.
+* `conditions.stagedFiles`: root-relative staged source paths and SHA-256
+  hashes after copying and patching.
+* `conditions.requiredArtifacts`: a list of alternative-pattern groups.
+  Every group needs an installed match. Optional `forbiddenArtifacts`
+  patterns reject packaging that contradicts the decision.
+
+All recorded paths use relative POSIX syntax. Artifact patterns are matched
+against finalized component-owned paths, using case-sensitive shell glob
+rules. The catalog validator in `CMake/BextVex.py` rejects unknown fields,
+malformed identities, and incomplete conditions. See the existing catalogs
+for concrete records rather than creating a separate per-scanner exception.
+
+An ExternalProject post-install step captures clean source revisions, the
+inputs actually used by source preparation, relevant staged files, and
+installed artifact hashes. The finalizer binds this receipt to the files it
+processes, then records their finalized hashes. Repeated finalization can
+reuse previously established evidence only while those finalized bytes and
+the capture still match. Failed generation removes earlier assertions.
+
+A changed revision, dirty source checkout, changed or additional input,
+missing artifact, or mismatched evidence produces `under_investigation`
+and a `review_needed` report entry. It does not suppress the finding. Inspect
+the report after an update, review the source and build changes, update the
+conditions and review date, and rebuild the affected dependency. Refreshing
+hashes alone is not an applicability review. Unrelated documentation commits
+do not invalidate unchanged component facts.
+
+Use `scope: component` for facts independent of callers, such as absent code
+or an applied fix. Component-scoped `not_affected` reviews allow only
+`vulnerable_code_not_present` or `component_not_present`. Conclusions about
+execution paths, adversary control, or caller mitigations require
+`scope: product`, a `product` name, and the exact `conditions.productContext`
+digest reported by the generator. Such decisions require local review for a
+new product context and are never silently inherited downstream.
+
+### Scanning with VEX
+
+With Grype on PATH and its local database populated, the build target keeps
+raw and filtered JSON reports, scanner logs, and an audit summary under
+`bext-vex-scans`:
+
+```sh
+cmake --build build/release --target vex_scan
+```
+
+The scanner wrapper also accepts either finalized SBOM format and supports
+Trivy. For example, using the documented local tool environment:
+
+```sh
+. build/sbom-tools/env.sh
+python3 CMake/ScanVex.py \
+  --scanner grype --offline \
+  --input build/release/bext.build.spdx.json \
+  --vex build/release/bext.openvex.json \
+  --output-dir build/release/grype-results
+python3 CMake/ScanVex.py \
+  --scanner trivy --offline \
+  --input build/release/bext.build.conan.cdx.json \
+  --vex build/release/bext.openvex.json \
+  --output-dir build/release/trivy-results
+```
+
+Omit `--offline` to allow a database refresh before the baseline scan.
+The filtered scan reuses that database. The wrapper uses an empty scanner
+configuration and ignore file, clears common ambient ignore/VEX filters,
+and records suppressed findings separately in the summary. Missing VEX is
+valid for builds with no installed reviewed packages: both reports then
+contain the baseline findings. Review `bext-vex-report.json` as well as the
+scanner reports; an empty vulnerability report is not evidence of coverage.
+
+Trivy 0.76.2 reports vulnerabilities for only the first instance when multiple
+packages share an advisory lookup name and version, even with different
+build qualifiers. The wrapper partitions repeated variants into separate
+scans and merges their reports, retaining the native per-partition reports,
+logs, and SBOMs for audit. Use this workflow for Trivy when variants repeat;
+a direct scan of the combined inventory can omit an unreviewed copy.
+Grype 0.121.2 preserves those variants in the tested inventories.
+
+The offline generator tests exercise evidence invalidation, import rules,
+format parity, empty builds, and failed-publication cleanup. Scanner tests
+also check that a reviewed copy can be filtered while another copy of the
+same version and unrelated CVEs remain visible, in both formats:
+
+```sh
+python3 CMake/tests/test_vex_generation.py -v
+BEXT_VEX_SCANNER_TESTS=1 python3 CMake/tests/test_vex_scanners.py -v
+```
+
+The scanner tests make no database updates and are skipped by default.
+
+### Reusing bext evidence in BRL-CAD
+
+BRL-CAD can import `bext-vex-evidence.json`, combine its canonical SPDX source
+inventory with its own finalized component manifest, and generate statements
+for its final package selection:
+
+```sh
+python3 CMake/GenerateVex.py \
+  --product brlcad --author https://brlcad.org/ \
+  --sbom build/brlcad.spdx.json \
+  --manifest build/brlcad-component-manifest.json \
+  --install-root build/install \
+  --import-evidence build/bext-vex-evidence.json \
+  --output-dir build/release-metadata
+```
+
+The manifest uses the existing
+`https://brlcad.org/schema/bext-component-manifest-v2` structure: `platform`,
+`files` containing `path` and `component`, and `packages` containing
+`spdx_id`, `component`, and `output` (`install` or `noinstall`). If BRL-CAD
+renames an imported SPDX package ID, include its original bext ID as
+`source_spdx_id`. Keep the corresponding upstream PURL unchanged. Paths are
+relative to the final install root, and files must have explicit owners.
+
+Only decisions established by the exported build can be reused. Imported
+component files may be omitted or relocated, but each retained file must
+match an exported SHA-256 hash. Changed or additional component artifacts
+require new evidence. Reused statements receive the new product's build
+qualifiers. Product-scoped reviews require local reanalysis, and system
+libraries cannot inherit a bext-built library's decision by version match.
+This supplies the import interface; BRL-CAD's own build integration must
+provide its final inventory and ownership manifest.
+
+Release the matching SPDX, CycloneDX, OpenVEX, and evidence files together,
+using the project's existing release publication and signing process.
+The approach follows established vendoring practices: keep provenance and
+local changes with dependency recipes, then evaluate applicability for the
+built product. See [Chromium's dependency guidance](https://chromium.googlesource.com/chromium/src/+/main/docs/adding_to_third_party.md),
+[Yocto's vulnerability workflow](https://docs.yoctoproject.org/dev/security-manual/vulnerabilities.html),
+the [OpenVEX specification](https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md),
+[Grype filtering documentation](https://oss.anchore.com/docs/guides/vulnerability/filter-results/),
+and [Trivy VEX documentation](https://trivy.dev/docs/latest/supply-chain/vex/file/).
 
 | Tool | Use with bext | Setup without admin access |
 | --- | --- | --- |

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "component": "qt",
+  "target": "Qt6_BLD",
+  "reviews": [
+    {
+      "id": "qt-cbor-empty-url",
+      "package": "SPDXRef-Package-qt-qt",
+      "sourcePurl": "pkg:github/BRL-CAD/qt@3178765365af3497b0fe60d6cb0e1012027d9b75",
+      "vulnerability": "CVE-2026-105924",
+      "status": "fixed",
+      "scope": "component",
+      "impactStatement": "The official Qt 6.12 patch guards empty CBOR URL payloads during JSON conversion. The staged implementation and the installed Qt Core artifacts are verified for this build.",
+      "reviewedAt": "2026-11-07T00:56:29Z",
+      "references": [
+        "https://download.qt.io/official_releases/qt/6.12/CVE-2026-105924-qtbase-6.12.diff"
+      ],
+      "conditions": {
+        "sources": {
+          "qt/qt": "3178765365af3497b0fe60d6cb0e1012027d9b75"
+        },
+        "inputs": {
+          "qt/CMakeLists.txt": "9b087643c36ef9167b2e8018ef8502002eaa9a5ce167a1f6b2001656568d4f3d",
+          "qt/qt_CVE-2026-105924.patch": "c27d27b86aaf2cdab0c18d513fbb94a432e98782eddfc5f856387e4be68be50b",
+          "qt/qt_metadata.patch": "11c6d1d32b25da8f68528c944267f035417a4b2b28134416ae7a840550bc3315",
+          "qt/qt_xmin.patch": "9a0fc10b188a59b01e2692b4a1dfe5bf4cc4776ae35c9cd7a5af4b2d6d1c7677",
+          "qt/qtsvg.patch": "7787bf5287c3aff99b2bcc0ac9b49903cf705b4fd0d5c95f3f5c1c49dfc5e916",
+          "qt/qt_freebsd.patch": "d9bbd0becb52efbe12f5fd56dfe11003667bc42cfd265c3137fe655e9c723945"
+        },
+        "requiredInputs": [
+          "qt/CMakeLists.txt",
+          "qt/qt_CVE-2026-105924.patch"
+        ],
+        "stagedFiles": {
+          "src/corelib/serialization/qjsoncbor.cpp": "4433252aeada150fed7ec352be825504f56f50cad3e71aa50ce16300d9c199a1"
+        },
+        "requiredArtifacts": [
+          [
+            "lib*/libQt6Core.so*",
+            "lib*/libQt6Core*.dylib",
+            "lib*/libQt6Core.a",
+            "bin/Qt6Core*.dll"
+          ]
+        ],
+        "forbiddenArtifacts": []
+      }
+    }
+  ]
+}

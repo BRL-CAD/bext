@@ -1,0 +1,5 @@
+function(bext_test_zlib_sbom sbom)
+  bext_test_sbom_package(package "${sbom}" SPDXRef-Package-zlib-zlib)
+  bext_test_sbom_reference("${package}" cpe23Type "cpe:2.3:a:zlib:zlib:1.4:*:*:*:*:*:*:*")
+  bext_test_sbom_field("${package}" copyrightText "Copyright (C) 1995-2026 Jean-loup Gailly and Mark Adler")
+endfunction()
