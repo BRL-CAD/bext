@@ -107,7 +107,8 @@ selection further.
   [validation procedure](MAINTAINING.md#validation-and-ci) for script commands
   that do not require a configured build.
 * `check_dependency_metadata` validates committed metadata. The `sbom` target
-  writes the committed repository inventory to `bext.spdx.json`;
+  writes the committed repository inventory to `bext.spdx.json` and
+  `bext.cdx.json` (CycloneDX 1.6);
   `supply_chain_check` performs both operations. The SBOM always uses HEAD and
   is distinct from the finalized installed bundle manifest.
 * SBOM generation rejects a dirty checkout by default. Use

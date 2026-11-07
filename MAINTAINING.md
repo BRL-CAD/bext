@@ -230,7 +230,7 @@ preferences. Custom wrappers must preserve the same override precedence.
 | `cad_enable(PKG "component;...")` | Apply BRL-CAD component selection while preserving explicit local-build exclusions. Call before package selection. |
 | `bext_enable(Package)` | Probe a system package and choose a local fallback when allowed. Match the actual find-module or config-package name. |
 | `bext_local_source(PKG path url revision)` | Build a permitted, present CMake snapshot; skip an absent one. Cache the preference separately from availability. Does not track source or patch changes. |
-| `git_submodule_init(path checkfile [PATCH_FILES ...] [PATCH_COMMAND_VAR var])` | Populate an adopted source when its checkfile is absent, using bext's Git mappings. Track its revision and the ordered patch list; reset the wrapper build directory when that state changes. Call inside the enabled block. |
+| `git_submodule_init(path checkfile [PATCH_FILES ...] [INPUT_FILES ...] [PATCH_COMMAND_VAR var])` | Populate an adopted source when its checkfile is absent, using bext's Git mappings. Track its revision, ordered patch list, and other staging inputs; reset the wrapper build directory when that state changes. Only `PATCH_FILES` are passed to the patch tool. Call inside the enabled block. |
 | `bext_patch_command(var patch-file...)` | Assemble ordered patch commands using the shared patch tool and options. Does not register change tracking or reset staged sources. |
 | `RegisterDeps(PKG)` | Read `<wrapper>.deps`, require prerequisites to have been considered earlier, and expose `*_TARGET` flags. |
 | `TargetInstallDeps(PKG PKG_DEPENDS)` | Make the external project's configure step wait for locally built prerequisite install steps. |
@@ -413,6 +413,7 @@ in a fresh output tree when removed or changed products could remain installed.
 | `noinstall/` | Build tools and compile-time-only assets; not automatically part of a downstream binary distribution. |
 | `bext-install-manifest.json` | Finalized installed-file classifications and producer-prefix information used by downstream staging. |
 | `bext.spdx.json` | Repository dependency inventory for a committed bext revision, including projects outside the active build profile. |
+| `bext.cdx.json` | The same source inventory serialized as CycloneDX 1.6 JSON. |
 
 Wrappers install into their designated prefix using normal `bin`, `lib`,
 `include`, and `share` layout. Copy bundled legal notices into
@@ -494,6 +495,164 @@ It deliberately rejects INDEX mode rather than labeling staged metadata as a
 committed artifact. `supply_chain_check` combines the committed check and SBOM.
 The metadata parsers are those in the current scripts; when changing those
 scripts, exercise their behavior explicitly even if inventory data is committed.
+
+### SBOM formats and local tools
+
+The `sbom` target emits SPDX 2.3 and CycloneDX 1.6 without requiring Python or
+external converters. Both writers use the same resolved inventory: the
+CycloneDX writer consumes its SPDX-shaped JSON representation, without
+re-reading package descriptors or independently resolving identities. For a
+standalone invocation, pass both output names:
+
+```sh
+cmake -DBEXT_SOURCE_DIR="$PWD" \
+  -DBEXT_SBOM_OUTPUT="$PWD/build/sbom-tools/results/bext.spdx.json" \
+  -DBEXT_CYCLONEDX_OUTPUT="$PWD/build/sbom-tools/results/bext.cdx.json" \
+  -P CMake/GenerateSbom.cmake
+```
+
+Add `-DBEXT_SBOM_ALLOW_DIRTY=ON` for an intentional development inventory.
+This retains HEAD metadata and labels the document with dirty-tree provenance.
+The source checkouts required above must still be populated.
+
+CycloneDX `bom-ref` values retain package SPDX identifiers. Nested components
+represent `CONTAINS`; dependency edges represent only `DEPENDS_ON`. The metadata
+component describes the whole repository inventory, including inactive groups.
+Its lifecycle is `pre-build`. Source aggregates, including Qt, use `library`
+rather than implying a runtime container image; the original purpose remains
+in `bext:spdx:primaryPackagePurpose`.
+
+CycloneDX licenses use the concluded expression when asserted, otherwise the
+declared expression, with the corresponding acknowledgement. `NONE` and
+`NOASSERTION` do not become license expressions. Both original assertions,
+source provenance, comments, and copyright assertions remain in `bext:spdx:*`
+properties. Custom license texts accompany their original identifiers in
+license evidence. Serial numbers and timestamps are reproducible.
+
+Install independent validators in a local virtual environment, without admin
+access or changes to the system Python:
+
+```sh
+python3 -m venv build/sbom-tools/venv
+build/sbom-tools/venv/bin/python -m pip install -r CMake/sbom-requirements.txt
+build/sbom-tools/venv/bin/python CMake/ValidateSbom.py \
+  --spdx build/sbom-tools/results/bext.spdx.json \
+  --cyclonedx build/sbom-tools/results/bext.cdx.json
+python3 CMake/tests/test_sbom_formats.py -v
+```
+
+This runs the official [SPDX validator](https://github.com/spdx/tools-python)
+and [CycloneDX strict JSON validator](https://github.com/CycloneDX/cyclonedx-python-lib),
+then checks package identity, source downloads, licenses and evidence,
+containment, document provenance, and dependency parity. The pinned Python
+requirements include JSON validation only; XML libraries are unnecessary.
+FreeBSD may compile Python dependencies locally, requiring an available C/Rust
+toolchain. Ordinary SBOM generation does not need these validation packages.
+
+For an already configured build, set `BEXT_SBOM_PYTHON` to the virtual
+environment's Python at configure time, then build `sbom_validate` or
+`sbom_scan_inputs`. The former runs both specification validators and parity;
+the latter generates advisory projections and coverage reports. Neither target
+builds the dependency libraries. Weekly CI installs the validators explicitly,
+runs both formats and projections, and fails on validation errors.
+
+### Advisory identities and scanner coverage
+
+Upstream identity and source provenance serve different purposes. Package
+descriptors already record upstream URLs and release PURLs separately from
+the exact vendored download locations and commits. Use that upstream identity
+when selecting advisory aliases; do not infer identity from a local fork's
+name. Tools can still require a package ecosystem identity such as Conan
+instead of an upstream GitHub PURL.
+
+`CMake/SbomScanAliases.json` records exact source PURL to advisory PURL mappings,
+grouped by the ecosystem types accepted by a profile. The initial `conan`
+profile is useful with Trivy and can also be supplied to other consumers.
+Every entry includes pinned recipe evidence identifying the same upstream
+release and an explanation of the mapping. New versions require new evidence;
+the projection rejects mismatched versions and ambiguous aliases. Do not map
+an arbitrary commit, embedded subpath, or downstream fork to a release merely
+because the names resemble each other.
+
+```sh
+for format in spdx cdx; do
+  python3 CMake/ProjectSbom.py \
+    --input "build/sbom-tools/results/bext.$format.json" \
+    --output "build/sbom-tools/results/bext.conan.$format.json" \
+    --report "build/sbom-tools/results/coverage-$format.json"
+done
+```
+
+The separate, labelled projections preserve the source documents. SPDX keeps
+the canonical PURL as an additional reference and records alias provenance in
+annotations. CycloneDX keeps the original name and PURL in properties and uses
+a flat component list, retaining containment in `bext:source:parent` properties.
+This accommodates consumers that ignore nested CycloneDX components. The
+projection uses the ecosystem lookup name as well as its PURL, because some
+scanners match names independently. Graphs, source revisions, and source
+download locations remain intact. A matching alias identifies advisory
+candidates; it does not claim the library was installed through that package
+manager or that an upstream vulnerability applies after local patches.
+
+Reports enumerate mapped and unmapped packages and distinct mapped PURLs.
+Mapping coverage is not proof of advisory database coverage. Compare those
+reports with actual scanner package counts; consumers may deduplicate repeated
+occurrences of the same upstream release. An empty vulnerability result is
+meaningful only with understood scan coverage.
+
+| Tool | Use with bext | Setup without admin access |
+| --- | --- | --- |
+| [Grype](https://github.com/anchore/grype) | Scan both formats, including the reviewed CPEs already emitted by bext. Triage upstream matches against patches and build selection. | A native Go source build works on FreeBSD; official release binaries cover Linux, macOS, and Windows. |
+| [Trivy](https://trivy.dev/docs/latest/target/sbom/) | Exercise ecosystem aliases. The tested release does not scan our original `github`, `git`, and `generic` PURLs or use SPDX CPE references for matching. | Native FreeBSD release archive; extract into a user-owned directory and verify its published checksum. |
+| [sbomqs](https://github.com/interlynk-io/sbomqs) | Inspect quality and missing metadata in both formats. Interpret scores against the purpose of a source inventory. | Native Go source build works on FreeBSD. |
+| [Syft](https://github.com/anchore/syft) | Independently read the output or compare an artifact scan with declared metadata. Conversion is useful for experiments; check for lost information. | Native Go source build works on FreeBSD. |
+| [sbomdiff](https://github.com/anthonyharrison/sbomdiff), [sbom2dot](https://github.com/anthonyharrison/sbom2dot) | Compare component versions/licenses and draw dependency graphs. These complement specification and parity checks. | Install in the same virtual environment; render DOT with Graphviz if available. |
+| [CycloneDX CLI](https://github.com/CycloneDX/cyclonedx-cli) | Additional conversion, diff, merge, and signature experiments. Cross-format conversion can lose information. | Official releases cover Linux, macOS, and Windows; use those hosts for the prebuilt CLI. |
+
+For example, with Go available (some FreeBSD installations name it `go127`),
+install the tested Go tools under the build directory:
+
+```sh
+mkdir -p build/sbom-tools/bin
+GOBIN="$PWD/build/sbom-tools/bin" go127 install github.com/anchore/grype/cmd/grype@v0.121.2
+GOBIN="$PWD/build/sbom-tools/bin" go127 install github.com/anchore/syft/cmd/syft@v1.57.0
+GOBIN="$PWD/build/sbom-tools/bin" go127 install github.com/interlynk-io/sbomqs/v2@v2.1.3
+build/sbom-tools/venv/bin/python -m pip install sbomdiff==0.6.0 sbom2dot==0.3.2
+```
+
+Keep vulnerability databases in user-owned directories. Initial downloads need
+network access and substantial disk space; subsequent scans can reuse them:
+
+```sh
+GRYPE_DB_CACHE_DIR="$PWD/build/sbom-tools/grype-cache" \
+  build/sbom-tools/bin/grype sbom:build/sbom-tools/results/bext.spdx.json -o json \
+  > build/sbom-tools/results/grype-spdx.json
+build/sbom-tools/bin/trivy --cache-dir build/sbom-tools/trivy-cache sbom \
+  --format json --output build/sbom-tools/results/trivy-conan.json \
+  build/sbom-tools/results/bext.conan.spdx.json
+build/sbom-tools/bin/sbomqs score --json build/sbom-tools/results/bext.spdx.json \
+  > build/sbom-tools/results/quality-spdx.json
+```
+
+Trivy's [`github`/`generic` PURL coverage](https://github.com/aquasecurity/trivy/blob/v0.76.2/pkg/purl/purl.go)
+and [SPDX reference handling](https://github.com/aquasecurity/trivy/blob/v0.76.2/pkg/sbom/spdx/unmarshal.go)
+explain why successful parsing of the canonical source inventory can produce
+zero scanned packages. Keep a known-vulnerable synthetic fixture separate
+from release inventories when testing scanner matching; never change real
+dependency versions to manufacture a finding.
+
+The checked-in positive control exercises ecosystem matching without fetching
+or building vulnerable source code:
+
+```sh
+build/sbom-tools/bin/trivy --cache-dir build/sbom-tools/trivy-cache sbom \
+  CMake/tests/fixtures/vulnerable-zlib.spdx.json
+```
+
+With the tested database this reports `CVE-2018-25032` and `CVE-2022-37434`.
+This fixture also supplies a CPE for a Grype positive control. It must never be
+included in release inventories or interpreted as the project's actual zlib
+version. Advisory counts and severities can change as databases are updated.
 
 ### Match checks to the change
 

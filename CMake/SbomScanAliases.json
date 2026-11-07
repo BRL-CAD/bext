@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "profiles": {
+    "conan": [
+      "conan"
+    ]
+  },
+  "aliases": [
+    {
+      "sourcePurl": "pkg:generic/giflib@5.2.2",
+      "targetPurl": "pkg:conan/giflib@5.2.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/giflib/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same giflib 5.2.2 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:generic/sqlite@3.53.4",
+      "targetPurl": "pkg:conan/sqlite3@3.53.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/sqlite3/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same sqlite3 3.53.4 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:generic/sqlite@3.54.1",
+      "targetPurl": "pkg:conan/sqlite3@3.54.1",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/sqlite3/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same sqlite3 3.54.1 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:git/gitlab.com/libeigen/eigen.git@5.0.1",
+      "targetPurl": "pkg:conan/eigen@5.0.1",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/eigen/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same eigen 5.0.1 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:git/gitlab.com/libtiff/libtiff@v4.7.2",
+      "targetPurl": "pkg:conan/libtiff@4.7.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/libtiff/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same tiff 4.7.2 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/AcademySoftwareFoundation/OpenColorIO@v2.3.2",
+      "targetPurl": "pkg:conan/opencolorio@2.3.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/4662ebbdeba0348dffb6e7580dd4d2d1af3c6467/recipes/opencolorio/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same opencolorio 2.3.2 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/AcademySoftwareFoundation/OpenImageIO@v2.5.12.0",
+      "targetPurl": "pkg:conan/openimageio@2.5.12.0",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/5cc80c47dd9e139a036d972debae9246fc39083d/recipes/openimageio/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same OpenImageIO 2.5.12.0 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/AcademySoftwareFoundation/openexr@v3.2.4",
+      "targetPurl": "pkg:conan/openexr@3.2.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/2dd5b2b4115c9829753b175818ca16f60106190e/recipes/openexr/3.x/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same openexr 3.2.4 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/OSGeo/libgeotiff@1.7.4",
+      "targetPurl": "pkg:conan/libgeotiff@1.7.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/libgeotiff/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same libgeotiff 1.7.4 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/PCRE2Project/pcre2@pcre2-10.47",
+      "targetPurl": "pkg:conan/pcre2@10.47",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/pcre2/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same PCRE2 10.47 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/PCRE2Project/pcre2@pcre2-10.48",
+      "targetPurl": "pkg:conan/pcre2@10.48",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/pcre2/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same PCRE2 10.48 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/RenderKit/embree@v4.4.1",
+      "targetPurl": "pkg:conan/embree@4.4.1",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/embree/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same embree 4.4.1 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/apache/xerces-c@v3.2.5",
+      "targetPurl": "pkg:conan/xerces-c@3.2.5",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/xerces-c/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same xerces-c 3.2.5 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/ebiggers/libdeflate@v1.20",
+      "targetPurl": "pkg:conan/libdeflate@1.20",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/36b57d3bc07657e26de7be98f687cfa850618e42/recipes/libdeflate/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same libdeflate 1.20 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/facebook/zstd@v1.5.6",
+      "targetPurl": "pkg:conan/zstd@1.5.6",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/zstd/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same facebook/zstd upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/fmtlib/fmt@10.2.1",
+      "targetPurl": "pkg:conan/fmt@10.2.1",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/fmt/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same fmt 10.2.1 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/freetype/freetype@VER-2-14-3",
+      "targetPurl": "pkg:conan/freetype@2.14.3",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/freetype/meson/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same Freetype 2 2.14.3 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/imageworks/pystring@v1.1.4",
+      "targetPurl": "pkg:conan/pystring@1.1.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/pystring/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same pystring 1.1.4 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/jbeder/yaml-cpp@0.8.0",
+      "targetPurl": "pkg:conan/yaml-cpp@0.8.0",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/yaml-cpp/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same jbeder/yaml-cpp upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/json-c/json-c@json-c-0.15-20200726",
+      "targetPurl": "pkg:conan/json-c@0.15",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/json-c/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same json-c 0.15 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/libexpat/libexpat@R_2_6_2",
+      "targetPurl": "pkg:conan/expat@2.6.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/ae76e2ae44bae9f7af947e5ec6aab5408ee03d09/recipes/expat/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same expat 2.6.2 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/libjpeg-turbo/libjpeg-turbo@3.2.0",
+      "targetPurl": "pkg:conan/libjpeg-turbo@3.2.0",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/libjpeg-turbo/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same libjpeg-turbo upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/lz4/lz4@v1.9.4",
+      "targetPurl": "pkg:conan/lz4@1.9.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/lz4/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same lz4/lz4 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/madler/zlib@v1.3.2",
+      "targetPurl": "pkg:conan/zlib@1.3.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/zlib/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same madler/zlib upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/mity/md4c@release-0.5.2",
+      "targetPurl": "pkg:conan/md4c@0.5.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/d7fc0cd8e380faba82115df5d73dc574807c42fb/recipes/md4c/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same MD4C 0.5.2 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/mity/md4c@release-0.5.3",
+      "targetPurl": "pkg:conan/md4c@0.5.3",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/d7fc0cd8e380faba82115df5d73dc574807c42fb/recipes/md4c/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same MD4C 0.5.3 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/pnggroup/libpng@v1.6.57",
+      "targetPurl": "pkg:conan/libpng@1.6.57",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/61c7c71dd2c17f822f1dc3be0d6a8a474fe6339a/recipes/libpng/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same libpng 1.6.57 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/pnggroup/libpng@v1.6.58",
+      "targetPurl": "pkg:conan/libpng@1.6.58",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/38b852d48946bb469874e70eb90425789d4360a2/recipes/libpng/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same libpng 1.6.58 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/qhull/qhull@v8.0.2",
+      "targetPurl": "pkg:conan/qhull@8.0.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/qhull/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same Qhull 8.0.2 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/unicode-org/icu@release-75-1",
+      "targetPurl": "pkg:conan/icu@75.1",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/icu/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same icu 75.1 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/uxlfoundation/oneTBB@v2023.1.0",
+      "targetPurl": "pkg:conan/onetbb@2023.1.0",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/onetbb/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same oneTBB 2023.1.0 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/westes/flex@v2.6.4",
+      "targetPurl": "pkg:conan/flex@2.6.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/flex/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same flex 2.6.4 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/zeux/pugixml@v1.16",
+      "targetPurl": "pkg:conan/pugixml@1.16",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/pugixml/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same zeux/pugixml upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}
