@@ -687,6 +687,22 @@ endif ()
 configure_file("${CMAKE_SOURCE_DIR}/CMake/RefreshSpdx.cmake"
   "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/bext/RefreshSpdx.cmake" COPYONLY)
 
+# Prebuilt consumers need the matching generators and policy fragments without
+# checking out another copy of the dependency sources.
+set(BEXT_SBOM_TOOLS_ROOT "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/bext/supply-chain")
+file(GLOB BEXT_SBOM_ALIAS_FILES RELATIVE "${CMAKE_SOURCE_DIR}" CONFIGURE_DEPENDS
+  "${CMAKE_SOURCE_DIR}/*/SbomScanAliases.json")
+set(BEXT_SBOM_TOOL_FILES
+  CMake/GenerateVex.py CMake/BextVex.py CMake/ProjectSbom.py CMake/ValidateSbom.py
+  CMake/InstallTransformations.py
+  CMake/WriteCycloneDx.cmake CMake/BextCycloneDx.cmake CMake/BextSbomJson.cmake
+  CMake/BextComponentManifest.schema.json CMake/SbomScanProfiles.json
+  ${BEXT_SBOM_ALIAS_FILES})
+file(REMOVE_RECURSE "${BEXT_SBOM_TOOLS_ROOT}")
+foreach(tool_file IN LISTS BEXT_SBOM_TOOL_FILES)
+  configure_file("${CMAKE_SOURCE_DIR}/${tool_file}" "${BEXT_SBOM_TOOLS_ROOT}/${tool_file}" COPYONLY)
+endforeach()
+
 set(BEXT_INSTALL_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-manifest.json")
 set(BEXT_INSTALL_EXCLUDE_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-exclude-manifest.json")
 set(BEXT_INSTALL_EXCLUDE_RULES "${CMAKE_BINARY_DIR}/CMakeFiles/bext-install-exclude-patterns.txt")
@@ -697,6 +713,7 @@ string(REPLACE ";" "\n" BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT "${BEXT_INSTALL_EXCLU
 file(WRITE "${BEXT_INSTALL_EXCLUDE_RULES}" "${BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT}\n")
 set(BEXT_COMPONENT_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-component-manifest.json")
 set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
+set(BEXT_CYCLONEDX_OUTPUT "${CMAKE_BINARY_DIR}/bext.cdx.json")
 set(BEXT_COMPONENT_OWNERSHIP_RULES_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-component-ownership-rules.txt")
 set(BEXT_ACTIVE_COMPONENTS_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-active-components.txt")
 set(BEXT_SBOM_SELECTORS_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-sbom-selectors.cmake")
@@ -752,6 +769,9 @@ add_custom_target(bext_finalize ${BEXT_FINALIZE_ALL}
     --install-root "${CMAKE_BUNDLE_INSTALL_PREFIX}"
     --registry "${BEXT_VEX_REGISTRY}" --proof "${BEXT_VEX_PROOF}"
     --output-dir "${CMAKE_INSTALL_PREFIX}" --cmake "${CMAKE_COMMAND}"
+  COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+    "${BEXT_SBOM_OUTPUT}" "${BEXT_CYCLONEDX_OUTPUT}"
+    "${CMAKE_BINARY_DIR}/bext-content-stamp" "${CMAKE_INSTALL_PREFIX}"
   DEPENDS ${BEXT_INSTALL_TARGETS}
   VERBATIM
 )
@@ -882,8 +902,6 @@ add_custom_target(sbom_copyright_candidates
 # Logic for generating a Software Bill of Materials (SBOM)
 # from committed bext repository information. Regenerate on each request:
 # a new commit or gitlink pin can change HEAD without touching wrapper files.
-set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
-set(BEXT_CYCLONEDX_OUTPUT "${CMAKE_BINARY_DIR}/bext.cdx.json")
 add_custom_target(sbom
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}

@@ -50,6 +50,7 @@ class ComponentManifestTests(unittest.TestCase):
                     self.validate()
 
     def test_downstream_package_remapping_preserves_original_identity(self):
+        self.document['generated_by'] = 'brlcad'
         self.package['source_spdx_id'] = self.package['spdx_id']
         self.package['spdx_id'] = 'SPDXRef-imported'
         self.validate()

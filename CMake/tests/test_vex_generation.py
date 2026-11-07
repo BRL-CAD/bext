@@ -5,6 +5,7 @@ import copy
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
 import unittest
@@ -14,8 +15,10 @@ MODULE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(MODULE))
 from BextVex import (build_purl, digest, file_digest, generate, inside,
                      json_text, read_json, split_build_purl, exported_evidence,
-                     validate_catalog)
+                     validate_catalog, package_view)
 from CaptureVexEvidence import before_finalize, capture
+from InstallTransformations import (capture as capture_install, finalize as finalize_install,
+                                    read_transformations)
 from ProjectSbom import project_inventory
 from ValidateSbom import check_parity
 
@@ -202,6 +205,84 @@ class VexGenerationTests(unittest.TestCase):
         self.library.write_bytes(b'different downstream library')
         self.assert_review_needed(imported=True)
 
+    def install_fixture(self):
+        _, _, exported, _ = self.run_generation()
+        self.evidence = exported_evidence(exported)
+        evidence = self.root / 'export.json'
+        evidence.write_text(json_text(exported))
+        stage = self.root / 'consumer'
+        (stage / 'lib').mkdir(parents=True)
+        shutil.copyfile(self.library, stage / 'lib/libz.so')
+        stamps = self.root / 'stamps'
+        stamps.mkdir()
+        pipeline = self.root / 'pipeline.cmake'
+        pipeline.write_text('controlled fixture pipeline')
+        return evidence, stage, stamps, pipeline
+
+    def test_imported_install_transformations_bind_both_hashes(self):
+        evidence, stage, stamps, pipeline = self.install_fixture()
+        source_hash = file_digest(self.library)
+        self.library.write_bytes(b'installed RPATH fixture')
+        (stamps / 'operation.receipt').write_text(
+            f'{stage / "lib/libz.so"}\n{self.library}\n{source_hash}\n'
+            f'{file_digest(self.library)}\nbinary-postprocess|fixture\n')
+        snapshot = capture_install(evidence, stage, self.install, stamps, pipeline, pipeline)
+        self.assertEqual(len(snapshot['files']), 1)
+        self.library.write_bytes(b'final path-cleaned fixture')
+        receipt = self.root / 'transformations.json'
+        receipt.write_text(json_text(finalize_install(snapshot, evidence, self.install)))
+        transformations = read_transformations(receipt, file_digest(evidence))
+        self.assert_review_needed(imported=True)
+        result = self.run_generation(imported=True, transformations=transformations)
+        self.assertEqual(result[1]['statements'][0]['status'], 'not_affected')
+        self.assertEqual(result[3]['decisions'][0]['result'], 'applied')
+        self.library.write_bytes(b'unrecorded later modification')
+        self.assert_review_needed(imported=True, transformations=transformations)
+        self.library.write_bytes(b'final path-cleaned fixture')
+        for field in ('sourceSha256', 'sha256'):
+            broken = copy.deepcopy(transformations)
+            broken[('probe', 'lib/libz.so')][field] = '0' * 64
+            self.assert_review_needed(imported=True, transformations=broken)
+        with self.assertRaisesRegex(ValueError, 'different source evidence'):
+            read_transformations(receipt, '0' * 64)
+        document = read_json(receipt)
+        document['files'].append(document['files'][0])
+        receipt.write_text(json_text(document))
+        with self.assertRaisesRegex(ValueError, 'Duplicate'):
+            read_transformations(receipt, file_digest(evidence))
+
+    def test_install_capture_rejects_unrecorded_changes_and_changed_inputs(self):
+        evidence, stage, stamps, pipeline = self.install_fixture()
+        self.library.write_bytes(b'unrecorded installed change')
+        snapshot = capture_install(evidence, stage, self.install, stamps, pipeline, pipeline)
+        self.assertEqual(snapshot['files'], [])
+        shutil.copyfile(stage / 'lib/libz.so', self.library)
+        snapshot = capture_install(evidence, stage, self.install, stamps, pipeline, pipeline)
+        self.assertEqual(len(snapshot['files']), 1)
+        (stage / 'lib/libz.so').write_bytes(b'unreviewed staged input')
+        self.assertEqual(capture_install(evidence, stage, self.install, stamps, pipeline, pipeline)['files'], [])
+        evidence.write_text(evidence.read_text() + '\n')
+        with self.assertRaisesRegex(ValueError, 'changed during installation'):
+            finalize_install(snapshot, evidence, self.install)
+
+    def test_installed_package_view_preserves_graph_and_original_file_audit(self):
+        original = copy.deepcopy(self.source_sbom)
+        original['files'] = [{'SPDXID': 'SPDXRef-file', 'fileName': './lib/libz.so'}]
+        original['packages'][0].update(filesAnalyzed=True, hasFiles=['SPDXRef-file'],
+            packageVerificationCode={'packageVerificationCodeValue': '0' * 40})
+        original['relationships'].append({'spdxElementId': 'SPDXRef-zlib',
+            'relationshipType': 'CONTAINS', 'relatedSpdxElement': 'SPDXRef-file'})
+        preserved = copy.deepcopy(original)
+        self.source_sbom = package_view(original)
+        inventory, vex, _, _ = self.run_generation()
+        self.assertEqual(original, preserved)
+        self.assertNotIn('files', inventory)
+        self.assertFalse(inventory['packages'][0]['filesAnalyzed'])
+        self.assertNotIn('packageVerificationCode', inventory['packages'][0])
+        self.assertNotIn('hasFiles', inventory['packages'][0])
+        self.assertEqual(len(inventory['relationships']), 1)
+        self.assertEqual(vex['statements'][0]['status'], 'not_affected')
+
     def test_import_cannot_promote_an_unproven_export(self):
         self.captured['installedArtifacts'].clear()
         _, _, exported, _ = self.run_generation()
@@ -286,6 +367,21 @@ class VexGenerationTests(unittest.TestCase):
         check_parity(spdx, cdx)
         self.assertEqual(cdx['metadata']['lifecycles'], [{'phase': 'post-build'}])
         self.assertTrue((output / 'bext.openvex.json').exists())
+        file_inventory = copy.deepcopy(self.source_sbom)
+        file_inventory['packages'][0]['filesAnalyzed'] = True
+        file_inventory['files'] = [{'SPDXID': 'SPDXRef-file', 'fileName': './lib/libz.so'}]
+        source.write_text(json_text(file_inventory))
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('--package-view', result.stderr)
+        self.assertFalse((output / 'bext.openvex.json').exists())
+        result = subprocess.run(command + ['--package-view'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = read_json(output / 'bext-vex-report.json')
+        self.assertEqual(report['fileInventory'], {'document': file_inventory['documentNamespace'],
+                                                  'sha256': file_digest(source)})
+        check_parity(read_json(output / 'bext.build.spdx.json'), read_json(output / 'bext.build.cdx.json'))
+        source.write_text(json_text(self.source_sbom))
         manifest.write_text(json_text({**self.manifest, 'packages': [], 'files': []}))
         result = subprocess.run(command, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
