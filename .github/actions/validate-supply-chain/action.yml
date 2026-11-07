@@ -1,0 +1,28 @@
+name: Validate finalized dependency metadata
+description: Check both inventory formats, advisory projections, and ownership
+inputs:
+  prefix:
+    description: Finalized dependency output directory
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Validate finalized inventories
+      shell: bash
+      env:
+        BEXT_RELEASE_PREFIX: ${{ inputs.prefix }}
+      run: |
+        python -m venv "$RUNNER_TEMP/sbom-validators"
+        if [[ "$RUNNER_OS" == Windows ]]; then
+          BEXT_VALIDATOR_PYTHON="$RUNNER_TEMP/sbom-validators/Scripts/python.exe"
+        else
+          BEXT_VALIDATOR_PYTHON="$RUNNER_TEMP/sbom-validators/bin/python"
+        fi
+        "$BEXT_VALIDATOR_PYTHON" -m pip install -r CMake/sbom-requirements.txt
+        "$BEXT_VALIDATOR_PYTHON" CMake/ValidateSbom.py --component-manifest "$BEXT_RELEASE_PREFIX/bext-component-manifest.json"
+        "$BEXT_VALIDATOR_PYTHON" CMake/ValidateSbom.py --spdx "$BEXT_RELEASE_PREFIX/bext.spdx.json" --cyclonedx "$BEXT_RELEASE_PREFIX/bext.cdx.json"
+        "$BEXT_VALIDATOR_PYTHON" CMake/ValidateSbom.py --spdx "$BEXT_RELEASE_PREFIX/bext.build.spdx.json" --cyclonedx "$BEXT_RELEASE_PREFIX/bext.build.cdx.json"
+        "$BEXT_VALIDATOR_PYTHON" CMake/ValidateSbom.py --spdx "$BEXT_RELEASE_PREFIX/bext.build.conan.spdx.json" --cyclonedx "$BEXT_RELEASE_PREFIX/bext.build.conan.cdx.json"
