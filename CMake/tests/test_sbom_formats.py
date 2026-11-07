@@ -89,6 +89,21 @@ class SbomFormatTests(unittest.TestCase):
                           if item['ref'] == 'SPDXRef-parent')
         self.assertEqual(dependency['dependsOn'], [])
 
+    def test_structured_membership_survives_both_formats_and_detects_drift(self):
+        package = self.inventory['packages'][0]
+        membership = json.dumps({'schemaVersion': 1, 'component': 'probe', 'groups': ['BRLCAD', 'QT']})
+        package['annotations'] = [{'annotationDate': self.inventory['creationInfo']['created'],
+                                   'annotationType': 'OTHER', 'annotator': 'Tool: bext:membership',
+                                   'comment': membership}]
+        bom = self.emit()
+        check_parity(self.inventory, bom)
+        properties = bom['components'][0]['properties']
+        group = next(item for item in properties if item['name'] == 'bext:membership')
+        self.assertEqual(group['value'], membership)
+        group['value'] = '{}'
+        with self.assertRaisesRegex(ValueError, 'membership differs'):
+            check_parity(self.inventory, bom)
+
     def test_reproducible_output_and_source_aggregate_type(self):
         self.inventory['packages'][0]['primaryPackagePurpose'] = 'CONTAINER'
         first = self.emit()

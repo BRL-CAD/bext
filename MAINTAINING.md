@@ -572,6 +572,155 @@ the latter generates advisory projections and coverage reports. Neither target
 builds the dependency libraries. Weekly CI installs the validators explicitly,
 runs both formats and projections, and fails on validation errors.
 
+### Manual dependency update reports
+
+Renovate is an optional release-discovery tool here. Neither normal builds nor
+CI invoke it automatically. These targets run without compiling dependencies:
+
+```sh
+cmake --build build/release --target dependency_update_inputs
+cmake --build build/release --target dependency_update_report
+```
+
+The first generates inputs without requiring Renovate or network access.
+The second requires a Renovate executable on PATH or configured with
+`BEXT_RENOVATE_EXECUTABLE`, and performs upstream tag or approved branch lookups. Both write
+under the build directory's `dependency-updates` directory. Outputs include
+the generated `dependency-updates.json` and `renovate.json`, a readable
+`dependency-update-report.txt`, a structured `dependency-update-report.json`,
+and a spreadsheet-friendly `dependency-update-report.csv`.
+A lookup also keeps JSON logs and stderr for diagnosis. A missing tool or
+incomplete lookup returns a failed target and is reported explicitly; it is
+never interpreted as an up-to-date dependency.
+If Node.js or Renovate is missing, `dependency_update_report` fails and prints
+setup commands for the current platform, including the private npm prefix,
+the CMake executable setting, and a link to the setup guide. It checks only
+the tools needed for update discovery; scanners and Python validators are
+independent optional tools. `dependency_update_inputs` needs neither Node.js
+nor Renovate.
+
+The adapter copies only its generated inputs to a temporary directory outside
+the checkout, clears inherited Renovate configuration and hosting tokens,
+and forces `--platform=local --dry-run=lookup`. It disables scripts and
+plugins. There are no repository arguments or hosted-platform operations.
+Renovate's experimental local platform cannot create branches or pull
+requests. No GitHub or Gitea installation is needed. The report is a list of
+release candidates, not a compatibility verdict or an update implementation.
+It does not update source mirrors, pins, patches, or VEX decisions.
+
+Current versions and upstream PURLs come from the canonical source SBOM,
+which is generated from dependency descriptors. Ordinary GitHub/Git PURLs
+with version tags produce `git-tags` queries automatically. Dependency-local
+`UpdateChecks.json` catalogs supply exceptional policies, without another
+current-version pin. Every record has a descriptor `source` path and a `kind`:
+
+* `release` (the default) supports `packageName` (HTTPS Git repository),
+  `currentValueFrom` (`ref` or `version`), `versioning`, and `extractVersion`.
+  A reviewed native version can be recorded in the descriptor while retaining
+  its exact source-commit PURL. Tie newly reviewed versions to the source pin
+  with `REVIEWED_REVISION`. Use `baseline: snapshot` when the comparison
+  version describes development sources. Without a newer release, this
+  reports `snapshot_no_newer_release`, rather than claiming a current release.
+* `commit` requires an explicitly approved `branch`. The repository and
+  current digest come from committed `.gitmodules` and gitlinks, not from
+  the working checkout or an upstream alias. Renovate uses `git-refs` and
+  `currentDigest` to check that branch. Equal tips report `commit_current`;
+  differing tips report `commit_changed`. Commit IDs are never sorted.
+* `parent` names one or more descriptor source paths in `coveredBy`. It
+  reports the actual checks covering an aggregate or copied component,
+  including failed, manual, or outside-selection checks. Cycles and missing
+  targets are rejected. Qt's aggregate follows both Base and SVG; Tcl's
+  copied SQLite follows the maintained standalone SQLite dependency.
+* `manual` requires a `reason` and reports `manual_import`. Use it when a
+  historical import, conflicting version declarations, or an unverified
+  release feed still needs investigation. It is an explained coverage gap.
+
+Contained components automatically record their `managedBy` relationship
+from SBOM containment. A contained library with its own recognizable upstream
+release keeps its independent release check, while its update still goes
+through the parent. An unrecognized contained snapshot defaults to a parent
+check. Root packages without a usable rule remain `not_checked`. The report
+counts check kinds separately from outcomes so parent coverage and manual
+imports cannot inflate the independent lookup count.
+
+Commit changes are classified as advances, rewinds, divergence, unrelated
+history, or unknown ancestry. The comparison fetches commit history, filtered
+to omit trees, into a private bare cache under the report directory. It does
+not fetch into dependency checkouts. Unavailable history is visible and makes
+the lookup incomplete. Full digests and comparison counts are retained in
+JSON; raw Git diagnostics go to the cache's `ancestry.log`.
+
+For maintained imports, a commit check can watch the prepared BRL-CAD branch,
+with a `reason` explaining that upstream integration remains a separate task.
+Netpbm follows `brlcad`; Lemon and regex follow their maintained `main` branches.
+These checks report prepared-source availability, not upstream release coverage.
+Rules cannot claim sources owned by another dependency folder. See the
+strclear, plief, osmesa, Tcl, SQLite, and Qt catalogs for concrete policies.
+
+Install the CLI as described in
+[Setting up the external supply-chain tools](#setting-up-the-external-supply-chain-tools).
+
+Limit a trial run with
+`-DBEXT_UPDATE_REPORT_COMPONENTS="zlib;sqlite3;tcl;qt"` at configure time, or
+use `--only <dependency>` repeatedly with `CMake/DependencyUpdates.py`.
+Filter by consumer group with `-DBEXT_UPDATE_REPORT_GROUPS="BRLCAD;APPLESEED"`,
+or repeat `--group BRLCAD --group APPLESEED` with the script. Multiple groups
+select their union; a component selection further restricts that result.
+Unknown groups and empty intersections fail explicitly.
+
+Every JSON package record includes its `groups` array. Group tags come from
+the canonical source SBOM's structured membership annotation, which reflects the
+owning dependency's `BextPackage.cmake` declaration, including embedded copies.
+The text report labels every package and summarizes release and commit
+candidates by group. JSON includes the same summaries in `byGroup`, plus
+unique overall totals. CSV includes all selected records with semicolon-separated
+groups, status, current version or commit, candidates, and source identity.
+Shared dependencies retain all their tags, so group totals overlap. When
+filtering groups, `byGroup` summarizes only requested groups, while each record
+retains its complete membership. `UNGROUPED` selects and displays dependencies
+with no declared group gate (the source SBOM calls these `always considered`);
+their JSON `groups` array remains empty.
+
+SPDX stores this machine-readable value in a `Tool: bext:membership` annotation
+with `schemaVersion`, `component`, and `groups`. CycloneDX preserves it as the
+`bext:membership` property. Human-readable package comments are independent.
+Reports reject missing, ambiguous, or invalid annotations; regenerate an older
+source inventory before using it with the report adapter.
+
+The JSON report records the source file SHA-256, resolved policy SHA-256,
+observed and tested Renovate versions, and start/finish timestamps. The adapter
+contract is checked against captured results from Renovate 44.221.6. Other
+versions require compatibility testing; local mode remains experimental.
+Set `BEXT_UPDATE_LOOKUP_TIMEOUT` (default 1800 seconds) and
+`BEXT_UPDATE_ANCESTRY_TIMEOUT` (default 300 seconds per Git command), or use
+`--lookup-timeout` and `--ancestry-timeout` directly. Outputs are staged before
+publication, with the JSON completion report replaced last.
+
+Report status `generated` means only inputs were prepared. `complete` means
+the configured lookups completed, and can coexist with `manual_import`,
+`parent_managed`, and `not_checked` coverage gaps. `current` means a valid
+release lookup returned no candidate; commit equality is `commit_current`.
+Malformed results, lookup errors, and no recognizable releases become
+`lookup_failed`. Missing results or unknown ancestry make the report
+`incomplete`; tool failures/timeouts produce `failed`, and an absent optional
+executable produces `tool_unavailable`. These unsuccessful lookups return a
+nonzero exit code. None establishes dependency compatibility.
+
+Groups describe declared membership, rather than complete build profiles.
+For example, a BRL-CAD build may also use packages in QT, TCL, and GDAL;
+include those groups when reviewing that larger set. Ungrouped build tools
+remain visible in an unfiltered report or with `--group UNGROUPED`.
+Without a selection, the report covers all source-inventory packages,
+including embedded copies that may be excluded by the actual build.
+Review the coverage, lookup failures, major-version changes, and related
+updates before choosing a candidate set. Coupled updates need joint bext and
+BRL-CAD integration tests; successful lookup does not establish compatibility.
+
+See [Renovate's local mode](https://docs.renovatebot.com/modules/platform/local/),
+[JSONata custom managers](https://docs.renovatebot.com/modules/manager/jsonata/),
+and [dry-run controls](https://docs.renovatebot.com/self-hosted-configuration/#dryrun),
+and [Git-ref digest lookups](https://docs.renovatebot.com/modules/datasource/git-refs/).
+
 ### Advisory identities and scanner coverage
 
 Upstream identity and source provenance serve different purposes. Package

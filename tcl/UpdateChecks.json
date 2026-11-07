@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "tcl/tcl",
+      "versioning": "regex:^(?:core-)?(?<major>[0-9]+)[.-](?<minor>[0-9]+)[.-](?<patch>[0-9]+)$",
+      "currentValueFrom": "version"
+    },
+    {
+      "source": "tcl/tcl/pkgs/itcl4.3.7",
+      "versioning": "regex:^itcl-(?<major>[0-9]+)-(?<minor>[0-9]+)-(?<patch>[0-9]+)$"
+    },
+    {
+      "source": "tcl/tcl/pkgs/thread2.8.13",
+      "versioning": "regex:^thread-(?<major>[0-9]+)-(?<minor>[0-9]+)-(?<patch>[0-9]+)$"
+    },
+    {
+      "source": "tcl/tcl/pkgs/sqlite3.53.0",
+      "kind": "parent",
+      "coveredBy": [
+        "sqlite3/sqlite3"
+      ],
+      "reason": "The Tcl extension receives its engine from the maintained SQLite dependency."
+    }
+  ]
+}

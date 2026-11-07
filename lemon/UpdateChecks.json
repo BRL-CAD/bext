@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "lemon/lemon",
+      "kind": "commit",
+      "branch": "main",
+      "reason": "Track the maintained extraction; upstream SQLite generator changes require wfobj compatibility review."
+    }
+  ]
+}

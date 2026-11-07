@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "ncurses/ncurses",
+      "kind": "manual",
+      "reason": "Review the maintained Ncurses import and its original release or patch-level baseline."
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 
 import argparse
 import copy
+import datetime
 import itertools
 import os
 from pathlib import Path
@@ -15,6 +16,42 @@ import uuid
 
 from BextVex import file_digest, json_text, purls, read_json
 from ValidateSbom import component_index
+from SupplyChainTools import publish_files, tool_version
+
+
+SCAN_TIMEOUT_SECONDS = 1800
+TESTED_SCANNER_VERSIONS = {'grype': '0.121.2', 'trivy': '0.76.2'}
+
+
+def inventory_packages(document):
+    if document.get('spdxVersion') == 'SPDX-2.3':
+        return [{'id': package['SPDXID'], 'name': package['name'],
+                 'purls': purls(package)} for package in document['packages']]
+    if document.get('bomFormat') == 'CycloneDX':
+        return [{'id': identifier, 'name': package['name'],
+                 'purls': [package['purl']] if package.get('purl') else []}
+                for identifier, package in component_index(document)[0].items()]
+    raise ValueError('Expected an SPDX or CycloneDX inventory')
+
+
+def scan_coverage(inventory, recognized):
+    packages = inventory_packages(read_json(inventory))
+    recognized = {lookup_identity(purl) for purl in recognized if purl}
+    missing = [package for package in packages
+               if not {lookup_identity(purl) for purl in package['purls']}.intersection(recognized)]
+    return {'inputPackages': len(packages), 'recognizedPackages': len(packages) - len(missing),
+            'unrecognizedPackages': missing,
+            'status': 'empty' if not packages else 'partial' if missing else 'complete',
+            'note': 'Package recognition does not establish advisory coverage or absence of vulnerabilities.'}
+
+
+def lookup_identity(purl):
+    # GitHub names are case-insensitive; source revisions and build qualifiers
+    # retain their case. This comparison does not rewrite inventory identities.
+    if purl.startswith('pkg:github/'):
+        name, separator, revision = purl.partition('@')
+        return name.lower() + separator + revision
+    return purl
 
 
 def trivy_partitions(inventory, directory):
@@ -113,10 +150,11 @@ def findings(scanner, document):
     return records
 
 
-def scan(scanner, inventory, vex, directory, offline):
+def scan(scanner, inventory, vex, directory, offline, timeout=SCAN_TIMEOUT_SECONDS):
     if not shutil.which(scanner):
         raise ValueError(f'{scanner} is not on PATH; use the documented local tool environment')
     environment = dict(os.environ, GRYPE_CHECK_FOR_APP_UPDATE='false')
+    version = tool_version(scanner)
     # Scanner-wide VEX/ignore settings must not silently alter the baseline.
     for variable in ('GRYPE_VEX_DOCUMENTS', 'GRYPE_VEX_ADD', 'GRYPE_IGNORE',
                      'GRYPE_ONLY_FIXED', 'GRYPE_ONLY_NOTFIXED', 'GRYPE_IGNORE_STATES',
@@ -146,6 +184,8 @@ def scan(scanner, inventory, vex, directory, offline):
                 continue
             arguments = command + [('sbom:' if scanner == 'grype' else '') + str(partition)]
             if scanner == 'grype':
+                if not filtered:
+                    arguments.extend(['--output', 'cyclonedx-json=' + str(directory / 'grype.packages.cdx.json')])
                 if offline or filtered:
                     environment['GRYPE_DB_AUTO_UPDATE'] = 'false'
             elif offline or filtered or index > 0:
@@ -153,7 +193,7 @@ def scan(scanner, inventory, vex, directory, offline):
             if filtered:
                 arguments.extend(['--vex', str(vex)])
             with path.open('w') as output, (directory / f'{stem}.{label}.log').open('w') as log:
-                subprocess.run(arguments, env=environment, stdout=output, stderr=log, check=True)
+                subprocess.run(arguments, env=environment, stdout=output, stderr=log, check=True, timeout=timeout)
             by_mode[filtered].append(read_json(path))
     results = []
     for filtered in (False, True):
@@ -164,15 +204,31 @@ def scan(scanner, inventory, vex, directory, offline):
             (directory / f'{scanner}.{label}.json').write_text(json_text(merged), encoding='utf-8')
         results.append(merged)
     baseline, filtered = [findings(scanner, document) for document in results]
+    if scanner == 'grype':
+        catalog = read_json(directory / 'grype.packages.cdx.json')
+        recognized = {package.get('purl') for package in component_index(catalog)[0].values()}
+        database = copy.deepcopy(results[0].get('descriptor', {}).get('db'))
+        if isinstance(database, dict) and isinstance(database.get('status'), dict):
+            database['status'].pop('path', None)
+    else:
+        recognized = {package.get('Identifier', {}).get('PURL')
+                      for result in results[0].get('Results', []) for package in result.get('Packages', [])}
+        database = tool_version(scanner)
+    coverage = scan_coverage(inventory, recognized)
     vex_document = read_json(vex) if vex and vex.exists() else None
     suppressed = []
     for key in sorted(baseline.keys() - filtered.keys()):
         finding = baseline[key]
         decisions = [statement for statement in vex_document['statements']
                      if statement['vulnerability'].get('name') == finding['vulnerability']
-                     and any(product['@id'] == finding['purl'] for product in statement['products'])]
+                     and any(lookup_identity(product['@id']) == lookup_identity(finding['purl'])
+                             for product in statement['products'])]
         suppressed.append({**finding, 'vexStatements': decisions})
-    return {'scanner': scanner, 'vexApplied': vex_document is not None,
+    return {'scanner': scanner, 'toolVersion': version, 'testedVersion': TESTED_SCANNER_VERSIONS[scanner],
+            'database': database, 'coverage': coverage,
+            'status': 'incomplete' if coverage['inputPackages'] and not coverage['recognizedPackages'] else 'complete',
+            'checkedAt': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'vexApplied': vex_document is not None,
             'vexSha256': file_digest(vex) if vex_document else None,
             'inputSha256': file_digest(inventory), 'partitions': len(partitions),
             'rawMatches': len(baseline), 'filteredMatches': len(filtered),
@@ -187,10 +243,13 @@ def main():
     parser.add_argument('--scanner', choices=('grype', 'trivy'), default='grype')
     parser.add_argument('--output-dir', type=Path, required=True)
     parser.add_argument('--offline', action='store_true')
+    parser.add_argument('--timeout', type=int, default=SCAN_TIMEOUT_SECONDS, metavar='SECONDS')
     args = parser.parse_args()
+    if args.timeout <= 0:
+        parser.error('Timeout must be positive seconds')
     args.output_dir.mkdir(parents=True, exist_ok=True)
     owned = re.compile(re.escape(args.scanner) +
-                       r'\.(summary\.json|(?:part-[0-9]+\.)?(?:(?:raw|filtered)\.(?:json|log)|sbom\.json))')
+                       r'\.(summary\.json|packages\.cdx\.json|(?:part-[0-9]+\.)?(?:(?:raw|filtered)\.(?:json|log)|sbom\.json))')
     for path in (args.input, args.vex):
         if (path and path.resolve().parent == args.output_dir.resolve()
                 and owned.fullmatch(path.resolve().name)):
@@ -201,11 +260,15 @@ def main():
     summary = args.output_dir / f'{args.scanner}.summary.json'
     try:
         result = scan(args.scanner, args.input.resolve(),
-                      args.vex.resolve() if args.vex else None, args.output_dir.resolve(), args.offline)
-        summary.write_text(json_text(result), encoding='utf-8')
+                      args.vex.resolve() if args.vex else None, args.output_dir.resolve(), args.offline, args.timeout)
+        publish_files(args.output_dir, {summary.name: json_text(result)}, completion=summary.name)
         print(f'{args.scanner}: {result["rawMatches"]} baseline, '
               f'{result["filteredMatches"]} after VEX, {len(result["suppressed"])} suppressed')
-    except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
+        coverage = result['coverage']
+        print(f'Package recognition: {coverage["recognizedPackages"]}/{coverage["inputPackages"]}; '
+              'see the summary for coverage gaps')
+        return int(result['status'] != 'complete')
+    except (ValueError, KeyError, OSError, subprocess.SubprocessError) as error:
         print(f'VEX scan failed: {error}', file=sys.stderr)
         return 1
     return 0
