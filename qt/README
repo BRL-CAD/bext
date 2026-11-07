@@ -61,3 +61,10 @@ the same compiler used for bext:
     -DCMAKE_CXX_COMPILER=<compiler> -DCMAKE_PREFIX_PATH=<bext-prefix>/install
   cmake --build build/qt-runtime
   ctest --test-dir build/qt-runtime --output-on-failure
+
+Relocatable metadata
+--------------------
+
+Finalization makes exported Qt link paths relative to _IMPORT_PREFIX and
+uses $$[QT_INSTALL_PREFIX] in qmake metadata. Consumers can move the bundle
+and stage dependencies without changing those files.

@@ -91,5 +91,6 @@ A bundled-stack build must establish all of the following:
 * Tcl's configure probe resolves brl_deflateSetHeader from -lz_brl;
 * the installed Tcl library depends on libz_brl and has unresolved brl_ zlib
   symbols for that library to satisfy;
+* finalized ELF Tcl libraries carry an installed library SONAME;
 * package require reports Itcl 4.3.7, Itk 4.2.7, and Iwidgets 4.1.1; and
 * Itk's upstream suite and BRL-CAD's Tcl GUI baseline pass under Xmin.

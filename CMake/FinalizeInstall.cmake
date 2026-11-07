@@ -3,6 +3,7 @@
 foreach(required_var
     BEXT_INSTALL_ROOT
     BEXT_MANIFEST
+    BEXT_ACTIVE_COMPONENTS
     BEXT_SOURCE_ROOT
     BEXT_BINARY_ROOT
     BEXT_NOINSTALL_ROOT
@@ -214,6 +215,14 @@ function(bext_run_text_replace files target replacement)
     message(FATAL_ERROR "strclear text replacement failed for ${target}: ${error}${output}")
   endif ()
 endfunction()
+
+function(bext_run_component_hooks phase)
+  foreach(component IN LISTS active_components)
+    include("${BEXT_SOURCE_ROOT}/${component}/${phase}.cmake" OPTIONAL)
+  endforeach()
+endfunction()
+
+file(STRINGS "${BEXT_ACTIVE_COMPONENTS}" active_components)
 
 # TEA configuration files describe the original source/build trees and are
 # already excluded by BRL-CAD staging.  Keep them available to the dependency
@@ -461,6 +470,8 @@ if ("${BEXT_SYSTEM_NAME}" STREQUAL "Darwin" AND
 endif ()
 bext_run_binary_clear("${binary_cleanup_paths}")
 bext_run_rpath_update("${rpath_paths}")
+
+bext_run_component_hooks(FinalizeInstall)
 
 include("${CMAKE_CURRENT_LIST_DIR}/RefreshSpdx.cmake")
 bext_refresh_spdx("${BEXT_INSTALL_ROOT}")
