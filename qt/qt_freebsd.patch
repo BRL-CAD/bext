@@ -1,0 +1,30 @@
+--- a/src/corelib/global/qtypes.h
++++ b/src/corelib/global/qtypes.h
+@@ -275,7 +275,12 @@
+ 
+ // Define a native float16 type
+ namespace QtPrivate {
+-#if defined(__STDCPP_FLOAT16_T__)
++// FreeBSD's GCC runtime lacks some PIC half-precision conversion helpers.
++// Keep the portable representation instead of emitting unavailable libcalls.
++#if defined(Q_OS_FREEBSD) && defined(Q_CC_GNU_ONLY)
++#  define QFLOAT16_IS_NATIVE        0
++using NativeFloat16Type = void;
++#elif defined(__STDCPP_FLOAT16_T__)
+ #  define QFLOAT16_IS_NATIVE        1
+ using NativeFloat16Type = std::float16_t;
+ #elif defined(Q_CC_CLANG) && defined(__FLT16_MAX__) && 0
+--- a/cmake/QtFlagHandlingHelpers.cmake
++++ b/cmake/QtFlagHandlingHelpers.cmake
+@@ -148,6 +148,11 @@
+ 
+ function(qt_internal_add_link_flags_no_undefined target)
+     if (NOT QT_BUILD_SHARED_LIBS OR WASM)
++        return()
++    endif()
++    if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
++        # FreeBSD's executable supplies environ. GNU ld rejects even Qt's weak
++        # reference through libc when --no-undefined is enabled.
+         return()
+     endif()
+     if (VXWORKS)

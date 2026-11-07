@@ -44,3 +44,20 @@ Qt Base's source archive includes SQLite 3.53.4, but bext configures Qt with
 -system-sqlite and SQLite3_ROOT pointing to its dependency installation.
 The SQL plugin uses the maintained standalone SQLite library rather than
 compiling Qt's private copy.
+
+FreeBSD compiler runtime checks
+------------------------------
+
+The FreeBSD patch keeps Qt's portable float16 representation with GCC, whose
+runtime lacks some half-precision helpers when linking PIC shared libraries.
+For this toolchain, the patch also skips Qt's strict undefined-symbol linker
+check: GNU ld rejects the weak environ reference supplied by the FreeBSD
+executable. Other compilers retain that check.
+
+After building Qt, test its public conversions and environment access with
+the same compiler used for bext:
+
+  cmake -S qt/tests/runtime -B build/qt-runtime \
+    -DCMAKE_CXX_COMPILER=<compiler> -DCMAKE_PREFIX_PATH=<bext-prefix>/install
+  cmake --build build/qt-runtime
+  ctest --test-dir build/qt-runtime --output-on-failure
