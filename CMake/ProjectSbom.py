@@ -3,7 +3,6 @@
 
 import argparse
 import copy
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -11,8 +10,10 @@ import sys
 import uuid
 from urllib.parse import unquote
 
+from BextVex import build_purl, split_build_purl, digest, read_json
 
-DEFAULT_ALIASES = Path(__file__).with_name('SbomScanAliases.json')
+
+DEFAULT_ALIASES = Path(__file__).resolve().parents[1]
 PROJECTION_COMMENT = (
     'Vulnerability-matching projection of the bext source inventory. '
     'Aliases identify upstream advisory candidates; they do not assert that '
@@ -20,31 +21,49 @@ PROJECTION_COMMENT = (
 )
 
 
+def alias_sources(path):
+    if path.is_dir():
+        return [path / 'CMake' / 'SbomScanProfiles.json',
+                *sorted(path.glob('*/SbomScanAliases.json'))]
+    return [path]
+
+
 def read_aliases(path, profile):
-    data = json.loads(path.read_text())
+    sources = alias_sources(path)
+    data = read_json(sources[0])
     if data.get('schemaVersion') != 1:
         raise ValueError('Unsupported vulnerability alias schemaVersion')
     types = data.get('profiles', {}).get(profile)
     if not types or not isinstance(types, list):
         raise ValueError(f'Unknown or empty alias profile {profile}')
     aliases = {}
-    for alias in data['aliases']:
-        source, target = alias['sourcePurl'], alias['targetPurl']
-        if (not re.fullmatch(r'pkg:[a-z0-9.+-]+/[^@]+@[^@]+', source) or
-                not re.fullmatch(r'pkg:[a-z0-9.+-]+/[^@]+@[^@?#]+', target)):
-            raise ValueError(f'Invalid versioned alias {source} -> {target}')
-        if not alias.get('evidence') or not alias.get('reason'):
-            raise ValueError(f'Alias {source} requires evidence and a reason')
-        if not all(url.startswith('https://') for url in alias['evidence']):
-            raise ValueError(f'Alias {source} requires HTTPS evidence URLs')
-        target_type = target.split(':', 1)[1].split('/', 1)[0]
-        if target_type not in types:
-            continue
-        if source in aliases:
-            raise ValueError(f'Ambiguous alias for {source} in profile {profile}')
-        aliases[source] = alias
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    return aliases, digest
+    catalogs = sources[1:] if path.is_dir() else sources
+    if not catalogs:
+        raise ValueError('No dependency advisory alias catalogs were found')
+    for catalog in catalogs:
+        data = read_json(catalog)
+        if data.get('schemaVersion') != 1 or not isinstance(data.get('aliases'), list):
+            raise ValueError(f'Invalid advisory alias catalog: {catalog.name}')
+        local_sources = set()
+        for alias in data['aliases']:
+            source, target = alias['sourcePurl'], alias['targetPurl']
+            if (not re.fullmatch(r'pkg:[a-z0-9.+-]+/[^@]+@[^@]+', source) or
+                    not re.fullmatch(r'pkg:[a-z0-9.+-]+/[^@]+@[^@?#]+', target)):
+                raise ValueError(f'Invalid versioned alias {source} -> {target}')
+            if not alias.get('evidence') or not alias.get('reason'):
+                raise ValueError(f'Alias {source} requires evidence and a reason')
+            if not all(url.startswith('https://') for url in alias['evidence']):
+                raise ValueError(f'Alias {source} requires HTTPS evidence URLs')
+            target_type = target.split(':', 1)[1].split('/', 1)[0]
+            if target_type not in types:
+                continue
+            if source in local_sources or (source in aliases and aliases[source] != alias):
+                raise ValueError(f'Ambiguous alias for {source} in profile {profile}')
+            local_sources.add(source)
+            aliases[source] = alias
+    identity = digest({'profile': profile, 'types': types,
+                       'aliases': [aliases[key] for key in sorted(aliases)]})
+    return aliases, identity
 
 
 def project_inventory(inventory, aliases, profile, digest):
@@ -106,19 +125,24 @@ def project_inventory(inventory, aliases, profile, digest):
             purls = [package['purl']] if 'purl' in package else []
             identifier = package['bom-ref']
             version = package['version']
-        matches = [aliases[purl] for purl in purls if purl in aliases]
+        source_purls = [split_build_purl(purl) for purl in purls]
+        matches = [(aliases[purl], build_id) for purl, build_id in source_purls
+                   if purl in aliases]
         if not matches:
             report['unmapped'].append({'id': identifier, 'purls': purls,
                                        'reason': 'No reviewed alias for this profile'})
             continue
         if len(matches) != 1:
             raise ValueError(f'Multiple applicable aliases for {identifier}')
-        alias = matches[0]
+        alias, build_id = matches[0]
         target = alias['targetPurl']
         alias_version = target.rsplit('@', 1)[1]
         if version != alias_version:
             raise ValueError(f'{identifier}: alias version differs from source version')
-        provenance = {'id': identifier, 'sourceName': package['name'], **alias}
+        if build_id:
+            target = build_purl(target, build_id)
+        provenance = {'id': identifier, 'sourceName': package['name'], **alias,
+                      'targetPurl': target}
         report['mapped'].append(provenance)
         # Ecosystem scanners can look up the package name as well as its PURL.
         # Preserve display names in provenance and use the alias's lookup name.
@@ -135,11 +159,14 @@ def project_inventory(inventory, aliases, profile, digest):
             })
         else:
             package['purl'] = target
-            package.setdefault('properties', []).extend([
+            properties = package.setdefault('properties', [])
+            for property in [
                 {'name': 'bext:source:name', 'value': provenance['sourceName']},
                 {'name': 'bext:source:purl', 'value': alias['sourcePurl']},
                 {'name': 'bext:scan:alias', 'value': json.dumps(provenance, sort_keys=True)},
-            ])
+            ]:
+                if property not in properties:
+                    properties.append(property)
     report['mappedPackages'] = len(report['mapped'])
     report['unmappedPackages'] = len(report['unmapped'])
     report['distinctMappedPurls'] = len({item['targetPurl'] for item in report['mapped']})
@@ -165,7 +192,7 @@ def main():
     parser.add_argument('--profile', default='conan')
     args = parser.parse_args()
     paths = [args.input.resolve(), args.output.resolve(), args.report.resolve(),
-             args.aliases.resolve()]
+             *(path.resolve() for path in alias_sources(args.aliases))]
     if len(set(paths)) != len(paths):
         parser.error('input, aliases, output, and report must be distinct files')
     # Failed regeneration must not leave a stale report or scanner input.

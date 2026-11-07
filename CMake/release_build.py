@@ -94,6 +94,22 @@ def preserve_selector_caches(project):
         temporary.replace(destination)
 
 
+def preserve_install_manifest(project):
+    # Finalization uses native manifests for inventory and ownership after the
+    # compilation tree has gone. Keep a combined manifest in the wrapper tree.
+    manifests = sorted(Path(project['binary_dir']).rglob('install_manifest.txt'))
+    if not manifests:
+        return
+    destination = Path(project['preserved_install_manifest'])
+    files = set()
+    for manifest in manifests:
+        files.update(manifest.read_text(encoding='utf-8').splitlines())
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + '.tmp')
+    temporary.write_text(''.join(name + '\n' for name in sorted(files)), encoding='utf-8')
+    temporary.replace(destination)
+
+
 def signature(plan):
     digest = hashlib.sha256(json.dumps(plan, sort_keys=True).encode())
     cache = Path(plan['build_root']) / 'CMakeCache.txt'
@@ -209,6 +225,7 @@ def build(plan):
             continue
         run(project['name'], project['build_target'])
         preserve_selector_caches(project)
+        preserve_install_manifest(project)
         if not project['deferred']:
             discard(plan, project)
         state['completed'].append(project['name'])

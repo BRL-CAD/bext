@@ -155,18 +155,32 @@ def validate_cyclonedx(path):
     print(f'Validated CycloneDX 1.6: {path.name}')
 
 
+def validate_component_manifest(path):
+    from jsonschema import Draft202012Validator
+
+    schema = json.loads(Path(__file__).with_name('BextComponentManifest.schema.json').read_text())
+    errors = list(Draft202012Validator(schema).iter_errors(json.loads(path.read_text())))
+    if errors:
+        raise ValueError('\n'.join(
+            '/'.join(map(str, error.absolute_path)) + ': ' + error.message for error in errors))
+    print(f'Validated component manifest: {path.name}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--spdx', type=Path)
     parser.add_argument('--cyclonedx', type=Path)
+    parser.add_argument('--component-manifest', type=Path)
     args = parser.parse_args()
-    if not (args.spdx or args.cyclonedx):
-        parser.error('provide --spdx and/or --cyclonedx')
+    if not (args.spdx or args.cyclonedx or args.component_manifest):
+        parser.error('provide --spdx, --cyclonedx, and/or --component-manifest')
     try:
         if args.spdx:
             validate_spdx(args.spdx)
         if args.cyclonedx:
             validate_cyclonedx(args.cyclonedx)
+        if args.component_manifest:
+            validate_component_manifest(args.component_manifest)
         if args.spdx and args.cyclonedx:
             packages, edges, containment = check_parity(
                 json.loads(args.spdx.read_text()), json.loads(args.cyclonedx.read_text()))

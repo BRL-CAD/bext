@@ -167,7 +167,8 @@ if (ENABLE_QT)
     ${QT_EXTRA_PATCHES}
     "${CMAKE_CURRENT_SOURCE_DIR}/qtsvg.patch")
   git_submodule_init(qt qtbase/configure
-    PATCH_FILES ${QT_TRACKED_PATCH_FILES})
+    PATCH_FILES ${QT_TRACKED_PATCH_FILES}
+    INPUT_FILES "${CMAKE_CURRENT_LIST_FILE}")
   bext_patch_command(QT_PATCH_COMMAND ${QT_EXTRA_PATCHES})
   bext_patch_command(QTSVG_PATCH_COMMAND
     "${CMAKE_CURRENT_SOURCE_DIR}/qtsvg.patch")

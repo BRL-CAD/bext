@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/imageworks/pystring@v1.1.4",
+      "targetPurl": "pkg:conan/pystring@1.1.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/pystring/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same pystring 1.1.4 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

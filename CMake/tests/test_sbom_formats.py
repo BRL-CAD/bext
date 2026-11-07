@@ -202,6 +202,26 @@ class SbomFormatTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'requires evidence'):
             read_aliases(path, 'conan')
 
+    def test_dependency_alias_discovery_deduplicates_and_rejects_conflicts(self):
+        root = self.directory / 'catalogs'
+        (root / 'CMake').mkdir(parents=True)
+        (root / 'CMake/SbomScanProfiles.json').write_text(json.dumps({
+            'schemaVersion': 1, 'profiles': {'conan': ['conan']}}))
+        alias = next(iter(self.aliases().values()))
+        for owner in ('first', 'second'):
+            (root / owner).mkdir()
+            (root / owner / 'SbomScanAliases.json').write_text(json.dumps({
+                'schemaVersion': 1, 'aliases': [alias]}))
+        actual, original_digest = read_aliases(root, 'conan')
+        self.assertEqual(actual, self.aliases())
+        (root / 'second/SbomScanAliases.json').unlink()
+        self.assertEqual(read_aliases(root, 'conan')[1], original_digest)
+        changed = {**alias, 'targetPurl': 'pkg:conan/different@1.0'}
+        (root / 'second/SbomScanAliases.json').write_text(json.dumps({
+            'schemaVersion': 1, 'aliases': [changed]}))
+        with self.assertRaisesRegex(ValueError, 'Ambiguous alias'):
+            read_aliases(root, 'conan')
+
 
 if __name__ == '__main__':
     unittest.main()

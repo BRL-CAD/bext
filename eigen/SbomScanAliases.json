@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:git/gitlab.com/libeigen/eigen.git@5.0.1",
+      "targetPurl": "pkg:conan/eigen@5.0.1",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/eigen/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same eigen 5.0.1 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

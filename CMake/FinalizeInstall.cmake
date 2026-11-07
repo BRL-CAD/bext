@@ -238,19 +238,7 @@ function(bext_run_component_hooks phase)
 endfunction()
 
 file(STRINGS "${BEXT_ACTIVE_COMPONENTS}" active_components)
-
-# TEA configuration files describe the original source/build trees and are
-# already excluded by BRL-CAD staging.  Keep them available to the dependency
-# builds, but omit them from the finalized relocatable bundle.
-file(GLOB_RECURSE build_config_files
-  "${BEXT_INSTALL_ROOT}/*/tclConfig.sh"
-  "${BEXT_INSTALL_ROOT}/*/tkConfig.sh"
-  "${BEXT_INSTALL_ROOT}/*/itclConfig.sh"
-  "${BEXT_INSTALL_ROOT}/*/itkConfig.sh"
-  "${BEXT_INSTALL_ROOT}/*/tdbcConfig.sh")
-if(build_config_files)
-  file(REMOVE ${build_config_files})
-endif()
+bext_run_component_hooks(PrepareInstall)
 
 file(MAKE_DIRECTORY "${BEXT_BINARY_ROOT}/CMakeFiles")
 file(GLOB_RECURSE install_tree_files
@@ -264,7 +252,6 @@ list(SORT install_tree_files)
 # Explicit ownership rules cover files copied by wrapper logic outside those
 # native manifests. Anything else may be residue from another configuration;
 # retain it on disk, but exclude it from this build's manifest and SBOM.
-file(STRINGS "${BEXT_ACTIVE_COMPONENTS}" active_components)
 file(GLOB_RECURSE native_install_manifests
   LIST_DIRECTORIES false
   "${BEXT_BINARY_ROOT}/*/install_manifest.txt"
@@ -707,9 +694,6 @@ bext_run_rpath_update("${rpath_paths}")
 
 bext_run_component_hooks(FinalizeInstall)
 
-include("${CMAKE_CURRENT_LIST_DIR}/RefreshSpdx.cmake")
-bext_refresh_spdx("${BEXT_INSTALL_ROOT}")
-
 file(WRITE "${BEXT_MANIFEST}.tmp" "{\n")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"schema\": 1,\n")
 bext_json_escape(platform "${BEXT_SYSTEM_NAME}")
@@ -781,12 +765,14 @@ foreach(record ${package_records})
   list(GET record_parts 1 id)
   list(GET record_parts 2 spdx_id)
   list(GET record_parts 3 primary)
+  bext_inventory_get(package_output "${component}" OUTPUT)
   string(TOLOWER "${primary}" primary)
   bext_json_escape(component_json "${component}")
   bext_json_escape(id_json "${id}")
   bext_json_escape(spdx_id_json "${spdx_id}")
+  bext_json_escape(package_output_json "${package_output}")
   file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp"
-    "    {${json_quote}component${json_quote}: ${json_quote}${component_json}${json_quote}, ${json_quote}id${json_quote}: ${json_quote}${id_json}${json_quote}, ${json_quote}spdx_id${json_quote}: ${json_quote}${spdx_id_json}${json_quote}, ${json_quote}primary${json_quote}: ${primary}}")
+    "    {${json_quote}component${json_quote}: ${json_quote}${component_json}${json_quote}, ${json_quote}id${json_quote}: ${json_quote}${id_json}${json_quote}, ${json_quote}spdx_id${json_quote}: ${json_quote}${spdx_id_json}${json_quote}, ${json_quote}primary${json_quote}: ${primary}, ${json_quote}output${json_quote}: ${json_quote}${package_output_json}${json_quote}}")
   if(package_index LESS package_count)
     file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" ",\n")
   else()

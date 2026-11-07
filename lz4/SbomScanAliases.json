@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/lz4/lz4@v1.9.4",
+      "targetPurl": "pkg:conan/lz4@1.9.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/lz4/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same lz4/lz4 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

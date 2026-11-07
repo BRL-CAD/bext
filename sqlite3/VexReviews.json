@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "component": "sqlite3",
+  "target": "SQLITE3_BLD",
+  "reviews": [
+    {
+      "id": "sqlite-cli-recover",
+      "package": "SPDXRef-Package-sqlite3-sqlite3",
+      "sourcePurl": "pkg:generic/sqlite@3.54.1",
+      "vulnerability": "CVE-2026-119586",
+      "status": "not_affected",
+      "scope": "component",
+      "impactStatement": "The shipped SQLite library compiles the engine without shell.c. The .recover command handler is CLI code and is absent from this library. The shell build tool is outside the bundled output.",
+      "reviewedAt": "2026-11-06T00:00:00Z",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-119586",
+        "https://sqlite.org/recovery.html"
+      ],
+      "conditions": {
+        "sources": {
+          "sqlite3/sqlite3": "b7dd4ceb2815cb1432775c2844fe3d3136e90c23"
+        },
+        "inputs": {
+          "sqlite3/CMakeLists.txt": "b72f347dc768feb24f6cd08d9b983893d8542b7c25fb8edef1bfa68c7516c58d",
+          "sqlite3/sqlite3.patch": "2095d029c0fdfcbb59e7b30eae8ed2e96d6e3ab3c7f678dfa06b8895deedfae6"
+        },
+        "requiredInputs": [
+          "sqlite3/CMakeLists.txt",
+          "sqlite3/sqlite3.patch"
+        ],
+        "stagedFiles": {
+          "sqlite3.c": "0c657666d819f261cc4007526ad57e1669de9949df7a8ea847aa284a2bf0ee52",
+          "sqlite3.h": "d6c84557261893439b341d2e6c35187ae3ea24fbfd843ad94616f72d89242b8c"
+        },
+        "requiredArtifacts": [
+          [
+            "lib*/libsqlite3.so*",
+            "lib*/libsqlite3*.dylib",
+            "lib*/libsqlite3.a",
+            "bin/libsqlite3.dll"
+          ]
+        ],
+        "forbiddenArtifacts": [
+          "sqlite3",
+          "sqlite3.exe",
+          "**/sqlite3",
+          "**/sqlite3.exe"
+        ]
+      },
+      "justification": "vulnerable_code_not_present"
+    }
+  ]
+}

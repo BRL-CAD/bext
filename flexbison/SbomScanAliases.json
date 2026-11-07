@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/westes/flex@v2.6.4",
+      "targetPurl": "pkg:conan/flex@2.6.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/flex/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same flex 2.6.4 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

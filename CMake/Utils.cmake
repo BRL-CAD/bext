@@ -166,6 +166,7 @@ function(git_submodule_init path checkfile)
     endif ()
   endif ()
   file(WRITE "${sha1_stamp}" "${SOURCE_STATE}")
+  set_property(DIRECTORY APPEND PROPERTY BEXT_SOURCE_STATE_FILES "${sha1_stamp}")
 
   if (GSI_PATCH_COMMAND_VAR)
     bext_patch_command(patch_command ${normalized_patch_files})
