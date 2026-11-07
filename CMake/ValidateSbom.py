@@ -54,6 +54,12 @@ def check_parity(spdx, cyclonedx):
         component = components[identifier]
         properties = {item['name']: item['value']
                       for item in component.get('properties', [])}
+        memberships = [item['comment'] for item in package.get('annotations', [])
+                       if item.get('annotator') == 'Tool: bext:membership']
+        if len(memberships) > 1:
+            raise ValueError(f'{identifier}: duplicate package membership')
+        if properties.get('bext:membership') != (memberships[0] if memberships else None):
+            raise ValueError(f'{identifier}: consumer-group membership differs')
         for field in PRESERVED_FIELDS:
             if properties.get('bext:spdx:' + field) != package[field]:
                 raise ValueError(f'{identifier}: {field} differs')

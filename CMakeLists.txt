@@ -907,6 +907,37 @@ add_custom_target(sbom
 )
 add_dependencies(bext_finalize sbom)
 
+find_program(BEXT_RENOVATE_EXECUTABLE NAMES renovate renovate.cmd)
+set(BEXT_RENOVATE_COMMAND renovate)
+if(BEXT_RENOVATE_EXECUTABLE)
+  set(BEXT_RENOVATE_COMMAND "${BEXT_RENOVATE_EXECUTABLE}")
+endif()
+set(BEXT_UPDATE_REPORT_COMPONENTS "" CACHE STRING "Limit manual release lookups to these dependencies")
+set(BEXT_UPDATE_REPORT_GROUPS "" CACHE STRING "Limit manual update lookups to these consumer groups")
+set(BEXT_UPDATE_LOOKUP_TIMEOUT "1800" CACHE STRING "Renovate lookup timeout in seconds")
+set(BEXT_UPDATE_ANCESTRY_TIMEOUT "300" CACHE STRING "Timeout per Git ancestry command in seconds")
+set(BEXT_UPDATE_REPORT_ARGS --lookup-timeout "${BEXT_UPDATE_LOOKUP_TIMEOUT}"
+  --ancestry-timeout "${BEXT_UPDATE_ANCESTRY_TIMEOUT}")
+foreach(component IN LISTS BEXT_UPDATE_REPORT_COMPONENTS)
+  list(APPEND BEXT_UPDATE_REPORT_ARGS --only "${component}")
+endforeach()
+foreach(group IN LISTS BEXT_UPDATE_REPORT_GROUPS)
+  list(APPEND BEXT_UPDATE_REPORT_ARGS --group "${group}")
+endforeach()
+add_custom_target(dependency_update_inputs
+  COMMAND "${BEXT_VEX_PYTHON}" "${CMAKE_SOURCE_DIR}/CMake/DependencyUpdates.py"
+    --sbom "${BEXT_SBOM_OUTPUT}" --source-root "${CMAKE_SOURCE_DIR}"
+    --output-dir "${CMAKE_BINARY_DIR}/dependency-updates" --generate-only
+    ${BEXT_UPDATE_REPORT_ARGS}
+  DEPENDS sbom
+  VERBATIM)
+add_custom_target(dependency_update_report
+  COMMAND "${BEXT_VEX_PYTHON}" "${CMAKE_SOURCE_DIR}/CMake/DependencyUpdates.py"
+    --sbom "${BEXT_SBOM_OUTPUT}" --source-root "${CMAKE_SOURCE_DIR}"
+    --output-dir "${CMAKE_BINARY_DIR}/dependency-updates"
+    --renovate "${BEXT_RENOVATE_COMMAND}" ${BEXT_UPDATE_REPORT_ARGS}
+  DEPENDS sbom
+  USES_TERMINAL VERBATIM)
 find_program(BEXT_SPDX_VALIDATOR NAMES pyspdxtools)
 if(BEXT_SPDX_VALIDATOR)
   add_custom_command(TARGET sbom POST_BUILD

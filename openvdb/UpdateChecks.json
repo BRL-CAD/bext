@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "openvdb/openvdb",
+      "currentValueFrom": "version",
+      "baseline": "snapshot",
+      "reason": "The pinned tree declares a development patch version between upstream release tags."
+    }
+  ]
+}

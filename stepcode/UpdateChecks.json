@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "stepcode/stepcode",
+      "kind": "manual",
+      "reason": "Review the maintained Stepcode snapshot and establish its upstream release baseline."
+    }
+  ]
+}

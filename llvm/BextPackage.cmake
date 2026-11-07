@@ -4,6 +4,7 @@ bext_package(llvm OUTPUT install GROUPS APPLESEED OSPRAY
 )
 
 bext_sbom_component("llvm/llvm-project"
+  VERSION "18.1.8"
   UPSTREAM_URL "https://github.com/llvm/llvm-project"
   PURL_BASE "pkg:github/llvm/llvm-project"
 )

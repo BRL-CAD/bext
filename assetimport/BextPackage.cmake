@@ -1,6 +1,8 @@
 bext_package(assetimport OUTPUT install GROUPS BRLCAD)
 
 bext_sbom_component("assetimport/assimp"
+  VERSION "6.0.4"
+  REVIEWED_REVISION "cfc14a26d2103df97dba445ef203a01be82395bf"
   UPSTREAM_URL "https://github.com/assimp/assimp"
   PURL_BASE "pkg:github/assimp/assimp"
 )

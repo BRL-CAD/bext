@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "openimageio/oiio",
+      "versioning": "regex:^v?(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)\\.(?<build>[0-9]+)$",
+      "reason": "OpenImageIO uses four-part release numbers; its final component must participate in comparisons."
+    }
+  ]
+}

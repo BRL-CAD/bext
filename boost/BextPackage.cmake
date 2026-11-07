@@ -1,6 +1,8 @@
 bext_package(boost OUTPUT install GROUPS APPLESEED)
 
 bext_sbom_component("boost/boost"
+  VERSION "1.85.0"
+  REVIEWED_REVISION "2d59a4b188b6f4e9f0e7bb1eb535a0dc6900d401"
   UPSTREAM_URL "https://github.com/boostorg/boost"
   PURL_BASE "pkg:github/boostorg/boost"
 )

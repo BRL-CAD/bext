@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "netpbm/netpbm",
+      "kind": "commit",
+      "branch": "brlcad",
+      "reason": "Track prepared BRL-CAD sources; integrating upstream Netpbm releases remains a separate review."
+    }
+  ]
+}

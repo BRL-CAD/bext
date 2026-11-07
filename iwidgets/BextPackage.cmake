@@ -1,6 +1,8 @@
 bext_package(iwidgets OUTPUT install GROUPS TCL)
 
 bext_sbom_component("iwidgets/iwidgets"
+  VERSION "4.1.1"
+  REVIEWED_REVISION "ce8f624329a32c042c7da110166d03a6f5ad03c3"
   UPSTREAM_URL "https://core.tcl-lang.org/iwidgets"
   PURL_BASE "pkg:github/BRL-CAD/iwidgets"
 )

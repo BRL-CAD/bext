@@ -45,6 +45,9 @@ jobs:
       - name: Validate VEX evidence and generation
         run: python3 CMake/tests/test_vex_generation.py -v
 
+      - name: Validate dependency release reports
+        run: python3 CMake/tests/test_dependency_updates.py -v
+
       - name: Install SBOM validators
         run: |
           python3 -m venv "$RUNNER_TEMP/sbom-tools"

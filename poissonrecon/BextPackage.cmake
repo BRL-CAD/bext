@@ -1,6 +1,8 @@
 bext_package(poissonrecon OUTPUT noinstall GROUPS BRLCAD)
 
 bext_sbom_component("poissonrecon/PoissonRecon"
+  VERSION "18.75"
+  REVIEWED_REVISION "cd6dc7d33f028b2e6496f5cd999c25cecd56aff2"
   UPSTREAM_URL "https://github.com/mkazhdan/PoissonRecon"
   PURL_BASE "pkg:github/mkazhdan/PoissonRecon"
 )

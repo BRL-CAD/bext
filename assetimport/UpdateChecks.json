@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "assetimport/assimp",
+      "currentValueFrom": "version"
+    }
+  ]
+}

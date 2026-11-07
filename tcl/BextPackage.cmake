@@ -1,6 +1,7 @@
 bext_package(tcl OUTPUT install GROUPS TCL)
 
 bext_sbom_component("tcl/tcl"
+  VERSION "8.6.18"
   UPSTREAM_URL "https://github.com/tcltk/tcl"
   PURL_BASE "pkg:github/tcltk/tcl"
 )

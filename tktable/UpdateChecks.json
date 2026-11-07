@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "tktable/tktable",
+      "kind": "manual",
+      "reason": "The maintained source uses a commit identity; review upstream release availability and Tcl/Tk compatibility."
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 bext_package(openvdb OUTPUT install GROUPS BRLCAD)
 
 bext_sbom_component("openvdb/openvdb"
+  VERSION "13.0.1"
+  REVIEWED_REVISION "c81d904dede13fb698f9e2e40a5189781ca92a35"
   UPSTREAM_URL "https://github.com/AcademySoftwareFoundation/openvdb"
   PURL_BASE "pkg:github/AcademySoftwareFoundation/openvdb"
 )

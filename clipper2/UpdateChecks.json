@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "clipper2/Clipper2",
+      "versioning": "regex:^Clipper2_(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$"
+    }
+  ]
+}
