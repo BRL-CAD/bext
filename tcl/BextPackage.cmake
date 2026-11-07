@@ -1,0 +1,110 @@
+bext_package(tcl OUTPUT install GROUPS TCL)
+
+bext_sbom_component("tcl/tcl"
+  UPSTREAM_URL "https://github.com/tcltk/tcl"
+  PURL_BASE "pkg:github/tcltk/tcl"
+)
+
+bext_sbom_component("tcl/tcl"
+  LICENSE "TCL"
+  LICENSE_FILE "license.terms"
+  LICENSE_SHA256 "c0a69a2bfd757361ec7e6143973b103c90409316b49e9c88db26ad6388e79f16"
+  LICENSE_COMMENT "Bundled Tcl packages and LibTomMath are represented as contained packages."
+  PURPOSE "LIBRARY"
+)
+
+bext_sbom_subcomponent("tcl/tcl" "libtommath"
+  NAME "LibTomMath"
+  VERSION "1.2.1"
+  UPSTREAM_URL "https://github.com/libtom/libtommath"
+  PURL "pkg:github/libtom/libtommath@v1.2.1"
+  LICENSE "Unlicense"
+  LICENSE_FILE "libtommath/LICENSE"
+  LICENSE_SHA256 "2fa64b163659f41965c9815882a8296d3d03ff546b76153e11445f9bdecf955a"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("tcl/tcl" "pkgs/itcl4.3.7"
+  NAME "Itcl"
+  VERSION "4.3.7"
+  UPSTREAM_URL "https://core.tcl-lang.org/itcl"
+  PURL "pkg:github/tcltk/itcl@itcl-4-3-7"
+  LICENSE "TCL"
+  LICENSE_FILE "pkgs/itcl4.3.7/license.terms"
+  LICENSE_SHA256 "b61edfaeead97546bc62b1f205b046f2e440b83bfc517bc0932b93bc3d505865"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("tcl/tcl" "pkgs/sqlite3.53.0"
+  NAME "SQLite Tcl extension"
+  VERSION "3.54.1"
+  UPSTREAM_URL "https://www.sqlite.org/"
+  PURL "pkg:generic/sqlite@3.54.1"
+  CPE "cpe:2.3:a:sqlite:sqlite:3.54.1:*:*:*:*:*:*:*"
+  CPE_STATUS "NVD_PRODUCT"
+  CPE_PRODUCT_EVIDENCE "cpe:2.3:a:sqlite:sqlite:3.8.8.3:*:*:*:*:*:*:*"
+  CPE_COMMENT "The staged Tcl package copies bext's maintained SQLite engine and headers. Tcl's leap-second timestamp support is retained by the setup script."
+  COPYRIGHT_TEXT "NONE"
+  COPYRIGHT_REVIEWED_REVISION "aa6d198af7833313f33120704ce68de422a3bcf3"
+  LICENSE "LicenseRef-SQLite-Public-Domain"
+  LICENSE_NAME "SQLite public-domain dedication"
+  LICENSE_FILES "@/tcl/licenses/sqlite3.txt" "pkgs/sqlite3.53.0/license.terms"
+  LICENSE_SHA256S
+    "05b720fa5e7c5bd8c039c6d0e37158c7bfc069f2e6462bbb4408f987e982783a"
+    "66e056b6e8687f32af30d5187611b98b12a8f46f07aaf62f43585f276e8f0ac9"
+  REVIEWED_REVISION "aa6d198af7833313f33120704ce68de422a3bcf3"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+foreach(_bext_tdbc_component IN ITEMS tdbc tdbcmysql tdbcodbc)
+  bext_sbom_subcomponent("tcl/tcl" "pkgs/${_bext_tdbc_component}1.1.13"
+    NAME "${_bext_tdbc_component}"
+    VERSION "1.1.13"
+    UPSTREAM_URL "https://core.tcl-lang.org/${_bext_tdbc_component}"
+    PURL "pkg:generic/tcl/${_bext_tdbc_component}@1.1.13"
+    LICENSE "TCL"
+    LICENSE_FILE "pkgs/${_bext_tdbc_component}1.1.13/license.terms"
+    LICENSE_SHA256 "fafd6456aa4b7c80c190df86de5bdfab82c8c227a0c348662432c75ceeb2238d"
+    PURPOSE "LIBRARY"
+    SCOPE "RUNTIME"
+  )
+endforeach()
+
+bext_sbom_subcomponent("tcl/tcl" "pkgs/tdbcpostgres1.1.13"
+  NAME "tdbcpostgres"
+  VERSION "1.1.13"
+  UPSTREAM_URL "https://core.tcl-lang.org/tdbcpostgres"
+  PURL "pkg:generic/tcl/tdbcpostgres@1.1.13"
+  LICENSE "TCL"
+  LICENSE_FILE "pkgs/tdbcpostgres1.1.13/license.terms"
+  LICENSE_SHA256 "d3aa1cf53b96e69469d46c62bceeebadaa3ecb9699b73962bb207246f4288a08"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("tcl/tcl" "pkgs/tdbcsqlite3-1.1.13"
+  NAME "tdbcsqlite3"
+  VERSION "1.1.13"
+  UPSTREAM_URL "https://core.tcl-lang.org/tdbcsqlite3"
+  PURL "pkg:generic/tcl/tdbcsqlite3@1.1.13"
+  LICENSE "TCL"
+  LICENSE_FILE "pkgs/tdbcsqlite3-1.1.13/license.terms"
+  LICENSE_SHA256 "37186e29fd02702179f7c5e9fc630840429319281fcf5a282caaf7fcb0a1c7f4"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("tcl/tcl" "pkgs/thread2.8.13"
+  NAME "Tcl Thread"
+  VERSION "2.8.13"
+  UPSTREAM_URL "https://core.tcl-lang.org/thread"
+  PURL "pkg:github/tcltk/thread@thread-2-8-13"
+  LICENSE "TCL"
+  LICENSE_FILE "pkgs/thread2.8.13/license.terms"
+  LICENSE_SHA256 "0a03981c40f7813ce6ddbdfce9882020bcfd696ea044b21ef07619ed9b86abae"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)

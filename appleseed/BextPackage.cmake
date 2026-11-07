@@ -1,0 +1,72 @@
+bext_package(appleseed OUTPUT install GROUPS APPLESEED)
+
+bext_sbom_component("appleseed/appleseed"
+  UPSTREAM_URL "https://github.com/appleseedhq/appleseed"
+  PURL_BASE "pkg:github/BRL-CAD/appleseed"
+)
+
+bext_sbom_component("appleseed/appleseed"
+  LICENSE "MIT"
+  LICENSE_FILE "LICENSE.txt"
+  LICENSE_SHA256 "67ab82c6f3b067c64d7a36ddf3fc238dd096a669076bff4e5a7e3a09dedad9e7"
+  LICENSE_COMMENT "Bundled third-party libraries are represented as contained packages."
+  PURPOSE "LIBRARY"
+)
+
+bext_sbom_subcomponent("appleseed/appleseed" "src/thirdparty/bcd"
+  NAME "Bayesian Collaborative Denoising"
+  UPSTREAM_URL "https://github.com/superboubek/bcd"
+  PURL_BASE "pkg:github/BRL-CAD/appleseed"
+  PURL_SUBPATH "src/thirdparty/bcd"
+  LICENSE "LicenseRef-BCD-BSD-3-Clause-Enhancements"
+  LICENSE_NAME "BCD BSD-3-Clause with enhancement grant"
+  LICENSE_FILE "@/appleseed/licenses/appleseed-bcd.txt"
+  LICENSE_SHA256 "317162b7e39e3350ec0bac4e6bd56e69086c53ae6b6cac30f70ebeda92923e0c"
+  LICENSE_SOURCE_FILE "src/thirdparty/bcd/LICENSE.txt"
+  LICENSE_SOURCE_SHA256 "317162b7e39e3350ec0bac4e6bd56e69086c53ae6b6cac30f70ebeda92923e0c"
+  REVIEWED_REVISION "05e66fd424c1311c52362247cff92b945ecf2021"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("appleseed/appleseed" "src/thirdparty/glad"
+  NAME "glad"
+  VERSION "0.1.29"
+  UPSTREAM_URL "https://github.com/Dav1dde/glad"
+  PURL "pkg:github/Dav1dde/glad@v0.1.29"
+  LICENSE "CC0-1.0 AND MIT"
+  LICENSE_FILE "@/appleseed/licenses/appleseed-glad.txt"
+  LICENSE_SHA256 "709fbdf8a94bb61211862f75957509d12d1f74c625ad9d4dd5bc334aadb8629d"
+  REVIEWED_REVISION "05e66fd424c1311c52362247cff92b945ecf2021"
+  LICENSE_FILES
+    "src/thirdparty/glad/include/glad/glad.h"
+    "src/thirdparty/glad/src/glad.c"
+    "src/thirdparty/glad/include/KHR/khrplatform.h"
+    "src/thirdparty/glad/CMakeLists.txt"
+  LICENSE_SHA256S
+    "f2e245dfae8d854b3b78547ecf15b2c883145ea606e78f8b4d71207479ec79cd"
+    "e63d4eae1428bff22bbf2a00d9f7f592229af08a4c39a3a351017f489e95f30d"
+    "890c04e4cc75739666aa8ff989a0a37b7f11d9e0ec60bc362b40f91835d11b5c"
+    "48b644c93ffc7e9c949b4c46e4e6f78e1eb67e76fe6e8e96e3740cd94ffab7e3"
+  LICENSE_COMMENT "glad offers generated code under CC0, and bext selects that option. The Khronos platform header and appleseed build integration carry MIT-form grants."
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)
+
+bext_sbom_subcomponent("appleseed/appleseed" "src/thirdparty/murmurhash3"
+  NAME "MurmurHash3"
+  UPSTREAM_URL "https://github.com/aappleby/smhasher"
+  PURL_BASE "pkg:github/BRL-CAD/appleseed"
+  PURL_SUBPATH "src/thirdparty/murmurhash3"
+  COPYRIGHT_TEXT "NONE"
+  COPYRIGHT_REVIEWED_REVISION "05e66fd424c1311c52362247cff92b945ecf2021"
+  LICENSE "LicenseRef-MurmurHash3-Public-Domain"
+  LICENSE_NAME "MurmurHash3 public-domain dedication"
+  LICENSE_FILE "@/appleseed/licenses/appleseed-murmurhash3.txt"
+  LICENSE_SHA256 "33b0a105d6861175dcfb9f9f94c3e159f21d9a4d4e417531bd3b327ec1152e37"
+  LICENSE_SOURCE_FILE "src/thirdparty/murmurhash3/MurmurHash3.h"
+  LICENSE_SOURCE_SHA256 "33b0a105d6861175dcfb9f9f94c3e159f21d9a4d4e417531bd3b327ec1152e37"
+  REVIEWED_REVISION "05e66fd424c1311c52362247cff92b945ecf2021"
+  PURPOSE "LIBRARY"
+  SCOPE "RUNTIME"
+)

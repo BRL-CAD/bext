@@ -22,16 +22,19 @@ class DependencySelectionTests(unittest.TestCase):
         self.wrapper = self.source / 'probe'
         self.wrapper.mkdir(parents=True)
         self.build = self.root / 'build'
+        (self.wrapper / 'BextPackage.cmake').write_text('bext_package(probe OUTPUT install GROUPS BRLCAD)\n')
         (self.source / '.gitmodules').write_text('')
         (self.source / 'CMakeLists.txt').write_text('''
 cmake_minimum_required(VERSION 3.26)
 project(selection NONE)
 include(ExternalProject)
 include("@SOURCE@/CMake/Utils.cmake")
+include("@SOURCE@/CMake/BextDependencyInventory.cmake")
 option(USE_BRLCAD "BRL-CAD dependencies" ON)
 set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install")
 set(DOC_LICENSE_DIR "${CMAKE_BUNDLE_INSTALL_PREFIX}/share/doc/legal/other")
 add_project(probe GROUPS "BRLCAD")
+bext_write_sbom_selectors("${CMAKE_BINARY_DIR}/sbom-selectors.cmake")
 if(TARGET PROBE_BLD)
   file(WRITE "${CMAKE_BINARY_DIR}/selected.txt" "ON")
 else()
@@ -88,6 +91,40 @@ install(FILES payload DESTINATION share/probe)
         self.snapshot()
         self.configure('ON')
 
+    def test_wrapper_serializes_installed_sbom_selector(self):
+        selector = self.wrapper / 'SbomSelection.cmake'
+        selector.write_text('function(probe_selected_packages output cache)\nendfunction()\n')
+        wrapper = self.wrapper / 'CMakeLists.txt'
+        wrapper.write_text(wrapper.read_text().replace(
+            '  configure_file(snapshot/LICENSE "${DOC_LICENSE_DIR}/probe.txt" COPYONLY)\n',
+            '  configure_file(snapshot/LICENSE "${DOC_LICENSE_DIR}/probe.txt" COPYONLY)\n'
+            '  bext_sbom_selector(probe\n'
+            '    TARGET PROBE_BLD\n'
+            '    SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/SbomSelection.cmake"\n'
+            '    FUNCTION probe_selected_packages\n'
+            '    CACHE "${CMAKE_CURRENT_BINARY_DIR}/probe-cache.txt"\n'
+            '    ARGUMENTS first second)\n'))
+        self.snapshot()
+        self.configure('ON')
+        probe = self.root / 'selector-probe.cmake'
+        probe.write_text('''
+cmake_minimum_required(VERSION 3.26)
+include("@REGISTRY@")
+list(LENGTH BEXT_SBOM_SELECTOR_IDS selector_count)
+if(NOT selector_count EQUAL 1)
+  message(FATAL_ERROR "Expected one selector, found ${selector_count}")
+endif()
+list(GET BEXT_SBOM_SELECTOR_IDS 0 selector_id)
+set(prefix "BEXT_SBOM_SELECTOR_${selector_id}")
+if(NOT "${${prefix}_COMPONENT}" STREQUAL "probe" OR
+   NOT "${${prefix}_TARGET}" STREQUAL "PROBE_BLD" OR
+   NOT "${${prefix}_FUNCTION}" STREQUAL "probe_selected_packages" OR
+   NOT "${${prefix}_ARGUMENTS}" STREQUAL "first;second")
+  message(FATAL_ERROR "Serialized selector fields are incorrect")
+endif()
+'''.replace('@REGISTRY@', (self.build / 'sbom-selectors.cmake').as_posix()))
+        self.run_command('cmake', '-P', probe)
+
     def test_explicit_off_survives_availability_changes_and_enable_all(self):
         self.configure('OFF', '-DENABLE_PROBE=OFF', '-DENABLE_ALL=ON')
         self.snapshot()
@@ -112,6 +149,7 @@ install(FILES payload DESTINATION share/probe)
                          '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Snapshot wrapper')
         script = self.root / 'inventory.cmake'
         script.write_text('''
+cmake_minimum_required(VERSION 3.26)
 include("@SOURCE@/CMake/BextDependencyInventory.cmake")
 bext_collect_dependency_inventory("@FIXTURE@")
 bext_inventory_get(urls probe SOURCE_URLS)

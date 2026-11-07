@@ -1,0 +1,97 @@
+Qt source REUSE aggregate
+=========================
+
+Scope
+-----
+
+This aggregate was produced with reuse-tool 6.2.0 from the independently
+evaluated qtbase and qtsvg roots in BRL-CAD's Qt source repository at commit
+3178765365af3497b0fe60d6cb0e1012027d9b75.  qtbase is tree
+eff7c4d1f306bab99af820729bfb04ca603c21ad and qtsvg is tree
+d6491826490c6b24237f44090698fdf63f03cff3.
+
+The aggregate records all identifiers found by REUSE, including alternative
+commercial and GPL declarations in source files.  It does not mean that bext
+selects every alternative.  The contained Qt runtime and build-tool packages
+record the open-source conclusions selected for distributed outputs.
+
+Qt Base identifiers
+-------------------
+
+AFL-2.1
+Apache-2.0
+Bitstream-Vera
+blessing
+BSD-2-Clause
+BSD-3-Clause
+BSD-4-Clause
+BSL-1.0
+CC0-1.0
+FTL
+GFDL-1.3-no-invariants-only
+GPL-2.0-only
+GPL-2.0-or-later
+GPL-3.0-only
+HPND
+IJG
+Imlib2
+IPL-1.0
+LGPL-2.1-or-later
+LGPL-3.0-only
+Libpng
+libpng-2.0
+LicenseRef-BSD-3-Clause-with-PCRE2-Binary-Like-Packages-Exception
+LicenseRef-ICC-License
+LicenseRef-Lcs-Telegraphics
+LicenseRef-Qt-Commercial
+LicenseRef-SHA1-Public-Domain
+Linux-syscall-note
+MIT
+MIT-Khronos-old
+MIT-open-group
+MPL-2.0
+Qt-GPL-exception-1.0
+SPL-1.0
+Unicode-3.0
+X11
+Xerox
+Zlib
+
+REUSE reported licensing information for 23,106 of 23,107 files.  The sole
+unannotated file is .release-timestamp, which contains only an ISO timestamp.
+
+Qt SVG identifiers
+------------------
+
+BSD-3-Clause
+GFDL-1.3-no-invariants-only
+GPL-2.0-only
+GPL-3.0-only
+HPND-sell-variant
+LGPL-3.0-only
+LicenseRef-Qt-Commercial
+
+REUSE reported licensing information for all 633 files.
+
+Distribution review
+-------------------
+
+* LicenseRef-Qt-Commercial occurs as an alternative in Qt-authored source; it
+  is not the concluded license for any bext output.
+* GPL-3.0-only files without the Qt GPL exception are tests or Qt Base's WASM
+  platform plugin.  bext disables Qt tests and does not target Emscripten.
+* GPL-3.0-only WITH Qt-GPL-exception-1.0 applies to host build and deployment
+  tools.  These programs are not linked into BRL-CAD or the Qt runtime.
+* The only standalone GPL-2.0-only item is FreeType's license text.  FreeType
+  code and Qt's rasterizer are available under the FTL alternative.
+* IPL-1.0 and SPL-1.0 occur only in the disabled XML conformance tests.
+* GFDL-1.3-no-invariants-only applies to documentation, and
+  GPL-2.0-only WITH Linux-syscall-note occurs only in QtTest support.
+* MPL-2.0 covers Public Suffix List data.  LGPL-2.1-or-later covers an optional
+  Wayland protocol description.  The remaining third-party identifiers are
+  permissive, attribution, public-domain, or data-license terms.
+
+No source used by bext's supported desktop runtime configuration was found to
+require a GPL-only or commercial license.  A future Emscripten build must
+repeat this review because Qt's WASM platform plugin is GPL-3.0-only or
+commercial in this source revision.

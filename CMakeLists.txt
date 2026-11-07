@@ -272,6 +272,7 @@ set(STALE_INSTALL_WARN FALSE)
 file(GLOB BEXT_GRAPH_PROJECT_FILES
   RELATIVE "${CMAKE_SOURCE_DIR}"
   "*/*.deps"
+  "*/BextPackage.cmake"
   "*/CMakeLists.txt"
 )
 list(REMOVE_DUPLICATES BEXT_GRAPH_PROJECT_FILES)
@@ -283,6 +284,7 @@ list(SORT BEXT_GRAPH_PROJECT_FILES)
 # in dependency CMakeLists.txt files
 ###############################################################################
 include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/Utils.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/BextDependencyInventory.cmake")
 
 
 ###############################################################################
@@ -300,6 +302,7 @@ option(USE_GDAL         "GDAL terrain support"                       ON)
 option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
 option(USE_QT           "Qt graphical toolkit support"               ON)
 option(USE_TCL          "Tcl/Tk support"                             ON)
+option(BEXT_SBOM_ALLOW_DIRTY "Allow non-release SBOMs from dirty source trees" OFF)
 
 # An Xmin prefix selects a coherent toolkit build profile.  Individual
 # dependency logic applies the version-matched patches only when that
@@ -688,12 +691,29 @@ configure_file("${CMAKE_SOURCE_DIR}/CMake/RefreshSpdx.cmake"
   "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/bext/RefreshSpdx.cmake" COPYONLY)
 
 set(BEXT_INSTALL_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-manifest.json")
+set(BEXT_INSTALL_EXCLUDE_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-exclude-manifest.json")
+set(BEXT_INSTALL_EXCLUDE_RULES "${CMAKE_BINARY_DIR}/CMakeFiles/bext-install-exclude-patterns.txt")
+get_property(BEXT_INSTALL_EXCLUDE_PATTERNS GLOBAL PROPERTY BEXT_INSTALL_EXCLUDE_PATTERNS)
+list(REMOVE_DUPLICATES BEXT_INSTALL_EXCLUDE_PATTERNS)
+list(SORT BEXT_INSTALL_EXCLUDE_PATTERNS)
+string(REPLACE ";" "\n" BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT "${BEXT_INSTALL_EXCLUDE_PATTERNS}")
+file(WRITE "${BEXT_INSTALL_EXCLUDE_RULES}" "${BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT}\n")
+set(BEXT_COMPONENT_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-component-manifest.json")
+set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
+set(BEXT_COMPONENT_OWNERSHIP_RULES_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-component-ownership-rules.txt")
 set(BEXT_ACTIVE_COMPONENTS_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-active-components.txt")
+set(BEXT_SBOM_SELECTORS_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-sbom-selectors.cmake")
+get_property(BEXT_COMPONENT_OWNERSHIP_RULES GLOBAL PROPERTY BEXT_COMPONENT_OWNERSHIP_RULES)
+list(REMOVE_DUPLICATES BEXT_COMPONENT_OWNERSHIP_RULES)
+list(SORT BEXT_COMPONENT_OWNERSHIP_RULES)
+string(REPLACE ";" "\n" BEXT_COMPONENT_OWNERSHIP_RULES_TEXT "${BEXT_COMPONENT_OWNERSHIP_RULES}")
+file(WRITE "${BEXT_COMPONENT_OWNERSHIP_RULES_FILE}" "${BEXT_COMPONENT_OWNERSHIP_RULES_TEXT}\n")
 get_property(BEXT_ACTIVE_COMPONENTS GLOBAL PROPERTY BEXT_SUMMARY_LOCAL_PROJECTS)
 list(REMOVE_DUPLICATES BEXT_ACTIVE_COMPONENTS)
 list(SORT BEXT_ACTIVE_COMPONENTS)
 string(REPLACE ";" "\n" BEXT_ACTIVE_COMPONENTS_TEXT "${BEXT_ACTIVE_COMPONENTS}")
 file(WRITE "${BEXT_ACTIVE_COMPONENTS_FILE}" "${BEXT_ACTIVE_COMPONENTS_TEXT}\n")
+bext_write_sbom_selectors("${BEXT_SBOM_SELECTORS_FILE}")
 set(BEXT_FINALIZE_SCRIPT "${CMAKE_SOURCE_DIR}/CMake/FinalizeInstall.cmake")
 get_property(BEXT_INSTALL_TARGETS GLOBAL PROPERTY BEXT_INSTALL_TARGETS)
 list(REMOVE_DUPLICATES BEXT_INSTALL_TARGETS)
@@ -706,7 +726,13 @@ add_custom_target(bext_finalize ${BEXT_FINALIZE_ALL}
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_INSTALL_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DBEXT_MANIFEST=${BEXT_INSTALL_MANIFEST}
+    -DBEXT_INSTALL_EXCLUDE_MANIFEST=${BEXT_INSTALL_EXCLUDE_MANIFEST}
+    -DBEXT_INSTALL_EXCLUDE_RULES=${BEXT_INSTALL_EXCLUDE_RULES}
+    -DBEXT_COMPONENT_MANIFEST=${BEXT_COMPONENT_MANIFEST}
+    -DBEXT_COMPONENT_OWNERSHIP_RULES=${BEXT_COMPONENT_OWNERSHIP_RULES_FILE}
     -DBEXT_ACTIVE_COMPONENTS=${BEXT_ACTIVE_COMPONENTS_FILE}
+    -DBEXT_SBOM_SELECTORS=${BEXT_SBOM_SELECTORS_FILE}
+    -DBEXT_SBOM=${BEXT_SBOM_OUTPUT}
     -DBEXT_SOURCE_ROOT=${CMAKE_SOURCE_DIR}
     -DBEXT_BINARY_ROOT=${CMAKE_BINARY_DIR}
     -DBEXT_NOINSTALL_ROOT=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
@@ -814,6 +840,22 @@ add_custom_target(update_staged_dependency_docs
     -P ${CMAKE_SOURCE_DIR}/CMake/GenerateDependencyDocs.cmake
   VERBATIM
 )
+add_custom_target(sbom_metadata_report
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_REPORT_OUTPUT=${CMAKE_BINARY_DIR}/sbom-metadata-gaps.md
+    -P ${CMAKE_SOURCE_DIR}/CMake/ReportSbomMetadata.cmake
+  BYPRODUCTS "${CMAKE_BINARY_DIR}/sbom-metadata-gaps.md"
+  VERBATIM
+)
+add_custom_target(sbom_copyright_candidates
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_REPORT_OUTPUT=${CMAKE_BINARY_DIR}/sbom-copyright-candidates.md
+    -P ${CMAKE_SOURCE_DIR}/CMake/ReportCopyrightCandidates.cmake
+  BYPRODUCTS "${CMAKE_BINARY_DIR}/sbom-copyright-candidates.md"
+  VERBATIM
+)
 
 # Logic for generating a Software Bill of Materials (SBOM)
 # from committed bext repository information. Regenerate on each request:
@@ -823,7 +865,11 @@ add_custom_target(sbom
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DBEXT_SBOM_OUTPUT=${BEXT_SBOM_OUTPUT}
+    -DBEXT_SBOM_ALLOW_DIRTY=${BEXT_SBOM_ALLOW_DIRTY}
     -P ${CMAKE_SOURCE_DIR}/CMake/GenerateSbom.cmake
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SBOM_INPUT=${BEXT_SBOM_OUTPUT}
+    -P ${CMAKE_SOURCE_DIR}/CMake/ValidateSbom.cmake
   DEPENDS
     ${CMAKE_SOURCE_DIR}/CMake/BextDependencyInventory.cmake
     ${CMAKE_SOURCE_DIR}/CMake/GenerateSbom.cmake
@@ -833,8 +879,23 @@ add_custom_target(sbom
   BYPRODUCTS "${BEXT_SBOM_OUTPUT}"
   VERBATIM
 )
+add_dependencies(bext_finalize sbom)
+find_program(BEXT_SPDX_VALIDATOR NAMES pyspdxtools)
+if(BEXT_SPDX_VALIDATOR)
+  add_custom_command(TARGET sbom POST_BUILD
+    COMMAND "${BEXT_SPDX_VALIDATOR}" --infile "${BEXT_SBOM_OUTPUT}" --version SPDX-2.3
+    VERBATIM
+  )
+endif()
 add_custom_target(supply_chain_check
-  DEPENDS check_dependency_metadata sbom
+  DEPENDS check_dependency_metadata sbom sbom_metadata_report
+)
+add_custom_target(sbom_regress
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_SBOM_OUTPUT=${CMAKE_BINARY_DIR}/bext-test.spdx.json
+    -P ${CMAKE_SOURCE_DIR}/CMake/TestSbom.cmake
+  VERBATIM
 )
 
 ###############################################################################
