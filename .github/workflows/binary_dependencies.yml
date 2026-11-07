@@ -59,6 +59,11 @@ jobs:
       - name: Build
         run: cmake --build build --parallel 1 --verbose
 
+      - name: Validate finalized supply-chain metadata
+        uses: ./.github/actions/validate-supply-chain
+        with:
+          prefix: ${{ runner.temp }}/bext_output
+
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'
         shell: bash
@@ -69,7 +74,7 @@ jobs:
           test -d install
           test -d noinstall
           test -f bext-install-manifest.json
-          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+          cmake -DBEXT_PACKAGE_ROOT="$PWD" -DBEXT_PACKAGE_ARCHIVE="$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" -P "$GITHUB_WORKSPACE/CMake/PackageDependencies.cmake"
 
       - name: Upload dependency tree
         if: github.ref == 'refs/heads/main'
@@ -118,6 +123,11 @@ jobs:
         shell: pwsh
         run: cmake --build build --parallel 1 --verbose
 
+      - name: Validate finalized supply-chain metadata
+        uses: ./.github/actions/validate-supply-chain
+        with:
+          prefix: ${{ runner.temp }}/bext_output
+
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'
         shell: bash
@@ -128,7 +138,7 @@ jobs:
           test -d install
           test -d noinstall
           test -f bext-install-manifest.json
-          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+          cmake -DBEXT_PACKAGE_ROOT="$PWD" -DBEXT_PACKAGE_ARCHIVE="$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" -P "$GITHUB_WORKSPACE/CMake/PackageDependencies.cmake"
 
       - name: Upload dependency tree
         if: github.ref == 'refs/heads/main'
@@ -167,6 +177,11 @@ jobs:
       - name: Build
         run: cmake --build build --parallel 1 --verbose
 
+      - name: Validate finalized supply-chain metadata
+        uses: ./.github/actions/validate-supply-chain
+        with:
+          prefix: ${{ runner.temp }}/bext_output
+
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'
         shell: bash
@@ -177,7 +192,7 @@ jobs:
           test -d install
           test -d noinstall
           test -f bext-install-manifest.json
-          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+          cmake -DBEXT_PACKAGE_ROOT="$PWD" -DBEXT_PACKAGE_ARCHIVE="$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" -P "$GITHUB_WORKSPACE/CMake/PackageDependencies.cmake"
 
       - name: Upload dependency tree
         if: github.ref == 'refs/heads/main'

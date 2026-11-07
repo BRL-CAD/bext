@@ -1,0 +1,54 @@
+name: Supply-chain metadata
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '30 3 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install validators in a private environment
+        run: |
+          python3 -m venv "$RUNNER_TEMP/sbom-tools"
+          "$RUNNER_TEMP/sbom-tools/bin/python" -m pip install -r CMake/sbom-requirements.txt
+      - name: Run offline supply-chain tests
+        run: '"$RUNNER_TEMP/sbom-tools/bin/python" -m unittest discover -s CMake/tests -v'
+
+  scanners:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      GRYPE_VERSION: '0.121.2'
+      TRIVY_VERSION: '0.76.2'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tested scanners in a private directory
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/scanners"
+          cd "$RUNNER_TEMP/scanners"
+          curl -fLO "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          curl -fLO "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "grype_${GRYPE_VERSION}_checksums.txt"
+          tar -xzf "grype_${GRYPE_VERSION}_linux_amd64.tar.gz" grype
+          curl -fLO "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -fLO "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "trivy_${TRIVY_VERSION}_checksums.txt"
+          tar -xzf "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" trivy
+          echo "$RUNNER_TEMP/scanners" >> "$GITHUB_PATH"
+      - name: Populate scanner databases
+        run: |
+          grype db update
+          trivy image --download-db-only
+      - name: Verify vulnerability detection and VEX isolation
+        env:
+          BEXT_VEX_SCANNER_TESTS: '1'
+        run: python3 CMake/tests/test_vex_scanners.py -v

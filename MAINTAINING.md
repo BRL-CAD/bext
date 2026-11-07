@@ -554,7 +554,7 @@ build/sbom-tools/venv/bin/python -m pip install -r CMake/sbom-requirements.txt
 build/sbom-tools/venv/bin/python CMake/ValidateSbom.py \
   --spdx build/sbom-tools/results/bext.spdx.json \
   --cyclonedx build/sbom-tools/results/bext.cdx.json
-python3 CMake/tests/test_sbom_formats.py -v
+build/sbom-tools/venv/bin/python CMake/tests/test_sbom_formats.py -v
 ```
 
 This runs the official [SPDX validator](https://github.com/spdx/tools-python)
@@ -571,6 +571,129 @@ environment's Python at configure time, then build `sbom_validate` or
 the latter generates advisory projections and coverage reports. Neither target
 builds the dependency libraries. Weekly CI installs the validators explicitly,
 runs both formats and projections, and fails on validation errors.
+
+### Setting up the external supply-chain tools
+
+These tools are developer utilities, separate from the C/C++ dependency bundle.
+Generating source SPDX/CycloneDX needs only CMake and Git; configured build
+finalization also needs Python 3.8 or newer. Independent validators need a
+newer Python supported by `CMake/sbom-requirements.txt`; Python 3.12 or newer
+is a convenient choice. Scanning additionally needs Grype or Trivy, and update
+discovery needs Node.js and Renovate. None requires a GitHub/Gitea bot account.
+
+Use a private directory such as `build/sbom-tools`, outside the installed
+product. Adding its `bin` directory to PATH is similar to selecting a compiler
+toolchain: only processes launched from that shell inherit the choice. These
+programs analyze metadata and artifacts; their runtime and build dependencies
+are not linked into BRL-CAD. Keep their caches outside release packages.
+
+| Host | Python and validators | Scanner executables | Renovate |
+| --- | --- | --- | --- |
+| Linux | Use an available Python with `venv`; distributions may package `venv` separately. A user-installed Python is also suitable. | Extract the matching Linux release archives into a private `bin` directory. | Use a supported Node.js runtime, then the private npm installation below. |
+| macOS | Use an existing development Python or a Python.org/Homebrew installation, then create a virtual environment. | Extract the matching Intel or Apple Silicon archives. Homebrew is another option when already available. | A Node.js distribution for the host architecture or an existing Homebrew installation works. |
+| Windows | Use Python from Python.org and `py -3`; a virtual environment uses `Scripts` instead of `bin`. | Extract the Windows archives into a private tools directory and add it to the shell's PATH. Keep native Windows and WSL tools/caches separate. | Use native Node.js and the generated `renovate.cmd` launcher, or use the entire workflow inside WSL. |
+| FreeBSD | Use an available Python and `venv`. When wheels are unavailable, pip may compile dependencies and require C/Rust development tools. | Trivy publishes FreeBSD archives. Build Grype from its pinned Go module using an available Go toolchain. | The tested npm installation works with Node 24.22.1; optional RE2 is omitted as described below. |
+
+The [Python packaging guide](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/),
+[Grype installation guide](https://oss.anchore.com/docs/installation/grype/),
+[Trivy installation guide](https://www.trivy.dev/docs/latest/getting-started/installation/),
+and [Renovate runtime guide](https://docs.renovatebot.com/getting-started/running/)
+describe supported distributions and platform installation choices. Prefer
+upstream archives when administrative package installation is unavailable;
+check their published checksums before extracting executables. The tested
+scanner versions are Grype 0.121.2 and Trivy 0.76.2. Re-run the scanner fixtures
+when changing versions, even when their command lines remain compatible.
+
+On Linux, macOS, or FreeBSD, start from the bext checkout:
+
+```sh
+mkdir -p build/sbom-tools/bin
+python3 -m venv build/sbom-tools/venv
+build/sbom-tools/venv/bin/python -m pip install -r CMake/sbom-requirements.txt
+export PATH="$PWD/build/sbom-tools/bin:$PWD/build/sbom-tools/venv/bin:$PATH"
+export GRYPE_DB_CACHE_DIR="$PWD/build/sbom-tools/grype-cache"
+export TRIVY_CACHE_DIR="$PWD/build/sbom-tools/trivy-cache"
+```
+
+On Windows PowerShell, the corresponding environment is:
+
+```powershell
+New-Item -ItemType Directory -Force build/sbom-tools/bin | Out-Null
+py -3 -m venv build/sbom-tools/venv
+& ./build/sbom-tools/venv/Scripts/python.exe -m pip install -r CMake/sbom-requirements.txt
+$env:PATH = "$PWD/build/sbom-tools/bin;$PWD/build/sbom-tools/venv/Scripts;$env:PATH"
+$env:GRYPE_DB_CACHE_DIR = "$PWD/build/sbom-tools/grype-cache"
+$env:TRIVY_CACHE_DIR = "$PWD/build/sbom-tools/trivy-cache"
+```
+
+Explicitly naming the environment's Python avoids activation-script policies
+and accidentally installing packages into the system Python. An environment
+is disposable: recreate it from the requirements when changing Python.
+
+For Grype source builds, including FreeBSD, choose a Go version accepted by
+the selected module (the tested build used Go 1.27). Some hosts name it
+`go127`; substitute that for `go` if necessary:
+
+```sh
+GOBIN="$PWD/build/sbom-tools/bin" go install github.com/anchore/grype/cmd/grype@v0.121.2
+```
+
+Go downloads and compiles the tool's own modules. This can consume several
+gigabytes of cache and does not require a CMake build of Grype. A Go-installed
+binary can report an unspecified release version; `go version -m` on the
+executable records the embedded module version. Keep that information when
+comparing results with an official release binary.
+
+For update discovery, use a supported Node.js runtime on PATH. The tested
+Renovate release accepts Node 24.11 or newer within the 24 series, or Node
+26.13 or newer within the 26 series; Node 24.22.1 was exercised here. Install
+into a private npm prefix rather than globally:
+
+```sh
+npm install --prefix build/renovate-tools --ignore-scripts --omit=optional \
+  --no-audit --no-fund renovate@44.221.6
+cmake -S . -B build/release \
+  -DBEXT_RENOVATE_EXECUTABLE="$PWD/build/renovate-tools/node_modules/.bin/renovate"
+```
+
+In PowerShell use the same npm command on one line, and configure
+`BEXT_RENOVATE_EXECUTABLE` with the absolute path to
+`build/renovate-tools/node_modules/.bin/renovate.cmd`. Node is a runtime for
+this optional developer tool; bext does not fetch or install it automatically.
+Omitting optional native modules can produce a message that Renovate is using
+its JavaScript regular-expression fallback. The tested JSONata queries and
+tag lookups work with that fallback on FreeBSD.
+
+Before offline scanning, download the databases once with network access:
+
+```sh
+grype db update
+trivy image --download-db-only
+grype db status
+trivy --version
+```
+
+Keep the databases current for security review. `--offline` prevents updates
+during a scan; it does not populate an empty cache. Both databases can consume
+several gigabytes. Proxy settings and trusted corporate CA certificates must
+be available to Python/npm/Go and the scanners, as appropriate.
+
+Verify the installation from the same shell used to launch CMake:
+
+```sh
+build/sbom-tools/venv/bin/python -m unittest discover -s CMake/tests
+BEXT_VEX_SCANNER_TESTS=1 build/sbom-tools/venv/bin/python CMake/tests/test_vex_scanners.py -v
+cmake --build build/release --target sbom_validate sbom_scan_inputs
+cmake --build build/release --target dependency_update_report
+```
+
+In PowerShell use `venv/Scripts/python.exe` and set
+`$env:BEXT_VEX_SCANNER_TESTS = '1'` before the scanner tests. Configure
+`BEXT_SBOM_PYTHON` with the environment's Python when using CMake validation
+targets. The scanner fixture deliberately contains an old vulnerable zlib:
+its successful detection and selective VEX suppression verify matching, rather
+than asserting anything about the installed product. Extra inspection tools
+and their installation examples are listed below the VEX documentation.
 
 ### Manual dependency update reports
 

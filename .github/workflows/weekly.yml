@@ -30,6 +30,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install SBOM validators
+        run: |
+          python3 -m venv "$RUNNER_TEMP/sbom-tools"
+          "$RUNNER_TEMP/sbom-tools/bin/python" -m pip install -r CMake/sbom-requirements.txt
+          echo "$RUNNER_TEMP/sbom-tools/bin" >> "$GITHUB_PATH"
+
       - name: Validate build scheduling and working-tree cleanup
         run: python3 CMake/tests/test_release_build.py -v
 
@@ -47,11 +53,6 @@ jobs:
 
       - name: Validate dependency release reports
         run: python3 CMake/tests/test_dependency_updates.py -v
-
-      - name: Install SBOM validators
-        run: |
-          python3 -m venv "$RUNNER_TEMP/sbom-tools"
-          "$RUNNER_TEMP/sbom-tools/bin/python" -m pip install -r CMake/sbom-requirements.txt
 
       - name: Validate component manifest schema
         run: '"$RUNNER_TEMP/sbom-tools/bin/python" CMake/tests/test_component_manifest.py -v'
@@ -79,11 +80,14 @@ jobs:
           "$RUNNER_TEMP/sbom-tools/bin/python" CMake/ValidateSbom.py --spdx "$RUNNER_TEMP/bext.conan.spdx.json"
           "$RUNNER_TEMP/sbom-tools/bin/python" CMake/ValidateSbom.py --cyclonedx "$RUNNER_TEMP/bext.conan.cdx.json"
 
-      - name: Upload SPDX SBOM
+      - name: Upload source inventories and advisory coverage
         uses: actions/upload-artifact@v4
         with:
-          name: bext-spdx-sbom
-          path: ${{ runner.temp }}/bext.spdx.json
+          name: bext-source-inventories
+          path: |
+            ${{ runner.temp }}/bext.spdx.json
+            ${{ runner.temp }}/bext.cdx.json
+            ${{ runner.temp }}/bext.conan.*.json
 
   linux_configure_presets:
     needs: changes
