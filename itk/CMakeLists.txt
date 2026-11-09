@@ -35,10 +35,15 @@ if (ENABLE_ITK)
   set(ITK_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/itk.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/itk_install.patch")
-  git_submodule_init(itk configure PATCH_FILES ${ITK_PATCH_FILES})
-  list(GET ITK_PATCH_FILES 0 ITK_SOURCE_PATCH_FILE)
-  list(GET ITK_PATCH_FILES 1 ITK_INSTALL_PATCH_FILE)
-  bext_component_manpage_ownership(itk "${CMAKE_CURRENT_SOURCE_DIR}/itk/doc/*.n")
+  if (NOT BEXT_TCL_ENABLE_DOCS)
+    list(APPEND ITK_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/itk_disable_docs.patch")
+  endif ()
+  git_submodule_init(itk configure
+    PATCH_FILES ${ITK_PATCH_FILES}
+    INPUT_FILES "${CMAKE_CURRENT_LIST_FILE}" "${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake")
+  if (BEXT_TCL_ENABLE_DOCS)
+    bext_component_manpage_ownership(itk "${CMAKE_CURRENT_SOURCE_DIR}/itk/doc/*.n")
+  endif ()
 
   RegisterDeps(ITK)
 
@@ -60,19 +65,21 @@ if (ENABLE_ITK)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/itk_build.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/itk_build.cmake @ONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/itk_install.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/itk_install.cmake @ONLY)
 
+  set(ITK_PATCH_LIST_SEPARATOR "|")
+  string(REPLACE ";" "${ITK_PATCH_LIST_SEPARATOR}" ITK_PATCH_FILES_ARGUMENT "${ITK_PATCH_FILES}")
   set(ITK_PATCH_COMMAND
     ${CMAKE_COMMAND}
     "-DITK_SOURCE_DIR=<SOURCE_DIR>"
     "-DITK_PATCH_EXECUTABLE=${PATCH_NATIVE_EXECUTABLE}"
     "-DITK_PATCH_CHECK_OPTION=${PATCH_CHECK_OPTION}"
     "-DITK_PATCH_REJECT_DIR=${PATCH_REJECT_DIR}"
-    "-DITK_PATCH_FILE=${ITK_SOURCE_PATCH_FILE}"
-    "-DITK_INSTALL_PATCH_FILE=${ITK_INSTALL_PATCH_FILE}"
+    "-DITK_PATCH_FILES=${ITK_PATCH_FILES_ARGUMENT}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake"
     )
 
   if (NOT MSVC)
     ExternalProject_Add(ITK_BLD
+      LIST_SEPARATOR "${ITK_PATCH_LIST_SEPARATOR}"
       URL "${CMAKE_CURRENT_SOURCE_DIR}/itk"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${ITK_PATCH_COMMAND}
@@ -93,6 +100,7 @@ if (ENABLE_ITK)
     # local nmake support files.  Upstream omits the matching targets.vc;
     # supply the complete file rather than patching one into existence.
     ExternalProject_Add(ITK_BLD
+      LIST_SEPARATOR "${ITK_PATCH_LIST_SEPARATOR}"
       URL "${CMAKE_CURRENT_SOURCE_DIR}/itk"
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       PATCH_COMMAND ${ITK_PATCH_COMMAND}

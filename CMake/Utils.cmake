@@ -461,14 +461,53 @@ function(bext_write_sbom_selectors output)
 endfunction()
 
 function(bext_component_manpage_ownership component)
-  # Autotools installers do not produce CMake install manifests.  Match their
-  # section-n manuals by source filename so packages sharing mann stay distinct.
-  file(GLOB manpages LIST_DIRECTORIES false ${ARGN})
+  cmake_parse_arguments(M "" "INSTALL_SCRIPT" "" ${ARGN})
+  file(GLOB manpages CONFIGURE_DEPENDS LIST_DIRECTORIES false ${M_UNPARSED_ARGUMENTS})
+  if (M_INSTALL_SCRIPT)
+    # Core Tcl/Tk installs aliases from each page's NAME section. Use its own
+    # installer to obtain the complete filename set without duplicating that
+    # parsing or claiming manuals belonging to another component.
+    find_program(BEXT_MANPAGE_SHELL sh REQUIRED)
+    mark_as_advanced(BEXT_MANPAGE_SHELL)
+    set(ownership_root "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${component}-manpages")
+    file(REMOVE_RECURSE "${ownership_root}")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${M_INSTALL_SCRIPT}")
+  endif ()
   foreach(manpage IN LISTS manpages)
-    get_filename_component(manpage_name "${manpage}" NAME)
-    string(REPLACE "." "[.]" manpage_name "${manpage_name}")
-    bext_component_ownership("${component}" "^(share/)?man/mann/${manpage_name}$")
+    get_filename_component(section "${manpage}" LAST_EXT)
+    string(SUBSTRING "${section}" 1 -1 section)
+    if (NOT section MATCHES "^(1|3|n)$")
+      message(FATAL_ERROR "Unsupported manual section: ${manpage}")
+    endif ()
+    if (M_INSTALL_SCRIPT)
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${manpage}")
+      set(section_root "${ownership_root}/man${section}")
+      file(MAKE_DIRECTORY "${section_root}")
+      execute_process(
+        COMMAND "${BEXT_MANPAGE_SHELL}" "${M_INSTALL_SCRIPT}" "${manpage}" "${section_root}"
+        RESULT_VARIABLE install_result
+        OUTPUT_VARIABLE install_output
+        ERROR_VARIABLE install_error)
+      if (NOT install_result EQUAL 0)
+        message(FATAL_ERROR
+          "Unable to enumerate manual ownership for ${manpage}: "
+          "${install_output}${install_error}")
+      endif ()
+    else ()
+      get_filename_component(manpage_name "${manpage}" NAME)
+      string(REPLACE "." "[.]" manpage_name "${manpage_name}")
+      bext_component_ownership("${component}" "^(share/)?man/man${section}/${manpage_name}$")
+    endif ()
   endforeach()
+  if (M_INSTALL_SCRIPT)
+    file(GLOB_RECURSE installed_pages LIST_DIRECTORIES false
+      RELATIVE "${ownership_root}" "${ownership_root}/*")
+    foreach(manpage IN LISTS installed_pages)
+      string(REPLACE "." "[.]" manpage "${manpage}")
+      bext_component_ownership("${component}" "^(share/)?man/${manpage}$")
+    endforeach()
+    file(REMOVE_RECURSE "${ownership_root}")
+  endif ()
 endfunction()
 
 function(_bext_register_package_legal_ownership pname)

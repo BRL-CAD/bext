@@ -67,6 +67,12 @@ if (TK_DO_BUILD)
     "^lib/pkgconfig/tk[.]pc$"
   )
 
+  if (BEXT_TCL_ENABLE_DOCS AND NOT MSVC)
+    bext_component_manpage_ownership(tk
+      INSTALL_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/tk/unix/installManPage"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tk/doc/*.[13n]")
+  endif ()
+
   RegisterDeps(TK)
 
   if (NOT DEFINED TCL_VERSION)
@@ -104,8 +110,10 @@ if (TK_DO_BUILD)
     list(APPEND TK_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/tk_windows_build.patch")
   endif ()
-  list(APPEND TK_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch")
+  if (NOT BEXT_TCL_ENABLE_DOCS)
+    list(APPEND TK_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tk_disable_docs.patch")
+  endif ()
 
   if (NOT MSVC)
     foreach(TK_EXTRA_PATCH IN LISTS TK_EXTRA_PATCHES)

@@ -150,8 +150,10 @@ if (ENABLE_TCL)
     list(APPEND TCL_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/tcl_windows_build.patch")
   endif ()
-  list(APPEND TCL_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
+  if (NOT BEXT_TCL_ENABLE_DOCS)
+    list(APPEND TCL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
+  endif ()
   set(TCL_INPUT_FILES "${CMAKE_CURRENT_LIST_FILE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/BuildSettings.cmake")
   set(TCL_SQLITE_SETUP_COMMANDS)
@@ -231,21 +233,27 @@ if (ENABLE_TCL)
     unset(TCL_EXCLUDED_PACKAGE)
   endif ()
 
-  # Bundled Itcl and Thread still install manuals even when Tcl's own
-  # documentation is disabled.  Include optional packages only when built.
-  file(GLOB TCL_PACKAGE_SOURCE_DIRS LIST_DIRECTORIES true
-    "${CMAKE_CURRENT_SOURCE_DIR}/tcl/pkgs/*")
-  foreach(TCL_PACKAGE_SOURCE_DIR IN LISTS TCL_PACKAGE_SOURCE_DIRS)
-    get_filename_component(TCL_PACKAGE_NAME "${TCL_PACKAGE_SOURCE_DIR}" NAME)
-    if (NOT TCL_PACKAGE_NAME IN_LIST TCL_EXCLUDED_PACKAGES)
+  # Optional packages contribute manuals only when selected for this build.
+  if (BEXT_TCL_ENABLE_DOCS)
+    if (NOT MSVC)
       bext_component_manpage_ownership(tcl
-        "${TCL_PACKAGE_SOURCE_DIR}/doc/*.n"
-        "${TCL_PACKAGE_SOURCE_DIR}/doc/man/*.n")
+        INSTALL_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/tcl/unix/installManPage"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tcl/doc/*.[13n]")
     endif ()
-  endforeach()
-  unset(TCL_PACKAGE_NAME)
-  unset(TCL_PACKAGE_SOURCE_DIR)
-  unset(TCL_PACKAGE_SOURCE_DIRS)
+    file(GLOB TCL_PACKAGE_SOURCE_DIRS LIST_DIRECTORIES true
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl/pkgs/*")
+    foreach(TCL_PACKAGE_SOURCE_DIR IN LISTS TCL_PACKAGE_SOURCE_DIRS)
+      get_filename_component(TCL_PACKAGE_NAME "${TCL_PACKAGE_SOURCE_DIR}" NAME)
+      if (NOT TCL_PACKAGE_NAME IN_LIST TCL_EXCLUDED_PACKAGES)
+        bext_component_manpage_ownership(tcl
+          "${TCL_PACKAGE_SOURCE_DIR}/doc/*.[13n]"
+          "${TCL_PACKAGE_SOURCE_DIR}/doc/man/*.[13n]")
+      endif ()
+    endforeach()
+    unset(TCL_PACKAGE_NAME)
+    unset(TCL_PACKAGE_SOURCE_DIR)
+    unset(TCL_PACKAGE_SOURCE_DIRS)
+  endif ()
 
   if (TARGET ZLIB_BLD)
     set(ZLIB_SETUP_COMMANDS
