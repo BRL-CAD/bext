@@ -3,9 +3,6 @@ bext_package(osmesa OUTPUT install GROUPS BRLCAD)
 bext_sbom_component("osmesa/osmesa"
   UPSTREAM_URL "https://github.com/starseeker/osmesa"
   PURL_BASE "pkg:github/starseeker/osmesa"
-)
-
-bext_sbom_component("osmesa/osmesa"
   LICENSE "MIT AND SGI-B-2.0 AND BSD-3-Clause"
   LICENSE_FILE "@/osmesa/licenses/osmesa.txt"
   LICENSE_SHA256 "1c449c96762abfed1a1820c2a4a251c84f337bab1b2f66acb17ddd2dfd18c213"

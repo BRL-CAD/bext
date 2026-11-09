@@ -19,9 +19,6 @@ bext_sbom_component("qt/qt"
   CPE_STATUS "NVD_PRODUCT"
   CPE_PRODUCT_EVIDENCE "cpe:2.3:a:qt:qt:5.5.1:*:*:*:*:*:*:*"
   CPE_COMMENT "Suite-level NVD identity for vulnerability triage only. Confirm each match against Qt advisories for the contained qtbase and qtsvg modules."
-)
-
-bext_sbom_component("qt/qt"
   LICENSE "LicenseRef-Qt-Source-REUSE-Aggregate"
   LICENSE_CONCLUDED "LicenseRef-Qt-Source-REUSE-Aggregate"
   LICENSE_NAME "Qt source REUSE aggregate"

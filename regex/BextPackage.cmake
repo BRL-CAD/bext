@@ -3,9 +3,6 @@ bext_package(regex OUTPUT install GROUPS BRLCAD)
 bext_sbom_component("regex/regex"
   UPSTREAM_URL "https://github.com/garyhouston/regex"
   PURL_BASE "pkg:github/BRL-CAD/regex"
-)
-
-bext_sbom_component("regex/regex"
   LICENSE "LicenseRef-BRL-CAD-Regex-Aggregate"
   LICENSE_NAME "BRL-CAD regex aggregate license"
   LICENSE_FILE "@/regex/licenses/regex.txt"

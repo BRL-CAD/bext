@@ -1,16 +1,12 @@
 bext_package(opencv OUTPUT install GROUPS BRLCAD)
 
-bext_sbom_component("opencv/opencv" UPSTREAM_URL "https://github.com/opencv/opencv")
-
 bext_sbom_component("opencv/opencv"
+  UPSTREAM_URL "https://github.com/opencv/opencv"
   VERSION "5.0.0"
   PURL "pkg:github/opencv/opencv@5.0.0"
   CPE "cpe:2.3:a:opencv:opencv:5.0.0:*:*:*:*:*:*:*"
   CPE_STATUS "NVD_PRODUCT"
   CPE_PRODUCT_EVIDENCE "cpe:2.3:a:opencv:opencv:3.3.1:*:*:*:*:*:*:*"
-)
-
-bext_sbom_component("opencv/opencv"
   LICENSE "Apache-2.0"
   LICENSE_FILE "./LICENSE"
   LICENSE_SHA256 "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"

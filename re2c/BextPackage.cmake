@@ -1,13 +1,9 @@
 bext_package(re2c OUTPUT noinstall GROUPS BRLCAD)
 
-bext_sbom_component("re2c/re2c" UPSTREAM_URL "https://github.com/skvadrik/re2c")
-
 bext_sbom_component("re2c/re2c"
+  UPSTREAM_URL "https://github.com/skvadrik/re2c"
   VERSION "4.6"
   PURL "pkg:github/skvadrik/re2c@4.6"
-)
-
-bext_sbom_component("re2c/re2c"
   LICENSE "LicenseRef-re2c-Public-Domain"
   LICENSE_NAME "re2c public-domain dedication"
   LICENSE_FILE "@/re2c/licenses/re2c.txt"

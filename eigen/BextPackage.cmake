@@ -1,13 +1,9 @@
 bext_package(eigen OUTPUT noinstall GROUPS BRLCAD APPLESEED)
 
-bext_sbom_component("eigen/eigen" UPSTREAM_URL "https://gitlab.com/libeigen/eigen.git")
-
 bext_sbom_component("eigen/eigen"
+  UPSTREAM_URL "https://gitlab.com/libeigen/eigen.git"
   VERSION "5.0.1"
   PURL "pkg:git/gitlab.com/libeigen/eigen.git@5.0.1"
-)
-
-bext_sbom_component("eigen/eigen"
   LICENSE "MPL-2.0 AND BSD-3-Clause"
   LICENSE_FILES "COPYING.MPL2" "COPYING.BSD"
   LICENSE_SHA256S

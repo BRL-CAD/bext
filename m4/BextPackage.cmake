@@ -1,8 +1,7 @@
 bext_package(m4 OUTPUT noinstall GROUPS OSPRAY)
 
-bext_sbom_component("m4/m4" UPSTREAM_URL "https://github.com/ibara/m4")
-
 bext_sbom_component("m4/m4"
+  UPSTREAM_URL "https://github.com/ibara/m4"
   VERSION "6.6"
   PURL "pkg:github/ibara/m4@om4-6.6"
   LICENSE "BSD-3-Clause AND BSD-2-Clause AND ISC"

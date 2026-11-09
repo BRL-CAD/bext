@@ -5,11 +5,7 @@ bext_sbom_component("assetimport/assimp"
   REVIEWED_REVISION "cfc14a26d2103df97dba445ef203a01be82395bf"
   UPSTREAM_URL "https://github.com/assimp/assimp"
   PURL_BASE "pkg:github/assimp/assimp"
-)
-
-bext_sbom_component("assetimport/assimp" NAME "assimp")
-
-bext_sbom_component("assetimport/assimp"
+  NAME "assimp"
   LICENSE "BSD-3-Clause"
   LICENSE_FILE "./LICENSE"
   LICENSE_SHA256 "21195d410708b82757d3e34c3a40c427f6e59339da862e9480d4fcdc79b7a1bd"

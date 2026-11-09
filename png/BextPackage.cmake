@@ -1,15 +1,10 @@
 bext_package(png OUTPUT install GROUPS APPLESEED BRLCAD TCL)
 
-bext_sbom_component("png/libpng" UPSTREAM_URL "https://github.com/pnggroup/libpng")
-
-bext_sbom_component("png/libpng" NAME "libpng")
-
 bext_sbom_component("png/libpng"
+  UPSTREAM_URL "https://github.com/pnggroup/libpng"
+  NAME "libpng"
   VERSION "1.6.58"
   PURL "pkg:github/pnggroup/libpng@v1.6.58"
-)
-
-bext_sbom_component("png/libpng"
   CPE "cpe:2.3:a:libpng:libpng:1.6.58:*:*:*:*:*:*:*"
   CPE_STATUS "NVD_EXACT"
   COPYRIGHT_FILE "@/png/licenses/libpng-copyright.txt"

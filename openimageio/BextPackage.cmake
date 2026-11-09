@@ -1,10 +1,8 @@
 bext_package(openimageio OUTPUT install GROUPS APPLESEED)
 
-bext_sbom_component("openimageio/oiio" UPSTREAM_URL "https://github.com/AcademySoftwareFoundation/OpenImageIO")
-
-bext_sbom_component("openimageio/oiio" NAME "OpenImageIO")
-
 bext_sbom_component("openimageio/oiio"
+  UPSTREAM_URL "https://github.com/AcademySoftwareFoundation/OpenImageIO"
+  NAME "OpenImageIO"
   VERSION "2.5.12.0"
   PURL "pkg:github/AcademySoftwareFoundation/OpenImageIO@v2.5.12.0"
   CPE "cpe:2.3:a:openimageio:openimageio:2.5.12.0:*:*:*:*:*:*:*"

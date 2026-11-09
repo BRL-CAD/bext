@@ -3,9 +3,6 @@ bext_package(appleseed OUTPUT install GROUPS APPLESEED)
 bext_sbom_component("appleseed/appleseed"
   UPSTREAM_URL "https://github.com/appleseedhq/appleseed"
   PURL_BASE "pkg:github/BRL-CAD/appleseed"
-)
-
-bext_sbom_component("appleseed/appleseed"
   LICENSE "MIT"
   LICENSE_FILE "LICENSE.txt"
   LICENSE_SHA256 "67ab82c6f3b067c64d7a36ddf3fc238dd096a669076bff4e5a7e3a09dedad9e7"

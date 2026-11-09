@@ -8,9 +8,6 @@ bext_sbom_component("litehtml/litehtml"
   VERSION "0.10"
   UPSTREAM_URL "https://github.com/litehtml/litehtml"
   PURL "pkg:github/litehtml/litehtml@v0.10"
-)
-
-bext_sbom_component("litehtml/litehtml"
   LICENSE "BSD-3-Clause"
   LICENSE_FILE "@/litehtml/licenses/litehtml.txt"
   LICENSE_SHA256 "71bd488e77ee821bf38d89e2b8a9c5ebe687553fcae9cefa00a96499792a3e23"

@@ -3,9 +3,6 @@ bext_package(mmesh OUTPUT install GROUPS BRLCAD)
 bext_sbom_component("mmesh/mmesh"
   UPSTREAM_URL "https://github.com/BRL-CAD/mmesh"
   PURL_BASE "pkg:github/BRL-CAD/mmesh"
-)
-
-bext_sbom_component("mmesh/mmesh"
   LICENSE "LicenseRef-MMesh-Aggregate"
   LICENSE_NAME "MMesh aggregate license"
   LICENSE_FILE "@/mmesh/licenses/mmesh.txt"

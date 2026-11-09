@@ -3,11 +3,9 @@ bext_package(osl OUTPUT install GROUPS APPLESEED
     openshadinglanguage
 )
 
-bext_sbom_component("osl/OpenShadingLanguage" UPSTREAM_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage")
-
-bext_sbom_component("osl/OpenShadingLanguage" NAME "OpenShadingLanguage")
-
 bext_sbom_component("osl/OpenShadingLanguage"
+  UPSTREAM_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage"
+  NAME "OpenShadingLanguage"
   VERSION "1.13.10.0"
   PURL "pkg:github/AcademySoftwareFoundation/OpenShadingLanguage@v1.13.10.0"
   LICENSE "BSD-3-Clause"

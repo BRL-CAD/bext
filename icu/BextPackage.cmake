@@ -1,8 +1,7 @@
 bext_package(icu OUTPUT install GROUPS APPLESEED)
 
-bext_sbom_component("icu/icu" UPSTREAM_URL "https://github.com/unicode-org/icu")
-
 bext_sbom_component("icu/icu"
+  UPSTREAM_URL "https://github.com/unicode-org/icu"
   VERSION "75.1"
   PURL "pkg:github/unicode-org/icu@release-75-1"
   LICENSE "LicenseRef-ICU-75.1-Aggregate"

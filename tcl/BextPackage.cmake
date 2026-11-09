@@ -4,9 +4,6 @@ bext_sbom_component("tcl/tcl"
   VERSION "8.6.18"
   UPSTREAM_URL "https://github.com/tcltk/tcl"
   PURL_BASE "pkg:github/tcltk/tcl"
-)
-
-bext_sbom_component("tcl/tcl"
   LICENSE "TCL"
   LICENSE_FILE "license.terms"
   LICENSE_SHA256 "c0a69a2bfd757361ec7e6143973b103c90409316b49e9c88db26ad6388e79f16"

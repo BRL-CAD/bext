@@ -7,9 +7,6 @@ bext_sbom_component("llvm/llvm-project"
   VERSION "18.1.8"
   UPSTREAM_URL "https://github.com/llvm/llvm-project"
   PURL_BASE "pkg:github/llvm/llvm-project"
-)
-
-bext_sbom_component("llvm/llvm-project"
   LICENSE "LicenseRef-LLVM-Project-Aggregate"
   LICENSE_NAME "LLVM Project aggregate license and third-party notices"
   LICENSE_FILE "@/llvm/licenses/llvm.txt"

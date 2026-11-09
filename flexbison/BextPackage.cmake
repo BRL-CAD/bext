@@ -3,29 +3,6 @@ bext_package(flexbison OUTPUT noinstall GROUPS APPLESEED OSPRAY PROVIDERS bison 
 bext_sbom_component("flexbison/bison"
   UPSTREAM_URL "https://git.savannah.gnu.org/git/bison.git"
   PURL_BASE "pkg:github/BRL-CAD/bison"
-)
-
-bext_sbom_component("flexbison/flex" UPSTREAM_URL "https://github.com/westes/flex")
-
-bext_sbom_component("flexbison/winflexbison" UPSTREAM_URL "https://github.com/lexxmark/winflexbison")
-
-bext_sbom_component("flexbison/flex"
-  VERSION "2.6.4"
-  PURL "pkg:github/westes/flex@v2.6.4"
-)
-
-bext_sbom_component("flexbison/winflexbison"
-  VERSION "2.5.25"
-  PURL "pkg:github/lexxmark/winflexbison@v2.5.25"
-)
-
-bext_sbom_component("flexbison/flex"
-  LICENSE "BSD-3-Clause"
-  LICENSE_FILE "COPYING"
-  LICENSE_SHA256 "97fd685958d93be7f8dab939bb8161dbd6afb0718c63bfc337c24321aea44273"
-)
-
-bext_sbom_component("flexbison/bison"
   LICENSE "GPL-3.0-or-later"
   LICENSE_FILES "COPYING" "AUTHORS"
   LICENSE_SHA256S
@@ -36,7 +13,19 @@ bext_sbom_component("flexbison/bison"
   SCOPE "BUILD"
 )
 
+bext_sbom_component("flexbison/flex"
+  UPSTREAM_URL "https://github.com/westes/flex"
+  VERSION "2.6.4"
+  PURL "pkg:github/westes/flex@v2.6.4"
+  LICENSE "BSD-3-Clause"
+  LICENSE_FILE "COPYING"
+  LICENSE_SHA256 "97fd685958d93be7f8dab939bb8161dbd6afb0718c63bfc337c24321aea44273"
+)
+
 bext_sbom_component("flexbison/winflexbison"
+  UPSTREAM_URL "https://github.com/lexxmark/winflexbison"
+  VERSION "2.5.25"
+  PURL "pkg:github/lexxmark/winflexbison@v2.5.25"
   LICENSE "BSD-3-Clause AND GPL-3.0-or-later AND GFDL-1.3-or-later"
   LICENSE_FILES "flex/src/COPYING" "bison/src/COPYING" "COPYING.DOC" "README.md"
   LICENSE_SHA256S

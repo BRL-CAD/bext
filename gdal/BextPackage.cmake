@@ -1,16 +1,12 @@
 bext_package(gdal OUTPUT install GROUPS GDAL)
 
-bext_sbom_component("gdal/gdal" UPSTREAM_URL "https://github.com/OSGeo/gdal")
-
 bext_sbom_component("gdal/gdal"
+  UPSTREAM_URL "https://github.com/OSGeo/gdal"
   VERSION "3.13.3"
   PURL "pkg:github/OSGeo/gdal@v3.13.3"
   CPE "cpe:2.3:a:osgeo:gdal:3.13.3:*:*:*:*:*:*:*"
   CPE_STATUS "NVD_PRODUCT"
   CPE_PRODUCT_EVIDENCE "cpe:2.3:a:osgeo:gdal:1.1.5:*:*:*:*:*:*:*"
-)
-
-bext_sbom_component("gdal/gdal"
   LICENSE "LicenseRef-GDAL-Aggregate"
   LICENSE_NAME "GDAL source-tree aggregate license notice"
   LICENSE_FILE "@/gdal/licenses/gdal.txt"

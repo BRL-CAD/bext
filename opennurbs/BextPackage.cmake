@@ -3,14 +3,10 @@ bext_package(opennurbs OUTPUT install GROUPS BRLCAD
     openNURBS
 )
 
-bext_sbom_component("opennurbs/opennurbs" UPSTREAM_URL "https://github.com/mcneel/opennurbs")
-
 bext_sbom_component("opennurbs/opennurbs"
+  UPSTREAM_URL "https://github.com/mcneel/opennurbs"
   VERSION "8.34.26223.11001"
   PURL "pkg:github/mcneel/opennurbs@v8.34.26223.11001"
-)
-
-bext_sbom_component("opennurbs/opennurbs"
   LICENSE "LicenseRef-openNURBS-Aggregate"
   LICENSE_NAME "openNURBS aggregate license"
   LICENSE_FILE "@/opennurbs/licenses/opennurbs.txt"
