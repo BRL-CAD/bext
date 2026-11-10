@@ -400,6 +400,19 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         self.compile()
         self.assertIn('up to date', self.compile())
 
+    @unittest.skipUnless(shutil.which('gmake') or shutil.which('make'), 'make is required')
+    def test_cmake_steps_do_not_inherit_parent_make_flags(self):
+        self.fixture()
+        project = self.source / 'CMakeLists.txt'
+        project.write_text(project.read_text().replace(
+            '  CMAKE_ARGS ', '  CMAKE_GENERATOR "Unix Makefiles"\n  CMAKE_ARGS '))
+        self.configure(discard=False)
+        # A BSD make jobserver uses flags that GNU make cannot parse.
+        with mock.patch.dict(os.environ, {'MAKEFLAGS': '-J 3,4 -j 2',
+                                          'MFLAGS': '-J 3,4 -j 2'}):
+            self.compile()
+        self.assertTrue((self.prefix / 'finalized').is_file())
+
     def test_unsafe_work_directory_is_rejected(self):
         self.fixture()
         self.configure()

@@ -75,7 +75,9 @@ function(ExternalProject_Add name)
     foreach(step BUILD INSTALL)
       string(TOLOWER "${step}" lower_step)
       if (NOT has_${lower_step}_command)
-        string(APPEND ep_call " ${step}_COMMAND [==[${CMAKE_COMMAND}]==] --build <BINARY_DIR> --parallel ${BEXT_BUILD_JOBS}")
+        # These builds set their own parallelism and may use a different make
+        # implementation than the parent, whose jobserver flags are incompatible.
+        string(APPEND ep_call " ${step}_COMMAND [==[${CMAKE_COMMAND}]==] -E env --unset=MAKEFLAGS --unset=MFLAGS [==[${CMAKE_COMMAND}]==] --build <BINARY_DIR> --parallel ${BEXT_BUILD_JOBS}")
         if (CMAKE_CONFIGURATION_TYPES)
           string(APPEND ep_call " --config [==[$<CONFIG>]==]")
         endif ()
