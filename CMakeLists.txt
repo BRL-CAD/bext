@@ -329,23 +329,6 @@ endif ()
 
 
 ###############################################################################
-# Python is a build-time dependency for both LLVM and ISPC.  I think
-# it's only build time in both cases, but short of a lot of rework the
-# upstreams probably wouldn't be inclined to take anyway we're going
-# to have to have it available.  Unfortunately, bootstrapping our own
-# local copy is problematic on Linux right now - saw this issue immediately
-# when I tried:  https://github.com/python/cpython/issues/90737
-#
-# What we might be able to do for this is try building Python3 IFF we don't
-# find a system Python3 if we really don't need to bundle it - if we don't
-# have a system version available there wont' be anything to conflict with.
-# For now just hard require it and move on...
-if (USE_APPLESEED OR USE_OSPRAY)
-  find_package(Python3 REQUIRED)
-endif (USE_APPLESEED OR USE_OSPRAY)
-###############################################################################
-
-###############################################################################
 # Applying patch files cross platform is a challenging problem due to the
 # shortage of portable tools and issues with LF vs CRLF files - see
 # https://gitlab.kitware.com/cmake/cmake/-/issues/16854 for more background on
@@ -354,50 +337,7 @@ endif (USE_APPLESEED OR USE_OSPRAY)
 ###############################################################################
 add_project(patch)
 
-###############################################################################
-# Although we have bundled flex and bison programs, they can be problematic to
-# build - they require working Autotools tool chains (except on Windows where
-# we have winflexbison).  We therefore attempt these builds only if we need to.
-# This check must come after the patch subdirectory, since if we DO add_project
-# the flexbison directory it will need the patch executable.
-###############################################################################
-if (USE_APPLESEED OR USE_OSPRAY)
-
-  if (ENABLE_ALL)
-    if (NOT DEFINED ENABLE_BISON)
-      set(ENABLE_BISON ON)
-    endif (NOT DEFINED ENABLE_BISON)
-  endif (ENABLE_ALL)
-
-  if (NOT ENABLE_FLEX)
-    find_package(FLEX 2.6)
-
-    if (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
-      set(ENABLE_FLEX ON)
-    endif (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
-  endif (NOT ENABLE_FLEX)
-
-  if (NOT ENABLE_BISON)
-    find_package(BISON 3.0)
-
-    if (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
-      set(ENABLE_BISON ON)
-    endif (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
-  endif (NOT ENABLE_BISON)
-
-  if (ENABLE_FLEX OR ENABLE_BISON)
-    add_project(flexbison GROUPS "APPLESEED;OSPRAY")
-  endif (ENABLE_FLEX OR ENABLE_BISON)
-
-  # Whether or not we actually added the subdirectories, let subsequent targets
-  # know we have handled the FLEX and BISON dependencies.  Some will list these
-  # as potential build targets, since we may try to compile them, but as the
-  # default orientation for these is "build only if we have to" the find
-  # process itself needs to satisfy the check.
-  set(FLEX_ADDED 1)
-  set(BISON_ADDED 1)
-
-endif (USE_APPLESEED OR USE_OSPRAY)
+add_project(flexbison GROUPS "APPLESEED;OSPRAY")
 
 # ISPC requires GNU-compatible m4 behavior.  Prefer a system m4 when one is
 # available, and otherwise build the portable OpenBSD implementation after its
@@ -664,24 +604,8 @@ add_project(ospray GROUPS "OSPRAY")
 # BRL-CAD can then consume the manifest without repeating file classification
 # during every configure pass.
 ###############################################################################
-set(BEXT_STRCLEAR_EXPECTED
-  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/strclear${CMAKE_EXECUTABLE_SUFFIX}")
-if (TARGET STRCLEAR_BLD)
-  set(BEXT_STRCLEAR_EXECUTABLE "${BEXT_STRCLEAR_EXPECTED}")
-else ()
-  find_program(BEXT_STRCLEAR_EXECUTABLE NAMES strclear HINTS "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}")
-endif ()
-if (NOT BEXT_STRCLEAR_EXECUTABLE)
-  message(FATAL_ERROR "bext finalization requires strclear")
-endif ()
-
-set(BEXT_PLIEF_EXPECTED
-  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/plief${CMAKE_EXECUTABLE_SUFFIX}")
-if (TARGET PLIEF_BLD)
-  set(BEXT_PLIEF_EXECUTABLE "${BEXT_PLIEF_EXPECTED}")
-else ()
-  find_program(BEXT_PLIEF_EXECUTABLE NAMES plief patchelf HINTS "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}")
-endif ()
+get_property(BEXT_STRCLEAR_EXECUTABLE GLOBAL PROPERTY BEXT_STRCLEAR_EXECUTABLE)
+get_property(BEXT_PLIEF_EXECUTABLE GLOBAL PROPERTY BEXT_PLIEF_EXECUTABLE)
 
 configure_file("${CMAKE_SOURCE_DIR}/CMake/RefreshSpdx.cmake"
   "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/bext/RefreshSpdx.cmake" COPYONLY)
@@ -785,12 +709,6 @@ add_custom_target(vex_scan
     --output-dir "${CMAKE_BINARY_DIR}/bext-vex-scans"
   DEPENDS bext_finalize
   VERBATIM)
-if (TARGET STRCLEAR_BLD-install)
-  add_dependencies(bext_finalize STRCLEAR_BLD-install)
-endif ()
-if (TARGET PLIEF_BLD-install)
-  add_dependencies(bext_finalize PLIEF_BLD-install)
-endif ()
 get_property(BEXT_INSTALL_FIXUP_TARGETS GLOBAL PROPERTY BEXT_INSTALL_FIXUP_TARGETS)
 foreach(fixup IN LISTS BEXT_INSTALL_FIXUP_TARGETS)
   if (TARGET ${fixup})

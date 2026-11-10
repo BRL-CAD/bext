@@ -2,83 +2,14 @@
 """Offline checks for optional source snapshots and dependency profiles."""
 
 import json
-from pathlib import Path
 import shutil
-import subprocess
-import tempfile
 import unittest
 
 
-SOURCE = Path(__file__).resolve().parents[2]
-REVISION = '0123456789abcdef0123456789abcdef01234567'
+from dependency_selection_fixture import DependencySelectionFixture, REVISION, SOURCE
 
 
-class DependencySelectionTests(unittest.TestCase):
-    def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix='bext-selection-test-')
-        self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
-        self.source = self.root / 'source'
-        self.wrapper = self.source / 'probe'
-        self.wrapper.mkdir(parents=True)
-        self.build = self.root / 'build'
-        (self.wrapper / 'BextPackage.cmake').write_text('bext_package(probe OUTPUT install GROUPS BRLCAD)\n')
-        (self.source / '.gitmodules').write_text('')
-        (self.source / 'CMakeLists.txt').write_text('''
-cmake_minimum_required(VERSION 3.26)
-project(selection NONE)
-include(ExternalProject)
-include("@SOURCE@/CMake/Utils.cmake")
-include("@SOURCE@/CMake/BextDependencyInventory.cmake")
-option(USE_BRLCAD "BRL-CAD dependencies" ON)
-set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install")
-set(DOC_LICENSE_DIR "${CMAKE_BUNDLE_INSTALL_PREFIX}/share/doc/legal/other")
-add_project(probe GROUPS "BRLCAD")
-bext_write_sbom_selectors("${CMAKE_BINARY_DIR}/sbom-selectors.cmake")
-if(TARGET PROBE_BLD)
-  file(WRITE "${CMAKE_BINARY_DIR}/selected.txt" "ON")
-else()
-  file(WRITE "${CMAKE_BINARY_DIR}/selected.txt" "OFF")
-endif()
-bext_print_configure_summary()
-'''.replace('@SOURCE@', SOURCE.as_posix()))
-        (self.wrapper / 'CMakeLists.txt').write_text('''
-bext_local_source(PROBE snapshot https://example.invalid/probe @REVISION@)
-if(ENABLE_PROBE)
-  ExternalProject_Add(PROBE_BLD
-    URL "${CMAKE_CURRENT_SOURCE_DIR}/snapshot"
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
-    STEP_TARGETS install
-  )
-  configure_file(snapshot/LICENSE "${DOC_LICENSE_DIR}/probe.txt" COPYONLY)
-endif()
-'''.replace('@REVISION@', REVISION))
-
-    def run_command(self, *command):
-        result = subprocess.run([str(item) for item in command],
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                text=True)
-        self.assertEqual(result.returncode, 0, result.stdout)
-        return result.stdout
-
-    def snapshot(self):
-        upstream = self.wrapper / 'snapshot'
-        upstream.mkdir()
-        (upstream / 'CMakeLists.txt').write_text('''
-cmake_minimum_required(VERSION 3.26)
-project(snapshot NONE)
-install(FILES payload DESTINATION share/probe)
-''')
-        (upstream / 'payload').write_text('local snapshot artifact\n')
-        (upstream / 'LICENSE').write_text('local snapshot license\n')
-
-    def configure(self, selected, *options):
-        output = self.run_command('cmake', '-S', self.source, '-B', self.build, *options)
-        self.assertEqual((self.build / 'selected.txt').read_text(), selected, output)
-        local_projects = next(line for line in output.splitlines() if '  local builds:' in line)
-        self.assertEqual(local_projects.split(': ', 1)[1], 'probe' if selected == 'ON' else 'none')
-        return output
-
+class DependencySelectionTests(DependencySelectionFixture):
     def test_source_can_appear_disappear_and_return_with_enable_all(self):
         self.configure('OFF', '-DENABLE_ALL=ON')
         self.snapshot()
@@ -124,6 +55,25 @@ if(NOT "${${prefix}_COMPONENT}" STREQUAL "probe" OR
 endif()
 '''.replace('@REGISTRY@', (self.build / 'sbom-selectors.cmake').as_posix()))
         self.run_command('cmake', '-P', probe)
+
+    def test_summary_recognizes_a_wrapper_with_differently_named_build_targets(self):
+        self.snapshot()
+        (self.wrapper / 'CMakeLists.txt').write_text(
+            'set(ENABLE_PROBE OFF)\n'
+            'ExternalProject_Add(ALTERNATE_BLD URL "${CMAKE_CURRENT_SOURCE_DIR}/snapshot")\n')
+        output = self.run_command('cmake', '-S', self.source, '-B', self.build)
+        projects = next(line for line in output.splitlines() if '  local builds:' in line)
+        self.assertEqual(projects.split(': ', 1)[1], 'probe')
+
+    def test_wrapper_marks_all_declared_providers_as_handled(self):
+        descriptor = self.wrapper / 'BextPackage.cmake'
+        descriptor.write_text('bext_package(probe OUTPUT install GROUPS BRLCAD PROVIDERS parser lexer)\n')
+        top = self.source / 'CMakeLists.txt'
+        top.write_text(top.read_text() + '\n'
+                       'if(NOT PROBE_ADDED OR NOT PARSER_ADDED OR NOT LEXER_ADDED)\n'
+                       '  message(FATAL_ERROR "Declared providers were not marked handled")\n'
+                       'endif()\n')
+        self.configure('OFF')
 
     def test_explicit_off_survives_availability_changes_and_enable_all(self):
         self.configure('OFF', '-DENABLE_PROBE=OFF', '-DENABLE_ALL=ON')
@@ -248,61 +198,6 @@ set(DISABLE_PROBE "${DISABLE_PROBE}" CACHE BOOL "Disable custom dependency")
         self.configure('OFF', '-DDISABLE_PROBE=ON', '-DENABLE_ALL=ON', '-DBRLCAD_COMPONENTS=libgcv')
         self.configure('OFF', '-DBRLCAD_COMPONENTS=other:libgcv')
         self.configure('ON', '-DDISABLE_PROBE=OFF')
-
-    def test_tk_off_is_respected_without_brlcad_group(self):
-        (self.wrapper / 'CMakeLists.txt').write_text(
-            'set(USE_BRLCAD OFF)\nset(ENABLE_TK OFF CACHE BOOL "Disable Tk")\n'
-            'set(BEXT_XMIN_ROOT "unused-sdk")\n'
-            'include("' + SOURCE.as_posix() + '/tk/CMakeLists.txt")\n'
-            'if(TARGET TK_BLD)\nmessage(FATAL_ERROR "Tk was explicitly disabled")\nendif()\n')
-        self.configure('OFF', '-DENABLE_ALL=ON')
-
-    def test_qt_off_wins_over_components_enable_all_and_xmin_profile(self):
-        (self.wrapper / 'CMakeLists.txt').write_text(
-            'set(ENABLE_QT OFF CACHE BOOL "Disable Qt")\n'
-            'set(BRLCAD_COMPONENTS libqtcad)\nset(BEXT_XMIN_ROOT "unused-sdk")\n'
-            'set(QT_XMIN_ROOT "unused-sdk" CACHE PATH "Qt SDK")\n'
-            'include("' + SOURCE.as_posix() + '/qt/CMakeLists.txt")\n'
-            'if(TARGET Qt6_BLD OR ENABLE_QT)\nmessage(FATAL_ERROR "Qt was explicitly disabled")\nendif()\n')
-        self.configure('OFF', '-DENABLE_ALL=ON')
-
-    def test_netpbm_imported_target_supports_installed_header_layout(self):
-        provider = self.root / 'provider'
-        provider.mkdir()
-        (provider / 'CMakeLists.txt').write_text('''
-cmake_minimum_required(VERSION 3.26)
-project(netpbm_provider C)
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-add_library(netpbm SHARED probe.c)
-install(TARGETS netpbm RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
-install(FILES pam.h pm.h DESTINATION include/netpbm)
-''')
-        (provider / 'probe.c').write_text('int netpbm_probe(void) { return 42; }\n')
-        (provider / 'pam.h').write_text('#include "netpbm/pm.h"\n')
-        (provider / 'pm.h').write_text('int netpbm_probe(void);\n')
-        prefix = self.root / 'installed'
-        self.run_command('cmake', '-S', provider, '-B', self.root / 'provider-build',
-                         '-DCMAKE_INSTALL_PREFIX=' + str(prefix), '-DCMAKE_BUILD_TYPE=Release')
-        self.run_command('cmake', '--build', self.root / 'provider-build', '--config', 'Release',
-                         '--target', 'install', '--parallel', '2')
-        consumer = self.root / 'consumer'
-        consumer.mkdir()
-        (consumer / 'CMakeLists.txt').write_text('''
-cmake_minimum_required(VERSION 3.26)
-project(netpbm_consumer C)
-list(APPEND CMAKE_MODULE_PATH "@SOURCE@/CMake")
-find_package(NETPBM REQUIRED)
-add_executable(consumer main.c)
-target_link_libraries(consumer PRIVATE NETPBM::NETPBM)
-'''.replace('@SOURCE@', SOURCE.as_posix()))
-        # Both established include spellings and nested package includes work.
-        (consumer / 'main.c').write_text(
-            '#include <netpbm/pam.h>\n#include <pam.h>\n'
-            'int main(void) { return netpbm_probe() == 42 ? 0 : 1; }\n')
-        build = self.root / 'consumer-build'
-        self.run_command('cmake', '-S', consumer, '-B', build, '-DNETPBM_ROOT=' + str(prefix),
-                         '-DCMAKE_BUILD_TYPE=Release')
-        self.run_command('cmake', '--build', build, '--config', 'Release', '--parallel', '2')
 
 
 if __name__ == '__main__':

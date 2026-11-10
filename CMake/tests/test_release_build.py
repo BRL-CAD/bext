@@ -43,7 +43,7 @@ class ReleaseBuildTests(unittest.TestCase):
     def fixture(self, deferred=False, nested=False):
         (self.source / 'SbomSelection.cmake').write_text(
             'function(fixture_packages)\nendfunction()\n')
-        names = ['FIRST', 'SECOND'] + (['TCL', 'TK', 'ITK'] if deferred else [])
+        names = ['FIRST', 'SECOND'] + (['PROVIDER_A', 'PROVIDER_B', 'CONSUMER'] if deferred else [])
         for name in names:
             upstream = self.source / name.lower()
             upstream.mkdir()
@@ -59,9 +59,9 @@ find_library(first_library first PATHS "${CMAKE_INSTALL_PREFIX}/lib" NO_DEFAULT_
 '''
                 extra = 'target_link_libraries(second PRIVATE "${first_library}")\n'
                 body = 'return first();'
-            if name == 'ITK':
+            if name == 'CONSUMER':
                 checks = '''
-if(NOT EXISTS "${TCL_WORK}" OR NOT EXISTS "${TK_WORK}")
+if(NOT EXISTS "${PROVIDER_A_WORK}" OR NOT EXISTS "${PROVIDER_B_WORK}")
   message(FATAL_ERROR "Deferred dependency was discarded too early")
 endif()
 '''
@@ -97,14 +97,14 @@ include("@MODULE@/Utils.cmake")
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DEXPECT_DISCARD=${BEXT_DISCARD_WORK}
     -DFIRST_WORK=${CMAKE_BINARY_DIR}/FIRST_BLD-prefix/src/FIRST_BLD-build
-    -DTCL_WORK=${CMAKE_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD-build
-    -DTK_WORK=${CMAKE_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD-build
+    -DPROVIDER_A_WORK=${CMAKE_BINARY_DIR}/PROVIDER_A_BLD-prefix/src/PROVIDER_A_BLD-build
+    -DPROVIDER_B_WORK=${CMAKE_BINARY_DIR}/PROVIDER_B_BLD-prefix/src/PROVIDER_B_BLD-build
     -DFAIL_SWITCH=@FAILURE@
   STEP_TARGETS install LOG_CONFIGURE ON LOG_BUILD ON LOG_INSTALL ON LOG_OUTPUT_ON_FAILURE ON)
 '''.replace('@NAME@', name).replace('@name@', name.lower()).replace('@FAILURE@', failure.as_posix())
             if index:
                 wrapper += 'ExternalProject_Add_StepDependencies(' + name + '_BLD configure ' + names[index - 1] + '_BLD-install)\n'
-            if deferred and name in ('TCL', 'TK', 'ITK'):
+            if deferred and name in ('PROVIDER_A', 'PROVIDER_B', 'CONSUMER'):
                 wrapper += f'set_property(TARGET {name}_BLD PROPERTY BEXT_RETAIN_WORK_UNTIL_FINALIZE TRUE)\n'
             if nested:
                 directory = self.source / 'wrappers' / name.lower()
@@ -138,7 +138,7 @@ if(EXPECT_DISCARD)
   endif()
 endif()
 if(@DEFERRED@)
-  foreach(name TCL TK ITK)
+  foreach(name PROVIDER_A PROVIDER_B CONSUMER)
     if(NOT EXISTS "@BUILD@/${name}_BLD-prefix/src/${name}_BLD-build")
       message(FATAL_ERROR "Missing deferred tree at finalization")
     endif()
@@ -258,12 +258,12 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
                     windows.unlink.assert_not_called()
         self.assertTrue(path.exists())
 
-    def test_deferred_tcl_stack_survives_until_finalization(self):
+    def test_deferred_dependency_chain_survives_until_finalization(self):
         self.fixture(deferred=True)
         self.configure()
         self.compile()
         self.assertTrue((self.prefix / 'finalized').is_file())
-        for name in ('TCL', 'TK', 'ITK'):
+        for name in ('PROVIDER_A', 'PROVIDER_B', 'CONSUMER'):
             self.assertFalse((self.build / (name + '_BLD-prefix/src/' + name + '_BLD-build')).exists())
 
     def test_failed_finalization_retains_deferred_work_for_retry(self):
@@ -271,11 +271,11 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         self.configure()
         self.final_failure.touch()
         self.compile(success=False)
-        for name in ('TCL', 'TK', 'ITK'):
+        for name in ('PROVIDER_A', 'PROVIDER_B', 'CONSUMER'):
             self.assertTrue((self.build / (name + '_BLD-prefix/src/' + name + '_BLD-build')).is_dir())
         self.final_failure.unlink()
         self.compile()
-        for name in ('TCL', 'TK', 'ITK'):
+        for name in ('PROVIDER_A', 'PROVIDER_B', 'CONSUMER'):
             self.assertFalse((self.build / (name + '_BLD-prefix/src/' + name + '_BLD-build')).exists())
 
     def test_default_prefix_inside_build_tree_is_retained(self):
