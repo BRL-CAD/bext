@@ -46,6 +46,9 @@ jobs:
         run: |
           cmake -E make_directory ./build_linux
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         run: |
           export PATH=$ENV{GITHUB_WORKSPACE}:$PATH

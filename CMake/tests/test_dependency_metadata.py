@@ -173,6 +173,31 @@ endforeach()
         self.assertEqual(cyclonedx['components'][0]['evidence']['licenses'][0]
                          ['license']['text']['content'], license_text)
 
+    def test_repository_evidence_must_belong_to_the_selected_snapshot(self):
+        evidence = self.source / 'probe/license.txt'
+        license_text = 'Reviewed license terms\n'
+        evidence.write_text(license_text, encoding='utf-8')
+        digest = hashlib.sha256(license_text.encode()).hexdigest()
+        descriptor = self.source / 'probe/BextPackage.cmake'
+        for path in ('@/probe/license.txt', '../license.txt'):
+            with self.subTest(path=path):
+                descriptor.write_text(
+                    'bext_package(probe OUTPUT install GROUPS BRLCAD APPLESEED)\n'
+                    'bext_sbom_component("probe/source" LICENSE "LicenseRef-Probe" LICENSE_NAME "Probe terms"\n'
+                    f' LICENSE_FILE "{path}" LICENSE_SHA256 "{digest}"\n'
+                    f' REVIEWED_REVISION "{self.first}")\n')
+                self.git('add', 'probe/BextPackage.cmake')
+                self.assertIn('missing from INDEX', self.inventory('INDEX', success=False))
+                self.git('add', 'probe/license.txt')
+                self.inventory('INDEX')
+                self.git('restore', '--staged', 'probe/license.txt')
+        self.git('add', 'probe/license.txt')
+        self.git('commit', '-qm', 'Review repository evidence')
+        self.git('rm', '--cached', 'probe/license.txt')
+        self.assertTrue(evidence.is_file())
+        self.assertIn('missing from INDEX', self.inventory('INDEX', success=False))
+        self.inventory('HEAD')
+
     def test_local_license_snapshot_requires_current_reviewed_revision(self):
         evidence = self.source / 'probe/license.txt'
         license_text = 'Reviewed probe license\n'

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "reviewedRevision": "3178765365af3497b0fe60d6cb0e1012027d9b75",
+  "components": [
+    {
+      "path": "src/3rdparty/emoji-segmenter",
+      "snapshot": "emoji-segmenter.json",
+      "sha256": "9a980fc0f9e478d2a7e9a571d4cd234c259aaf8e2ea3fb60a0a7cf02cc3c3700"
+    },
+    {
+      "path": "src/3rdparty/freetype",
+      "snapshot": "freetype.json",
+      "sha256": "628b68bf60eb3bc1616342bc3545b63be2392e78bbebbc4c19f49675dd2ac8a7"
+    },
+    {
+      "path": "src/3rdparty/harfbuzz-ng",
+      "snapshot": "harfbuzz-ng.json",
+      "sha256": "b869a7f186e4cfc00cc979e7c4ffd369d823f7a0a94b951a6aedb9b3278c8419"
+    },
+    {
+      "path": "src/3rdparty/libjpeg",
+      "snapshot": "libjpeg.json",
+      "sha256": "ed7cb7abdd9124f664acd26cf552ba821c8cf236c4cd34a6737f202215bd41bc"
+    },
+    {
+      "path": "src/3rdparty/libpng",
+      "snapshot": "libpng.json",
+      "sha256": "a43ff8e146c949f7cd14e00bd681f4957e27def06ecafec55ccc7231c451d3fa"
+    },
+    {
+      "path": "src/3rdparty/md4c",
+      "snapshot": "md4c.json",
+      "sha256": "7b2bc7be22e4be2a2984119ce3d0bfc210ddd0d8ef6193d66e8479d4c22af4ba"
+    },
+    {
+      "path": "src/3rdparty/pcre2",
+      "snapshot": "pcre2.json",
+      "sha256": "c65e311b057e3ecb8ee9aeddd681add5aa4484485e265d3a6a8e7967abc19948"
+    },
+    {
+      "path": "src/3rdparty/sqlite",
+      "snapshot": "sqlite.json",
+      "sha256": "fcba08e23508524b77ee22186a5ef2d35957979fe9e2a604d994c5e9604c8fb9"
+    },
+    {
+      "path": "src/3rdparty/tinycbor",
+      "snapshot": "tinycbor.json",
+      "sha256": "788408509fb7967042640f24ba78b263712e816d886303ba1733f49753d33863"
+    },
+    {
+      "path": "src/3rdparty/zlib",
+      "snapshot": "zlib.json",
+      "sha256": "0346805e9c4048316dbc7c58d560a20c12482ea0218de264282212e9619b6d64"
+    }
+  ]
+}

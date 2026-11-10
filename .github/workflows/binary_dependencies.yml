@@ -53,6 +53,9 @@ jobs:
           sudo apt-get install libinput-dev
           sudo apt-get clean
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         run: cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DBEXT_DISCARD_WORK=ON -DBEXT_BUILD_JOBS=2 -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/bext_output"
 
@@ -111,6 +114,9 @@ jobs:
       - name: Add cl.exe to PATH
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         shell: pwsh
         run: |
@@ -167,6 +173,9 @@ jobs:
 
       - name: Install Xquartz
         run: brew install xquartz --cask
+
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
 
       - name: Configure
         env:

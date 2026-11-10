@@ -45,6 +45,12 @@ jobs:
       - name: Validate committed and staged dependency metadata
         run: python3 CMake/tests/test_dependency_metadata.py -v
 
+      - name: Validate inventories with optional checkouts absent or partial
+        run: python3 CMake/tests/test_source_inventory_checkouts.py -v
+
+      - name: Test dependency-local regressions
+        run: python3 CMake/tests/test_dependency_regressions.py -v
+
       - name: Validate SBOM formats and advisory projections
         run: python3 CMake/tests/test_sbom_formats.py -v
 
@@ -58,11 +64,7 @@ jobs:
         run: '"$RUNNER_TEMP/sbom-tools/bin/python" CMake/tests/test_component_manifest.py -v'
 
       - name: Validate dependency metadata and documentation
-        # Source attribution and aggregate license evidence are checked against
-        # these pinned trees; the remaining metadata is repository-local.
-        run: |
-          git submodule update --init --depth 1 -- qt/qt tcl/tcl openimageio/oiio
-          cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_DOC_MODE=CHECK -P CMake/GenerateDependencyDocs.cmake
+        run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_DOC_MODE=CHECK -P CMake/GenerateDependencyDocs.cmake
 
       - name: Generate source SBOMs
         run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_SBOM_OUTPUT="$RUNNER_TEMP/bext.spdx.json" -DBEXT_CYCLONEDX_OUTPUT="$RUNNER_TEMP/bext.cdx.json" -P CMake/TestSbom.cmake
@@ -118,6 +120,9 @@ jobs:
           sudo apt-get install libinput-dev
           sudo apt-get clean
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         run: |
           export PATH=$GITHUB_WORKSPACE:$PATH
@@ -149,6 +154,9 @@ jobs:
 
       - name: Validate excluded dependency targets with MSBuild
         run: python CMake/tests/test_release_build.py ReleaseBuildTests.test_excluded_wrappers_visual_studio -v
+
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
 
       - name: Configure
         shell: cmd
@@ -188,6 +196,9 @@ jobs:
 
       - name: Add cl.exe to PATH
         uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
 
       - name: Configure
         shell: cmd

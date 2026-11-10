@@ -69,3 +69,19 @@ Relocatable metadata
 Finalization makes exported Qt link paths relative to _IMPORT_PREFIX and
 uses $$[QT_INSTALL_PREFIX] in qmake metadata. Consumers can move the bundle
 and stage dependencies without changing those files.
+
+SBOM attribution snapshots
+--------------------------
+
+Source inventories read the reviewed Qt attribution files in attributions/
+and the revision and checksums in attributions.json. They do not require a Qt
+checkout. When sources are present, the inventory checks the original JSON
+and PCRE2 notice and rejects additional security-critical components.
+
+After preparing a candidate source revision in qt/qt, run:
+
+  python3 qt/RefreshSbomAttributions.py
+
+The helper reads committed source blobs. Review changes to the component set,
+licenses, build selectors, and vulnerability decisions before staging the
+refreshed snapshots alongside the Qt source pin.

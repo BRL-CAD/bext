@@ -10,6 +10,16 @@ if(BEXT_PACKAGE_BUILD_ONLY)
   return()
 endif()
 
+# Read reviewed metadata from the selected repository snapshot. Source
+# checkouts are optional for an inventory and remain additional evidence.
+get_filename_component(_bext_qt_repository_dir "${BEXT_PACKAGE_DIR}" DIRECTORY)
+_bext_inventory_read_evidence(_bext_qt_attributions "${_bext_qt_repository_dir}" "" "@/qt/attributions.json")
+string(JSON _bext_qt_attribution_schema GET "${_bext_qt_attributions}" schemaVersion)
+if(NOT _bext_qt_attribution_schema EQUAL 1)
+  message(FATAL_ERROR "Unsupported Qt attribution snapshot schema: ${_bext_qt_attribution_schema}")
+endif()
+string(JSON _bext_qt_attribution_revision GET "${_bext_qt_attributions}" reviewedRevision)
+
 bext_sbom_component("qt/qt"
   NAME "Qt source aggregate"
   VERSION "6.12.0"
@@ -75,9 +85,25 @@ bext_sbom_subcomponent("qt/qt" "qtbase-build-tools"
   SCOPE "BUILD"
 )
 
-function(_bext_qt_security_component relative_path)
+function(_bext_qt_security_component relative_path snapshot expected_sha256)
   set(attribution_file "${BEXT_PACKAGE_DIR}/qt/qtbase/${relative_path}/qt_attribution.json")
-  file(READ "${attribution_file}" attribution_json)
+  foreach(origin IN ITEMS snapshot upstream)
+    if(origin STREQUAL "snapshot")
+      _bext_inventory_read_evidence(attribution_text "${_bext_qt_repository_dir}" "" "@/qt/attributions/${snapshot}")
+    elseif(EXISTS "${attribution_file}")
+      file(READ "${attribution_file}" attribution_text)
+    else()
+      continue()
+    endif()
+    string(REPLACE "\r\n" "\n" attribution_text "${attribution_text}")
+    string(SHA256 actual_sha256 "${attribution_text}")
+    if(NOT actual_sha256 STREQUAL expected_sha256)
+      message(FATAL_ERROR "Qt ${origin} attribution for ${relative_path} changed; review it and refresh qt/attributions.json")
+    endif()
+    if(origin STREQUAL "snapshot")
+      set(attribution_json "${attribution_text}")
+    endif()
+  endforeach()
   string(JSON root_type TYPE "${attribution_json}")
   if(root_type STREQUAL "ARRAY")
     string(JSON entry_count LENGTH "${attribution_json}")
@@ -122,7 +148,7 @@ function(_bext_qt_security_component relative_path)
       LICENSE_CONCLUDED "${LicenseId}"
       PURPOSE "LIBRARY"
       SCOPE "RUNTIME"
-      REVIEWED_REVISION "3178765365af3497b0fe60d6cb0e1012027d9b75"
+      REVIEWED_REVISION "${_bext_qt_attribution_revision}"
     )
     string(JSON copyright_type ERROR_VARIABLE copyright_error TYPE "${entry}" Copyright)
     if(NOT copyright_error)
@@ -142,7 +168,7 @@ function(_bext_qt_security_component relative_path)
       endif()
       list(APPEND component_args
         COPYRIGHT_TEXT "${copyright_text}"
-        COPYRIGHT_REVIEWED_REVISION "3178765365af3497b0fe60d6cb0e1012027d9b75")
+        COPYRIGHT_REVIEWED_REVISION "${_bext_qt_attribution_revision}")
     endif()
 
     if(relative_path STREQUAL "src/3rdparty/emoji-segmenter")
@@ -177,8 +203,10 @@ function(_bext_qt_security_component relative_path)
       string(JSON LicenseName GET "${entry}" License)
       list(APPEND component_args
         LICENSE_NAME "${LicenseName}"
-        LICENSE_FILE "qtbase/${relative_path}/LICENCE.md"
-        LICENSE_SHA256 "197d8a73ffee0d6b09adba2f9c677b5f5aede24edf89258a68e48248d010d811")
+        LICENSE_FILE "@/qt/licenses/pcre2.txt"
+        LICENSE_SHA256 "197d8a73ffee0d6b09adba2f9c677b5f5aede24edf89258a68e48248d010d811"
+        LICENSE_SOURCE_FILE "qtbase/${relative_path}/LICENCE.md"
+        LICENSE_SOURCE_SHA256 "197d8a73ffee0d6b09adba2f9c677b5f5aede24edf89258a68e48248d010d811")
     elseif(relative_path STREQUAL "src/3rdparty/sqlite")
       list(APPEND component_args
         LICENSE_FILE "qtbase/LICENSES/blessing.txt"
@@ -216,19 +244,21 @@ function(_bext_qt_security_component relative_path)
   endforeach()
 endfunction()
 
-set(_bext_qt_security_paths
-    src/3rdparty/emoji-segmenter
-    src/3rdparty/freetype
-    src/3rdparty/harfbuzz-ng
-    src/3rdparty/libjpeg
-    src/3rdparty/libpng
-    src/3rdparty/md4c
-    src/3rdparty/pcre2
-    src/3rdparty/sqlite
-    src/3rdparty/tinycbor
-    src/3rdparty/zlib)
-foreach(_bext_qt_security_path IN LISTS _bext_qt_security_paths)
-  _bext_qt_security_component("${_bext_qt_security_path}")
+set(_bext_qt_security_paths)
+string(JSON _bext_qt_attribution_count LENGTH "${_bext_qt_attributions}" components)
+if(_bext_qt_attribution_count LESS 1)
+  message(FATAL_ERROR "The reviewed Qt attribution snapshot has no components")
+endif()
+math(EXPR _bext_qt_attribution_last "${_bext_qt_attribution_count} - 1")
+foreach(_bext_qt_attribution_index RANGE ${_bext_qt_attribution_last})
+  foreach(_bext_qt_field path snapshot sha256)
+    string(JSON _bext_qt_${_bext_qt_field} GET "${_bext_qt_attributions}" components ${_bext_qt_attribution_index} ${_bext_qt_field})
+  endforeach()
+  if(_bext_qt_path IN_LIST _bext_qt_security_paths)
+    message(FATAL_ERROR "Duplicate reviewed Qt attribution path: ${_bext_qt_path}")
+  endif()
+  list(APPEND _bext_qt_security_paths "${_bext_qt_path}")
+  _bext_qt_security_component("${_bext_qt_path}" "${_bext_qt_snapshot}" "${_bext_qt_sha256}")
 endforeach()
 
 function(_bext_qt_attribution_is_security_critical output attribution_file)

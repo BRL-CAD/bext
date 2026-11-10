@@ -1,0 +1,14 @@
+name: Validate source inventories
+description: Check repository metadata before compiling dependencies
+runs:
+  using: composite
+  steps:
+    - name: Generate and validate source inventories
+      shell: bash
+      run: |
+        cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" \
+          -DBEXT_SBOM_OUTPUT="$RUNNER_TEMP/bext-source.spdx.json" \
+          -DBEXT_CYCLONEDX_OUTPUT="$RUNNER_TEMP/bext-source.cdx.json" \
+          -DBEXT_SBOM_ALLOW_DIRTY=OFF -P CMake/GenerateSbom.cmake
+        cmake -DBEXT_SBOM_INPUT="$RUNNER_TEMP/bext-source.spdx.json" \
+          -P CMake/ValidateSbom.cmake

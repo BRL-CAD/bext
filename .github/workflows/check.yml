@@ -41,6 +41,9 @@ jobs:
       - name: Add cl.exe to PATH
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         shell: powershell
         run: |
@@ -88,6 +91,9 @@ jobs:
           sudo apt-get install libinput-dev
           sudo apt-get clean
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         run: |
           export PATH="$GITHUB_WORKSPACE:$PATH"
@@ -114,6 +120,9 @@ jobs:
       - name: Install Xquartz
         run: |
           brew install xquartz --cask
+
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
 
       - name: Configure
         run: |

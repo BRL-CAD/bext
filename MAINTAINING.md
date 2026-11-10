@@ -462,14 +462,26 @@ wrappers, package descriptors, repository-local evidence, `.deps` files, URLs,
 gitlinks, and the reference table from the same
 resolved commit. `INDEX` reads their staged versions, rejects conflicted entries,
 and supports a new submodule before an integration commit. Neither mode reads
-unstaged repository metadata. The SBOM descriptors also inspect Qt attribution
-and Tcl/OpenImageIO aggregate license evidence in populated source trees.
-Initialize those submodules at the candidate pins before checking the full
-repository inventory or generating its SBOM:
+unstaged repository metadata. Source inventories work without initialized
+submodules. Reviewed license and attribution snapshots live with each
+dependency, are tied to its pinned revision, and are read from the selected
+HEAD or INDEX snapshot. Available source notices and Qt attributions are still
+checked against their reviewed hashes; a checkout never silently replaces
+cached evidence.
+
+Qt stores its security-critical attribution inputs in `qt/attributions/`, with
+paths, hashes, and the reviewed source revision in `qt/attributions.json`.
+After preparing a candidate Qt checkout, refresh those files with:
 
 ```sh
-git submodule update --init -- qt/qt tcl/tcl openimageio/oiio
+python3 qt/RefreshSbomAttributions.py
 ```
+
+The helper reads the source checkout's committed HEAD, ignoring working-tree
+edits. It stops if security-critical packages were added or removed so their
+license declarations, build selectors, and advisory mappings can be reviewed
+before refreshing. Review and stage the resulting snapshots with the Qt pin;
+license snapshots and vulnerability decisions still need their own review.
 
 The isolated metadata regression fixtures remain offline and do not need
 dependency checkouts. When validating staged pin changes, align the inspected
@@ -529,7 +541,8 @@ cmake -DBEXT_SOURCE_DIR="$PWD" \
 
 Add `-DBEXT_SBOM_ALLOW_DIRTY=ON` for an intentional development inventory.
 This retains HEAD metadata and labels the document with dirty-tree provenance.
-The source checkouts required above must still be populated.
+Dependency checkouts are optional; populated sources receive additional
+evidence checks.
 
 CycloneDX `bom-ref` values retain package SPDX identifiers. Nested components
 represent `CONTAINS`; dependency edges represent only `DEPENDS_ON`. The metadata
@@ -1225,11 +1238,21 @@ version. Advisory counts and severities can change as databases are updated.
 | Finalization or staging | Finalized bundle, relocated consumer, ELF staging regression where applicable, installed SPDX integrity, and platform-specific binary checks. |
 | Metadata or documentation | HEAD and INDEX checks, generated table, source-mode regression tests, working links, current preset paths, and a runnable example. |
 
+Dependency-specific regression tests belong in the wrapper's `tests/`
+directory.  The central Python test discovery includes `*/tests/test_*.py`
+through `CMake/tests/test_dependency_regressions.py`; run that file directly
+for just the dependency-local checks.  Shared fixtures stay in `CMake/tests/`.
+A dependency test module may provide `populate_inventory_sources(fixture)`
+to exercise its upstream evidence in the complete source-inventory checkout
+matrix.  Keep source paths and evidence details inside that dependency module.
+
 Useful offline regressions:
 
 ```sh
 python3 CMake/tests/test_dependency_selection.py -v
 python3 CMake/tests/test_dependency_metadata.py -v
+python3 CMake/tests/test_dependency_regressions.py -v
+python3 CMake/tests/test_source_inventory_checkouts.py -v
 python3 CMake/tests/test_release_build.py -v
 ```
 
