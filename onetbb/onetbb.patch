@@ -1,0 +1,13 @@
+--- a/src/tbb/governor.cpp
++++ b/src/tbb/governor.cpp
+@@ -119,8 +119,9 @@
+ #endif /* TBB_USE_ASSERT */
+ 
+     system_topology::destroy();
++    // Controls must be freed before unloading their allocator.
++    global_control_release();
+     dynamic_unlink_all();
+-    global_control_release();
+ }
+ 
+ rml::tbb_server* governor::create_rml_server ( rml::tbb_client& client ) {

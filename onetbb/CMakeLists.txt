@@ -17,7 +17,9 @@ set(ENABLE_ONETBB "${ENABLE_ONETBB}" CACHE BOOL "Enable oneTBB build")
 
 if (ENABLE_ONETBB)
 
-  git_submodule_init(oneTBB CMakeLists.txt)
+  git_submodule_init(oneTBB CMakeLists.txt
+    PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/onetbb.patch"
+    PATCH_COMMAND_VAR ONETBB_PATCH_COMMAND)
 
   RegisterDeps(ONETBB)
 
@@ -34,6 +36,7 @@ if (ENABLE_ONETBB)
 
   ExternalProject_Add(ONETBB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oneTBB"
+    PATCH_COMMAND ${ONETBB_PATCH_COMMAND}
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
