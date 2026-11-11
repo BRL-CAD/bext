@@ -5,6 +5,7 @@ if (ENABLE_BOOST)
 
   set(BOOST_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/boost_cmake.patch")
   git_submodule_init(boost CMakeLists.txt
+    INPUT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/boost_components.cmake"
     PATCH_FILES ${BOOST_PATCH_FILES}
     PATCH_COMMAND_VAR BOOST_PATCH_COMMAND)
 
@@ -22,6 +23,7 @@ if (ENABLE_BOOST)
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/libs/iostreams/cmake/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/boost/FindICU.cmake;<SOURCE_DIR>/libs/locale/cmake/FindICU.cmake
     CMAKE_ARGS
+    -C ${CMAKE_CURRENT_SOURCE_DIR}/boost_components.cmake
     ${BUILD_TYPE_SPECIFIER}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>

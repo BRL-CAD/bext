@@ -495,6 +495,10 @@ add_project(png GROUPS "APPLESEED;BRLCAD;TCL")
 # https://gitlab.com/libtiff/libtiff
 add_project(tiff GROUPS "APPLESEED;GDAL")
 
+# Imath - math types shared by the image and shading libraries
+# https://github.com/AcademySoftwareFoundation/Imath
+add_project(imath GROUPS "APPLESEED")
+
 # OpenEXR - EXR image storage format
 # https://openexr.com/
 # https://github.com/AcademySoftwareFoundation/openexr
@@ -507,6 +511,14 @@ add_project(openexr GROUPS "APPLESEED")
 # is a useful reference for what versions to expect elements
 # of the rendering pipeline software stack to use/require
 add_project(opencolorio GROUPS "APPLESEED")
+
+# robin-map - hash containers required by OpenImageIO
+# https://github.com/Tessil/robin-map (local v1.4.1 snapshot)
+add_project(robin-map GROUPS "APPLESEED")
+
+# oneTBB - Threading Building Blocks
+# https://github.com/oneapi-src/oneTBB
+add_project(onetbb GROUPS "APPLESEED;OSPRAY;BRLCAD")
 
 # OpenImageIO - reading and writing images, aimed at VFX studios
 # https://github.com/OpenImageIO/oiio
@@ -523,10 +535,6 @@ add_project(lmdb GROUPS "BRLCAD")
 # Eigen - linear algebra library
 # https://eigen.tuxfamily.org
 add_project(eigen GROUPS "BRLCAD;APPLESEED")
-
-# oneTBB - Threading Building Blocks
-# https://github.com/oneapi-src/oneTBB
-add_project(onetbb GROUPS "APPLESEED;OSPRAY;BRLCAD")
 
 # rkcommon -  C++ infrastructure and CMake utilities
 # https://github.com/ospray/rkcommon
@@ -647,6 +655,10 @@ add_project(tktable GROUPS "TCL")
 # Qt - cross-platform user interface/application development toolkit
 # https://download.qt.io/archive/qt
 add_project(qt GROUPS "QT")
+
+# Happly - PLY input used by Appleseed
+# https://github.com/MarcusTU/happly (local header snapshot)
+add_project(happly GROUPS "APPLESEED")
 
 # Appleseed - global illumination rendering engine
 # https://github.com/appleseedhq/appleseed

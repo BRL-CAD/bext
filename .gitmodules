@@ -370,3 +370,6 @@
 	url = https://github.com/BRL-CAD/m4.git
 	ignore = dirty
 	shallow = true
+[submodule "imath/Imath"]
+	path = imath/Imath
+	url = https://github.com/BRL-CAD/Imath

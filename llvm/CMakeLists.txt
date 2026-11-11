@@ -3,15 +3,18 @@ bext_enable(LLVM)
 
 if (ENABLE_LLVM)
 
-  set(LLVM_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/llvm_no_ast_introspection.patch")
+  set(LLVM_PATCH_FILES)
   if (TARGET ZLIB_BLD)
     list(APPEND LLVM_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/llvm_z_brl.patch")
   endif ()
-  git_submodule_init(llvm-project llvm/CMakeLists.txt
-    PATCH_FILES ${LLVM_PATCH_FILES}
-    PATCH_COMMAND_VAR LLVM_PATCH_COMMAND)
+  if (LLVM_PATCH_FILES)
+    git_submodule_init(llvm-project llvm/CMakeLists.txt
+      PATCH_FILES ${LLVM_PATCH_FILES}
+      PATCH_COMMAND_VAR LLVM_PATCH_COMMAND)
+  else ()
+    git_submodule_init(llvm-project llvm/CMakeLists.txt)
+  endif ()
 
   RegisterDeps(LLVM)
   # LLVM installs its own Ninja pools, including memory-heavy TableGen jobs.
@@ -68,7 +71,6 @@ if (ENABLE_LLVM)
       -DLLVM_INCLUDE_EXAMPLES=OFF
       -DLLVM_INCLUDE_BENCHMARKS=OFF
       -DLLVM_INCLUDE_DOCS=OFF
-      -DCLANG_TOOLING_BUILD_AST_INTROSPECTION=OFF
       -DBIN_DIR=${BIN_DIR}
       -DLIB_DIR=${LIB_DIR}
       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -125,7 +127,6 @@ if (ENABLE_LLVM)
       -DLLVM_INCLUDE_EXAMPLES=OFF
       -DLLVM_INCLUDE_BENCHMARKS=OFF
       -DLLVM_INCLUDE_DOCS=OFF
-      -DCLANG_TOOLING_BUILD_AST_INTROSPECTION=OFF
       -DBIN_DIR=${BIN_DIR}
       -DLIB_DIR=${LIB_DIR}
       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}

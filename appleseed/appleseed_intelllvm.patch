@@ -7,7 +7,7 @@
 +set(compiler_detection_options)
 +if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
 +    # The deprecated module cannot describe IntelLLVM. These features are all
-+    # required by the C++14 standard enforced above, including for consumers.
++    # required by the C++17 standard enforced above, including for consumers.
 +    list(APPEND compiler_detection_options
 +        ALLOW_UNKNOWN_COMPILERS
 +        PROLOG [=[

@@ -15,7 +15,7 @@ index 74ed663..ba8c28e 100644
 +endif ()
  include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories(${Boost_LIBRARY_DIRS})
- find_package(OSL REQUIRED)
+ find_package(OSL 1.15 REQUIRED)
 +# appleseed links OSL via the oslcomp/oslexec/oslquery_LIBRARY_IMP variables,
 +# which are only populated by appleseed's module-mode FindOSL.cmake.  When OSL is
 +# resolved in CONFIG mode instead (e.g. CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON with
@@ -29,7 +29,7 @@ index 74ed663..ba8c28e 100644
 +endif ()
 -find_package(OpenEXR REQUIRED)
 +find_package(OpenEXR MODULE REQUIRED)
- find_package(OpenImageIO REQUIRED)
+ find_package(OpenImageIO 3.0 REQUIRED)
  
 @@ -275,7 +293,6 @@ endif ()
  
@@ -139,7 +139,7 @@ diff --git a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp b/src/applese
              m_texture_system,
              m_error_handler);
      m_shading_system->attribute("lockgeom", 1);
--    m_shading_system->attribute("colorspace", "Linear");
+-    m_shading_system->attribute("colorspace", "sRGB"); // TODO: is this really correct? Note: this attribute does not need to be set for Appleseed to render. (If not set, produces identical (looking) results.)
 +    /* BRL-CAD PATCH: OSL's working color space must be a name OSL knows (its
 +     * default is "Rec709", the linear-Rec709 working space).  The upstream
 +     * "Linear" is not a recognized OSL color space, so OSL logged
