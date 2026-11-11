@@ -1,0 +1,35 @@
+--- a/tclconfig/tcl.m4
++++ b/tclconfig/tcl.m4
+@@ -2222,7 +2222,11 @@
+ 
+ AC_DEFUN([TEA_PATH_X], [
+     if test "${TEA_WINDOWINGSYSTEM}" = "x11" ; then
+-	TEA_PATH_UNIX_X
++	if test -n "${TK_XLIBSW}" ; then
++	    PKG_LIBS="${PKG_LIBS} ${TK_XLIBSW}"
++	else
++	    TEA_PATH_UNIX_X
++	fi
+     fi
+ ])
+ 
+--- a/configure
++++ b/configure
+@@ -6410,6 +6410,9 @@
+ 
+ 
+     if test "${TEA_WINDOWINGSYSTEM}" = "x11" ; then
++    if test -n "${TK_XLIBSW}" ; then
++	PKG_LIBS="${PKG_LIBS} ${TK_XLIBSW}"
++    else
+ 
+     { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for X" >&5
+ printf %s "checking for X... " >&6; }
+@@ -6784,6 +6787,7 @@
+ 	PKG_LIBS="${PKG_LIBS} ${XLIBSW}"
+     fi
+ 
++    fi
+     fi
+ 
+ 

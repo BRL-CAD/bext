@@ -6,24 +6,8 @@ if (USE_BRLCAD)
 endif (USE_BRLCAD)
 
 
-# Unfortunately, there does not appear to be a reliable way to test for the
-# presence of the Tktable package on a system Tcl/Tk.  We key off of the
-# presence of the TK_BLD target, but that may produce a false negative if the
-# Tk build is off but we still need Tktable.  As far as I can tell the "package
-# require Tktable" test (which is what is required to properly test for an
-# available Tktable package) can ONLY be performed successfully on a system that
-# supports creation of a graphics window. Window creation isn't typically
-# available on continuous integration runners, which means the test will always
-# fail there even when it shouldn't.
-
-# We try to find the Tktable library, since that's the only test we can do without
-# needing the graphical invocation.  Unfortunately, even a find_library search
-# looking for libTktable isn't completely reliable, since the presence of a shared
-# library is not a guarantee it is correctly hooked into the "package require"
-# mechanism of the system Tcl/Tk we want to use.  (It is possible to have more
-# than one Tcl/Tk on a system - this situation is known to have occurred on the
-# Mac when 3rd party package managers are used, for example.)
-
+# Loading Tktable requires a display.  Prefer a local build with bundled Tk;
+# the library probe is only a fallback for an explicitly selected system stack.
 if (ENABLE_TK AND NOT DEFINED ENABLE_TKTABLE AND NOT DISABLE_TKTABLE)
   set(ENABLE_TKTABLE ON)
 endif (ENABLE_TK AND NOT DEFINED ENABLE_TKTABLE AND NOT DISABLE_TKTABLE)
@@ -40,25 +24,69 @@ set(ENABLE_TKTABLE "${ENABLE_TKTABLE}" CACHE BOOL "Enable Tktable build")
 
 if (ENABLE_TKTABLE)
 
-  git_submodule_init(tktable CMakeLists.txt)
-
+  # Extensions must use Tk's X11 provider, including an Xmin-backed Tk.
+  set(TKTABLE_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/tktable_tk_xlibs.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tktable_manifest.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tktable_relocatable.patch")
+  git_submodule_init(tktable configure
+    PATCH_FILES ${TKTABLE_PATCH_FILES}
+    PATCH_COMMAND_VAR TKTABLE_PATCH_COMMAND)
   RegisterDeps(TKTABLE)
 
+  set(TKTABLE_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TKTABLE_BLD-prefix/src/TKTABLE_BLD")
+  set(TKTABLE_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/TKTABLE_BLD-prefix/src/TKTABLE_BLD-build")
+
+  if (MSVC)
+    if (NOT TARGET TCL_BLD OR NOT TARGET TK_BLD)
+      message(FATAL_ERROR
+        "The native Tktable build requires bundled Tcl and Tk sources; "
+        "enable them with -DENABLE_TCL=ON")
+    endif ()
+    set(TCL_SRC_DIR "${CMAKE_BINARY_DIR}/tcl/TCL_BLD-prefix/src/TCL_BLD")
+    set(TK_SRC_DIR "${CMAKE_BINARY_DIR}/tk/TK_BLD-prefix/src/TK_BLD")
+    set(TKTABLE_BIN_DIR "${TKTABLE_SRC_DIR}/win")
+    configure_file(tktable_msvc.cmake.in tktable_msvc.cmake @ONLY)
+    set(tktable_configure_command "")
+    set(tktable_build_command
+      ${CMAKE_COMMAND} -DTKTABLE_TARGET=all -P ${CMAKE_CURRENT_BINARY_DIR}/tktable_msvc.cmake)
+    set(tktable_install_command
+      ${CMAKE_COMMAND} -DTKTABLE_TARGET=install -P ${CMAKE_CURRENT_BINARY_DIR}/tktable_msvc.cmake)
+  else ()
+    foreach(package TCL TK)
+      if (TARGET ${package}_BLD)
+        set(TKTABLE_${package}_CONFIG_DIR "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}")
+      else ()
+        string(TOLOWER "${package}" package_lower)
+        get_filename_component(package_libdir "${${package}_LIBRARY}" DIRECTORY)
+        file(STRINGS "${${package}_INCLUDE_PATH}/${package_lower}.h" package_version_define
+          REGEX "^#define[ \t]+${package}_VERSION[ \t]+")
+        if (NOT package_version_define MATCHES "[0-9]+\\.[0-9]+")
+          message(FATAL_ERROR "Cannot determine ${package} version from ${${package}_INCLUDE_PATH}")
+        endif ()
+        set(package_version "${CMAKE_MATCH_0}")
+        find_file(TKTABLE_${package}_CONFIG
+          NAMES ${package_lower}Config.sh
+          HINTS "${package_libdir}"
+          PATH_SUFFIXES ${package_lower}${package_version}
+          NO_DEFAULT_PATH NO_CACHE REQUIRED)
+        get_filename_component(TKTABLE_${package}_CONFIG_DIR "${TKTABLE_${package}_CONFIG}" DIRECTORY)
+      endif ()
+    endforeach()
+    configure_file(tktable_configure.cmake.in tktable_configure.cmake @ONLY)
+    set(tktable_configure_command ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tktable_configure.cmake)
+    set(tktable_build_command ${BEXT_MAKE_COMMAND} -j${pcnt} binaries)
+    set(tktable_install_command ${BEXT_MAKE_COMMAND} -j1 INSTALL_OPTIONS=-C install-binaries install-libraries)
+  endif ()
+
   ExternalProject_Add(TKTABLE_BLD
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tktable"
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/tktable"
+    BINARY_DIR "${TKTABLE_BIN_DIR}"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    CMAKE_ARGS
-    ${BUILD_TYPE_SPECIFIER}
-    -DBIN_DIR=$<IF:$<BOOL:${WIN32}>,${LIB_DIR},${BIN_DIR}>
-    -DLIB_DIR=${LIB_DIR}
-    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-    -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
-    -DCMAKE_INSTALL_RPATH=${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${RPATH_SUFFIX}
-    -DINCLUDE_DIR=${INCLUDE_DIR}
-    -DSHARED_DIR=${LIB_DIR}
-    -DTCL_ENABLE_TK=ON
-    -DTCL_ROOT=$<$<BOOL:${TCL_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    PATCH_COMMAND ${TKTABLE_PATCH_COMMAND}
+    CONFIGURE_COMMAND ${tktable_configure_command}
+    BUILD_COMMAND ${tktable_build_command}
+    INSTALL_COMMAND ${tktable_install_command}
     LOG_CONFIGURE ${EXT_BUILD_QUIET}
     LOG_BUILD ${EXT_BUILD_QUIET}
     LOG_INSTALL ${EXT_BUILD_QUIET}
@@ -66,9 +94,38 @@ if (ENABLE_TKTABLE)
     STEP_TARGETS install
     )
 
+  if (NOT MSVC)
+    ExternalProject_Add_StepDependencies(TKTABLE_BLD configure
+      "${CMAKE_CURRENT_BINARY_DIR}/tktable_configure.cmake")
+  endif ()
+
   TargetInstallDeps(TKTABLE TKTABLE_DEPENDS)
 
-  # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
+  set(tktable_test_dependencies TKTABLE_BLD)
+  if (TARGET TCL_BLD)
+    set(tktable_tclsh "${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${CMAKE_EXECUTABLE_SUFFIX}")
+    list(APPEND tktable_test_dependencies tclsh_cpy)
+  else ()
+    set(tktable_tclsh "${TCL_TCLSH}")
+  endif ()
+  set(tktable_test_command
+    "${tktable_tclsh}" "${CMAKE_CURRENT_SOURCE_DIR}/run_tests.tcl"
+    "${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}" "${TKTABLE_SRC_DIR}/tests")
+  if (BEXT_XMIN_ROOT)
+    find_program(TKTABLE_XMIN_RUN NAMES xmin-run HINTS "${BEXT_XMIN_ROOT}/bin" NO_DEFAULT_PATH NO_CACHE REQUIRED)
+    find_program(TKTABLE_XMIN_SERVER NAMES Xmin HINTS "${BEXT_XMIN_ROOT}/bin" NO_DEFAULT_PATH NO_CACHE REQUIRED)
+    set(tktable_test_screen "1280x960x24")
+    list(PREPEND tktable_test_command
+      "${CMAKE_COMMAND}" -E env --modify "LD_LIBRARY_PATH=path_list_prepend:${BEXT_XMIN_ROOT}/lib"
+      "${TKTABLE_XMIN_RUN}" --server "${TKTABLE_XMIN_SERVER}" --screen "${tktable_test_screen}" --)
+  endif ()
+  add_custom_target(TKTABLE_check
+    COMMAND ${tktable_test_command}
+    DEPENDS ${tktable_test_dependencies}
+    WORKING_DIRECTORY "${TKTABLE_BIN_DIR}"
+    USES_TERMINAL
+    VERBATIM)
+
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/tktable/license.txt
     ${DOC_LICENSE_DIR}/tktable.txt
@@ -83,4 +140,3 @@ endif (ENABLE_TKTABLE)
 # indent-tabs-mode: t
 # End:
 # ex: shiftwidth=2 tabstop=8
-

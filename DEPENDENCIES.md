@@ -55,7 +55,7 @@ selection further.
 | `oidn` | `USE_OSPRAY` | `install` | `ispc`, `onetbb` | [repository](https://github.com/BRL-CAD/oidn) |
 | `onetbb` | `USE_APPLESEED`, `USE_OSPRAY`, `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/oneTBB) |
 | `opencolorio` | `USE_APPLESEED` | `install` | `expat`, `minizip-ng`, `openexr`, `patch`, `pystring`, `yaml-cpp`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/OpenColorIO) |
-| `opencv` | `USE_BRLCAD` | `install` | `patch`, `png`, `zlib` | [repository](https://github.com/BRL-CAD/opencv) |
+| `opencv` | `USE_BRLCAD` | `install` | `patch`, `png`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/opencv) |
 | `openexr` | `USE_APPLESEED` | `install` | `deflate`, `patch` | [repository](https://github.com/BRL-CAD/openexr) |
 | `openimageio` | `USE_APPLESEED` | `install` | `boost`, `fmt`, `jpeg`, `opencolorio`, `openexr`, `patch`, `png`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/oiio) |
 | `opennurbs` | `USE_BRLCAD` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/opennurbs) |

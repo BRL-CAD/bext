@@ -1,0 +1,31 @@
+set(ENV{CC} "@CMAKE_C_COMPILER@")
+set(ENV{CFLAGS} "@CMAKE_C_FLAGS@")
+set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+set(ENV{LDFLAGS} "@CMAKE_SHARED_LINKER_FLAGS@ -L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+
+set(configure_options
+  --prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@
+  --libdir=@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@
+  --with-tcl=@TKTABLE_TCL_CONFIG_DIR@
+  --with-tk=@TKTABLE_TK_CONFIG_DIR@)
+if ("@CMAKE_BUILD_TYPE@" STREQUAL "Debug")
+  list(APPEND configure_options --enable-symbols)
+endif ()
+if ("@CMAKE_SIZEOF_VOID_P@" EQUAL 8)
+  list(APPEND configure_options --enable-64bit)
+endif ()
+
+execute_process(
+  COMMAND "@TKTABLE_SRC_DIR@/configure" ${configure_options}
+  WORKING_DIRECTORY "@TKTABLE_BIN_DIR@"
+  RESULT_VARIABLE result)
+if (NOT result STREQUAL "0")
+  message(FATAL_ERROR "Tktable configure failed: ${result}")
+endif ()
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
