@@ -3,7 +3,9 @@ bext_enable(OSL)
 
 if (ENABLE_OSL)
 
-  git_submodule_init(OpenShadingLanguage CMakeLists.txt)
+  git_submodule_init(OpenShadingLanguage CMakeLists.txt
+    PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/osl.patch"
+    PATCH_COMMAND_VAR OSL_PATCH_COMMAND)
 
   RegisterDeps(OSL)
   if (LLVM_TARGET)
@@ -52,7 +54,8 @@ if (ENABLE_OSL)
   ExternalProject_Add(OSL_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/OpenShadingLanguage"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    PATCH_COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/src/cmake/modules/FindZLIB.cmake
+    PATCH_COMMAND ${OSL_PATCH_COMMAND}
+    COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/src/cmake/modules/FindZLIB.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DImath_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}

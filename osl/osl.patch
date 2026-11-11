@@ -1,0 +1,15 @@
+--- a/src/cmake/modules/FindLLVM.cmake
++++ b/src/cmake/modules/FindLLVM.cmake
+@@ -79,6 +79,12 @@
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+ endif ()
+ string (REPLACE " " ";" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
++
++# llvm-config reports a bare linker flag even for non-system libxml2 installs.
++if ("-lxml2" IN_LIST LLVM_SYSTEM_LIBRARIES)
++    find_package (LibXml2 REQUIRED)
++    list (TRANSFORM LLVM_SYSTEM_LIBRARIES REPLACE "^-lxml2$" "LibXml2::LibXml2")
++endif ()
+ 
+ # Seems necessary on our Windows CI?
+ string (REPLACE "libxml2s.lib" "" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
