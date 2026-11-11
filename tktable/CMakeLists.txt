@@ -47,7 +47,7 @@ if (ENABLE_TKTABLE)
     set(TK_SRC_DIR "${CMAKE_BINARY_DIR}/tk/TK_BLD-prefix/src/TK_BLD")
     set(TKTABLE_BIN_DIR "${TKTABLE_SRC_DIR}/win")
     configure_file(tktable_msvc.cmake.in tktable_msvc.cmake @ONLY)
-    set(tktable_configure_command "")
+    set(tktable_configure_command ${CMAKE_COMMAND} -E true)
     set(tktable_build_command
       ${CMAKE_COMMAND} -DTKTABLE_TARGET=all -P ${CMAKE_CURRENT_BINARY_DIR}/tktable_msvc.cmake)
     set(tktable_install_command
