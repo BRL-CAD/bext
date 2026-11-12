@@ -641,7 +641,6 @@ add_project(tcl GROUPS "TCL")
 add_project(tk GROUPS "TCL")
 add_project(itk GROUPS "TCL")
 add_project(iwidgets GROUPS "TCL")
-add_project(tkhtml GROUPS "TCL")
 add_project(tktable GROUPS "TCL")
 
 # Qt - cross-platform user interface/application development toolkit
