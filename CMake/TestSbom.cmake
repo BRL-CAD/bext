@@ -25,48 +25,57 @@ if(NOT first_hash STREQUAL second_hash)
   message(FATAL_ERROR "SBOM generation is not reproducible")
 endif()
 
-set(dirty_probe "${BEXT_SOURCE_DIR}/sbom-dirty-provenance-test.tmp")
+# Keep test mutations and outputs separate from the inventory published above.
+while(TRUE)
+  string(RANDOM LENGTH 24 ALPHABET 0123456789abcdef probe_id)
+  set(dirty_probe "${BEXT_SOURCE_DIR}/sbom-dirty-provenance-${probe_id}.tmp")
+  set(dirty_output "${BEXT_SBOM_OUTPUT}.dirty-${probe_id}")
+  if(NOT EXISTS "${dirty_probe}" AND NOT EXISTS "${dirty_output}")
+    break()
+  endif()
+endwhile()
 file(WRITE "${dirty_probe}" "first\n")
-file(WRITE "${BEXT_SBOM_OUTPUT}" "stale\n")
+file(WRITE "${dirty_output}" "stale\n")
 execute_process(
   COMMAND "${CMAKE_COMMAND}"
     -DBEXT_SOURCE_DIR=${BEXT_SOURCE_DIR}
-    -DBEXT_SBOM_OUTPUT=${BEXT_SBOM_OUTPUT}
+    -DBEXT_SBOM_OUTPUT=${dirty_output}
     -P ${BEXT_SOURCE_DIR}/CMake/GenerateSbom.cmake
   RESULT_VARIABLE refused_dirty_result
   ERROR_QUIET
 )
-if(refused_dirty_result EQUAL 0 OR EXISTS "${BEXT_SBOM_OUTPUT}")
-  file(REMOVE "${dirty_probe}")
-  message(FATAL_ERROR "Dirty SBOM generation did not reject and remove stale output")
+set(dirty_test_error "")
+if(refused_dirty_result EQUAL 0 OR EXISTS "${dirty_output}")
+  set(dirty_test_error "Dirty SBOM generation did not reject and remove stale output")
+else()
+  foreach(content first second)
+    file(WRITE "${dirty_probe}" "${content}\n")
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}"
+        -DBEXT_SOURCE_DIR=${BEXT_SOURCE_DIR}
+        -DBEXT_SBOM_OUTPUT=${dirty_output}
+        -DBEXT_SBOM_ALLOW_DIRTY=ON
+        -P ${BEXT_SOURCE_DIR}/CMake/GenerateSbom.cmake
+      RESULT_VARIABLE dirty_generation_result
+    )
+    if(NOT dirty_generation_result EQUAL 0 OR NOT EXISTS "${dirty_output}")
+      set(dirty_test_error "Dirty SBOM generation failed")
+      break()
+    endif()
+    file(READ "${dirty_output}" dirty_sbom)
+    string(JSON ${content}_dirty_namespace ERROR_VARIABLE json_error GET "${dirty_sbom}" documentNamespace)
+    if(NOT json_error STREQUAL "NOTFOUND")
+      set(dirty_test_error "Dirty SBOM has no document namespace: ${json_error}")
+      break()
+    endif()
+  endforeach()
+  if(NOT dirty_test_error AND first_dirty_namespace STREQUAL second_dirty_namespace)
+    set(dirty_test_error "Dirty source content did not change SBOM provenance")
+  endif()
 endif()
-execute_process(
-  COMMAND "${CMAKE_COMMAND}"
-    -DBEXT_SOURCE_DIR=${BEXT_SOURCE_DIR}
-    -DBEXT_SBOM_OUTPUT=${BEXT_SBOM_OUTPUT}
-    -DBEXT_SBOM_ALLOW_DIRTY=ON
-    -P ${BEXT_SOURCE_DIR}/CMake/GenerateSbom.cmake
-  RESULT_VARIABLE dirty_generation_result
-)
-file(READ "${BEXT_SBOM_OUTPUT}" first_dirty_sbom)
-string(JSON first_dirty_namespace GET "${first_dirty_sbom}" documentNamespace)
-file(WRITE "${dirty_probe}" "second\n")
-execute_process(
-  COMMAND "${CMAKE_COMMAND}"
-    -DBEXT_SOURCE_DIR=${BEXT_SOURCE_DIR}
-    -DBEXT_SBOM_OUTPUT=${BEXT_SBOM_OUTPUT}
-    -DBEXT_SBOM_ALLOW_DIRTY=ON
-    -P ${BEXT_SOURCE_DIR}/CMake/GenerateSbom.cmake
-  RESULT_VARIABLE changed_dirty_generation_result
-)
-file(READ "${BEXT_SBOM_OUTPUT}" second_dirty_sbom)
-string(JSON second_dirty_namespace GET "${second_dirty_sbom}" documentNamespace)
-file(REMOVE "${dirty_probe}")
-if(NOT dirty_generation_result EQUAL 0 OR NOT changed_dirty_generation_result EQUAL 0)
-  message(FATAL_ERROR "Dirty SBOM generation failed")
-endif()
-if(first_dirty_namespace STREQUAL second_dirty_namespace)
-  message(FATAL_ERROR "Dirty source content did not change SBOM provenance")
+file(REMOVE "${dirty_probe}" "${dirty_output}" "${dirty_output}.tmp")
+if(dirty_test_error)
+  message(FATAL_ERROR "${dirty_test_error}")
 endif()
 
 set(BEXT_SBOM_INPUT "${BEXT_SBOM_OUTPUT}")

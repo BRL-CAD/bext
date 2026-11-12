@@ -1,5 +1,6 @@
 """The complete source inventory must not depend on initialized submodules."""
 
+import json
 import shutil
 import unittest
 
@@ -8,6 +9,23 @@ from source_inventory_fixture import SOURCE, SourceInventoryFixture
 
 
 class SourceInventoryCheckoutTests(SourceInventoryFixture):
+    def test_regression_outputs_describe_the_original_tree(self):
+        sentinel = self.repository / 'sbom-dirty-provenance-test.tmp'
+        sentinel.write_text('user data\n', encoding='utf-8')
+        self.command('cmake', f'-DBEXT_SOURCE_DIR={self.repository}',
+                     f'-DBEXT_SBOM_OUTPUT={self.spdx}',
+                     f'-DBEXT_CYCLONEDX_OUTPUT={self.cyclonedx}',
+                     '-P', SOURCE / 'CMake/TestSbom.cmake')
+        namespace = json.loads(self.spdx.read_text())['documentNamespace']
+        self.assertEqual(json.loads(self.cyclonedx.read_text())['metadata']['component']['bom-ref'],
+                         namespace)
+        self.assertEqual(sentinel.read_text(encoding='utf-8'), 'user data\n')
+        self.assertEqual(list(self.repository.glob('sbom-dirty-provenance-*.tmp')), [sentinel])
+        self.command('cmake', f'-DBEXT_SOURCE_DIR={self.repository}',
+                     f'-DBEXT_SBOM_OUTPUT={self.spdx}', '-DBEXT_SBOM_ALLOW_DIRTY=ON',
+                     '-P', SOURCE / 'CMake/GenerateSbom.cmake')
+        self.assertEqual(json.loads(self.spdx.read_text())['documentNamespace'], namespace)
+
     def test_inventory_is_identical_with_absent_partial_and_available_metadata(self):
         self.generate()
         baseline = (self.spdx.read_bytes(), self.cyclonedx.read_bytes())
