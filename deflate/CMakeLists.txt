@@ -3,13 +3,17 @@ bext_enable(DEFLATE)
 
 if (ENABLE_DEFLATE)
 
-  git_submodule_init(libdeflate CMakeLists.txt)
+  set(DEFLATE_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/deflate.patch")
+  git_submodule_init(libdeflate CMakeLists.txt
+    PATCH_FILES ${DEFLATE_PATCH_FILES}
+    PATCH_COMMAND_VAR DEFLATE_PATCH_COMMAND)
 
   RegisterDeps(DEFLATE)
 
   ExternalProject_Add(DEFLATE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libdeflate"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${DEFLATE_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DLIBDEFLATE_BUILD_GZIP=OFF
