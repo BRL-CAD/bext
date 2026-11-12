@@ -489,6 +489,10 @@ add_project(jpeg GROUPS "APPLESEED;BRLCAD;GDAL")
 # http://www.libpng.org/pub/png/libpng.html
 add_project(png GROUPS "APPLESEED;BRLCAD;TCL")
 
+# struetype - bounded font parsing and rasterization
+# https://github.com/starseeker/struetype (local source evaluation)
+add_project(struetype GROUPS "APPLESEED")
+
 # libtiff - Tag Image File Format (TIFF) support
 # https://libtiff.gitlab.io/libtiff/
 # https://gitlab.com/libtiff/libtiff
