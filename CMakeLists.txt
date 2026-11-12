@@ -473,10 +473,9 @@ add_project(icu GROUPS "APPLESEED")
 # https://xerces.apache.org/xerces-c/
 add_project(xerces-c GROUPS "APPLESEED")
 
-# Boost - C++ libraries
-# https://www.boost.org
-# https://github.com/boostorg/boost
-add_project(boost GROUPS "APPLESEED")
+# PCRE2 - Perl-compatible regular expressions
+# https://github.com/PCRE2Project/pcre2
+add_project(pcre2 GROUPS "APPLESEED")
 
 # netpbm library - support for pnm,ppm,pbm, etc. image files
 # http://netpbm.sourceforge.net/

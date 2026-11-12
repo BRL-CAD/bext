@@ -253,12 +253,6 @@
 	branch = RELEASE
 	ignore = dirty
         shallow = true
-[submodule "boost/boost"]
-	path = boost/boost
-	url = https://github.com/BRL-CAD/boost
-	branch = RELEASE
-	ignore = dirty
-        shallow = true
 [submodule "openexr/openexr"]
 	path = openexr/openexr
 	url = https://github.com/BRL-CAD/openexr

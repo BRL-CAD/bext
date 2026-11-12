@@ -1,9 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -234,7 +234,18 @@
- include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
- link_directories(${Boost_LIBRARY_DIRS})
+@@ -240,6 +240,17 @@
+ endif ()
  find_package(OSL 1.15 REQUIRED)
 -find_package(OpenEXR REQUIRED)
 +# appleseed links OSL via the oslcomp/oslexec/oslquery_LIBRARY_IMP variables,
