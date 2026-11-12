@@ -14,7 +14,8 @@ if (NOT WIN32 AND NOT APPLE)
       SOURCE_SUBDIR icu4c/source
       BUILD_IN_SOURCE ON
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-      CONFIGURE_COMMAND <SOURCE_DIR>/<SOURCE_SUBDIR>/configure --disable-extras --disable-tools --disable-tests --disable-samples --prefix=${CMAKE_BUNDLE_INSTALL_PREFIX}
+      # ICU needs its build tools to produce the Unicode data library.
+      CONFIGURE_COMMAND <SOURCE_DIR>/<SOURCE_SUBDIR>/configure --disable-extras --disable-tests --disable-samples --prefix=${CMAKE_BUNDLE_INSTALL_PREFIX}
       BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
       INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
