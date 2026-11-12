@@ -3,7 +3,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -231,10 +231,28 @@
  endif ()
- find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time regex thread)
+ find_package(Boost 1.70 REQUIRED COMPONENTS chrono date_time regex thread)
  add_definitions(-DBOOST_ALL_DYN_LINK)
 +if (MSVC AND TARGET Boost::atomic)
 +    get_target_property(BOOST_ATOMIC_IMPLIB Boost::atomic IMPORTED_IMPLIB_RELEASE)
