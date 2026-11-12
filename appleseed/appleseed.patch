@@ -1,17 +1,7 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -231,10 +231,28 @@
- endif ()
- find_package(Boost 1.70 REQUIRED COMPONENTS chrono date_time regex thread)
- add_definitions(-DBOOST_ALL_DYN_LINK)
-+if (MSVC AND TARGET Boost::atomic)
-+    get_target_property(BOOST_ATOMIC_IMPLIB Boost::atomic IMPORTED_IMPLIB_RELEASE)
-+    get_filename_component(BOOST_ATOMIC_IMPLIB_NAME "${BOOST_ATOMIC_IMPLIB}" NAME)
-+    if (BOOST_ATOMIC_IMPLIB_NAME MATCHES "^boost_atomic-(vc[0-9]+)-")
-+        add_definitions(-DBOOST_LIB_TOOLSET="${CMAKE_MATCH_1}")
-+    endif ()
-+endif ()
+@@ -234,7 +234,18 @@
  include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories(${Boost_LIBRARY_DIRS})
  find_package(OSL 1.15 REQUIRED)
@@ -31,7 +21,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  find_package(OpenImageIO 3.0 REQUIRED)
  
  if (WITH_EMBREE)
-@@ -290,7 +308,6 @@
+@@ -290,7 +301,6 @@
  
  include_directories(
    ${IMATH_INCLUDE_DIRS}
@@ -39,7 +29,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
    ${LZ4_INCLUDE_DIR}
    ${OPENCOLORIO_INCLUDE_DIRS}
    ${OPENEXR_INCLUDE_DIRS}
-@@ -698,3 +715,11 @@
+@@ -698,3 +708,11 @@
  # indent-tabs-mode: t
  # End:
  # ex: shiftwidth=2 tabstop=8
