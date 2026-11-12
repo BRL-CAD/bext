@@ -4,11 +4,8 @@ set(BOOST_INCLUDE_LIBRARIES
   bind
   chrono
   date_time
-  filesystem
   interprocess
-  range
   regex
   smart_ptr
-  system
   thread
   CACHE STRING "Boost components required by Appleseed")
