@@ -503,14 +503,20 @@ cmake -S tests/deflate_package -B build/check-deflate \
   -Dlibdeflate_ROOT="$renderer_prefix"
 cmake --build build/check-deflate
 ctest --test-dir build/check-deflate --output-on-failure
+cmake -S tests/appleseed_cli -B build/check-appleseed-cli \
+  -DAPPLESEED_ROOT="$renderer_prefix"
+ctest --test-dir build/check-appleseed-cli --output-on-failure
 ```
 
 The ICU check requires installed Unicode conversion and normalization data
 and a UTF-8 default charset even in the C character locale; a stub data
 library is insufficient. The libdeflate check validates exported
 include paths and exercises compression through the installed shared target.
-Both checks reject libraries or include paths outside the requested prefix
-where applicable.
+These checks reject libraries, include paths, or executables outside the
+requested prefix where applicable. The CLI check requires an installed SDK
+without developer test fixtures. It checks the version command and requires
+both test and benchmark requests to report missing fixtures with exit status
+one, rather than aborting or reporting success.
 
 Run `tests/spdx_integrity.cmake` with an unused `TEST_ROOT` for integrity-refresh
 changes. The ELF staging/relocation test needs BRL-CAD, built helper tools, and

@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.26)
+project(AppleseedCliCheck LANGUAGES NONE)
+
+if(NOT APPLESEED_ROOT)
+  message(FATAL_ERROR "Set APPLESEED_ROOT to the installed renderer prefix to validate")
+endif()
+find_program(appleseed_cli NAMES appleseed.cli PATHS "${APPLESEED_ROOT}/bin" NO_DEFAULT_PATH REQUIRED)
+file(REAL_PATH "${APPLESEED_ROOT}" expected_root)
+file(REAL_PATH "${appleseed_cli}" cli_path)
+cmake_path(IS_PREFIX expected_root "${cli_path}" NORMALIZE in_prefix)
+if(NOT in_prefix)
+  message(FATAL_ERROR "CLI is outside the requested prefix: ${appleseed_cli}")
+endif()
+if(EXISTS "${APPLESEED_ROOT}/tests")
+  message(FATAL_ERROR "This check requires an installed SDK without developer test fixtures")
+endif()
+
+enable_testing()
+add_test(NAME version COMMAND "${appleseed_cli}" --version)
+foreach(mode IN ITEMS tests benchmarks)
+  add_test(NAME "missing_${mode}"
+    COMMAND "${CMAKE_COMMAND}" "-DCLI=${appleseed_cli}" "-DMODE=${mode}"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/check_missing_fixtures.cmake")
+  set_tests_properties("missing_${mode}" PROPERTIES TIMEOUT 10)
+endforeach()
