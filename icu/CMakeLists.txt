@@ -5,13 +5,18 @@ if (NOT WIN32 AND NOT APPLE)
 
   if (ENABLE_ICU)
 
-    git_submodule_init(icu icu4c/source/configure)
+    # Keep UTF-8 path handling consistent with the Linux and macOS defaults.
+    set(ICU_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/icu.patch")
+    git_submodule_init(icu icu4c/source/configure
+      PATCH_FILES ${ICU_PATCH_FILES}
+      PATCH_COMMAND_VAR ICU_PATCH_COMMAND)
 
     RegisterDeps(ICU)
 
     ExternalProject_Add(ICU_BLD
       URL "${CMAKE_CURRENT_SOURCE_DIR}/icu"
       SOURCE_SUBDIR icu4c/source
+      PATCH_COMMAND ${ICU_PATCH_COMMAND}
       BUILD_IN_SOURCE ON
       BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
       # ICU needs its build tools to produce the Unicode data library.

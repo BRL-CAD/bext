@@ -3,6 +3,7 @@
 #include <unicode/unorm2.h>
 
 #include <array>
+#include <clocale>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -24,10 +25,19 @@ bool check_status(const UErrorCode status, const char *operation)
 int main()
 {
     const Cleanup cleanup;
+    if (!std::setlocale(LC_CTYPE, "C")) {
+        std::cerr << "Cannot select the C character locale\n";
+        return EXIT_FAILURE;
+    }
     UErrorCode status = U_ZERO_ERROR;
     u_init(&status);
     if (!check_status(status, "ICU initialization"))
         return EXIT_FAILURE;
+
+    if (ucnv_compareNames(ucnv_getDefaultName(), "UTF-8") != 0) {
+        std::cerr << "ICU default charset must be UTF-8 in the C locale\n";
+        return EXIT_FAILURE;
+    }
 
     const std::unique_ptr<UConverter, decltype(&ucnv_close)> converter(
         ucnv_open("windows-1252", &status), ucnv_close);
@@ -64,6 +74,6 @@ int main()
         return EXIT_FAILURE;
     }
 
-    std::cout << "ICU initialization, conversion, and normalization passed\n";
+    std::cout << "ICU UTF-8 defaults, initialization, conversion, and normalization passed\n";
     return EXIT_SUCCESS;
 }
