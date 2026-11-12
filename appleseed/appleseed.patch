@@ -72,18 +72,6 @@ diff --git a/cmake/FindOpenEXR.cmake b/cmake/FindOpenEXR.cmake
      set (OPENEXR_LIBRARIES ${OPENEXR_ILMIMF_LIBRARY} ${OPENEXR_IEX_LIBRARY} ${OPENEXR_ILMTHREAD_LIBRARY} ${ILMBASE_LIBRARIES})
      set (OPENEXR_FOUND true)
  
-diff --git a/src/thirdparty/bcd/bcd/Denoiser.cpp b/src/thirdparty/bcd/bcd/Denoiser.cpp
---- a/src/thirdparty/bcd/bcd/Denoiser.cpp
-+++ b/src/thirdparty/bcd/bcd/Denoiser.cpp
-@@ -125,7 +125,7 @@
-                 i,
-                 boost::ref(abortRequested)));
- 
--        denoiseThreads.push_back(move(t));
-+        denoiseThreads.push_back(std::move(t));
- 
-         startPixelIndexIt = endPixelIndexIt;
-     }
 diff --git a/src/appleseed/main/allocator.cpp b/src/appleseed/main/allocator.cpp
 --- a/src/appleseed/main/allocator.cpp
 +++ b/src/appleseed/main/allocator.cpp
