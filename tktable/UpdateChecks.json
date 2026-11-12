@@ -3,8 +3,8 @@
   "rules": [
     {
       "source": "tktable/tktable",
-      "kind": "manual",
-      "reason": "The maintained source uses a commit identity; review upstream release availability and Tcl/Tk compatibility."
+      "versioning": "regex:^(?:tktable-)?(?<major>[0-9]+)[.-](?<minor>[0-9]+)[.-](?<patch>[0-9]+)$",
+      "currentValueFrom": "version"
     }
   ]
 }
