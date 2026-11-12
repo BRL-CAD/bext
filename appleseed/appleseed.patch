@@ -1,10 +1,9 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 74ed663..ba8c28e 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -224,9 +224,27 @@ if (USE_STATIC_BOOST)
+@@ -231,10 +231,28 @@
  endif ()
- find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time filesystem regex system thread wave)
+ find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time filesystem regex system thread)
  add_definitions(-DBOOST_FILESYSTEM_VERSION=3 -DBOOST_FILESYSTEM_NO_DEPRECATED -DBOOST_ALL_DYN_LINK)
 +if (MSVC AND TARGET Boost::atomic)
 +    get_target_property(BOOST_ATOMIC_IMPLIB Boost::atomic IMPORTED_IMPLIB_RELEASE)
@@ -16,6 +15,7 @@ index 74ed663..ba8c28e 100644
  include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories(${Boost_LIBRARY_DIRS})
  find_package(OSL 1.15 REQUIRED)
+-find_package(OpenEXR REQUIRED)
 +# appleseed links OSL via the oslcomp/oslexec/oslquery_LIBRARY_IMP variables,
 +# which are only populated by appleseed's module-mode FindOSL.cmake.  When OSL is
 +# resolved in CONFIG mode instead (e.g. CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON with
@@ -27,11 +27,11 @@ index 74ed663..ba8c28e 100644
 +    set(oslexec_LIBRARY_IMP OSL::oslexec)
 +    set(oslquery_LIBRARY_IMP OSL::oslquery)
 +endif ()
--find_package(OpenEXR REQUIRED)
 +find_package(OpenEXR MODULE REQUIRED)
  find_package(OpenImageIO 3.0 REQUIRED)
  
-@@ -275,7 +293,6 @@ endif ()
+ if (WITH_EMBREE)
+@@ -290,7 +308,6 @@
  
  include_directories(
    ${IMATH_INCLUDE_DIRS}
@@ -39,7 +39,7 @@ index 74ed663..ba8c28e 100644
    ${LZ4_INCLUDE_DIR}
    ${OPENCOLORIO_INCLUDE_DIRS}
    ${OPENEXR_INCLUDE_DIRS}
-@@ -674,3 +691,11 @@ endif ()
+@@ -698,3 +715,11 @@
  # indent-tabs-mode: t
  # End:
  # ex: shiftwidth=2 tabstop=8
@@ -52,10 +52,9 @@ index 74ed663..ba8c28e 100644
 +endforeach ()
 +endif ()
 diff --git a/cmake/FindOpenEXR.cmake b/cmake/FindOpenEXR.cmake
-index 00c769d..0f38a0d 100644
 --- a/cmake/FindOpenEXR.cmake
 +++ b/cmake/FindOpenEXR.cmake
-@@ -56,16 +56,22 @@ if (TARGET OpenEXR::OpenEXR AND TARGET Imath::Imath)
+@@ -56,16 +56,22 @@
      # Mimic old style variables
      set (OPENEXR_VERSION ${OpenEXR_VERSION})
      get_target_property(IMATH_INCLUDES Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
@@ -84,10 +83,9 @@ index 00c769d..0f38a0d 100644
      set (OPENEXR_FOUND true)
  
 diff --git a/src/thirdparty/bcd/bcd/Denoiser.cpp b/src/thirdparty/bcd/bcd/Denoiser.cpp
-index 109ec87..ef7ed8e 100644
 --- a/src/thirdparty/bcd/bcd/Denoiser.cpp
 +++ b/src/thirdparty/bcd/bcd/Denoiser.cpp
-@@ -125,7 +125,7 @@ bool Denoiser::denoise()
+@@ -125,7 +125,7 @@
                  i,
                  boost::ref(abortRequested)));
  
@@ -135,20 +133,17 @@ diff --git a/src/appleseed/main/allocator.cpp b/src/appleseed/main/allocator.cpp
 diff --git a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp b/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
 --- a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
 +++ b/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
-@@ -86,7 +86,12 @@
-             m_texture_system,
+@@ -87,7 +87,8 @@
+             m_texture_system.get(),
              m_error_handler);
      m_shading_system->attribute("lockgeom", 1);
 -    m_shading_system->attribute("colorspace", "sRGB"); // TODO: is this really correct? Note: this attribute does not need to be set for Appleseed to render. (If not set, produces identical (looking) results.)
-+    /* BRL-CAD PATCH: OSL's working color space must be a name OSL knows (its
-+     * default is "Rec709", the linear-Rec709 working space).  The upstream
-+     * "Linear" is not a recognized OSL color space, so OSL logged
-+     * "Unknown color space \"Linear\"" on every color transform and flagged an
-+     * error (nonzero process exit) even though rendering succeeded. */
++    // Current OSL expects a linear working color space.
 +    m_shading_system->attribute("colorspace", "Rec709");
      m_shading_system->attribute("commonspace", "world");
      m_shading_system->attribute("statistics:level", 1);
      m_shading_system->attribute(
+diff --git a/src/appleseed/foundation/platform/system.cpp b/src/appleseed/foundation/platform/system.cpp
 --- a/src/appleseed/foundation/platform/system.cpp
 +++ b/src/appleseed/foundation/platform/system.cpp
 @@ -602,6 +602,20 @@

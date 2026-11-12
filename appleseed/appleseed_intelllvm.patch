@@ -1,6 +1,6 @@
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -65,7 +65,26 @@
+@@ -65,9 +65,28 @@
  # Need to look at what it was doing and find another solution
  cmake_policy(SET CMP0120 OLD)
  include (WriteCompilerDetectionHeader)
@@ -27,3 +27,5 @@
      PREFIX APPLESEED
 +    ${compiler_detection_options}
      COMPILERS GNU Clang MSVC AppleClang
+     FEATURES
+         cxx_final
