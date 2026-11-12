@@ -1,0 +1,12 @@
+diff -Naur PoissonRecon/Src/NestedVector.h POISSONRECON_BLD/Src/NestedVector.h
+--- PoissonRecon/Src/NestedVector.h	2026-11-12 16:22:58.939643600 -0500
++++ POISSONRECON_BLD/Src/NestedVector.h	2026-11-12 16:24:47.018223400 -0500
+@@ -298,7 +298,7 @@
+ 		template< typename _T , unsigned int _Depth , unsigned int _LogSize > friend struct NestedVector;
+ 
+ 		using _DataType = NestedVector< T , Depth-1 , LogSize >;
+-		static const size_t _MaxSize = ((size_t)1)<<(LogSize*(Depth+1));
++		static const size_t _MaxSize = ( LogSize*(Depth+1) < sizeof(size_t)*8 ) ? ( ((size_t)1)<<(LogSize*(Depth+1)) ) : (~((size_t)0));
+ 		static const size_t _Size = ((size_t)1)<<LogSize;
+ 		static const size_t _Mask = _MaxSize-1;
+ 

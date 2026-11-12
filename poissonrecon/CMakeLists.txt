@@ -24,7 +24,8 @@ if (ENABLE_POISSONRECON)
     "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_cmake.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_init.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_osx.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_msvc.patch")
+    "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_msvc.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_x86.patch")
   git_submodule_init(PoissonRecon README.md
     PATCH_FILES ${POISSONRECON_PATCH_FILES}
     PATCH_COMMAND_VAR POISSONRECON_PATCH_COMMAND)
