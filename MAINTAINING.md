@@ -491,6 +491,27 @@ python3 CMake/tests/test_dependency_metadata.py -v
 python3 CMake/tests/test_release_build.py -v
 ```
 
+Renderer dependency changes also have installed-consumer checks. Use separate
+build directories and set each root to the prefix being qualified, including
+a relocated copy when testing a distributable bundle:
+
+```sh
+cmake -S tests/icu_data -B build/check-icu -DICU_ROOT="$renderer_prefix"
+cmake --build build/check-icu
+ctest --test-dir build/check-icu --output-on-failure
+cmake -S tests/deflate_package -B build/check-deflate \
+  -Dlibdeflate_ROOT="$renderer_prefix"
+cmake --build build/check-deflate
+ctest --test-dir build/check-deflate --output-on-failure
+```
+
+The ICU check requires installed Unicode conversion and normalization data
+and a UTF-8 default charset even in the C character locale; a stub data
+library is insufficient. The libdeflate check validates exported
+include paths and exercises compression through the installed shared target.
+Both checks reject libraries or include paths outside the requested prefix
+where applicable.
+
 Run `tests/spdx_integrity.cmake` with an unused `TEST_ROOT` for integrity-refresh
 changes. The ELF staging/relocation test needs BRL-CAD, built helper tools, and
 other prerequisites; its invocation is documented in README.md. On Windows,
