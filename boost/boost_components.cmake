@@ -11,5 +11,4 @@ set(BOOST_INCLUDE_LIBRARIES
   smart_ptr
   system
   thread
-  unordered
   CACHE STRING "Boost components required by Appleseed")
