@@ -474,7 +474,7 @@ add_project(icu GROUPS "APPLESEED")
 add_project(xerces-c GROUPS "APPLESEED")
 
 # PCRE2 - Perl-compatible regular expressions
-# https://github.com/PCRE2Project/pcre2
+# https://github.com/BRL-CAD/pcre2
 add_project(pcre2 GROUPS "APPLESEED")
 
 # netpbm library - support for pnm,ppm,pbm, etc. image files
@@ -490,8 +490,8 @@ add_project(jpeg GROUPS "APPLESEED;BRLCAD;GDAL")
 add_project(png GROUPS "APPLESEED;BRLCAD;TCL")
 
 # struetype - bounded font parsing and rasterization
-# https://github.com/starseeker/struetype (local source evaluation)
-add_project(struetype GROUPS "APPLESEED")
+# https://github.com/BRL-CAD/struetype
+add_project(struetype GROUPS "APPLESEED;BRLCAD")
 
 # libtiff - Tag Image File Format (TIFF) support
 # https://libtiff.gitlab.io/libtiff/

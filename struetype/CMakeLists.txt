@@ -1,6 +1,9 @@
-bext_local_source(STRUETYPE struetype https://github.com/starseeker/struetype 4e9369d550f0849f58b27dc6e3db8fc2d54e8304)
+cad_enable(STRUETYPE "librt;libdm")
+bext_enable(STRUETYPE)
 
 if (ENABLE_STRUETYPE)
+  git_submodule_init(struetype struetype.h INPUT_FILES install.cmake.in)
+
   RegisterDeps(STRUETYPE)
   configure_file(install.cmake.in InstallStruetype.cmake @ONLY)
   ExternalProject_Add(STRUETYPE_BLD

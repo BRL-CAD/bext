@@ -10,17 +10,11 @@ local copy unless `ENABLE_ALL=ON` or `ENABLE_<pkg>=ON` is used.
 For some BRL-CAD-related packages, `BRLCAD_COMPONENTS` can narrow the final
 selection further.
 
-PCRE2 is an experimental local source at `pcre2/pcre2`, based on upstream
-`pcre2-10.49` (commit `6f9d7c1373262c541324a16a358785b33ef116cf`). Its
-source is untracked until the release is preserved in a BRL-CAD mirror.
-Populate it explicitly to build the candidate; otherwise Appleseed needs a
-suitable system PCRE2. Only the 8-bit library is needed, without its JIT.
-
-Struetype is an experimental local source at `struetype/struetype`, pinned to
-upstream commit `4e9369d550f0849f58b27dc6e3db8fc2d54e8304`. A BRL-CAD mirror
-will supply the adopted submodule. The header-only package provides the same
-bounded font parser to OpenImageIO and Appleseed without a libbu dependency.
-OpenImageIO's FreeType backend remains optional; this stack selects struetype.
+PCRE2 and struetype are pinned submodules of the BRL-CAD mirrors. Appleseed
+uses PCRE2's 8-bit library without its JIT to preserve Perl-style name filters.
+The header-only struetype package supplies the same bounded font parser to
+BRL-CAD, OpenImageIO, and Appleseed. OpenImageIO's FreeType backend remains
+optional; this stack selects struetype.
 
 The art stack no longer uses Boost. Appleseed's optional Python bindings still
 require externally supplied Boost; bext leaves those bindings disabled.
@@ -80,7 +74,7 @@ require externally supplied Boost; bext leaves those bindings disabled.
 | `osmesa` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/osmesa) |
 | `ospray` | `USE_OSPRAY` | `install` | `embree`, `ispc`, `oidn`, `onetbb`, `patch`, `rkcommon` | [repository](https://github.com/BRL-CAD/ospray) |
 | `patch` | always considered | `noinstall` | — | [repository](https://github.com/BRL-CAD/patch) |
-| `pcre2` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/PCRE2Project/pcre2) |
+| `pcre2` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/pcre2) |
 | `perplex` | `USE_BRLCAD` | `noinstall` | `patch`, `lemon`, `re2c` | [repository](https://github.com/BRL-CAD/perplex) |
 | `plief` | always considered | `noinstall` | `lief`, `patch` | [repository](https://github.com/BRL-CAD/plief) |
 | `png` | `USE_APPLESEED`, `USE_BRLCAD`, `USE_TCL` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/libpng) |
@@ -96,7 +90,7 @@ require externally supplied Boost; bext leaves those bindings disabled.
 | `sqlite3` | `USE_GDAL` | `install` | `patch` | [repository](https://github.com/BRL-CAD/sqlite3.git) |
 | `stepcode` | `USE_BRLCAD` | `install` | `lemon`, `patch`, `perplex`, `re2c` | [repository](https://github.com/BRL-CAD/stepcode) |
 | `strclear` | always considered | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/strclear) |
-| `struetype` | `USE_APPLESEED` | `install` | — | [repository](https://github.com/starseeker/struetype) |
+| `struetype` | `USE_APPLESEED`, `USE_BRLCAD` | `install` | — | [repository](https://github.com/BRL-CAD/struetype) |
 | `tcl` | `USE_TCL` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/tcl.git) |
 | `tiff` | `USE_APPLESEED`, `USE_GDAL` | `install` | `jpeg`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/libtiff) |
 | `tinygltf` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/tinygltf.git) |

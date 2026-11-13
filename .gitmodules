@@ -367,3 +367,13 @@
 [submodule "imath/Imath"]
 	path = imath/Imath
 	url = https://github.com/BRL-CAD/Imath
+[submodule "pcre2/pcre2"]
+	path = pcre2/pcre2
+	url = https://github.com/BRL-CAD/pcre2
+	ignore = dirty
+	shallow = true
+[submodule "struetype/struetype"]
+	path = struetype/struetype
+	url = https://github.com/BRL-CAD/struetype
+	ignore = dirty
+	shallow = true

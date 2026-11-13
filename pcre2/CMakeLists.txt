@@ -1,6 +1,18 @@
-bext_local_source(PCRE2 pcre2 https://github.com/PCRE2Project/pcre2 6f9d7c1373262c541324a16a358785b33ef116cf)
+bext_enable_all_default(PCRE2 pcre2)
+if (NOT ENABLE_PCRE2 AND NOT DISABLE_PCRE2)
+  find_package(PCRE2 10.40 CONFIG QUIET COMPONENTS 8BIT)
+  if (NOT PCRE2_FOUND AND NOT DEFINED ENABLE_PCRE2)
+    set(ENABLE_PCRE2 ON)
+  endif ()
+endif ()
+if (DISABLE_PCRE2)
+  set(ENABLE_PCRE2 OFF)
+endif ()
+set(ENABLE_PCRE2 "${ENABLE_PCRE2}" CACHE BOOL "Enable PCRE2 build")
 
 if (ENABLE_PCRE2)
+  git_submodule_init(pcre2 CMakeLists.txt)
+
   RegisterDeps(PCRE2)
 
   ExternalProject_Add(PCRE2_BLD
