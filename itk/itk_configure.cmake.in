@@ -1,3 +1,12 @@
+if ("@MINGW@" AND WIN32)
+  include("@BEXT_TCL_CONFIGURE_ENV@")
+  bext_msys_configure("@ITK_SRC_DIR@/configure"
+    "--with-tcl=@WITH_TCL_DIR@" "--with-tk=@WITH_TK_DIR@"
+    "--with-itcl=@WITH_ITCL_DIR@"
+    "--with-tclinclude=@WITH_TCL_INCLUDE_DIR@" "--with-tkinclude=@WITH_TK_INCLUDE_DIR@")
+  return()
+endif ()
+
 if (APPLE)
   execute_process(
     COMMAND xcrun --show-sdk-path

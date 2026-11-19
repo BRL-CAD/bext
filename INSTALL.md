@@ -23,6 +23,33 @@ Additional requirements depend on the enabled stacks:
 * `USE_OSPRAY` needs `m4`.
 * `BEXT_DISCARD_WORK=ON` needs Python 3.8 or newer.
 
+# MinGW-w64 on Windows
+
+Use the MSYS2 UCRT64 shell so the configure scripts have MSYS2 utilities and
+CMake and Ninja drive the native MinGW-w64 toolchain. Install the build tools
+from that shell.
+
+```sh
+pacman -S --needed git make mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,python}
+```
+
+To use MSYS2's Qt libraries with the standard `auto` profile, also install
+`mingw-w64-ucrt-x86_64-qt6-base` and `mingw-w64-ucrt-x86_64-qt6-svg`.
+Pass `-DENABLE_QT=ON` when configuring to build bext's pinned Qt Base and Qt
+SVG sources.
+
+Keep the source and build paths free of spaces for the Tcl and Tk configure
+scripts. Run these commands from the bext source directory.
+
+```sh
+cmake --preset auto -G Ninja
+cmake --build build/auto/Release
+```
+
+On Windows, bext tests a system patch tool with both LF and CRLF patches and
+source files. It builds its bundled patch tool if the system tool fails the
+test.
+
 # Intel oneAPI on Linux
 
 IntelLLVM 2026.2 has been validated with the `everything` profile using

@@ -1,7 +1,7 @@
 # We only need plief's RPATH manipulation on some
 # platforms - don't worry about trying to build it
 # everywhere
-if (NOT MSVC AND NOT APPLE)
+if (NOT WIN32 AND NOT APPLE)
 
   # Unless we have ENABLE_ALL set, base the building of plief on
   # the system detection results
@@ -51,7 +51,7 @@ if (NOT MSVC AND NOT APPLE)
 
   endif (ENABLE_PLIEF)
 
-endif (NOT MSVC AND NOT APPLE)
+endif ()
 
 # tab-width: 8
 # mode: cmake

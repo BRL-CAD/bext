@@ -26,6 +26,10 @@ if (ENABLE_POISSONRECON)
     "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_osx.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_msvc.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_x86.patch")
+  if (MINGW)
+    list(APPEND POISSONRECON_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/poissonrecon_mingw_atomics.patch")
+  endif ()
   git_submodule_init(PoissonRecon README.md
     PATCH_FILES ${POISSONRECON_PATCH_FILES}
     PATCH_COMMAND_VAR POISSONRECON_PATCH_COMMAND)

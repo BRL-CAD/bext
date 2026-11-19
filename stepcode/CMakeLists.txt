@@ -8,7 +8,8 @@ bext_enable(STEPCODE)
 if (ENABLE_STEPCODE)
 
   set(STEPCODE_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/stepcode_complex_string_pool.patch")
+    "${CMAKE_CURRENT_SOURCE_DIR}/stepcode_complex_string_pool.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/stepcode_mingw_exports.patch")
   git_submodule_init(stepcode CMakeLists.txt PATCH_FILES ${STEPCODE_PATCH_FILES})
   bext_patch_command(STEPCODE_PATCH_COMMAND ${STEPCODE_PATCH_FILES})
 

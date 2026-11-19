@@ -1,0 +1,17 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1121,8 +1121,12 @@
+   if(PNG_SHARED)
+     # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
+     if(NOT WIN32 OR CYGWIN OR MINGW)
+-      create_symlink(libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png_shared)
+-      install(FILES "$<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${CMAKE_SHARED_LIBRARY_SUFFIX}"
++      set(PNG_LINKER_SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}")
++      if(CYGWIN OR MINGW)
++        set(PNG_LINKER_SUFFIX "${CMAKE_IMPORT_LIBRARY_SUFFIX}")
++      endif()
++      create_symlink(libpng_brl${PNG_LINKER_SUFFIX} TARGET png_shared)
++      install(FILES "$<TARGET_LINKER_FILE_DIR:png_shared>/libpng_brl${PNG_LINKER_SUFFIX}"
+               DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+     endif()
+   endif()

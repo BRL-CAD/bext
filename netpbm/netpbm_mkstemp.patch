@@ -1,0 +1,25 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -80,6 +80,9 @@
+ check_include_files(sys/stat.h HAVE_SYS_STAT_H)
+ check_include_files(sys/types.h HAVE_SYS_STAT_H)
+ 
++include(CheckSymbolExists)
++check_symbol_exists(mkstemp "stdlib.h" HAVE_MKSTEMP)
++
+ include(CheckTypeSize)
+ check_type_size(ssize_t HAVE_SSIZE_T)
+ check_type_size(int64_t HAVE_INT64)
+--- a/pm_config.h.in
++++ b/pm_config.h.in
+@@ -346,9 +346,7 @@
+    Netpbm program to access a file of the hacker's choosing when the
+    Netpbm program means to access its own temporary file.
+ */
+-#if !defined(__MINGW32__) && !defined(_MSC_VER)
+-  #define HAVE_MKSTEMP 1
+-#endif
++#cmakedefine HAVE_MKSTEMP 1
+ 
+ typedef int qsort_comparison_fn(const void *, const void *);
+     /* A compare function to pass to <stdlib.h>'s qsort() */

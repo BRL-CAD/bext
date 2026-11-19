@@ -1,0 +1,11 @@
+--- a/src/meshdecimation.c
++++ b/src/meshdecimation.c
+@@ -2588,7 +2588,7 @@
+   left0 = _mm_loadu_pd( leftpoint+0 );
+   left1 = _mm_load_sd( leftpoint+2 );
+   vecta0 = _mm_sub_pd( _mm_loadu_pd( rightpoint+0 ), left0 );
+-  vecta1 = _mm_sub_pd( _mm_load_ps( rightpoint+2 ), left1 );
++  vecta1 = _mm_sub_pd( _mm_load_sd( rightpoint+2 ), left1 );
+   oldvectb0 = _mm_sub_pd( _mm_loadu_pd( oldpoint+0 ), left0 );
+   oldvectb1 = _mm_sub_pd( _mm_load_sd( oldpoint+2 ), left1 );
+   oldnormal0 = _mm_sub_pd(

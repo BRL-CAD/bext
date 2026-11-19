@@ -1,4 +1,7 @@
-if (NOT WIN32)
+if ("@MINGW@" AND WIN32)
+  include("@BEXT_TCL_CONFIGURE_ENV@")
+  bext_msys_configure("@TCL_SRC_DIR@/win/configure")
+elseif (NOT WIN32)
 
   if (APPLE)
 
@@ -36,7 +39,7 @@ if (NOT WIN32)
 
   message("${MSG}\nTcl configure succeeded.\n")
 
-endif (NOT WIN32)
+endif ()
 
 # Local Variables:
 # tab-width: 8

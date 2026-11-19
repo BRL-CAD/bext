@@ -6,29 +6,70 @@
 bext_enable_all_default(PATCH patch)
 
 function(bext_find_patch_check_option patch_executable result_variable)
-  set(check_directory "${CMAKE_BINARY_DIR}/CMakeFiles/patch-option-check")
+  set(check_directory "${CMAKE_CURRENT_BINARY_DIR}/patch-option-check")
   set(check_input "${check_directory}/input.txt")
   set(check_patch "${check_directory}/change.patch")
   file(MAKE_DIRECTORY "${check_directory}")
-  file(WRITE "${check_patch}"
-    "--- input.txt\n"
-    "+++ input.txt\n"
-    "@@ -1 +1 @@\n"
-    "-before\n"
-    "+after\n")
+  set(patch_text
+    "--- input.txt\n+++ input.txt\n@@ -1,3 +1,3 @@\n first\n-before\n+after\n last\n")
+  set(LF "\n")
+  set(CRLF "\r\n")
+  set(newlines LF)
+  if (CMAKE_HOST_WIN32)
+    # Git can check out our patches as CRLF while upstream files can use
+    # either LF or CRLF, including in a single dependency.
+    list(APPEND newlines CRLF)
+  endif ()
 
+  set(${result_variable} "" PARENT_SCOPE)
   foreach(check_option IN ITEMS "--dry-run" "-C")
-    file(WRITE "${check_input}" "before\n")
-    execute_process(
-      COMMAND "${patch_executable}" "${check_option}" -t -p 0
-        -i "${check_patch}"
-      WORKING_DIRECTORY "${check_directory}"
-      RESULT_VARIABLE check_result
-      OUTPUT_QUIET
-      ERROR_QUIET
-    )
-    file(READ "${check_input}" check_contents)
-    if (check_result EQUAL 0 AND check_contents STREQUAL "before\n")
+    set(supported TRUE)
+    foreach(patch_newline IN LISTS newlines)
+      file(CONFIGURE OUTPUT "${check_patch}" CONTENT "${patch_text}"
+        NEWLINE_STYLE ${patch_newline})
+      foreach(input_newline IN LISTS newlines)
+        # Ensure the dry run does not change even the file's line endings.
+        file(CONFIGURE OUTPUT "${check_input}" CONTENT "first\nbefore\nlast\n"
+          NEWLINE_STYLE ${input_newline})
+        file(SHA256 "${check_input}" before)
+        set(args -t ${PATCH_OPTIONS} -p 0 -i "${check_patch}")
+        execute_process(
+          COMMAND "${patch_executable}" "${check_option}" ${args}
+          WORKING_DIRECTORY "${check_directory}"
+          RESULT_VARIABLE status OUTPUT_QUIET ERROR_QUIET)
+        if (NOT status STREQUAL "0" OR NOT EXISTS "${check_input}")
+          set(supported FALSE)
+          break()
+        endif ()
+        file(SHA256 "${check_input}" contents)
+        if (NOT contents STREQUAL before)
+          set(supported FALSE)
+          break()
+        endif ()
+        execute_process(
+          COMMAND "${patch_executable}" ${args}
+          WORKING_DIRECTORY "${check_directory}"
+          RESULT_VARIABLE status OUTPUT_QUIET ERROR_QUIET)
+        if (NOT status STREQUAL "0" OR NOT EXISTS "${check_input}")
+          set(supported FALSE)
+          break()
+        endif ()
+        # The changed line may use the patch's newline. Keep the context
+        # lines' original bytes so a partial edit cannot rewrite a file.
+        set(eol "${${input_newline}}")
+        string(SHA256 after "first${eol}after${eol}last${eol}")
+        string(SHA256 after_patch_eol "first${eol}after${${patch_newline}}last${eol}")
+        file(SHA256 "${check_input}" contents)
+        if (NOT contents STREQUAL after AND NOT contents STREQUAL after_patch_eol)
+          set(supported FALSE)
+          break()
+        endif ()
+      endforeach ()
+      if (NOT supported)
+        break()
+      endif ()
+    endforeach ()
+    if (supported)
       file(REMOVE_RECURSE "${check_directory}")
       set("${result_variable}" "${check_option}" PARENT_SCOPE)
       return()
@@ -36,8 +77,6 @@ function(bext_find_patch_check_option patch_executable result_variable)
   endforeach()
 
   file(REMOVE_RECURSE "${check_directory}")
-  message(FATAL_ERROR
-    "Patch executable ${patch_executable} has no supported check option")
 endfunction()
 
 # Although individual projects may need their own patching options, there are
@@ -48,7 +87,7 @@ endfunction()
 # Use split short options accepted by both bundled and Unix patch tools.
 #
 # -N avoids attempting to reverse patch if the patching is already done.
-set(PATCH_OPTIONS "-l;-N" CACHE STRING "Command line options to use when patching" FORCE)
+set(PATCH_OPTIONS -l -N)
 
 # Preserve any existing user-specified patch path before we replace the public
 # PATCH_EXECUTABLE variable with a wrapper command list.
@@ -63,9 +102,27 @@ if (NOT ENABLE_PATCH)
   endif (NOT PATCH_NATIVE_EXECUTABLE)
   mark_as_advanced(PATCH_NATIVE_EXECUTABLE)
 
-  if (NOT PATCH_NATIVE_EXECUTABLE AND NOT DEFINED ENABLE_PATCH)
-    set(ENABLE_PATCH "ON" CACHE BOOL "Enable patch build")
-  endif (NOT PATCH_NATIVE_EXECUTABLE AND NOT DEFINED ENABLE_PATCH)
+  set(PATCH_CHECK_OPTION "")
+  if (PATCH_NATIVE_EXECUTABLE)
+    execute_process(COMMAND "${PATCH_NATIVE_EXECUTABLE}" --help
+      OUTPUT_VARIABLE patch_help ERROR_VARIABLE patch_help)
+    if (patch_help MATCHES "--newline-output")
+      list(APPEND PATCH_OPTIONS --newline-output preserve)
+    endif ()
+    bext_find_patch_check_option("${PATCH_NATIVE_EXECUTABLE}" PATCH_CHECK_OPTION)
+  endif ()
+  if (NOT PATCH_CHECK_OPTION)
+    if (DEFINED ENABLE_PATCH AND NOT ENABLE_PATCH STREQUAL "")
+      message(FATAL_ERROR
+        "ENABLE_PATCH is OFF, but no compatible system patch tool is available "
+        "(found: ${PATCH_NATIVE_EXECUTABLE}). Enable the bundled patch tool "
+        "or set PATCH_NATIVE_EXECUTABLE to a compatible executable.")
+    endif ()
+    if (PATCH_NATIVE_EXECUTABLE)
+      message(STATUS "Patch tool ${PATCH_NATIVE_EXECUTABLE} failed the applicability and newline check. Building the bundled patch tool.")
+    endif ()
+    set(ENABLE_PATCH ON)
+  endif ()
 
 endif (NOT ENABLE_PATCH)
 set(ENABLE_PATCH "${ENABLE_PATCH}" CACHE BOOL "Enable patch build")
@@ -97,17 +154,12 @@ if (ENABLE_PATCH)
   set(PATCH_NATIVE_EXECUTABLE ${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/sb_patch${CMAKE_EXECUTABLE_SUFFIX} CACHE FILEPATH "Underlying patch executable" FORCE)
  
   # If we're using sb_patch, add the newline-output option
-  set(PATCH_OPTIONS "${PATCH_OPTIONS};--newline-output;preserve" CACHE STRING "Command line options to use when patching" FORCE)
+  set(PATCH_OPTIONS -l -N --newline-output preserve)
   set(PATCH_CHECK_OPTION "--dry-run")
-
-else (ENABLE_PATCH)
-
-  # GNU and BSD patch use different options for an applicability check.
-  bext_find_patch_check_option("${PATCH_NATIVE_EXECUTABLE}"
-    PATCH_CHECK_OPTION)
 
 endif (ENABLE_PATCH)
 
+set(PATCH_OPTIONS "${PATCH_OPTIONS}" CACHE STRING "Command line options to use when patching" FORCE)
 set(PATCH_CHECK_OPTION "${PATCH_CHECK_OPTION}" CACHE INTERNAL
   "Patch option for a non-modifying applicability check" FORCE)
 set(PATCH_REJECT_DIR "${CMAKE_BINARY_DIR}/patch-rejects" CACHE INTERNAL

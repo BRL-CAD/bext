@@ -1,3 +1,14 @@
+if ("@MINGW@" AND WIN32)
+  include("@BEXT_TCL_CONFIGURE_ENV@")
+  if ("@CMAKE_BUILD_TYPE@" STREQUAL "Debug")
+    set(tktable_configure_options --enable-symbols)
+  endif ()
+  bext_msys_configure("@TKTABLE_SRC_DIR@/configure"
+    "--with-tcl=@TKTABLE_TCL_CONFIG_DIR@" "--with-tk=@TKTABLE_TK_CONFIG_DIR@"
+    ${tktable_configure_options})
+  return()
+endif ()
+
 set(ENV{CC} "@CMAKE_C_COMPILER@")
 set(ENV{CFLAGS} "@CMAKE_C_FLAGS@")
 set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")

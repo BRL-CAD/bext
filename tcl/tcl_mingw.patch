@@ -1,0 +1,22 @@
+--- a/win/Makefile.in
++++ b/win/Makefile.in
+@@ -907,8 +898,8 @@
+ 
+ PKG_DIR			= ./pkgs
+ 
+-packages:
+-	@builddir="`$(CYGPATH) "$$(pwd -P)"`"; \
++packages: binaries
++	@set -e; builddir="`$(CYGPATH) "$$(pwd -P)"`"; \
+ 	for i in '$(PKGS_DIR)'/*/; do \
+ 	    if [ -x $$i/configure ] ; then \
+ 	      pkg=`basename $$i`; \
+@@ -925,7 +916,7 @@
+ 	cd "$$builddir"
+ 
+ install-packages: packages
+-	@builddir=`pwd -P`; \
++	@set -e; builddir=`pwd -P`; \
+ 	for i in '$(PKGS_DIR)'/*; do \
+ 	  if [ -d $$i ]; then \
+ 	    pkg=`basename $$i`; \

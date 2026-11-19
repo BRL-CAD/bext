@@ -17,7 +17,10 @@ set(ENABLE_ONETBB "${ENABLE_ONETBB}" CACHE BOOL "Enable oneTBB build")
 
 if (ENABLE_ONETBB)
 
-  git_submodule_init(oneTBB CMakeLists.txt)
+  set(ONETBB_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/onetbb_windows_loader.patch")
+  git_submodule_init(oneTBB CMakeLists.txt
+    PATCH_FILES ${ONETBB_PATCH_FILES}
+    PATCH_COMMAND_VAR ONETBB_PATCH_COMMAND)
 
   RegisterDeps(ONETBB)
 
@@ -26,8 +29,9 @@ if (ENABLE_ONETBB)
   # by Clang builds, so retain the scripts while allowing those entries to be
   # absent.
   set(ONETBB_LINKER_ARGS)
-  if (CMAKE_CXX_COMPILER_LINKER_ID STREQUAL "LLD" OR
-      CMAKE_LINKER MATCHES "(^|/)ld\\.lld$")
+  if (NOT WIN32 AND NOT APPLE AND
+      (CMAKE_CXX_COMPILER_LINKER_ID STREQUAL "LLD" OR
+       CMAKE_LINKER MATCHES "(^|/)ld\\.lld$"))
     list(APPEND ONETBB_LINKER_ARGS
       -DCMAKE_SHARED_LINKER_FLAGS:STRING=-Wl,--undefined-version)
   endif ()
@@ -35,6 +39,7 @@ if (ENABLE_ONETBB)
   ExternalProject_Add(ONETBB_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oneTBB"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${ONETBB_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DTBB_TEST=OFF

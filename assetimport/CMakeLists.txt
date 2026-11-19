@@ -11,7 +11,8 @@ if (ENABLE_ASSETIMPORT)
 
   set(ASSETIMPORT_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/assetimport_CMake.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/assetimport_stb.patch")
+    "${CMAKE_CURRENT_SOURCE_DIR}/assetimport_stb.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assetimport_ms3d_position_keys.patch")
   git_submodule_init(assimp CMakeLists.txt
     PATCH_FILES ${ASSETIMPORT_PATCH_FILES}
     PATCH_COMMAND_VAR ASSETIMPORT_PATCH_COMMAND)

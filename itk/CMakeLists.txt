@@ -31,9 +31,15 @@ if (ENABLE_ITK)
   set(ITK_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/itk.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/itk_install.patch")
-  git_submodule_init(itk configure PATCH_FILES ${ITK_PATCH_FILES})
   list(GET ITK_PATCH_FILES 0 ITK_SOURCE_PATCH_FILE)
   list(GET ITK_PATCH_FILES 1 ITK_INSTALL_PATCH_FILE)
+  set(ITK_MINGW_PATCH_FILES)
+  if (MINGW)
+    list(APPEND ITK_MINGW_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/itk_stubs.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/itk_mingw.patch")
+  endif ()
+  git_submodule_init(itk configure PATCH_FILES ${ITK_PATCH_FILES} ${ITK_MINGW_PATCH_FILES})
 
   RegisterDeps(ITK)
 
@@ -65,6 +71,10 @@ if (ENABLE_ITK)
     "-DITK_INSTALL_PATCH_FILE=${ITK_INSTALL_PATCH_FILE}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/itk_apply_patch.cmake"
     )
+  if (ITK_MINGW_PATCH_FILES)
+    bext_patch_command(ITK_MINGW_PATCH_COMMAND ${ITK_MINGW_PATCH_FILES})
+    list(APPEND ITK_PATCH_COMMAND COMMAND ${ITK_MINGW_PATCH_COMMAND})
+  endif ()
 
   if (NOT MSVC)
     ExternalProject_Add(ITK_BLD
@@ -75,14 +85,16 @@ if (ENABLE_ITK)
       COMMAND ${CMAKE_COMMAND} -E make_directory <SOURCE_DIR>/tclconfig
       COMMAND ${CMAKE_COMMAND} -E copy ${BEXT_ITCL_BUNDLED_SOURCE_DIR}/tclconfig/install-sh <SOURCE_DIR>/tclconfig/install-sh
       CONFIGURE_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/itk_configure.cmake
-      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
-      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 INSTALL_OPTIONS=-C install
+      BUILD_COMMAND ${BEXT_TCL_MAKE_COMMAND} -j${pcnt}
+      INSTALL_COMMAND ${BEXT_TCL_MAKE_COMMAND} -j1 INSTALL_OPTIONS=-C install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
       STEP_TARGETS install
       )
+    ExternalProject_Add_StepDependencies(ITK_BLD configure
+      "${CMAKE_CURRENT_BINARY_DIR}/itk_configure.cmake" ${BEXT_TCL_CONFIGURE_ENV})
   else (NOT MSVC)
     # Itk's rules.vc is newer than Tcl 8.6's, so rules-ext.vc selects the
     # local nmake support files.  Upstream omits the matching targets.vc;

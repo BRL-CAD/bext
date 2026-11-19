@@ -7,13 +7,17 @@ bext_enable(OSMESA)
 
 if (ENABLE_OSMESA)
 
-  git_submodule_init(osmesa CMakeLists.txt)
+  set(OSMESA_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/osmesa_mingw.patch")
+  git_submodule_init(osmesa CMakeLists.txt
+    PATCH_FILES ${OSMESA_PATCH_FILES}
+    PATCH_COMMAND_VAR OSMESA_PATCH_COMMAND)
 
   RegisterDeps(OSMESA)
 
   ExternalProject_Add(OSMESA_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/osmesa"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${OSMESA_PATCH_COMMAND}
     CMAKE_ARGS
     -DOSMESA_BUILD_EXAMPLES=OFF
     ${BUILD_TYPE_SPECIFIER}

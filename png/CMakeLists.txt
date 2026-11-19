@@ -20,7 +20,8 @@ set(ENABLE_PNG "${ENABLE_PNG}" CACHE BOOL "Enable png build")
 
 if (ENABLE_PNG)
 
-  set(PNG_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/png.patch")
+  set(PNG_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/png.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/png_mingw_import.patch")
   git_submodule_init(libpng CMakeLists.txt
     PATCH_FILES ${PNG_PATCH_FILES}
     PATCH_COMMAND_VAR PNG_PATCH_COMMAND)

@@ -104,6 +104,7 @@ if(ZLIB_FOUND)
   mark_as_advanced(PNG_PNG_INCLUDE_DIR)
 
   # If we still don't have PNG_LIBRARY, try without specifying search paths
+  find_path(PNG_PNG_INCLUDE_DIR png.h PATH_SUFFIXES include include/libpng)
   if(NOT PNG_LIBRARY)
     find_library(PNG_LIBRARY_RELEASE NAMES ${PNG_NAMES} NAMES_PER_DIR PATH_SUFFIXES lib)
     find_library(PNG_LIBRARY_DEBUG NAMES ${PNG_NAMES_DEBUG} NAMES_PER_DIR PATH_SUFFIXES lib)

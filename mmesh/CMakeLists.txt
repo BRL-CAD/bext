@@ -7,13 +7,17 @@ bext_enable(MMESH)
 
 if (ENABLE_MMESH)
 
-  git_submodule_init(mmesh CMakeLists.txt)
+  set(MMESH_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mmesh_sse3_load.patch")
+  git_submodule_init(mmesh CMakeLists.txt
+    PATCH_FILES ${MMESH_PATCH_FILES}
+    PATCH_COMMAND_VAR MMESH_PATCH_COMMAND)
 
   RegisterDeps(MMESH)
 
   ExternalProject_Add(MMESH_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/mmesh"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${MMESH_PATCH_COMMAND}
     CMAKE_ARGS
     -DMMESH_BUILD_EXAMPLES=OFF
     ${BUILD_TYPE_SPECIFIER}

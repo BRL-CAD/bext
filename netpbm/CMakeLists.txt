@@ -7,13 +7,17 @@ bext_enable(NETPBM)
 
 if (ENABLE_NETPBM)
 
-  git_submodule_init(netpbm CMakeLists.txt)
+  set(NETPBM_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/netpbm_mkstemp.patch")
+  git_submodule_init(netpbm CMakeLists.txt
+    PATCH_FILES ${NETPBM_PATCH_FILES}
+    PATCH_COMMAND_VAR NETPBM_PATCH_COMMAND)
 
   RegisterDeps(NETPBM)
 
   ExternalProject_Add(NETPBM_BLD
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/netpbm"
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/netpbm"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${NETPBM_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DBIN_DIR=${BIN_DIR}

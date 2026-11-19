@@ -128,6 +128,11 @@ if (ENABLE_TCL)
     list(APPEND TCL_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/tcl_windows_build.patch")
   endif ()
+  if (MINGW)
+    list(APPEND TCL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_mingw.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tcl_mingw_zlib.patch")
+  endif ()
   list(APPEND TCL_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
   set(TCL_INPUT_FILES)
@@ -156,6 +161,11 @@ if (ENABLE_TCL)
   if (TARGET ZLIB_BLD)
     list(APPEND TCL_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/tcl-z_brl.patch")
+  endif ()
+  if (MINGW)
+    list(APPEND TCL_INPUT_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/prepare_mingw.cmake"
+      "${CMAKE_CURRENT_SOURCE_DIR}/package_manifest.uuid")
   endif ()
   git_submodule_init(tcl unix/configure
     PATCH_FILES ${TCL_PATCH_FILES}
@@ -213,6 +223,10 @@ if (ENABLE_TCL)
       ${CMAKE_COMMAND};-E;remove_directory;<SOURCE_DIR>/compat/zlib
       )
   endif (TARGET ZLIB_BLD)
+  set(TCL_MAKE_OPTIONS)
+  if (MINGW AND TARGET ZLIB_BLD)
+    list(APPEND TCL_MAKE_OPTIONS BEXT_ZLIB_LIBRARY=z_brl)
+  endif ()
 
   # Give tclsh a loader-relative search path at link time.  Keep this override
   # specific to tclsh: extensions are installed below lib and need their normal
@@ -284,6 +298,10 @@ if (ENABLE_TCL)
     unset(TCL_PACKAGE_NAME)
     unset(TCL_PACKAGE_SOURCE_DIR)
     unset(TCL_PACKAGE_SOURCE_DIRS)
+  elseif (MINGW)
+    set(TCL_PACKAGE_MANIFEST_SETUP_COMMANDS
+      COMMAND ${CMAKE_COMMAND} "-DTCL_SOURCE_DIR=<SOURCE_DIR>"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/prepare_mingw.cmake")
   endif ()
 
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tcl_configure.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake @ONLY)
@@ -307,6 +325,7 @@ if (ENABLE_TCL)
       PATCH_COMMAND ${TCL_PATCH_COMMAND}
       ${TCL_SQLITE_SETUP_COMMANDS}
       ${TCL_PACKAGE_PRUNE_COMMANDS}
+      ${TCL_PACKAGE_MANIFEST_SETUP_COMMANDS}
       # Tcl's fallback zlib can silently supply headers even when we intend to
       # use z_brl.  Remove it only from this staging copy after patching Tcl to
       # require z_brl; the pristine source distribution remains untouched.
@@ -315,14 +334,16 @@ if (ENABLE_TCL)
 
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make
       # jobserver mode bug.  Tcl also seems to have a race fixed via genstubs.
-      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt} ${TCLSH_SEARCH_FLAGS_ARG}
-      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 ${TCLSH_SEARCH_FLAGS_ARG} genstubs install
+      BUILD_COMMAND ${BEXT_TCL_MAKE_COMMAND} -j${pcnt} ${TCL_MAKE_OPTIONS} ${TCLSH_SEARCH_FLAGS_ARG}
+      INSTALL_COMMAND ${BEXT_TCL_MAKE_COMMAND} -j1 ${TCL_MAKE_OPTIONS} ${TCLSH_SEARCH_FLAGS_ARG} genstubs install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
       STEP_TARGETS install
       )
+    ExternalProject_Add_StepDependencies(TCL_BLD configure
+      "${CMAKE_CURRENT_BINARY_DIR}/tcl_configure.cmake" ${BEXT_TCL_CONFIGURE_ENV})
 
     set(TCL_APPINIT tclAppInit.c)
 
@@ -360,36 +381,36 @@ if (ENABLE_TCL)
 
   # Scripts expect a non-versioned tclsh program, but the Tcl build doesn't provide one,
   # we must provide it ourselves
-  if (MSVC)
+  if (WIN32)
     add_custom_target(tclsh_cpy ALL
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${TCL_MAJOR_VERSION}${TCL_MINOR_VERSION}${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${CMAKE_EXECUTABLE_SUFFIX}
       DEPENDS TCL_BLD-install
       )
-  else (MSVC)
+  else ()
     add_custom_target(tclsh_cpy ALL
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${TCL_VERSION}${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}/tclsh${CMAKE_EXECUTABLE_SUFFIX}
       DEPENDS TCL_BLD-install
       )
-  endif (MSVC)
+  endif ()
 
   # The library file permissions end up a bit strange - fix them
   find_program(CHMOD_EXECUTABLE chmod)
   mark_as_advanced(CHMOD_EXECUTABLE)
-  if (CHMOD_EXECUTABLE)
+  if (CHMOD_EXECUTABLE AND NOT MINGW)
     if (MSVC)
       set(LIB_PREFIX)
       set(SHARED_DIR ${BIN_DIR})
       set(TCL_VERSION "${TCL_MAJOR_VERSION}${TCL_MINOR_VERSION}")
-    else (MSVC)
+    else ()
       set(LIB_PREFIX "lib")
       set(SHARED_DIR ${LIB_DIR})
-    endif (MSVC)
+    endif ()
     add_custom_target(tcl_permissionsfix ALL
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${SHARED_DIR}/${LIB_PREFIX}tcl${TCL_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${LIB_PREFIX}tclstub${TCL_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}
       DEPENDS TCL_BLD-install
       )
-  endif (CHMOD_EXECUTABLE)
+  endif ()
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX
   configure_file(

@@ -215,6 +215,15 @@ endif ()
 set(BEXT_MAKE_COMMAND
   ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS --unset=MFLAGS ${BEXT_MAKE_EXECUTABLE}
   )
+set(BEXT_TCL_MAKE_COMMAND ${BEXT_MAKE_COMMAND})
+if (MINGW AND CMAKE_HOST_WIN32)
+  set(BEXT_TCL_CONFIGURE_ENV "${CMAKE_BINARY_DIR}/CMakeFiles/BextMsysConfigure.cmake")
+  configure_file(CMake/BextMsysConfigure.cmake.in "${BEXT_TCL_CONFIGURE_ENV}" @ONLY)
+  # Tcl's package builds execute the just-built interpreter, which may need
+  # DLLs from the bundle (for example bext's zlib).
+  set(BEXT_TCL_MAKE_COMMAND ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS --unset=MFLAGS
+    --modify "PATH=path_list_prepend:${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}" ${BEXT_MAKE_EXECUTABLE})
+endif ()
 
 # We want to pass the build type option to CMake builds if we're not using a
 # multiconfig generator - define a variable that will either be empty or define
@@ -422,7 +431,7 @@ add_project(plief)
 
 # zlib compression/decompression library
 # https://zlib.net
-add_project(zlib GROUPS "APPLESEED;BRLCAD;OSPRAY;TCL")
+add_project(zlib GROUPS "APPLESEED;BRLCAD;OSPRAY;QT;TCL")
 
 # LLVM - code generation support, add it as EARLY as possible
 # https://llvm.org/

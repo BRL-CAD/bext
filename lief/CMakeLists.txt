@@ -3,7 +3,7 @@
 
 # plief currently uses LIEF only for ELF processing.  Windows needs no RPATH
 # rewriting, and macOS uses the native otool/install_name_tool workflow.
-if (NOT MSVC AND NOT APPLE)
+if (NOT WIN32 AND NOT APPLE)
 
   bext_enable(LIEF)
 
@@ -67,7 +67,7 @@ if (NOT MSVC AND NOT APPLE)
     TargetInstallDeps(LIEF LIEF_DEPENDS)
 
   endif (ENABLE_LIEF)
-endif (NOT MSVC AND NOT APPLE)
+endif ()
 
 # Local Variables:
 # tab-width: 8

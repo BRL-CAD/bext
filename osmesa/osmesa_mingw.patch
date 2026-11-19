@@ -1,0 +1,83 @@
+--- a/src/main/glheader.h
++++ b/src/main/glheader.h
+@@ -60,7 +60,7 @@
+ /* Get typedefs for uintptr_t and friends */
+ #include <stdint.h>
+ #if defined(_WIN32)
+-#  include <BaseTsd.h>
++#  include <basetsd.h>
+ #endif
+ #include <inttypes.h>
+ 
+--- a/src/main/imports.c
++++ b/src/main/imports.c
+@@ -479,7 +479,7 @@
+ int
+ _mesa_ffs(int i)
+ {
+-#if (defined(_WIN32) && !defined(__MINGW32__) ) || defined(__IBMC__) || defined(__IBMCPP__)
++#if defined(_WIN32) || defined(__IBMC__) || defined(__IBMCPP__)
+     register int bit = 0;
+     if (i != 0) {
+ 	if ((i & 0xffff) == 0) {
+@@ -514,11 +514,7 @@
+  *          if no bits set.
+  */
+ int
+-#ifdef __MINGW32__
+-_mesa_ffsll(long val)
+-#else
+ _mesa_ffsll(long long val)
+-#endif
+ {
+ #ifdef ffsll
+     return ffsll(val);
+--- a/src/main/imports.h
++++ b/src/main/imports.h
+@@ -523,11 +523,7 @@
+ _mesa_ffs(int i);
+ 
+ extern int
+-#ifdef __MINGW32__
+-_mesa_ffsll(long i);
+-#else
+ _mesa_ffsll(long long i);
+-#endif
+ 
+ extern unsigned int
+ _mesa_bitcount(unsigned int n);
+--- a/include/OSMesa/gl.h
++++ b/include/OSMesa/gl.h
+@@ -35,24 +35,24 @@
+ #endif
+ 
+ #if defined(_MSC_VER)
+-#  define COMPILER_DLLEXPORT __declspec(dllexport)
+-#  define COMPILER_DLLIMPORT __declspec(dllimport)
++#  define OSMESA_DLLEXPORT __declspec(dllexport)
++#  define OSMESA_DLLIMPORT __declspec(dllimport)
+ #  define GLAPIENTRY __stdcall
+ #elif defined(__GNUC__) || defined(__clang__)
+-#  define COMPILER_DLLEXPORT __attribute__ ((visibility ("default")))
+-#  define COMPILER_DLLIMPORT __attribute__ ((visibility ("default")))
++#  define OSMESA_DLLEXPORT __attribute__ ((visibility ("default")))
++#  define OSMESA_DLLIMPORT __attribute__ ((visibility ("default")))
+ #else
+-#  define COMPILER_DLLEXPORT
+-#  define COMPILER_DLLIMPORT
++#  define OSMESA_DLLEXPORT
++#  define OSMESA_DLLIMPORT
+ #endif
+ 
+ #ifndef GL_EXPORT
+ #  if defined(GL_DLL_EXPORTS) && defined(GL_DLL_IMPORTS)
+ #    error "Only GL_DLL_EXPORTS or GL_DLL_IMPORTS can be defined, not both."
+ #  elif defined(GL_DLL_EXPORTS)
+-#    define GLAPI COMPILER_DLLEXPORT
++#    define GLAPI OSMESA_DLLEXPORT
+ #  elif defined(GL_DLL_IMPORTS)
+-#    define GLAPI COMPILER_DLLIMPORT
++#    define GLAPI OSMESA_DLLIMPORT
+ #  else
+ #    define GLAPI
+ #  endif

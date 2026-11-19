@@ -75,8 +75,8 @@ if (ENABLE_TKTABLE)
     endforeach()
     configure_file(tktable_configure.cmake.in tktable_configure.cmake @ONLY)
     set(tktable_configure_command ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/tktable_configure.cmake)
-    set(tktable_build_command ${BEXT_MAKE_COMMAND} -j${pcnt} binaries)
-    set(tktable_install_command ${BEXT_MAKE_COMMAND} -j1 INSTALL_OPTIONS=-C install-binaries install-libraries)
+    set(tktable_build_command ${BEXT_TCL_MAKE_COMMAND} -j${pcnt} binaries)
+    set(tktable_install_command ${BEXT_TCL_MAKE_COMMAND} -j1 INSTALL_OPTIONS=-C install-binaries install-libraries)
   endif ()
 
   ExternalProject_Add(TKTABLE_BLD
@@ -96,7 +96,7 @@ if (ENABLE_TKTABLE)
 
   if (NOT MSVC)
     ExternalProject_Add_StepDependencies(TKTABLE_BLD configure
-      "${CMAKE_CURRENT_BINARY_DIR}/tktable_configure.cmake")
+      "${CMAKE_CURRENT_BINARY_DIR}/tktable_configure.cmake" ${BEXT_TCL_CONFIGURE_ENV})
   endif ()
 
   TargetInstallDeps(TKTABLE TKTABLE_DEPENDS)

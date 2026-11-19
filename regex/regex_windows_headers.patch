@@ -1,0 +1,11 @@
+--- a/regex.h.in
++++ b/regex.h.in
+@@ -36,7 +36,7 @@
+ #define	_REGEX_H_
+ 
+ #if defined (_WIN32)
+-#  include <BaseTsd.h>
++#  include <basetsd.h>
+ #endif
+ 
+ /* Pre VS2015, MSVC doesn't provide snprintf */

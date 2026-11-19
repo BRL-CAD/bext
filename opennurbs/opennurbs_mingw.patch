@@ -1,0 +1,564 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -454,9 +454,9 @@
+     opennurbs_plus_x.h
+     )
+ 
+-if (NOT HAVE_UUID_GENERATE AND NOT MSVC)
++if (NOT HAVE_UUID_GENERATE AND NOT WIN32)
+   install(FILES android_uuid/uuid.h DESTINATION include/OpenNURBS/android_uuid)
+-endif (NOT HAVE_UUID_GENERATE AND NOT MSVC)
++endif (NOT HAVE_UUID_GENERATE AND NOT WIN32)
+ 
+ if (BUILD_TESTING)
+     LIST(APPEND OPENNURBS_PLUS_HEADERS opennurbs_plus_testheader.h)
+@@ -566,10 +566,13 @@
+   # opennurbs_brep.cpp requires this flag when compiling with Visual C++
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+   #add_compile_options(\bigobj)
++endif()
++
++if (WIN32)
+   add_definitions(-DUNICODE)
+   add_definitions(-D_UNICODE)
+-  list(APPEND OPENNURBS_LINKLIBRARIES Rpcrt4 Shlwapi Usp10)
+-  list(APPEND OPENNURBS_STATIC_LINKLIBRARIES Rpcrt4 Shlwapi Usp10)
++  list(APPEND OPENNURBS_LINKLIBRARIES rpcrt4 shlwapi usp10 dwrite)
++  list(APPEND OPENNURBS_STATIC_LINKLIBRARIES rpcrt4 shlwapi usp10 dwrite)
+ endif()
+ 
+ add_definitions(-DON_CMAKE_BUILD)
+@@ -609,7 +612,7 @@
+     opennurbs_dll.cpp
+     )
+ 
+-if (NOT HAVE_UUID_GENERATE AND NOT MSVC)
++if (NOT HAVE_UUID_GENERATE AND NOT WIN32)
+   set(UUID_SOURCES
+     android_uuid/clear.c
+     android_uuid/compare.c
+@@ -638,7 +641,7 @@
+   target_sources(OpenNURBS PRIVATE $<TARGET_OBJECTS:uuid_fallback>)
+   target_sources(opennurbsStatic PRIVATE $<TARGET_OBJECTS:uuid_fallback>)
+ 
+-endif (NOT HAVE_UUID_GENERATE AND NOT MSVC)
++endif (NOT HAVE_UUID_GENERATE AND NOT WIN32)
+ 
+ if( APPLE)
+     set( OPENNURBS_APPLE_DEFINES
+--- a/opennurbs_file_utilities.cpp
++++ b/opennurbs_file_utilities.cpp
+@@ -21,7 +21,7 @@
+ #error ON_COMPILING_OPENNURBS must be defined when compiling opennurbs
+ #endif
+ 
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+ // November 2015: Visual Studo 2013 (and probably others)
+ // Shlwapi.h and Shlobj.h are not included in opennurbs_system.h 
+ // because the have gems like "#define small ..." (Thank You Microsoft!).
+@@ -30,10 +30,10 @@
+ // variable.  Reminds me of dealing with AutoDesk's old #define X 0
+ // in their headers from 20 years ago. 
+ #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
+-#include <Shlwapi.h>
++#include <shlwapi.h>
+ #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
+ #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
+-#include <Shlobj.h>
++#include <shlobj.h>
+ #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
+ #if (defined(_M_X64) || defined(_M_ARM64)) && defined(WIN32) && defined(WIN64)
+ // Shlwapi.h, Shlobj.h and perhaps others, unconditionally define WIN32
+@@ -1037,7 +1037,7 @@
+   const char* path
+   )
+ {
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   return ::PathFileExistsA(path) ? true : false;
+ #else
+   struct stat s;
+@@ -1054,7 +1054,7 @@
+   const wchar_t* path
+   )
+ {
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   return ::PathFileExistsW(path) ? true : false;
+ #else
+   const ON_String pathUTF8(path);
+@@ -1068,7 +1068,7 @@
+ {
+   if (0 == path || 0 == path[0])
+     return false;
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   return ::PathIsDirectoryA(path) ? true : false;
+ #else
+   struct stat s;
+@@ -1087,7 +1087,7 @@
+ {
+   if (0 == path || 0 == path[0])
+     return false;
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   return ::PathIsDirectoryW(path) ? true : false;
+ #else
+   const ON_String pathUTF8(path);
+@@ -1101,7 +1101,7 @@
+ {
+   if (0 == path || 0 == path[0])
+     return false;
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   return ::PathFileExistsA(path) && 0 == ::PathIsDirectoryA(path);
+ #else
+   struct stat s;
+@@ -1120,7 +1120,7 @@
+ {
+   if (0 == path || 0 == path[0])
+     return false;
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   return ::PathFileExistsW(path) && 0 == ::PathIsDirectoryW(path);
+ #else
+   const ON_String pathUTF8(path);
+@@ -1520,7 +1520,7 @@
+   if ( 0 == filename || 0 == filename[0] || 0 == mode || 0 == mode[0] )
+     return fp;
+ 
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   errno_t e = _wfopen_s(&fp,filename,mode); 
+   if ( 0 != e && 0 == fp )
+     fp = 0; // reference e to keep lint quiet.
+@@ -1542,7 +1542,7 @@
+   if ( 0 == filename || 0 == filename[0] || 0 == mode || 0 == mode[0] )
+     return fp;
+ 
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   errno_t e = fopen_s(&fp,filename,mode); 
+   if ( 0 != e && 0 == fp )
+     fp = 0; // reference e to keep lint quiet.
+@@ -2007,7 +2007,7 @@
+ {
+   if ( 0 == fp )
+     return -1;
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   return _ftelli64(fp);
+ #else
+   return ftell(fp);
+@@ -2040,7 +2040,7 @@
+   if ( 0 == offset && SEEK_CUR == origin )
+     return true;
+   
+-#if defined(ON_COMPILER_MSC) && defined(ON_RUNTIME_WIN)
++#if defined(ON_RUNTIME_WIN)
+   if (0 != _fseeki64(fp, offset, origin))
+     return false;
+ #else
+@@ -2188,10 +2188,10 @@
+   if ( fp )
+   {
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+ 
+     // Microsoft compilers
+-#if (_MSC_VER >= 1400)
++#if (_MSC_VER >= 1400) || defined(__MINGW32__)
+     // VC 8 (2005) 
+     // works for file sizes > 4GB 
+     // when size_t is a 64 bit integer
+@@ -2248,7 +2248,7 @@
+ 
+   const wchar_t* CurrentFileNameAsPointer() const;
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   // Used by Windows ::Find
+   //ON__UINT32 m_file_attributes_mask = 0;
+   HANDLE m_h = 0;
+@@ -2271,7 +2271,7 @@
+ 
+ ON_DirectoryIteratorImpl::ON_DirectoryIteratorImpl()
+ {
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   memset(&m_fd,0,sizeof(m_fd));
+ #else
+   memset(&m_dirent,0,sizeof(m_dirent));
+@@ -2282,7 +2282,7 @@
+ 
+ ON_DirectoryIteratorImpl::~ON_DirectoryIteratorImpl()
+ {
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   if ( 0 != m_h )
+     ::FindClose(m_h);
+ #else
+@@ -2312,7 +2312,7 @@
+   return m_count;
+ }
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+ static bool IsDotOrDotDotDir( const wchar_t* s )
+ #else
+ static bool IsDotOrDotDotDir( const char* s )
+@@ -2416,7 +2416,7 @@
+   if ( nullptr != item_name_filter && 0 == item_name_filter[0] )
+     item_name_filter = nullptr;
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   for (;;)
+   {
+     ON_wString s(m_directory);
+@@ -2485,7 +2485,7 @@
+   if ( 2 != m_state )
+     return false;
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   for (;;)
+   {
+     if (0 == m_impl->m_h || INVALID_HANDLE_VALUE == m_impl->m_h || 0 == m_impl->m_fd.cFileName[0])
+@@ -2611,7 +2611,7 @@
+ 
+ const wchar_t* ON_DirectoryIteratorImpl::CurrentFileNameAsPointer() const
+ {
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   return ( 0 != m_h && 0 != m_fd.cFileName[0] ) ? m_fd.cFileName : nullptr;
+ #else
+   return ( 0 != m_current_name[0] ) ? m_current_name : nullptr;
+@@ -2630,7 +2630,7 @@
+   if (nullptr != m_impl)
+   {
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+     if (0 != m_impl->CurrentFileNameAsPointer())
+     {
+       file_size = m_impl->m_fd.nFileSizeHigh;
+@@ -2653,7 +2653,7 @@
+     const wchar_t* current_file_name = m_impl->CurrentFileNameAsPointer();
+     if (0 != current_file_name && 0 != current_file_name[0])
+     {
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+       if (0 != (FILE_ATTRIBUTE_DIRECTORY & m_impl->m_fd.dwFileAttributes))
+       {
+         rc = true;
+@@ -2677,7 +2677,7 @@
+     const wchar_t* current_file_name = m_impl->CurrentFileNameAsPointer();
+     if (0 != current_file_name && 0 != current_file_name[0])
+     {
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+       if (0 == (FILE_ATTRIBUTE_DIRECTORY & m_impl->m_fd.dwFileAttributes))
+       {
+         rc = true;
+@@ -2704,7 +2704,7 @@
+       {
+         rc = true;
+       }
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+       else if (0 != (FILE_ATTRIBUTE_HIDDEN & m_impl->m_fd.dwFileAttributes))
+       {
+         rc = true;
+@@ -2732,7 +2732,7 @@
+ 
+ ON__UINT64 ON_SecondsSinceJanOne1970UTC()
+ {
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+ 
+   __time64_t t = _time64(nullptr);
+   return (ON__UINT64)t;  
+@@ -2762,7 +2762,7 @@
+   int min = 0;
+   int sec = 0;
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+ 
+   const time_t t = (time_t)seconds_since_epoch;
+   const struct tm* ptr = _gmtime64( &t );
+@@ -2827,7 +2827,7 @@
+   return ON_wString::EmptyString;
+ }
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+ static ON__UINT64 SecondsSinceJanOne1970( FILETIME ft )
+ {
+   // The FILETIME is in 100-nanosecond intervals since January 1, 1601 UCT.
+@@ -2863,7 +2863,7 @@
+ {
+   if ( nullptr == m_impl)
+     return 0;
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   return SecondsSinceJanOne1970(m_impl->m_fd.ftLastWriteTime);
+ #else
+   return m_impl->m_current_content_last_modified_time;
+--- a/opennurbs_internal_defines.h
++++ b/opennurbs_internal_defines.h
+@@ -28,9 +28,11 @@
+ #endif
+ 
+ #ifdef ON_RUNTIME_WIN
++#define ON_INTERNAL_WIDEN_IMPL(s) L##s
++#define ON_INTERNAL_WIDEN(s) ON_INTERNAL_WIDEN_IMPL(s)
+ #define PRIVATE_CHECK(c) auto priv_has = sizeof(_PRIVATE), priv_needs = sizeof(c) + 64; \
+         if (priv_has < priv_needs) { ON_wString priv; \
+-            priv.Format(L#c L" _PRIVATE has %u but needs %u bytes\n", priv_has, priv_needs); \
++            priv.Format(ON_INTERNAL_WIDEN(#c) L" _PRIVATE has %u but needs %u bytes\n", priv_has, priv_needs); \
+             OutputDebugString(priv); ON_ASSERT(false); }
+ #else
+ #define PRIVATE_CHECK(c) { }
+--- a/opennurbs_locale.cpp
++++ b/opennurbs_locale.cpp
+@@ -1325,7 +1325,7 @@
+ 
+   static bool Validate_sprintf_s()
+   {
+-#if defined(ON_COMPILER_CLANG)  || defined(ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+     // Test formatted printing
+     char buffer[64] = { 0 };
+     size_t buffer_capacity = (sizeof(buffer) / sizeof(buffer[0])) - 1;
+@@ -1344,7 +1344,7 @@
+ 
+   static bool Validate_sprintf_l()
+   {
+-#if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+ #if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
+     // Test formatted printing
+     char buffer[64] = { 0 };
+@@ -1369,7 +1369,7 @@
+ 
+   static bool Validate_sprintf_s_l()
+   {
+-#if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+ #if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
+     // Test formatted printing
+     char buffer[64] = { 0 };
+@@ -1406,7 +1406,7 @@
+ 
+   static bool Validate_sscanf_s()
+   {
+-#if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+     // Test formatted scanning
+     double a = ON_UNSET_VALUE;
+     // Testing C-runtime - do not using ON_String::Scan
+@@ -1423,7 +1423,7 @@
+ 
+   static bool Validate_sscanf_l()
+   {
+-#if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+ #if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
+     // Test formatted scanning
+     double a = ON_UNSET_VALUE;
+@@ -1448,7 +1448,7 @@
+ 
+   static bool Validate_sscanf_s_l()
+   {
+-#if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+ #if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
+     // Test formatted scanning
+     double a = ON_UNSET_VALUE;
+@@ -1591,7 +1591,7 @@
+   bool rc = ON_Locale::PeriodIsCRuntimeDecimalPoint();
+   if (false == rc)
+   {
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+     // Microsoft's C compiler
+     const int prev_type = _configthreadlocale(_DISABLE_PER_THREAD_LOCALE);
+ 
+--- a/opennurbs_sort.cpp
++++ b/opennurbs_sort.cpp
+@@ -16,9 +16,11 @@
+ 
+ #define ON_COMPILING_OPENNURBS_SORT_CPP
+ 
+-#if defined(ON_RUNTIME_WIN) && defined(ON_COMPILER_MSC)
+-
++#if defined(ON_RUNTIME_WIN)
++
++#if defined(ON_COMPILER_MSC)
+ #pragma optimize("t", on)
++#endif
+ 
+ // have a reliable thread safe CRT qsort.
+ #define ON__HAVE_RELIABLE_SYSTEM_QSORT
+@@ -32,7 +34,7 @@
+ 
+ #endif
+ 
+-#if defined(ON_RUNTIME_WIN) && defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+ 
+ // have a reliable thread safe CRT qsort with context that is
+ // faster than the functions below.
+@@ -61,7 +63,7 @@
+   // that is faster than the alternative code in this function.
+   // In particular, if it uses a random number generator to
+   // find pivots, that calculation must be thread safe.
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   qsort_s(base,nel,width,compar,context);
+ #elif defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
+   ON_hsort(base, nel, width, compar, context);
+--- a/opennurbs_string_format.cpp
++++ b/opennurbs_string_format.cpp
+@@ -798,7 +798,7 @@
+   if (0 == buffer || buffer_capacity <= 0)
+     return -1;
+   buffer[0] = 0;
+-#if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+   // CLang modifies args so a copy is required
+   va_list args_copy;
+   va_copy (args_copy, args);
+@@ -850,7 +850,7 @@
+   if ( nullptr == format || 0 == format[0] )
+     return 0;
+ 
+-#if defined(ON_COMPILER_CLANG) || defined(ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+   // CLang modifies args so a copy is required
+   va_list args_copy;
+   va_copy (args_copy, args);
+@@ -944,7 +944,7 @@
+   return rc;
+ }
+ 
+-#if defined(ON_COMPILER_CLANG) || defined (ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+ 
+ static const wchar_t* ConvertToWideCharStringFormat(
+   const wchar_t* format,
+@@ -1053,7 +1053,7 @@
+   if ( nullptr == format || 0 == format[0] )
+     return 0;
+   
+-#if defined(ON_COMPILER_CLANG) || defined (ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+   // CLang requires %ls to properly format a const wchar_t* parameter
+   wchar_t clang_format_stack_buffer[128];
+   ON_wStringBuffer clang_format_buffer(clang_format_stack_buffer, sizeof(clang_format_stack_buffer) / sizeof(clang_format_stack_buffer[0]));
+@@ -1114,7 +1114,7 @@
+   if ( nullptr == format || 0 == format[0] )
+     return 0;
+ 
+-#if defined(ON_COMPILER_CLANG) || defined (ON_COMPILER_GNU)
++#if !defined(ON_RUNTIME_WIN)
+   // Unlike _vscwprintf_p_l(), CLang's vswprintf() does not tell you how many characters would have 
+   // been written if there was space enough in the buffer. 
+   // It reports an error when there is not enough space.  
+--- a/opennurbs_string_scan.cpp
++++ b/opennurbs_string_scan.cpp
+@@ -82,7 +82,7 @@
+   va_list args
+   )
+ {
+-#if defined(ON_COMPILER_CLANG) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
++#if !defined(ON_RUNTIME_WIN)
+ #if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
+   if (nullptr == buffer || nullptr == format)
+     return -1;
+@@ -395,7 +395,7 @@
+   local_buffer[local_buffer_count++] = 0;
+ 
+   double x = value_on_failure;
+-#if defined(ON_COMPILER_CLANG) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
++#if !defined(ON_RUNTIME_WIN)
+ #if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
+   if (1 == sscanf(local_buffer, "%lg", &x))
+   {
+@@ -657,7 +657,7 @@
+   local_buffer[local_buffer_count++] = 0;
+ 
+   double x = value_on_failure;
+-#if defined(ON_COMPILER_CLANG) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
++#if !defined(ON_RUNTIME_WIN)
+ #if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM)
+   if (1 == sscanf(local_buffer, "%lg", &x))
+   {
+--- a/opennurbs_system.h
++++ b/opennurbs_system.h
+@@ -401,6 +401,9 @@
+ #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
+ 
+ #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
++// MinGW UCRT declares positional wide printf helpers only when wchar.h
++// precedes stdio.h (both use _WSTDIO_DEFINED).
++#include <wchar.h>
+ #include <stdio.h>
+ #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
+ 
+@@ -496,7 +499,7 @@
+ #pragma ON_PRAGMA_WARNING_BEFORE_DIRTY_INCLUDE
+ #if defined(ON_RUNTIME_ANDROID) || defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
+ #include "android_uuid/uuid.h"
+-#else
++#elif defined(ON_RUNTIME_APPLE)
+ #include <uuid/uuid.h>
+ #endif
+ #pragma ON_PRAGMA_WARNING_AFTER_DIRTY_INCLUDE
+--- a/opennurbs_uuid.cpp
++++ b/opennurbs_uuid.cpp
+@@ -12,6 +12,9 @@
+ ////////////////////////////////////////////////////////////////
+ 
+ #include "opennurbs.h"
++#if defined(ON_RUNTIME_WIN)
++#include <rpc.h>
++#endif
+ #if defined(ON_RUNTIME_LINUX) || defined(ON_RUNTIME_WASM) || defined(ON_RUNTIME_BSD)
+ #include "android_uuid/uuid.h"
+ #endif
+@@ -165,7 +168,7 @@
+ 
+ #else
+ 
+-#if defined(ON_COMPILER_MSC)
++#if defined(ON_RUNTIME_WIN)
+   // Header: Declared in Rpcdce.h.
+   // Library: Use Rpcrt4.lib  
+ #pragma comment(lib, "Rpcrt4.lib")
+--- a/opennurbs_xml.cpp
++++ b/opennurbs_xml.cpp
+@@ -217,7 +217,7 @@
+ {
+   tm stm = { 0 };
+ 
+-#ifdef ON_COMPILER_MSC
++#ifdef ON_RUNTIME_WIN
+   localtime_s(&stm, &time);
+ #else
+   localtime_r(&time, &stm);
+--- a/opennurbs_system.h
++++ b/opennurbs_system.h
+@@ -340,7 +340,7 @@
+ #if defined(_M_X64) && defined(WIN32) && defined(WIN64)
+ // 23 August 2007 Dale Lear
+ 
+-#if defined(_INC_WINDOWS)
++#if defined(_INC_WINDOWS) || defined(__MINGW32__)
+ // The user has included Microsoft's windows.h before opennurbs.h,
+ // and windows.h has nested includes that unconditionally define WIN32.
+ // Just undo the damage here or everybody that includes opennurbs.h after

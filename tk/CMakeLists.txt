@@ -168,14 +168,16 @@ if (TK_DO_BUILD)
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make
       # jobserver mode bug.
 
-      BUILD_COMMAND ${BEXT_MAKE_COMMAND} -j${pcnt}
-      INSTALL_COMMAND ${BEXT_MAKE_COMMAND} -j1 install
+      BUILD_COMMAND ${BEXT_TCL_MAKE_COMMAND} -j${pcnt}
+      INSTALL_COMMAND ${BEXT_TCL_MAKE_COMMAND} -j1 install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
       STEP_TARGETS install
       )
+    ExternalProject_Add_StepDependencies(TK_BLD configure
+      "${CMAKE_CURRENT_BINARY_DIR}/tk_configure.cmake" ${BEXT_TCL_CONFIGURE_ENV})
 
     set(TK_APPINIT tkAppInit.c)
 
@@ -202,21 +204,21 @@ if (TK_DO_BUILD)
   # The library file permissions end up a bit strange - fix them
   find_program(CHMOD_EXECUTABLE chmod)
   mark_as_advanced(CHMOD_EXECUTABLE)
-  if (CHMOD_EXECUTABLE)
+  if (CHMOD_EXECUTABLE AND NOT MINGW)
     if (MSVC)
       set(LIB_PREFIX)
       set(SHARED_DIR ${BIN_DIR})
       set(TCL_VERSION "86")
-    else (MSVC)
+    else ()
       set(LIB_PREFIX "lib")
       set(SHARED_DIR ${LIB_DIR})
-    endif (MSVC)
+    endif ()
     add_custom_target(tk_permissionsfix ALL
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${SHARED_DIR}/${LIB_PREFIX}tk${TCL_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${LIB_PREFIX}tkstub${TCL_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}
       DEPENDS TK_BLD-install
       )
-  endif (CHMOD_EXECUTABLE)
+  endif ()
 
   TargetInstallDeps(TK TK_DEPENDS)
 

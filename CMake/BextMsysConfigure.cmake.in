@@ -1,0 +1,41 @@
+# Run the Windows Autoconf recipes with MSYS utilities and the native compiler
+# selected for the rest of the bundle.
+function(bext_msys_configure script)
+  find_program(msys_cygpath NAMES cygpath REQUIRED)
+  get_filename_component(msys_bin "${msys_cygpath}" DIRECTORY)
+  find_program(msys_shell NAMES bash HINTS "${msys_bin}" NO_DEFAULT_PATH REQUIRED)
+
+  set(configure_args
+    "--prefix=@CMAKE_BUNDLE_INSTALL_PREFIX@"
+    "--bindir=@CMAKE_BUNDLE_INSTALL_PREFIX@/@BIN_DIR@"
+    "--libdir=@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@"
+    "--includedir=@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@"
+    ${ARGN})
+  if ("@CMAKE_SIZEOF_VOID_P@" EQUAL 8)
+    list(APPEND configure_args --enable-64bit)
+  endif ()
+  set(args)
+  foreach(arg IN LISTS configure_args)
+    if (arg MATCHES "^(--[^=]+)=(.+)$")
+      set(option "${CMAKE_MATCH_1}")
+      set(value "${CMAKE_MATCH_2}")
+      if (IS_ABSOLUTE "${value}")
+        execute_process(COMMAND "${msys_cygpath}" -u "${value}"
+          OUTPUT_VARIABLE path OUTPUT_STRIP_TRAILING_WHITESPACE
+          COMMAND_ERROR_IS_FATAL ANY)
+        set(arg "${option}=${path}")
+      endif ()
+    endif ()
+    list(APPEND args "${arg}")
+  endforeach ()
+
+  set(ENV{CC} "@CMAKE_C_COMPILER@")
+  set(ENV{CXX} "@CMAKE_CXX_COMPILER@")
+  set(ENV{RC} "@CMAKE_RC_COMPILER@")
+  set(ENV{CFLAGS} "@CMAKE_C_FLAGS@")
+  set(ENV{CPPFLAGS} "-I@CMAKE_BUNDLE_INSTALL_PREFIX@/@INCLUDE_DIR@")
+  set(ENV{LDFLAGS} "@CMAKE_SHARED_LINKER_FLAGS@ -L@CMAKE_BUNDLE_INSTALL_PREFIX@/@LIB_DIR@")
+  set(ENV{PATH} "@CMAKE_BUNDLE_INSTALL_PREFIX@/@BIN_DIR@;$ENV{PATH}")
+  execute_process(COMMAND "${msys_shell}" "${script}" ${args}
+    COMMAND_ERROR_IS_FATAL ANY)
+endfunction()

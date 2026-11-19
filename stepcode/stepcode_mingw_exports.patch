@@ -1,0 +1,98 @@
+--- a/src/express/CMakeLists.txt
++++ b/src/express/CMakeLists.txt
+@@ -25,12 +25,12 @@
+   include_directories(generated)
+ endif(SC_GENERATE_LP_SOURCES)
+ 
+-if(MSVC)
++if(WIN32)
+   set_property(TARGET objlib_expscan_c APPEND PROPERTY COMPILE_DEFINITIONS "SC_EXPRESS_DLL_EXPORTS")
+   set_property(TARGET objlib_expscan_c APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "SC_EXPRESS_DLL_IMPORTS")
+   set_property(TARGET objlib_expparse_c APPEND PROPERTY COMPILE_DEFINITIONS "SC_EXPRESS_DLL_EXPORTS")
+   set_property(TARGET objlib_expparse_c APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "SC_EXPRESS_DLL_IMPORTS")
+-endif(MSVC)
++endif(WIN32)
+ 
+ set(EXPRESS_SOURCES
+   symbol.c
+@@ -69,10 +69,10 @@
+   if(TARGET ExpScanner)
+     add_dependencies(${_objlib} ExpScanner)
+   endif(TARGET ExpScanner)
+-  if(MSVC)
++  if(WIN32)
+     set_property(TARGET ${_objlib} APPEND PROPERTY COMPILE_DEFINITIONS "SC_EXPRESS_DLL_EXPORTS")
+     set_property(TARGET ${_objlib} APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "SC_EXPRESS_DLL_IMPORTS")
+-  endif(MSVC)
++  endif(WIN32)
+   # TODO: probably PIC should be used everywhere...
+   set_property(TARGET ${_objlib} PROPERTY POSITION_INDEPENDENT_CODE ON)
+   list(APPEND EXPRESS_OBJS $<TARGET_OBJECTS:${_objlib}>)
+@@ -106,10 +106,10 @@
+     LIBRARY DESTINATION ${LIB_DIR}
+     ARCHIVE DESTINATION ${LIB_DIR})
+ 
+-  if(MSVC)
++  if(WIN32)
+     set_property(TARGET express APPEND PROPERTY COMPILE_DEFINITIONS "SC_EXPRESS_DLL_EXPORTS")
+     set_property(TARGET express APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "SC_EXPRESS_DLL_IMPORTS")
+-  endif(MSVC)
++  endif(WIN32)
+ endif()
+ 
+ if(BUILD_STATIC_LIBS)
+--- a/include/cllazyfile/judy.h
++++ b/include/cllazyfile/judy.h
+@@ -134,40 +134,40 @@
+ #endif
+ 
+     /// open a new judy array returning a judy object.
+-    SC_BASE_EXPORT Judy * judy_open( unsigned int max, unsigned int depth );
++    SC_LAZYFILE_EXPORT Judy * judy_open( unsigned int max, unsigned int depth );
+ 
+     /// close an open judy array, freeing all memory.
+-    SC_BASE_EXPORT void judy_close( Judy * judy );
++    SC_LAZYFILE_EXPORT void judy_close( Judy * judy );
+ 
+     /// clone an open judy array, duplicating the stack.
+-    SC_BASE_EXPORT Judy * judy_clone( Judy * judy );
++    SC_LAZYFILE_EXPORT Judy * judy_clone( Judy * judy );
+ 
+     /// allocate data memory within judy array for external use.
+-    SC_BASE_EXPORT void * judy_data( Judy * judy, unsigned int amt );
++    SC_LAZYFILE_EXPORT void * judy_data( Judy * judy, unsigned int amt );
+ 
+     /// insert a key into the judy array, return cell pointer.
+-    SC_BASE_EXPORT JudySlot * judy_cell( Judy * judy, const unsigned char * buff, unsigned int max );
++    SC_LAZYFILE_EXPORT JudySlot * judy_cell( Judy * judy, const unsigned char * buff, unsigned int max );
+ 
+     /// retrieve the cell pointer greater than or equal to given key
+-    SC_BASE_EXPORT JudySlot * judy_strt( Judy * judy, const unsigned char * buff, unsigned int max );
++    SC_LAZYFILE_EXPORT JudySlot * judy_strt( Judy * judy, const unsigned char * buff, unsigned int max );
+ 
+     /// retrieve the cell pointer, or return NULL for a given key.
+-    SC_BASE_EXPORT JudySlot * judy_slot( Judy * judy, const unsigned char * buff, unsigned int max );
++    SC_LAZYFILE_EXPORT JudySlot * judy_slot( Judy * judy, const unsigned char * buff, unsigned int max );
+ 
+     /// retrieve the string value for the most recent judy query.
+-    SC_BASE_EXPORT unsigned int judy_key( Judy * judy, unsigned char * buff, unsigned int max );
++    SC_LAZYFILE_EXPORT unsigned int judy_key( Judy * judy, unsigned char * buff, unsigned int max );
+ 
+     /// retrieve the cell pointer for the last string in the array.
+-    SC_BASE_EXPORT JudySlot * judy_end( Judy * judy );
++    SC_LAZYFILE_EXPORT JudySlot * judy_end( Judy * judy );
+ 
+     /// retrieve the cell pointer for the next string in the array.
+-    SC_BASE_EXPORT JudySlot * judy_nxt( Judy * judy );
++    SC_LAZYFILE_EXPORT JudySlot * judy_nxt( Judy * judy );
+ 
+     /// retrieve the cell pointer for the prev string in the array.
+-    SC_BASE_EXPORT JudySlot * judy_prv( Judy * judy );
++    SC_LAZYFILE_EXPORT JudySlot * judy_prv( Judy * judy );
+ 
+     /// delete the key and cell for the current stack entry.
+-    SC_BASE_EXPORT JudySlot * judy_del( Judy * judy );
++    SC_LAZYFILE_EXPORT JudySlot * judy_del( Judy * judy );
+ 
+ #ifdef __cplusplus
+ }

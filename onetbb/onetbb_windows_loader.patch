@@ -1,0 +1,15 @@
+--- a/src/tbb/dynamic_link.cpp
++++ b/src/tbb/dynamic_link.cpp
+@@ -36,6 +36,12 @@
+ #include <cstring>          // strrchr, memset
+ 
+ #if _WIN32
++    // MinGW hides this flag when NTDDI_VERSION predates Windows 10 RS1.
++    // Preserve the upstream loader policy with the documented flag value:
++    // https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexa
++    #ifndef LOAD_LIBRARY_SAFE_CURRENT_DIRS
++    #define LOAD_LIBRARY_SAFE_CURRENT_DIRS 0x00002000
++    #endif
+     // Unify system calls
+     #define dlopen( name, flags )   LoadLibraryEx( name, /*reserved*/NULL, flags )
+     #define dlsym( handle, name )   GetProcAddress( handle, name )
