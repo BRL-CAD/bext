@@ -1,0 +1,421 @@
+Subject: [PATCH 33/50] Preserve hierarchical emitter geometry and ray parameters
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 9d567b22b265835c5d12267f5b3c4d54495be8ae
+Original-Commit: 34b91f6b3e0e093a3810d7fd9540fe351a20edc9
+Original-Commit: 8580b094e9bd24fc684ac194e083b8ccd2bb303b
+
+diff --git a/src/appleseed/renderer/kernel/intersection/assemblytree.cpp b/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
+index b070a9dcd..b3a85fc5b 100644
+--- a/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
++++ b/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
+@@ -784,7 +784,9 @@ bool AssemblyLeafVisitor::visit(
+             const Vector3d object_point = obj_inst_ray.point_at(result.m_distance);
+             const Vector3d world_point = assembly_instance_transform.point_to_parent(
+                 object_instance_transform.point_to_parent(object_point));
+-            const double distance = dot(world_point - ray.m_org, ray.m_dir);
++            // EDF directions originate in float arithmetic. Preserve the ray
++            // parameter even when their promoted length is only nearly one.
++            const double distance = dot(world_point - ray.m_org, ray.m_dir) / square_norm(ray.m_dir);
+ 
+             // Keep track of the closest hit in the original world-space ray.
+             if (distance < m_shading_point.m_ray.m_tmax)
+diff --git a/src/appleseed/renderer/kernel/intersection/intersector.cpp b/src/appleseed/renderer/kernel/intersection/intersector.cpp
+index 30c4b8a3c..d85d3fbfd 100644
+--- a/src/appleseed/renderer/kernel/intersection/intersector.cpp
++++ b/src/appleseed/renderer/kernel/intersection/intersector.cpp
+@@ -398,7 +398,8 @@ void Intersector::make_triangle_shading_point(
+     const Transformd&                   assembly_instance_transform,
+     const size_t                        object_instance_index,
+     const size_t                        primitive_index,
+-    const TriangleSupportPlaneType&     triangle_support_plane) const
++    const TriangleSupportPlaneType&     triangle_support_plane,
++    const TransformSequence*            assembly_instance_transform_seq) const
+ {
+     // This helps finding bugs if make_surface_shading_point()
+     // is called on a previously used shading point.
+@@ -414,7 +415,9 @@ void Intersector::make_triangle_shading_point(
+     shading_point.m_bary = bary;
+     shading_point.m_assembly_instance = assembly_instance;
+     shading_point.m_assembly_instance_transform = assembly_instance_transform;
+-    shading_point.m_assembly_instance_transform_seq = &assembly_instance->transform_sequence();
++    shading_point.m_assembly_instance_transform_seq = assembly_instance_transform_seq
++        ? assembly_instance_transform_seq
++        : &assembly_instance->transform_sequence();
+     shading_point.m_object_instance_index = object_instance_index;
+     shading_point.m_primitive_index = primitive_index;
+     shading_point.m_triangle_support_plane = triangle_support_plane;
+@@ -462,7 +465,8 @@ void Intersector::make_procedural_surface_shading_point(
+     const size_t                        object_instance_index,
+     const size_t                        primitive_index,
+     const Vector3d&                     point,
+-    const ProceduralObject::IntersectionResult& attributes) const
++    const ProceduralObject::IntersectionResult& attributes,
++    const TransformSequence*            assembly_instance_transform_seq) const
+ {
+     // This method can reuse a previously initialized shading point.
+     debug_poison(shading_point);
+@@ -473,12 +477,14 @@ void Intersector::make_procedural_surface_shading_point(
+     assert(!shading_ray.m_has_differentials);
+     assert(is_normalized(shading_ray.m_dir));
+     shading_point.m_ray = shading_ray;
+-    shading_point.m_ray.m_tmax = dot(point - shading_ray.m_org, shading_ray.m_dir);
++    shading_point.m_ray.m_tmax = dot(point - shading_ray.m_org, shading_ray.m_dir) / square_norm(shading_ray.m_dir);
+     shading_point.m_primitive_type = ShadingPoint::PrimitiveProceduralSurface;
+     shading_point.m_bary = attributes.m_uv;
+     shading_point.m_assembly_instance = assembly_instance;
+     shading_point.m_assembly_instance_transform = assembly_instance_transform;
+-    shading_point.m_assembly_instance_transform_seq = &assembly_instance->transform_sequence();
++    shading_point.m_assembly_instance_transform_seq = assembly_instance_transform_seq
++        ? assembly_instance_transform_seq
++        : &assembly_instance->transform_sequence();
+     shading_point.m_object_instance_index = object_instance_index;
+     shading_point.m_primitive_index = primitive_index;
+ 
+diff --git a/src/appleseed/renderer/kernel/intersection/intersector.h b/src/appleseed/renderer/kernel/intersection/intersector.h
+index 70cbba994..d466593df 100644
+--- a/src/appleseed/renderer/kernel/intersection/intersector.h
++++ b/src/appleseed/renderer/kernel/intersection/intersector.h
+@@ -115,6 +115,8 @@ class Intersector
+         const ShadingRay&                   ray,
+         const ShadingPoint*                 parent_shading_point = nullptr) const;
+ 
++    // For nested instances, supply the accumulated transform sequence.
++    // It must remain alive while the manufactured shading point is used.
+     // Manufacture a triangle hit "by hand".
+     // There is no restriction placed on the shading point passed to this method.
+     // For instance it may have been previously initialized and used.
+@@ -126,7 +128,8 @@ class Intersector
+         const foundation::Transformd&       assembly_instance_transform,
+         const size_t                        object_instance_index,
+         const size_t                        primitive_index,
+-        const TriangleSupportPlaneType&     triangle_support_plane) const;
++        const TriangleSupportPlaneType&     triangle_support_plane,
++        const TransformSequence*            assembly_instance_transform_seq = nullptr) const;
+ 
+     // Manufacture a procedural surface hit "by hand".
+     // There is no restriction placed on the shading point passed to this method.
+@@ -153,7 +156,8 @@ class Intersector
+         const size_t                        object_instance_index,
+         const size_t                        primitive_index,
+         const foundation::Vector3d&         point,
+-        const ProceduralObject::IntersectionResult& attributes) const;
++        const ProceduralObject::IntersectionResult& attributes,
++        const TransformSequence*            assembly_instance_transform_seq = nullptr) const;
+ 
+     // Manufacture a volume shading point "by hand".
+     // There is no restriction placed on the shading point passed to this method.
+diff --git a/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp b/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp
+index 70ab88735..9ce33bd25 100644
+--- a/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp
++++ b/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp
+@@ -577,8 +577,8 @@ namespace
+             BDPTVertex& bdpt_vertex = vertices[0];
+             bdpt_vertex.m_beta = initial_flux;
+             bdpt_vertex.m_fwd_pdf = light_sample.m_probability;
+-            /// CONFUSE:: why geometric normal is flipped?
+-            bdpt_vertex.m_geometric_normal = -light_shading_point.get_geometric_normal();
++            // Camera connections and emission PDFs use the outward hemisphere.
++            bdpt_vertex.m_geometric_normal = light_shading_point.get_geometric_normal();
+             bdpt_vertex.m_is_light_vertex = true;
+             bdpt_vertex.m_position = light_shading_point.get_point();
+             bdpt_vertex.m_rev_pdf = 1.0;
+diff --git a/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp b/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp
+index f7efcba75..85297e2de 100644
+--- a/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp
++++ b/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp
+@@ -153,6 +153,8 @@ void LightSamplerBase::collect_emitting_shapes(
+     const TransformSequence&            transform_sequence,
+     const ShapeHandlingFunction&        shape_handling)
+ {
++    const size_t first_shape = m_emitting_shapes.size();
++
+     // Loop over the object instances of the assembly.
+     const size_t object_instance_count = assembly.object_instances().size();
+     for (size_t object_instance_index = 0; object_instance_index < object_instance_count; ++object_instance_index)
+@@ -547,6 +549,13 @@ void LightSamplerBase::collect_emitting_shapes(
+             object_area,
+             back_materials);
+     }
++
++    if (m_emitting_shapes.size() > first_shape)
++    {
++        m_emitting_shape_transforms.push_back(transform_sequence);
++        for (size_t i = first_shape; i < m_emitting_shapes.size(); ++i)
++            m_emitting_shapes[i].m_assembly_instance_transform = &m_emitting_shape_transforms.back();
++    }
+ }
+ 
+ void LightSamplerBase::collect_non_physical_lights(
+diff --git a/src/appleseed/renderer/kernel/lighting/lightsamplerbase.h b/src/appleseed/renderer/kernel/lighting/lightsamplerbase.h
+index 54aac3ec0..b9da5d662 100644
+--- a/src/appleseed/renderer/kernel/lighting/lightsamplerbase.h
++++ b/src/appleseed/renderer/kernel/lighting/lightsamplerbase.h
+@@ -39,6 +39,7 @@
+ #include "foundation/math/cdf.h"
+ 
+ // Standard headers.
++#include <deque>
+ #include <functional>
+ 
+ // Forward declarations.
+@@ -92,6 +93,9 @@ class LightSamplerBase
+     NonPhysicalLightVector                  m_non_physical_lights;
+     EmittingShapeVector                     m_emitting_shapes;
+ 
++    // Stable shared storage avoids copying an assembly transform per triangle.
++    std::deque<TransformSequence>           m_emitting_shape_transforms;
++
+     size_t                                  m_non_physical_light_count;
+ 
+     EmitterCDF                              m_non_physical_lights_cdf;
+diff --git a/src/appleseed/renderer/kernel/lighting/lighttypes.cpp b/src/appleseed/renderer/kernel/lighting/lighttypes.cpp
+index 8129c17fc..76869ddee 100644
+--- a/src/appleseed/renderer/kernel/lighting/lighttypes.cpp
++++ b/src/appleseed/renderer/kernel/lighting/lighttypes.cpp
+@@ -227,6 +227,7 @@ EmittingShape::EmittingShape(
+     m_primitive_index = primitive_index;
+     m_back_side = false;
+     m_material = material;
++    m_assembly_instance_transform = nullptr;
+     m_shape_prob = 0.0f;
+     m_average_flux = 1.0f;
+ }
+@@ -338,12 +339,15 @@ void EmittingShape::make_shading_point(
+     const Intersector&          intersector) const
+ {
+     const AssemblyInstance* instance = get_assembly_instance();
+-    const Transformd& transform = instance->transform_sequence().get_earliest_transform();
++    const TransformSequence& sequence = m_assembly_instance_transform
++        ? *m_assembly_instance_transform
++        : instance->transform_sequence();
++    const Transformd& transform = sequence.get_earliest_transform();
+     if (get_shape_type() == TriangleShape)
+     {
+         intersector.make_triangle_shading_point(shading_point, ray, param_coords,
+             instance, transform, get_object_instance_index(), get_primitive_index(),
+-            m_shape_support_plane);
++            m_shape_support_plane, &sequence);
+         return;
+     }
+ 
+@@ -370,7 +374,7 @@ void EmittingShape::make_shading_point(
+     }
+     intersector.make_procedural_surface_shading_point(shading_point, ray,
+         instance, transform, get_object_instance_index(), get_primitive_index(),
+-        ray.m_org, attributes);
++        ray.m_org, attributes, &sequence);
+ }
+ 
+ void EmittingShape::estimate_flux()
+diff --git a/src/appleseed/renderer/kernel/lighting/lighttypes.h b/src/appleseed/renderer/kernel/lighting/lighttypes.h
+index 3548e1fc3..6886110f4 100644
+--- a/src/appleseed/renderer/kernel/lighting/lighttypes.h
++++ b/src/appleseed/renderer/kernel/lighting/lighttypes.h
+@@ -229,6 +229,7 @@ class EmittingShape
+     float                       m_average_flux;                 // estimated average radiant flux in W emitted by this shape
+     float                       m_max_flux;                     // estimated maximum radiant flux in W emitted by this shape
+     const Material*             m_material;
++    const TransformSequence*    m_assembly_instance_transform; // owned by the light sampler
+     foundation::AABB3d          m_bbox;
+     foundation::Vector3d        m_centroid;
+ 
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+index 405aac926..830bb7de8 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+@@ -1173,7 +1173,7 @@ void ShadingPoint::initialize_osl_shader_globals(
+ 
+ bool ShadingPoint::OSLObjectTransformInfo::is_animated() const
+ {
+-    return !m_assembly_instance_transform->empty();
++    return m_assembly_instance_transform->size() > 1;
+ }
+ 
+ OSL::Matrix44 ShadingPoint::OSLObjectTransformInfo::get_transform() const
+@@ -1182,8 +1182,8 @@ OSL::Matrix44 ShadingPoint::OSLObjectTransformInfo::get_transform() const
+ 
+     const Transformd& assembly_xform = m_assembly_instance_transform->get_earliest_transform();
+     const Transformd::MatrixType m(
+-        m_object_instance_transform->get_local_to_parent() *
+-        assembly_xform.get_local_to_parent());
++        assembly_xform.get_local_to_parent() *
++        m_object_instance_transform->get_local_to_parent());
+ 
+     return Matrix4f(m);
+ }
+@@ -1192,8 +1192,8 @@ OSL::Matrix44 ShadingPoint::OSLObjectTransformInfo::get_transform(const float t)
+ {
+     const Transformd assembly_xform = m_assembly_instance_transform->evaluate(t);
+     const Transformd::MatrixType m(
+-        m_object_instance_transform->get_local_to_parent() *
+-        assembly_xform.get_local_to_parent());
++        assembly_xform.get_local_to_parent() *
++        m_object_instance_transform->get_local_to_parent());
+ 
+     return Matrix4f(m);
+ }
+diff --git a/src/appleseed/renderer/meta/tests/test_intersector.cpp b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+index 1cb863a68..cb0ef79eb 100644
+--- a/src/appleseed/renderer/meta/tests/test_intersector.cpp
++++ b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+@@ -712,6 +712,156 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+         check(flipped, true, true);
+     }
+ 
++    template <typename Factory>
++    struct NestedEmitterScene : EmitterScene<Factory>
++    {
++        NestedEmitterScene()
++        {
++            // Each level rotates a different axis, so using only the leaf
++            // instance transform cannot reproduce the world-space shader hit.
++            const Transformd transforms[] = {
++                Transformd::from_local_to_parent(Matrix4d::make_translation(Vector3d(7.0, -3.0, 4.0)) *
++                    Matrix4d::make_rotation_z(0.6) * Matrix4d::make_scaling(Vector3d(1.25))),
++                Transformd::from_local_to_parent(Matrix4d::make_translation(Vector3d(-2.0, 8.0, -5.0)) *
++                    Matrix4d::make_rotation_y(-0.3) * Matrix4d::make_scaling(Vector3d(0.9)))};
++            const char* assembly_name = "assembly";
++            const char* instance_name = "assembly_instance";
++            const char* parents[] = {"parent", "outer"};
++            const char* instances[] = {"parent_instance", "outer_instance"};
++            for (size_t level = 0; level < 2; ++level)
++            {
++                auto_release_ptr<Assembly> parent(AssemblyFactory().create(parents[level], ParamArray()));
++                parent->assembly_instances().insert(this->m_scene.assembly_instances().remove(
++                    this->m_scene.assembly_instances().get_by_name(instance_name)));
++                parent->assemblies().insert(this->m_scene.assemblies().remove(
++                    this->m_scene.assemblies().get_by_name(assembly_name)));
++                auto_release_ptr<AssemblyInstance> instance(AssemblyInstanceFactory::create(
++                    instances[level], ParamArray(), parents[level]));
++                instance->transform_sequence().set_transform(0.0f, transforms[level]);
++                this->m_scene.assembly_instances().insert(instance);
++                this->m_scene.assemblies().insert(parent);
++                this->m_assembly_transform = this->m_assembly_transform * transforms[level];
++                assembly_name = parents[level];
++                instance_name = instances[level];
++            }
++        }
++    };
++
++    TEST_CASE(SampledEmitters_NestedAssembliesPreserveShaderHitAttributes)
++    {
++        const double PointTolerance = 1.0e-10;
++        const float UVTolerance = 1.0e-6f;
++        const auto check = [&](auto& fixture)
++        {
++            ForwardLightSampler forward(fixture.m_scene);
++            BackwardLightSampler backward(fixture.m_scene);
++            ASSERT_TRUE(forward.has_lights());
++            const ShadingRay::Time time = ShadingRay::Time::create_with_normalized_time(0.37f, -0.2f, 0.8f);
++            for (const Vector3f s : {Vector3f(0.31f, 0.17f, 0.33f), Vector3f(0.87f, 0.71f, 0.62f)})
++            {
++                LightSample sample;
++                forward.sample(time, s, sample);
++                ASSERT_TRUE(sample.m_shape != nullptr);
++                const Vector3d normal = normalize(sample.m_geometric_normal);
++                const ShadingRay ray(sample.m_point + 0.5 * normal, -normal,
++                    time, VisibilityFlags::CameraRay, 0);
++                ShadingPoint traced, sampled;
++                ASSERT_TRUE(fixture.m_intersector.trace(ray, traced));
++                sample.make_shading_point(sampled, normal, fixture.m_intersector);
++                ShadingPoint copy(sampled);
++                for (const ShadingPoint* actual : {&sampled, &copy})
++                {
++                    EXPECT_FEQ_EPS(traced.get_point(), actual->get_point(), PointTolerance);
++                    EXPECT_FEQ_EPS(traced.get_uv(0), actual->get_uv(0), UVTolerance);
++                    EXPECT_FEQ_EPS(traced.get_geometric_normal(), actual->get_geometric_normal(), PointTolerance);
++                    EXPECT_FEQ_EPS(traced.get_shading_normal(), actual->get_shading_normal(), PointTolerance);
++                    EXPECT_FEQ_EPS(traced.get_dpdu(0), actual->get_dpdu(0), PointTolerance);
++                    EXPECT_FEQ_EPS(traced.get_dpdv(0), actual->get_dpdv(0), PointTolerance);
++                    EXPECT_FEQ_EPS(traced.get_dndu(0), actual->get_dndu(0), PointTolerance);
++                    EXPECT_FEQ_EPS(traced.get_dndv(0), actual->get_dndv(0), PointTolerance);
++                    EXPECT_EQ(traced.get_side(), actual->get_side());
++                    EXPECT_EQ(traced.get_material(), actual->get_material());
++                    EXPECT_FEQ_EPS(traced.get_assembly_instance_transform().point_to_parent(Vector3d(0.0)),
++                        actual->get_assembly_instance_transform().point_to_parent(Vector3d(0.0)), PointTolerance);
++                    EXPECT_FEQ_EPS(sample.m_probability, forward.evaluate_pdf(*actual), 1.0e-8f);
++                    EXPECT_FEQ_EPS(sample.m_probability, backward.evaluate_pdf(*actual, traced), 1.0e-8f);
++                }
++            }
++        };
++        Fixture<false, NestedEmitterScene<SphereObjectFactory>> sphere;
++        check(sphere);
++        Fixture<false, NestedEmitterScene<RectangleObjectFactory>> rectangle;
++        check(rectangle);
++        Fixture<false, NestedEmitterScene<DiskObjectFactory>> disk;
++        check(disk);
++    }
++
++    TEST_CASE(OSLObjectTransforms_RespectHierarchyAndStaticLookup)
++    {
++        const double TransformTolerance = 1.0e-4;
++        const Transformd object = Transformd::from_local_to_parent(
++            Matrix4d::make_translation(Vector3d(2.0, -1.0, 3.0)) *
++            Matrix4d::make_rotation_y(-0.37) * Matrix4d::make_scaling(Vector3d(2.0, 3.0, 4.0)));
++        const Transformd start = Transformd::from_local_to_parent(
++            Matrix4d::make_translation(Vector3d(-4.0, 5.0, 6.0)) * Matrix4d::make_rotation_x(0.4));
++        const Transformd end = Transformd::from_local_to_parent(
++            Matrix4d::make_translation(Vector3d(7.0, -2.0, 1.0)) * Matrix4d::make_rotation_z(-0.6));
++        const Vector3d local_points[] = {Vector3d(0.0), Vector3d(0.3, -0.7, 0.9)};
++        const auto apply = [](const OSL::Matrix44& matrix, const Vector3d& p)
++        {
++            OSL::Vec3 result;
++            matrix.multVecMatrix(OSL::Vec3(static_cast<float>(p.x), static_cast<float>(p.y),
++                static_cast<float>(p.z)), result);
++            return Vector3d(result.x, result.y, result.z);
++        };
++        for (const size_t keys : {size_t(0), size_t(1), size_t(2)})
++        {
++            TransformSequence assembly;
++            if (keys > 0)
++                assembly.set_transform(0.0f, start);
++            if (keys > 1)
++                assembly.set_transform(1.0f, end);
++            ASSERT_TRUE(assembly.prepare());
++            const ShadingPoint::OSLObjectTransformInfo info = {&assembly, &object};
++            EXPECT_EQ(keys > 1, info.is_animated());
++            for (const float time : {0.0f, 0.37f, 1.0f})
++            {
++                const Transformd assembly_transform = assembly.evaluate(time);
++                for (const Vector3d& local : local_points)
++                {
++                    const Vector3d world = assembly_transform.point_to_parent(object.point_to_parent(local));
++                    EXPECT_FEQ_EPS(world, apply(info.get_transform(time), local), TransformTolerance);
++                    EXPECT_FEQ_EPS(local, apply(info.get_inverse_transform(time), world), TransformTolerance);
++                    EXPECT_FEQ_EPS(local, apply(info.get_inverse_transform(time),
++                        apply(info.get_transform(time), local)), TransformTolerance);
++                    if (!info.is_animated())
++                    {
++                        EXPECT_FEQ_EPS(world, apply(info.get_transform(), local), TransformTolerance);
++                        EXPECT_FEQ_EPS(local, apply(info.get_inverse_transform(), world), TransformTolerance);
++                    }
++                }
++            }
++        }
++    }
++
++    TEST_CASE_F(ProceduralHitDistance_PreservesFloatDirectionParameter, ProceduralFixture)
++    {
++        ShadingRay ray = ray_to_plane(false);
++        // Reproduce the float-to-double promotion used by sampled EDF rays.
++        ray.m_dir = Vector3d(Vector3f(ray.m_dir));
++        const Vector3d point = m_assembly_transform.point_to_parent(
++            m_object_transform.point_to_parent(Vector3d(0.0)));
++        const Vector3d normal = world_normal();
++        const double expected = dot(point - ray.m_org, normal) / dot(ray.m_dir, normal);
++        ShadingPoint hit;
++        ASSERT_TRUE(m_intersector.trace(ray, hit));
++        EXPECT_FEQ_EPS(expected, hit.get_distance(), 1.0e-11);
++        EXPECT_FEQ_EPS(ray.point_at(expected), hit.get_point(), 1.0e-11);
++        m_intersector.advance_past_hit(ray, hit);
++        ShadingPoint beyond;
++        EXPECT_FALSE(m_intersector.trace(ray, beyond));
++    }
++
+     TEST_CASE(DiskIntersection_ParallelMissPreservesOutputsAndAcceptsNonunitRays)
+     {
+         double distance = -1.0, u = -1.0, v = -1.0;

@@ -1,0 +1,1344 @@
+Subject: [PATCH 18/50] Preserve procedural hit data, derivatives and ownership
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 59742e3a447afbdda04a9988e03f8ce61f0f66ad
+Original-Commit: 0dad2e786b3563280fe80839dbee922762562747
+Original-Commit: bfa681890662bddedc3a16f0e6e93df6c927c93d
+Original-Commit: 34ebfbea7e025451feb5d4acd04973e45c962fd5
+Original-Commit: b7eb39ba7a74142f5c39dc5e40acdb32c9e526b3
+Original-Commit: 87a899d89508f7fceaac013f04fde5fc21a5ee19
+
+diff --git a/src/appleseed/renderer/kernel/intersection/assemblytree.cpp b/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
+index 0834630ca..8a1cfbbce 100644
+--- a/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
++++ b/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
+@@ -104,7 +104,7 @@ size_t AssemblyTree::get_memory_size() const
+           TreeType::get_memory_size()
+         - sizeof(*static_cast<const TreeType*>(this))
+         + sizeof(*this)
+-        + m_items.capacity() * sizeof(AssemblyInstance*)
++        + m_items.capacity() * sizeof(Item)
+         + m_assembly_versions.size() * sizeof(std::pair<UniqueID, VersionID>);
+ }
+ 
+@@ -199,9 +199,6 @@ void AssemblyTree::rebuild_assembly_tree()
+             &temp_assembly_instances[0],
+             &ordering[0],
+             ordering.size());
+-
+-        // Store the items in the tree leaves whenever possible.
+-        store_items_in_leaves(statistics);
+     }
+ 
+     // Print assembly tree statistics.
+@@ -211,39 +208,6 @@ void AssemblyTree::rebuild_assembly_tree()
+             statistics).to_string().c_str());
+ }
+ 
+-void AssemblyTree::store_items_in_leaves(Statistics& statistics)
+-{
+-    size_t leaf_count = 0;
+-    size_t fat_leaf_count = 0;
+-
+-    const size_t node_count = m_nodes.size();
+-
+-    for (size_t i = 0; i < node_count; ++i)
+-    {
+-        NodeType& node = m_nodes[i];
+-
+-        if (node.is_leaf())
+-        {
+-            ++leaf_count;
+-
+-            const size_t item_count = node.get_item_count();
+-
+-            if (item_count <= NodeType::MaxUserDataSize / sizeof(Item))
+-            {
+-                ++fat_leaf_count;
+-
+-                const size_t item_begin = node.get_item_index();
+-                Item* user_data = &node.get_user_data<Item>();
+-
+-                for (size_t j = 0; j < item_count; ++j)
+-                    user_data[j] = m_items[item_begin + j];
+-            }
+-        }
+-    }
+-
+-    statistics.insert_percent("fat leaves", fat_leaf_count, leaf_count);
+-}
+-
+ void AssemblyTree::update_tree_hierarchy()
+ {
+     // Collect all assemblies in the scene.
+@@ -614,10 +578,12 @@ bool AssemblyLeafVisitor::visit(
+     // Retrieve the assembly instances for this leaf.
+     const size_t assembly_instance_index = node.get_item_index();
+     const size_t assembly_instance_count = node.get_item_count();
+-    const AssemblyTree::Item* items =
+-        assembly_instance_count <= AssemblyTree::NodeType::MaxUserDataSize / sizeof(AssemblyTree::Item)
+-            ? &node.get_user_data<AssemblyTree::Item>()     // items are stored in the leaf node
+-            : &m_tree.m_items[assembly_instance_index];     // items are stored in the tree
++    if (assembly_instance_count == 0)
++    {
++        distance = m_shading_point.m_ray.m_tmax;
++        return true;
++    }
++    const AssemblyTree::Item* items = &m_tree.m_items[assembly_instance_index];
+ 
+     for (size_t i = 0; i < assembly_instance_count; ++i)
+     {
+@@ -802,11 +768,21 @@ bool AssemblyLeafVisitor::visit(
+             ProceduralObject::IntersectionResult result;
+             object.intersect(obj_inst_ray, result);
+ 
+-            // Keep track of the closest hit.
+-            // todo: result is not in the same space as the shading point ray.
+-            if (result.m_hit && result.m_distance < m_shading_point.m_ray.m_tmax)
++            if (!result.m_hit)
++                continue;
++
++            // Preserve the hit on the ray that was actually traced. Offsetting
++            // the child origin changes both its position and its parameter.
++            const Vector3d object_point = obj_inst_ray.point_at(result.m_distance);
++            const Vector3d world_point = assembly_instance_transform.point_to_parent(
++                object_instance_transform.point_to_parent(object_point));
++            const double distance = dot(world_point - ray.m_org, ray.m_dir);
++
++            // Keep track of the closest hit in the original world-space ray.
++            if (distance < m_shading_point.m_ray.m_tmax)
+             {
+-                m_shading_point.m_ray.m_tmax = result.m_distance;
++                m_shading_point.m_ray.m_tmax = distance;
++                m_shading_point.m_procedural_point = object_point;
+                 m_shading_point.m_primitive_type = ShadingPoint::PrimitiveProceduralSurface;
+                 m_shading_point.m_bary = result.m_uv;
+                 m_shading_point.m_assembly_instance = item.m_assembly_instance;
+@@ -814,20 +790,10 @@ bool AssemblyLeafVisitor::visit(
+                 m_shading_point.m_assembly_instance_transform_seq = assembly_instance_transform_seq;
+                 m_shading_point.m_object_instance_index = object_instance_index_pair.second;
+                 m_shading_point.m_primitive_index = 0;
+-                m_shading_point.m_primitive_pa = result.m_material_slot;
+-                m_shading_point.m_geometric_normal =
+-                    normalize(
+-                        assembly_instance_transform.normal_to_parent(
+-                            object_instance_transform.normal_to_parent(
+-                                result.m_geometric_normal)));
+-                m_shading_point.m_original_shading_normal =
+-                    normalize(
+-                        assembly_instance_transform.normal_to_parent(
+-                            object_instance_transform.normal_to_parent(
+-                                result.m_shading_normal)));
+-                m_shading_point.m_uv = result.m_uv;
+-                // HasGeometricNormal and HasOriginalShadingNormal shading point members aren't set
+-                // so that the shading point can compute the hit side by itself.
++                m_shading_point.m_procedural_geometric_normal = result.m_geometric_normal;
++                m_shading_point.m_procedural_shading_normal = result.m_shading_normal;
++                m_shading_point.m_procedural_material_slot = result.m_material_slot;
++                m_shading_point.m_procedural_derivatives = result.m_derivatives;
+             }
+         }
+     }
+@@ -854,10 +820,12 @@ bool AssemblyLeafProbeVisitor::visit(
+ {
+     // Retrieve the assembly instances for this leaf.
+     const size_t assembly_instance_count = node.get_item_count();
+-    const AssemblyTree::Item* items =
+-        assembly_instance_count <= AssemblyTree::NodeType::MaxUserDataSize / sizeof(AssemblyTree::Item)
+-            ? &node.get_user_data<AssemblyTree::Item>()     // items are stored in the leaf node
+-            : &m_tree.m_items[node.get_item_index()];       // items are stored in the tree
++    if (assembly_instance_count == 0)
++    {
++        distance = ray.m_tmax;
++        return true;
++    }
++    const AssemblyTree::Item* items = &m_tree.m_items[node.get_item_index()];
+ 
+     for (size_t i = 0; i < assembly_instance_count; ++i)
+     {
+diff --git a/src/appleseed/renderer/kernel/intersection/assemblytree.h b/src/appleseed/renderer/kernel/intersection/assemblytree.h
+index baa5daa81..04d430981 100644
+--- a/src/appleseed/renderer/kernel/intersection/assemblytree.h
++++ b/src/appleseed/renderer/kernel/intersection/assemblytree.h
+@@ -127,6 +127,7 @@ class AssemblyTree
+     typedef std::map<foundation::UniqueID, foundation::VersionID> AssemblyVersionMap;
+ 
+     const Scene&                    m_scene;
++    // Items own transform sequences; raw BVH node storage cannot destroy them.
+     ItemVector                      m_items;
+     AssemblyVersionMap              m_assembly_versions;
+ 
+@@ -151,7 +152,6 @@ class AssemblyTree
+         AABBVector&                             assembly_instance_bboxes);
+ 
+     void rebuild_assembly_tree();
+-    void store_items_in_leaves(foundation::Statistics& statistics);
+ 
+     void update_tree_hierarchy();
+     void collect_unique_assemblies(AssemblyVector& assemblies) const;
+diff --git a/src/appleseed/renderer/kernel/intersection/intersector.cpp b/src/appleseed/renderer/kernel/intersection/intersector.cpp
+index a46ee2f98..4b1b7bafb 100644
+--- a/src/appleseed/renderer/kernel/intersection/intersector.cpp
++++ b/src/appleseed/renderer/kernel/intersection/intersector.cpp
+@@ -283,18 +283,17 @@ void Intersector::make_procedural_surface_shading_point(
+     const Vector3d&                     dpdu,
+     const Vector3d&                     dpdv) const
+ {
+-    // This helps finding bugs if make_surface_shading_point()
+-    // is called on a previously used shading point.
++    // This method can reuse a previously initialized shading point.
+     debug_poison(shading_point);
+-
++    shading_point.m_members = 0;
+     shading_point.m_texture_cache = &m_texture_cache;
+     shading_point.m_scene = &m_trace_context.get_scene();
+ 
+-    assert(shading_ray.m_has_differentials == false);
++    assert(!shading_ray.m_has_differentials);
++    assert(is_normalized(shading_ray.m_dir));
+     shading_point.m_ray = shading_ray;
+-
++    shading_point.m_ray.m_tmax = dot(point - shading_ray.m_org, shading_ray.m_dir);
+     shading_point.m_primitive_type = ShadingPoint::PrimitiveProceduralSurface;
+-
+     shading_point.m_bary = uv;
+     shading_point.m_assembly_instance = assembly_instance;
+     shading_point.m_assembly_instance_transform = assembly_instance_transform;
+@@ -302,31 +301,36 @@ void Intersector::make_procedural_surface_shading_point(
+     shading_point.m_object_instance_index = object_instance_index;
+     shading_point.m_primitive_index = primitive_index;
+ 
+-    shading_point.m_point = point;
+-    shading_point.m_members |= ShadingPoint::HasPoint;
+-
+-    assert(is_normalized(normal));
+-    shading_point.m_geometric_normal = shading_point.m_original_shading_normal = normal;
+-    shading_point.m_members |= ShadingPoint::HasGeometricNormal | ShadingPoint::HasOriginalShadingNormal;
+-
+-    shading_point.m_shading_basis = Basis3d(
+-        normal,
+-        normalize(dpdu),
+-        normalize(dpdv));
+-    shading_point.m_members |= ShadingPoint::HasShadingBasis;
++    // Keep primary normals in object space so copies can rebuild their caches.
++    const ObjectInstance* object_instance =
++        assembly_instance->get_assembly().object_instances().get_by_index(object_instance_index);
++    const Vector3d object_normal = normalize(
++        object_instance->get_transform().normal_to_local(
++            assembly_instance_transform.normal_to_local(normal)));
++    shading_point.m_procedural_point = object_instance->get_transform().point_to_local(
++        assembly_instance_transform.point_to_local(point));
++    shading_point.m_procedural_geometric_normal = object_normal;
++    shading_point.m_procedural_shading_normal = object_normal;
++    shading_point.m_procedural_material_slot = 0;
++    shading_point.m_procedural_derivatives.m_valid = true;
++    shading_point.m_procedural_derivatives.m_dndu =
++        shading_point.m_procedural_derivatives.m_dndv = Vector3d(0.0);
++    shading_point.m_procedural_derivatives.m_dpdu =
++        object_instance->get_transform().vector_to_local(
++            assembly_instance_transform.vector_to_local(dpdu));
++    shading_point.m_procedural_derivatives.m_dpdv =
++        object_instance->get_transform().vector_to_local(
++            assembly_instance_transform.vector_to_local(dpdv));
+ 
++    shading_point.m_point = point;
+     shading_point.m_uv = uv;
+-    shading_point.m_members = ShadingPoint::HasUV0;
+-
+-    shading_point.m_dpdu = dpdu;
+-    shading_point.m_dpdu = dpdv;
+-    shading_point.m_members |= ShadingPoint::HasWorldSpaceDerivatives;
++    shading_point.m_members |= ShadingPoint::HasPoint | ShadingPoint::HasUV0;
+ 
+     shading_point.m_dpdx = Vector3d(0.0);
+     shading_point.m_dpdy = Vector3d(0.0);
+-    shading_point.m_duvdx = Vector2f(0.0);
+-    shading_point.m_duvdy = Vector2f(0.0);
+-    shading_point.m_members = ShadingPoint::HasScreenSpaceDerivatives;
++    shading_point.m_duvdx = Vector2f(0.0f);
++    shading_point.m_duvdy = Vector2f(0.0f);
++    shading_point.m_members |= ShadingPoint::HasScreenSpaceDerivatives;
+ }
+ 
+ void Intersector::make_volume_shading_point(
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+index d2dec6b48..e8f7ec4c8 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+@@ -52,6 +52,7 @@
+ 
+ // Standard headers.
+ #include <algorithm>
++#include <cmath>
+ #include <utility>
+ 
+ using namespace foundation;
+@@ -87,12 +88,14 @@ void ShadingPoint::flip_side()
+     const double t = 2.0 * m_ray.m_tmax;
+ 
+     m_ray.m_org = m_ray.point_at(t);
+-    m_ray.m_rx_org = m_ray.m_rx_org + t * m_ray.m_rx_dir;
+-    m_ray.m_ry_org = m_ray.m_ry_org + t * m_ray.m_ry_dir;
+-
+     m_ray.m_dir = -m_ray.m_dir;
+-    m_ray.m_rx_dir = -m_ray.m_rx_dir;
+-    m_ray.m_ry_dir = -m_ray.m_ry_dir;
++    if (m_ray.m_has_differentials)
++    {
++        m_ray.m_rx_org = m_ray.m_rx_org + t * m_ray.m_rx_dir;
++        m_ray.m_ry_org = m_ray.m_ry_org + t * m_ray.m_ry_dir;
++        m_ray.m_rx_dir = -m_ray.m_rx_dir;
++        m_ray.m_ry_dir = -m_ray.m_ry_dir;
++    }
+ 
+     m_members = 0;
+ 
+@@ -171,7 +174,7 @@ void ShadingPoint::fetch_source_geometry() const
+         break;
+ 
+       case PrimitiveProceduralSurface:
+-        // Nothing to do.
++        m_primitive_pa = m_procedural_material_slot;
+         break;
+ 
+       case PrimitiveCurve1:
+@@ -417,13 +420,15 @@ void ShadingPoint::refine_and_offset() const
+               // Compute the location of the intersection point in object space.
+               refine_space_ray = m_object_instance->get_transform().to_local(refine_space_ray);
+ 
+-              // Offset the ray origin to the hit point.
+-              refine_space_ray.m_org += refine_space_ray.m_tmax * refine_space_ray.m_dir;
++              // The traced ray can start at an offset parent point. Its hit
++              // cannot be reconstructed from the original world-space ray.
++              refine_space_ray.m_org = m_procedural_point;
+ 
+               // Compute the offset points and geometric normal in object space.
+               const ProceduralObject& object = static_cast<const ProceduralObject&>(get_object());
+               object.refine_and_offset(
+                   refine_space_ray,
++                  m_procedural_geometric_normal,
+                   m_refine_space_front_point,
+                   m_refine_space_back_point,
+                   m_refine_space_geo_normal);
+@@ -546,11 +551,30 @@ void ShadingPoint::compute_world_space_partial_derivatives() const
+ 
+       case PrimitiveProceduralSurface:
+         {
+-            // todo: fix.
+-            const Basis3d basis(m_original_shading_normal);
+-            m_dpdu = basis.get_tangent_u();
+-            m_dpdv = basis.get_tangent_v();
+-            m_dndu = m_dndv = Vector3d(0.0);
++            if (!m_procedural_derivatives.m_valid)
++            {
++                m_dpdu = m_dpdv = m_dndu = m_dndv = Vector3d(0.0);
++                break;
++            }
++
++            const Transformd& object_transform = m_object_instance->get_transform();
++            m_dpdu = m_assembly_instance_transform.vector_to_parent(
++                object_transform.vector_to_parent(m_procedural_derivatives.m_dpdu));
++            m_dpdv = m_assembly_instance_transform.vector_to_parent(
++                object_transform.vector_to_parent(m_procedural_derivatives.m_dpdv));
++
++            const Vector3d raw_normal = m_assembly_instance_transform.normal_to_parent(
++                object_transform.normal_to_parent(m_procedural_shading_normal));
++            const double normal_length = norm(raw_normal);
++            const Vector3d& normal = get_original_shading_normal();
++            const double sign = dot(raw_normal, normal) < 0.0 ? -1.0 : 1.0;
++            const Vector3d du = m_assembly_instance_transform.normal_to_parent(
++                object_transform.normal_to_parent(m_procedural_derivatives.m_dndu));
++            const Vector3d dv = m_assembly_instance_transform.normal_to_parent(
++                object_transform.normal_to_parent(m_procedural_derivatives.m_dndv));
++            // Differentiate normalization as well as the inverse-transpose transform.
++            m_dndu = (du - normal * dot(normal, du)) * (sign / normal_length);
++            m_dndv = (dv - normal * dot(normal, dv)) * (sign / normal_length);
+         }
+         break;
+ 
+@@ -597,7 +621,8 @@ void ShadingPoint::compute_screen_space_partial_derivatives() const
+     }
+ 
+     const Vector3d& p = get_point();
+-    const Vector3d& n = get_original_shading_normal();
++    const Vector3d& n = m_primitive_type == PrimitiveProceduralSurface
++        ? get_geometric_normal() : get_original_shading_normal();
+ 
+     double tx, ty;
+     if (!intersect_ray_plane(m_ray.m_rx_org, m_ray.m_rx_dir, p, n, tx) ||
+@@ -622,35 +647,24 @@ void ShadingPoint::compute_screen_space_partial_derivatives() const
+     const Vector3d& dpdu = get_dpdu(0);
+     const Vector3d& dpdv = get_dpdv(0);
+ 
+-    const Vector2f plane_dpdu(
+-        static_cast<float>(dpdu[axis0]),
+-        static_cast<float>(dpdu[axis1]));
+-    const Vector2f plane_dpdv(
+-        static_cast<float>(dpdv[axis0]),
+-        static_cast<float>(dpdv[axis1]));
+-
+-    const float d = det(plane_dpdu, plane_dpdv);
+-
+-    if (d == 0.0f)
++    // Keep the solve in world-space precision, then convert the UV result.
++    const Vector2d plane_dpdu(dpdu[axis0], dpdu[axis1]);
++    const Vector2d plane_dpdv(dpdv[axis0], dpdv[axis1]);
++    const double d = det(plane_dpdu, plane_dpdv);
++    if (d == 0.0 || !std::isfinite(d))
+     {
+         m_duvdx = Vector2f(0.0f);
+         m_duvdy = Vector2f(0.0f);
+         return;
+     }
+ 
+-    const Vector2f plane_dpdx(
+-        static_cast<float>(m_dpdx[axis0]),
+-        static_cast<float>(m_dpdx[axis1]));
+-    const Vector2f plane_dpdy(
+-        static_cast<float>(m_dpdy[axis0]),
+-        static_cast<float>(m_dpdy[axis1]));
+-
+-    const float rcp_d = 1.0f / d;
+-
+-    m_duvdx[0] = det(plane_dpdx, plane_dpdv) * rcp_d;   // dudx
+-    m_duvdx[1] = det(plane_dpdu, plane_dpdx) * rcp_d;   // dvdx
+-    m_duvdy[0] = det(plane_dpdy, plane_dpdv) * rcp_d;   // dudy
+-    m_duvdy[1] = det(plane_dpdu, plane_dpdy) * rcp_d;   // dvdy
++    const Vector2d plane_dpdx(m_dpdx[axis0], m_dpdx[axis1]);
++    const Vector2d plane_dpdy(m_dpdy[axis0], m_dpdy[axis1]);
++    const double rcp_d = 1.0 / d;
++    m_duvdx[0] = static_cast<float>(det(plane_dpdx, plane_dpdv) * rcp_d);
++    m_duvdx[1] = static_cast<float>(det(plane_dpdu, plane_dpdx) * rcp_d);
++    m_duvdy[0] = static_cast<float>(det(plane_dpdy, plane_dpdv) * rcp_d);
++    m_duvdy[1] = static_cast<float>(det(plane_dpdu, plane_dpdy) * rcp_d);
+ }
+ 
+ void ShadingPoint::compute_normals() const
+@@ -664,7 +678,12 @@ void ShadingPoint::compute_normals() const
+         break;
+ 
+       case PrimitiveProceduralSurface:
+-        // Nothing to do.
++        m_geometric_normal = normalize(
++            m_assembly_instance_transform.normal_to_parent(
++                m_object_instance->get_transform().normal_to_parent(m_procedural_geometric_normal)));
++        m_original_shading_normal = normalize(
++            m_assembly_instance_transform.normal_to_parent(
++                m_object_instance->get_transform().normal_to_parent(m_procedural_shading_normal)));
+         break;
+ 
+       case PrimitiveCurve1:
+@@ -799,7 +818,9 @@ void ShadingPoint::compute_shading_basis() const
+         switch (material->get_render_data().m_default_tangent_mode)
+         {
+           case Material::RenderData::DefaultTangentMode::UV:
+-            tangent = normalize(get_dpdu(0));
++            tangent = get_dpdu(0);
++            if (square_norm(tangent) > 0.0)
++                tangent = normalize(tangent);
+             break;
+ 
+           case Material::RenderData::DefaultTangentMode::LocalX:
+@@ -1228,6 +1249,11 @@ void PoisonImpl<renderer::ShadingPoint>::do_poison(renderer::ShadingPoint& point
+     always_poison(point.m_object_instance_index);
+     always_poison(point.m_primitive_index);
+     always_poison(point.m_triangle_support_plane);
++    always_poison(point.m_procedural_point);
++    always_poison(point.m_procedural_geometric_normal);
++    always_poison(point.m_procedural_shading_normal);
++    always_poison(point.m_procedural_material_slot);
++    point.m_procedural_derivatives = renderer::ProceduralObject::SurfaceDerivatives();
+ 
+     always_poison(point.m_members);
+ 
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.h b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+index ada7d858f..21c1fbba2 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.h
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+@@ -36,6 +36,7 @@
+ #include "renderer/kernel/tessellation/statictessellation.h"
+ #include "renderer/modeling/material/material.h"
+ #include "renderer/modeling/object/curveobject.h"
++#include "renderer/modeling/object/proceduralobject.h"
+ #include "renderer/modeling/object/triangle.h"
+ #include "renderer/modeling/scene/assembly.h"
+ #include "renderer/modeling/scene/assemblyinstance.h"
+@@ -300,6 +301,11 @@ class ShadingPoint
+     size_t                              m_object_instance_index;            // index of the object instance that was hit
+     size_t                              m_primitive_index;                  // index of the hit primitive
+     TriangleSupportPlaneType            m_triangle_support_plane;           // support plane of the hit triangle
++    foundation::Vector3d                m_procedural_point;                 // object space hit from the traced, offset ray
++    foundation::Vector3d                m_procedural_geometric_normal;      // object space, before side adjustment
++    foundation::Vector3d                m_procedural_shading_normal;        // object space, before side adjustment
++    std::uint32_t                       m_procedural_material_slot;
++    ProceduralObject::SurfaceDerivatives m_procedural_derivatives;
+ 
+     // Flags to keep track of which on-demand results have been computed and cached.
+     enum Members
+@@ -431,6 +437,14 @@ inline ShadingPoint::ShadingPoint(const ShadingPoint& rhs)
+   , m_triangle_support_plane(rhs.m_triangle_support_plane)
+   , m_members(0)
+ {
++    if (m_primitive_type == PrimitiveProceduralSurface)
++    {
++        m_procedural_point = rhs.m_procedural_point;
++        m_procedural_geometric_normal = rhs.m_procedural_geometric_normal;
++        m_procedural_shading_normal = rhs.m_procedural_shading_normal;
++        m_procedural_material_slot = rhs.m_procedural_material_slot;
++        m_procedural_derivatives = rhs.m_procedural_derivatives;
++    }
+ }
+ 
+ inline ShadingPoint& ShadingPoint::operator=(const ShadingPoint& rhs)
+@@ -447,6 +461,14 @@ inline ShadingPoint& ShadingPoint::operator=(const ShadingPoint& rhs)
+     m_primitive_index = rhs.m_primitive_index;
+     m_triangle_support_plane = rhs.m_triangle_support_plane;
+     m_members = 0;
++    if (m_primitive_type == PrimitiveProceduralSurface)
++    {
++        m_procedural_point = rhs.m_procedural_point;
++        m_procedural_geometric_normal = rhs.m_procedural_geometric_normal;
++        m_procedural_shading_normal = rhs.m_procedural_shading_normal;
++        m_procedural_material_slot = rhs.m_procedural_material_slot;
++        m_procedural_derivatives = rhs.m_procedural_derivatives;
++    }
+     return *this;
+ }
+ 
+@@ -542,7 +564,7 @@ inline const foundation::Vector2f& ShadingPoint::get_uv(const size_t uvset) cons
+             break;
+ 
+           case PrimitiveProceduralSurface:
+-            // Nothing to do.
++            m_uv = m_bary;
+             break;
+ 
+           case PrimitiveCurve1:
+@@ -594,7 +616,10 @@ inline const foundation::Vector3d& ShadingPoint::get_point() const
+ 
+     if (!(m_members & HasPoint))
+     {
+-        m_point = m_ray.point_at(m_ray.m_tmax);
++        m_point = m_primitive_type == PrimitiveProceduralSurface
++            ? m_assembly_instance_transform.point_to_parent(
++                get_object_instance().get_transform().point_to_parent(m_procedural_point))
++            : m_ray.point_at(m_ray.m_tmax);
+         m_members |= HasPoint;
+     }
+ 
+diff --git a/src/appleseed/renderer/meta/tests/test_intersector.cpp b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+index b7e39e6b2..8b3b4f4c6 100644
+--- a/src/appleseed/renderer/meta/tests/test_intersector.cpp
++++ b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+@@ -36,6 +36,10 @@
+ #include "renderer/kernel/texturing/texturecache.h"
+ #include "renderer/kernel/texturing/texturestore.h"
+ #include "renderer/modeling/object/object.h"
++#include "renderer/modeling/object/diskobject.h"
++#include "renderer/modeling/object/rectangleobject.h"
++#include "renderer/modeling/object/sphereobject.h"
++#include "renderer/modeling/object/proceduralobject.h"
+ #include "renderer/modeling/scene/assembly.h"
+ #include "renderer/modeling/scene/assemblyinstance.h"
+ #include "renderer/modeling/scene/containers.h"
+@@ -48,10 +52,15 @@
+ // appleseed.foundation headers.
+ #include "foundation/containers/dictionary.h"
+ #include "foundation/math/matrix.h"
++#include "foundation/math/scalar.h"
+ #include "foundation/math/transform.h"
+ #include "foundation/math/vector.h"
+ #include "foundation/memory/autoreleaseptr.h"
+ #include "foundation/utility/test.h"
++#include "foundation/utility/iostreamop.h"
++
++// Standard headers.
++#include <algorithm>
+ 
+ using namespace foundation;
+ using namespace renderer;
+@@ -91,9 +100,9 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+         }
+     };
+ 
+-    template <bool UseEmbree>
++    template <bool UseEmbree, typename SceneType = TestScene>
+     struct Fixture
+-      : public StaticTestSceneContext<TestScene>
++      : public StaticTestSceneContext<SceneType>
+     {
+         TraceContext    m_trace_context;
+         TextureStore    m_texture_store;
+@@ -101,8 +110,8 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+         Intersector     m_intersector;
+ 
+         Fixture()
+-          : m_trace_context(m_scene)
+-          , m_texture_store(m_scene)
++          : m_trace_context(this->m_scene)
++          , m_texture_store(this->m_scene)
+           , m_texture_cache(m_texture_store)
+           , m_intersector(m_trace_context, m_texture_cache)
+         {
+@@ -113,6 +122,483 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+         }
+     };
+ 
++    class NormalProbeObject : public ProceduralObject
++    {
++      public:
++        NormalProbeObject() : ProceduralObject("object", ParamArray()) {}
++        void release() override { delete this; }
++        const char* get_model() const override { return "normal_probe"; }
++        GAABB3 compute_local_bbox() const override { return GAABB3(GVector3(-1.0), GVector3(1.0)); }
++        size_t get_material_slot_count() const override { return 3; }
++        const char* get_material_slot(size_t) const override { return "default"; }
++        static Vector3d normal() { return normalize(Vector3d(1.0, 2.0, 3.0)); }
++        static Vector3d dpdu() { return Vector3d(4.0, -2.0, 0.0); }
++        static Vector3d dpdv() { return Vector3d(0.0, 3.0, -2.0); }
++        static constexpr double NormalSlopeU = 0.1;
++        static constexpr double NormalSlopeV = 0.2;
++        bool m_supply_derivatives = true;
++        Vector3d m_shading_offset = Vector3d(0.0);
++
++        Vector3d normal_field(const double u, const double v) const
++        {
++            return normalize(normal() + m_shading_offset + NormalSlopeU * u * dpdu() + NormalSlopeV * v * dpdv());
++        }
++
++        void intersect(const ShadingRay& ray, IntersectionResult& result) const override
++        {
++            const double denominator = dot(ray.m_dir, normal());
++            const double distance = -dot(ray.m_org, normal()) / denominator;
++            result.m_hit = distance >= ray.m_tmin && distance < ray.m_tmax;
++            if (result.m_hit)
++            {
++                result.m_distance = distance;
++                result.m_geometric_normal = normal();
++                const Vector3d p = ray.point_at(distance);
++                const double uu = dot(dpdu(), dpdu());
++                const double uv = dot(dpdu(), dpdv());
++                const double vv = dot(dpdv(), dpdv());
++                const double determinant = uu * vv - uv * uv;
++                const double u = (dot(p, dpdu()) * vv - dot(p, dpdv()) * uv) / determinant;
++                const double v = (dot(p, dpdv()) * uu - dot(p, dpdu()) * uv) / determinant;
++                const Vector3d raw_normal = normal() + m_shading_offset + NormalSlopeU * u * dpdu() + NormalSlopeV * v * dpdv();
++                const double normal_length = norm(raw_normal);
++                const Vector3d n = raw_normal / normal_length;
++                result.m_shading_normal = n;
++                result.m_uv = Vector2f(static_cast<float>(0.25 + u), static_cast<float>(0.75 + v));
++                result.m_material_slot = 2;
++                result.m_derivatives.m_valid = m_supply_derivatives;
++                result.m_derivatives.m_dpdu = dpdu();
++                result.m_derivatives.m_dpdv = dpdv();
++                const Vector3d du = NormalSlopeU * dpdu();
++                const Vector3d dv = NormalSlopeV * dpdv();
++                result.m_derivatives.m_dndu = (du - n * dot(n, du)) / normal_length;
++                result.m_derivatives.m_dndv = (dv - n * dot(n, dv)) / normal_length;
++            }
++        }
++        bool intersect(const ShadingRay& ray) const override
++        {
++            IntersectionResult result;
++            intersect(ray, result);
++            return result.m_hit;
++        }
++        mutable Vector3d m_received_normal = Vector3d(0.0);
++        void refine_and_offset(const Ray3d& ray, const Vector3d& geometric_normal,
++            Vector3d& front, Vector3d& back, Vector3d& n) const override
++        {
++            m_received_normal = geometric_normal;
++            n = faceforward(geometric_normal, ray.m_dir);
++            const double Offset = 1.0e-6;
++            front = ray.m_org + Offset * n;
++            back = ray.m_org - Offset * n;
++        }
++    };
++
++    class SlabProbeObject : public NormalProbeObject
++    {
++      public:
++        static constexpr double HalfThickness = 0.5;
++
++        void intersect(const ShadingRay& ray, IntersectionResult& result) const override
++        {
++            const Vector3d n = normal();
++            const double denominator = dot(ray.m_dir, n);
++            result.m_hit = false;
++            if (denominator == 0.0)
++                return;
++            const double origin = dot(ray.m_org, n);
++            const double first = (-HalfThickness - origin) / denominator;
++            const double second = (HalfThickness - origin) / denominator;
++            const double near_distance = std::min(first, second);
++            const double far_distance = std::max(first, second);
++            const double distance = near_distance >= ray.m_tmin ? near_distance : far_distance;
++            if (distance < ray.m_tmin || distance >= ray.m_tmax)
++                return;
++            result.m_hit = true;
++            result.m_distance = distance;
++            result.m_geometric_normal = dot(ray.point_at(distance), n) > 0.0 ? n : -n;
++            result.m_shading_normal = result.m_geometric_normal;
++            result.m_material_slot = 2;
++        }
++
++        bool intersect(const ShadingRay& ray) const override
++        {
++            IntersectionResult result;
++            intersect(ray, result);
++            return result.m_hit;
++        }
++    };
++
++    template <typename Probe = NormalProbeObject>
++    struct ProceduralTestScene : public TestSceneBase
++    {
++        NormalProbeObject* m_probe;
++        Transformd m_object_transform;
++        Transformd m_assembly_transform;
++
++        explicit ProceduralTestScene(const double scale = 1.0)
++          : m_probe(new Probe())
++          // The analytic inverse isolates tiny-scale derivatives from the
++          // generic inverse's absolute threshold for singular matrices.
++          , m_object_transform(
++                Matrix4d::make_scaling(scale * Vector3d(2.0, 3.0, 4.0)),
++                Matrix4d::make_scaling(Vector3d(0.5, 1.0 / 3.0, 0.25) / scale))
++          , m_assembly_transform(Matrix4d::make_translation(scale * Vector3d(5.0, 6.0, 7.0)))
++        {
++            auto_release_ptr<Assembly> assembly(AssemblyFactory().create("assembly", ParamArray()));
++            assembly->objects().insert(auto_release_ptr<Object>(m_probe));
++            assembly->object_instances().insert(ObjectInstanceFactory::create(
++                "object_instance", ParamArray(), "object", m_object_transform, StringDictionary()));
++            auto_release_ptr<AssemblyInstance> instance(AssemblyInstanceFactory::create(
++                "assembly_instance", ParamArray(), "assembly"));
++            instance->transform_sequence().set_transform(0.0f, m_assembly_transform);
++            m_scene.assembly_instances().insert(instance);
++            m_scene.assemblies().insert(assembly);
++        }
++
++        ShadingRay ray_to_plane(const bool back) const
++        {
++            const Vector3d n = back ? -NormalProbeObject::normal() : NormalProbeObject::normal();
++            return ShadingRay(
++                m_assembly_transform.point_to_parent(m_object_transform.point_to_parent(2.0 * n)),
++                normalize(m_assembly_transform.vector_to_parent(m_object_transform.vector_to_parent(-n))),
++                ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        }
++
++        Vector3d world_vector(const Vector3d& vector) const
++        {
++            return m_assembly_transform.vector_to_parent(m_object_transform.vector_to_parent(vector));
++        }
++
++        Vector3d world_shading_normal(const double u, const double v) const
++        {
++            return normalize(m_assembly_transform.normal_to_parent(
++                m_object_transform.normal_to_parent(m_probe->normal_field(u, v))));
++        }
++
++        Vector3d world_normal_derivative(const bool u) const
++        {
++            const double Step = 1.0e-5;
++            return u
++                ? (world_shading_normal(Step, 0.0) - world_shading_normal(-Step, 0.0)) / (2.0 * Step)
++                : (world_shading_normal(0.0, Step) - world_shading_normal(0.0, -Step)) / (2.0 * Step);
++        }
++
++        ShadingRay ray_with_differentials() const
++        {
++            const double Step = 0.01;
++            ShadingRay ray = ray_to_plane(false);
++            ray.m_has_differentials = true;
++            ray.m_rx_org = ray.m_org + Step * world_vector(NormalProbeObject::dpdu());
++            ray.m_ry_org = ray.m_org + Step * world_vector(NormalProbeObject::dpdv());
++            ray.m_rx_dir = ray.m_ry_dir = ray.m_dir;
++            return ray;
++        }
++
++        Vector3d world_normal() const
++        {
++            return normalize(m_assembly_transform.normal_to_parent(
++                m_object_transform.normal_to_parent(NormalProbeObject::normal())));
++        }
++    };
++
++    const double NormalDerivativeTolerance = 1.0e-9;
++    const double RayFootprintTolerance = 1.0e-12;
++
++    using ProceduralFixture = Fixture<false, ProceduralTestScene<>>;
++
++    struct SmallProceduralScene : ProceduralTestScene<>
++    {
++        SmallProceduralScene() : ProceduralTestScene(1.0e-25) {}
++    };
++    struct LargeProceduralScene : ProceduralTestScene<>
++    {
++        LargeProceduralScene() : ProceduralTestScene(1.0e25) {}
++    };
++    using SmallProceduralFixture = Fixture<false, SmallProceduralScene>;
++    using LargeProceduralFixture = Fixture<false, LargeProceduralScene>;
++
++    template <typename Factory>
++    struct AnalyticScene : TestSceneBase
++    {
++        ProceduralObject* m_analytic;
++        AnalyticScene()
++        {
++            auto_release_ptr<Assembly> assembly(AssemblyFactory().create("assembly", ParamArray()));
++            auto_release_ptr<Object> object = Factory().create("object",
++                ParamArray().insert("width", 4.0).insert("height", 6.0).insert("radius", 2.0));
++            m_analytic = static_cast<ProceduralObject*>(object.get());
++            assembly->objects().insert(object);
++            assembly->object_instances().insert(ObjectInstanceFactory::create(
++                "object_instance", ParamArray(), "object", Transformd::identity(), StringDictionary()));
++            m_scene.assembly_instances().insert(AssemblyInstanceFactory::create(
++                "assembly_instance", ParamArray(), "assembly"));
++            m_scene.assemblies().insert(assembly);
++        }
++    };
++    using SphereFixture = Fixture<false, AnalyticScene<SphereObjectFactory>>;
++    using RectangleFixture = Fixture<false, AnalyticScene<RectangleObjectFactory>>;
++    using DiskFixture = Fixture<false, AnalyticScene<DiskObjectFactory>>;
++
++    using SlabFixture = Fixture<false, ProceduralTestScene<SlabProbeObject>>;
++
++    TEST_CASE_F(OffsetSecondaryRay_PreservesActualHitAndLeavesClosedObject, SlabFixture)
++    {
++        ShadingPoint entry;
++        ASSERT_TRUE(m_intersector.trace(ray_to_plane(false), entry));
++        const Vector3d direction = normalize(world_vector(
++            -NormalProbeObject::normal() + 0.1 * normalize(NormalProbeObject::dpdu())));
++        const ShadingRay transmitted(entry.get_point(), direction,
++            ShadingRay::Time(), VisibilityFlags::SpecularRay, 1);
++        ShadingPoint exit;
++        ASSERT_TRUE(m_intersector.trace(transmitted, exit, &entry));
++        ShadingPoint copy(exit);
++        const Vector3d object_point = m_object_transform.point_to_local(
++            m_assembly_transform.point_to_local(exit.get_point()));
++        EXPECT_FEQ_EPS(-SlabProbeObject::HalfThickness,
++            dot(object_point, NormalProbeObject::normal()), 1.0e-12);
++        EXPECT_FEQ_EPS(exit.get_point(), copy.get_point(), 1.0e-12);
++        ShadingPoint assigned;
++        assigned = exit;
++        assigned.flip_side();
++        EXPECT_FEQ_EPS(exit.get_point(), assigned.get_point(), 1.0e-12);
++        const ShadingRay outgoing(exit.get_point(), direction,
++            ShadingRay::Time(), VisibilityFlags::SpecularRay, 2);
++        ShadingPoint background;
++        EXPECT_FALSE(m_intersector.trace(outgoing, background, &exit));
++        EXPECT_FALSE(m_intersector.trace_probe(outgoing, &exit));
++    }
++
++    TEST_CASE_F(CopyConstructor_PreservesUncachedProceduralInputs, ProceduralFixture)
++    {
++        ShadingPoint original;
++        ASSERT_TRUE(m_intersector.trace(ray_to_plane(false), original));
++        ShadingPoint copy(original);
++        EXPECT_FEQ(world_normal(), copy.get_geometric_normal());
++        EXPECT_FEQ(world_normal(), copy.get_original_shading_normal());
++        EXPECT_FEQ(Vector2f(0.25f, 0.75f), copy.get_uv(0));
++        EXPECT_EQ(size_t(2), copy.get_primitive_attribute_index());
++        EXPECT_EQ(ObjectInstance::FrontSide, copy.get_side());
++    }
++
++    TEST_CASE_F(Assignment_PreservesCachedBackFaceInputs, ProceduralFixture)
++    {
++        ShadingPoint original;
++        ASSERT_TRUE(m_intersector.trace(ray_to_plane(true), original));
++        EXPECT_FEQ(-world_normal(), original.get_geometric_normal());
++        EXPECT_EQ(ObjectInstance::BackSide, original.get_side());
++        ShadingPoint copy;
++        copy = original;
++        EXPECT_FEQ(-world_normal(), copy.get_geometric_normal());
++        EXPECT_FEQ(-world_normal(), copy.get_original_shading_normal());
++        EXPECT_EQ(ObjectInstance::BackSide, copy.get_side());
++        EXPECT_FEQ(Vector2f(0.25f, 0.75f), copy.get_uv(0));
++        EXPECT_EQ(size_t(2), copy.get_primitive_attribute_index());
++    }
++
++    TEST_CASE_F(Refine_ReceivesObjectSpaceNormalAfterBackFaceCopy, ProceduralFixture)
++    {
++        ShadingPoint original;
++        ASSERT_TRUE(m_intersector.trace(ray_to_plane(true), original));
++        EXPECT_EQ(ObjectInstance::BackSide, original.get_side());
++        ShadingPoint copy(original);
++        const ShadingRay outgoing(copy.get_point(), world_normal(),
++            ShadingRay::Time(), VisibilityFlags::ShadowRay, 1);
++        EXPECT_FALSE(m_intersector.trace_probe(outgoing, &copy));
++        EXPECT_FEQ(NormalProbeObject::normal(), m_probe->m_received_normal);
++    }
++
++    TEST_CASE_F(FlipSide_RecomputesProceduralNormalsFromIntersectionInputs, ProceduralFixture)
++    {
++        ShadingPoint point;
++        ASSERT_TRUE(m_intersector.trace(ray_to_plane(true), point));
++        EXPECT_EQ(ObjectInstance::BackSide, point.get_side());
++        point.flip_side();
++        EXPECT_EQ(ObjectInstance::FrontSide, point.get_side());
++        EXPECT_FEQ(world_normal(), point.get_geometric_normal());
++    }
++
++    TEST_CASE_F(ProceduralDerivatives_TransformPositionAndUnitNormals, ProceduralFixture)
++    {
++        ShadingPoint point;
++        ASSERT_TRUE(m_intersector.trace(ray_to_plane(false), point));
++        EXPECT_FEQ(world_vector(NormalProbeObject::dpdu()), point.get_dpdu(0));
++        EXPECT_FEQ(world_vector(NormalProbeObject::dpdv()), point.get_dpdv(0));
++        EXPECT_FEQ_EPS(world_normal_derivative(true), point.get_dndu(0), NormalDerivativeTolerance);
++        EXPECT_FEQ_EPS(world_normal_derivative(false), point.get_dndv(0), NormalDerivativeTolerance);
++        EXPECT_FEQ(0.0, dot(point.get_dndu(0), point.get_original_shading_normal()));
++    }
++
++    TEST_CASE_F(ProceduralDerivatives_CopyAssignmentAndSideChangesPreserveInputs, ProceduralFixture)
++    {
++        ShadingPoint original;
++        ASSERT_TRUE(m_intersector.trace(ray_to_plane(true), original));
++        ShadingPoint copy(original);
++        EXPECT_FEQ(world_vector(NormalProbeObject::dpdu()), copy.get_dpdu(0));
++        EXPECT_FEQ_EPS(-world_normal_derivative(true), copy.get_dndu(0), NormalDerivativeTolerance);
++        EXPECT_FEQ_EPS(-world_normal_derivative(false), original.get_dndv(0), NormalDerivativeTolerance);
++        copy = original;
++        EXPECT_FEQ(world_vector(NormalProbeObject::dpdv()), copy.get_dpdv(0));
++        EXPECT_FEQ_EPS(-world_normal_derivative(false), copy.get_dndv(0), NormalDerivativeTolerance);
++        copy.flip_side();
++        EXPECT_FEQ_EPS(world_normal_derivative(true), copy.get_dndu(0), NormalDerivativeTolerance);
++        EXPECT_FEQ(world_vector(NormalProbeObject::dpdu()), copy.get_dpdu(0));
++    }
++
++    TEST_CASE_F(ProceduralDerivatives_UseTheGeometricSurfaceForRayFootprints, ProceduralFixture)
++    {
++        m_probe->m_shading_offset = 0.1 * NormalProbeObject::dpdu();
++        ShadingPoint point;
++        ASSERT_TRUE(m_intersector.trace(ray_with_differentials(), point));
++        EXPECT_FEQ_EPS(0.01 * world_vector(NormalProbeObject::dpdu()), point.get_dpdx(), RayFootprintTolerance);
++        EXPECT_FEQ_EPS(0.01 * world_vector(NormalProbeObject::dpdv()), point.get_dpdy(), RayFootprintTolerance);
++        EXPECT_FEQ(Vector2f(0.01f, 0.0f), point.get_duvdx(0));
++        EXPECT_FEQ(Vector2f(0.0f, 0.01f), point.get_duvdy(0));
++        point.flip_side();
++        EXPECT_FEQ(Vector2f(0.01f, 0.0f), point.get_duvdx(0));
++        EXPECT_FEQ(Vector2f(0.0f, 0.01f), point.get_duvdy(0));
++    }
++
++    TEST_CASE_F(ProceduralDerivatives_UnavailableMappingHasZeroUVFootprint, ProceduralFixture)
++    {
++        m_probe->m_supply_derivatives = false;
++        ShadingPoint point;
++        ASSERT_TRUE(m_intersector.trace(ray_with_differentials(), point));
++        EXPECT_FEQ(Vector3d(0.0), point.get_dpdu(0));
++        EXPECT_FEQ(Vector3d(0.0), point.get_dpdv(0));
++        EXPECT_FEQ(Vector3d(0.0), point.get_dndu(0));
++        EXPECT_FEQ(Vector2f(0.0f), point.get_duvdx(0));
++        EXPECT_FEQ(Vector2f(0.0f), point.get_duvdy(0));
++        EXPECT_TRUE(is_normalized(point.get_shading_basis().get_normal()));
++    }
++
++    TEST_CASE_F(ProceduralDerivatives_SmallScalePreservesUVFootprints, SmallProceduralFixture)
++    {
++        ShadingPoint point;
++        ASSERT_TRUE(m_intersector.trace(ray_with_differentials(), point));
++        EXPECT_FEQ(Vector2f(0.01f, 0.0f), point.get_duvdx(0));
++        EXPECT_FEQ(Vector2f(0.0f, 0.01f), point.get_duvdy(0));
++    }
++
++    TEST_CASE_F(ProceduralDerivatives_LargeScalePreservesUVFootprints, LargeProceduralFixture)
++    {
++        ShadingPoint point;
++        ASSERT_TRUE(m_intersector.trace(ray_with_differentials(), point));
++        EXPECT_FEQ(Vector2f(0.01f, 0.0f), point.get_duvdx(0));
++        EXPECT_FEQ(Vector2f(0.0f, 0.01f), point.get_duvdy(0));
++    }
++
++    TEST_CASE_F(SphereDerivatives_MatchNativeMapping, SphereFixture)
++    {
++        const ShadingRay ray(Vector3d(2.0, 0.0, 0.0), Vector3d(-1.0, 0.0, 0.0),
++            ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        ProceduralObject::IntersectionResult result;
++        m_analytic->intersect(ray, result);
++        ASSERT_TRUE(result.m_hit);
++        ASSERT_TRUE(result.m_derivatives.m_valid);
++        EXPECT_FEQ(Vector2f(0.0f, 0.5f), result.m_uv);
++        EXPECT_FEQ(Vector3d(0.0, 0.0, -TwoPi<double>()), result.m_derivatives.m_dpdu);
++        EXPECT_FEQ(Vector3d(0.0, Pi<double>(), 0.0), result.m_derivatives.m_dpdv);
++        EXPECT_FEQ(result.m_derivatives.m_dpdu, result.m_derivatives.m_dndu);
++        EXPECT_FEQ(result.m_derivatives.m_dpdv, result.m_derivatives.m_dndv);
++    }
++
++    TEST_CASE_F(SphereDerivatives_PoleHasUnavailableMapping, SphereFixture)
++    {
++        const ShadingRay ray(Vector3d(0.0, 2.0, 0.0), Vector3d(0.0, -1.0, 0.0),
++            ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        ProceduralObject::IntersectionResult result;
++        m_analytic->intersect(ray, result);
++        ASSERT_TRUE(result.m_hit);
++        EXPECT_FALSE(result.m_derivatives.m_valid);
++    }
++
++    TEST_CASE_F(RectangleDerivatives_RetainWidthAndHeight, RectangleFixture)
++    {
++        const ShadingRay ray(Vector3d(0.0, 2.0, 0.0), Vector3d(0.0, -1.0, 0.0),
++            ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        ProceduralObject::IntersectionResult result;
++        m_analytic->intersect(ray, result);
++        ASSERT_TRUE(result.m_hit);
++        ASSERT_TRUE(result.m_derivatives.m_valid);
++        EXPECT_FEQ(Vector3d(4.0, 0.0, 0.0), result.m_derivatives.m_dpdu);
++        EXPECT_FEQ(Vector3d(0.0, 0.0, -6.0), result.m_derivatives.m_dpdv);
++        EXPECT_FEQ(Vector3d(0.0), result.m_derivatives.m_dndu);
++        EXPECT_FEQ(Vector3d(0.0), result.m_derivatives.m_dndv);
++    }
++
++    TEST_CASE_F(DiskDerivatives_MatchPolarMapping, DiskFixture)
++    {
++        const ShadingRay ray(Vector3d(1.0, 2.0, 0.0), Vector3d(0.0, -1.0, 0.0),
++            ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        ProceduralObject::IntersectionResult result;
++        m_analytic->intersect(ray, result);
++        ASSERT_TRUE(result.m_hit);
++        ASSERT_TRUE(result.m_derivatives.m_valid);
++        EXPECT_FEQ(Vector2f(0.25f, 0.5f), result.m_uv);
++        EXPECT_FEQ(Vector3d(0.0, 0.0, -TwoPi<double>()), result.m_derivatives.m_dpdu);
++        EXPECT_FEQ(Vector3d(-2.0, 0.0, 0.0), result.m_derivatives.m_dpdv);
++        EXPECT_FEQ(Vector3d(0.0), result.m_derivatives.m_dndu);
++        EXPECT_FEQ(Vector3d(0.0), result.m_derivatives.m_dndv);
++    }
++
++    TEST_CASE_F(DiskDerivatives_CenterHasUnavailableMapping, DiskFixture)
++    {
++        const ShadingRay ray(Vector3d(0.0, 2.0, 0.0), Vector3d(0.0, -1.0, 0.0),
++            ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        ProceduralObject::IntersectionResult result;
++        m_analytic->intersect(ray, result);
++        ASSERT_TRUE(result.m_hit);
++        EXPECT_FALSE(result.m_derivatives.m_valid);
++    }
++
++    TEST_CASE_F(SampledProceduralPoint_PreservesSuppliedPointUVAndTangents, ProceduralFixture)
++    {
++        const ShadingRay ray = ray_to_plane(false);
++        const Vector3d point = m_assembly_transform.point_to_parent(Vector3d(0.0));
++        const Vector3d dpdu = m_object_transform.vector_to_parent(Vector3d(4.0, -2.0, 0.0));
++        const Vector3d dpdv = m_object_transform.vector_to_parent(Vector3d(0.0, 3.0, -2.0));
++        const Vector2f uv(0.25f, 0.75f);
++        ShadingPoint hit;
++        ASSERT_TRUE(m_intersector.trace(ray, hit));
++        ASSERT_TRUE(square_norm(hit.get_dndu(0)) > 0.0);
++        m_intersector.make_procedural_surface_shading_point(hit, ray, uv,
++            m_scene.assembly_instances().get_by_name("assembly_instance"),
++            m_assembly_transform, 0, 0, point, world_normal(), dpdu, dpdv);
++        EXPECT_FEQ(point, hit.get_point());
++        EXPECT_FEQ(uv, hit.get_uv(0));
++        EXPECT_FEQ(dpdu, hit.get_dpdu(0));
++        EXPECT_FEQ(dpdv, hit.get_dpdv(0));
++        EXPECT_FEQ(Vector3d(0.0), hit.get_dndu(0));
++        EXPECT_FEQ(Vector3d(0.0), hit.get_dndv(0));
++        EXPECT_FEQ(world_normal(), hit.get_geometric_normal());
++        EXPECT_EQ(ObjectInstance::FrontSide, hit.get_side());
++        const Basis3d& basis = hit.get_shading_basis();
++        EXPECT_FEQ(0.0, dot(basis.get_tangent_u(), basis.get_tangent_v()));
++        EXPECT_FEQ(world_normal(), basis.get_normal());
++    }
++
++    TEST_CASE_F(SampledProceduralPoint_BackFaceAndCopyPreservePrimaryInputs, ProceduralFixture)
++    {
++        const ShadingRay ray = ray_to_plane(true);
++        const Vector3d point = m_assembly_transform.point_to_parent(Vector3d(0.0));
++        const Vector3d dpdu = m_object_transform.vector_to_parent(Vector3d(4.0, -2.0, 0.0));
++        const Vector3d dpdv = m_object_transform.vector_to_parent(Vector3d(0.0, 3.0, -2.0));
++        ShadingPoint hit;
++        m_intersector.make_procedural_surface_shading_point(hit, ray, Vector2f(0.25f, 0.75f),
++            m_scene.assembly_instances().get_by_name("assembly_instance"),
++            m_assembly_transform, 0, 0, point, world_normal(), dpdu, dpdv);
++        EXPECT_EQ(ObjectInstance::BackSide, hit.get_side());
++        EXPECT_FEQ(-world_normal(), hit.get_geometric_normal());
++        ShadingPoint copy(hit);
++        EXPECT_FEQ(point, copy.get_point());
++        EXPECT_FEQ(Vector2f(0.25f, 0.75f), copy.get_uv(0));
++        EXPECT_FEQ(-world_normal(), copy.get_original_shading_normal());
++        EXPECT_EQ(ObjectInstance::BackSide, copy.get_side());
++        EXPECT_EQ(size_t(0), copy.get_primitive_attribute_index());
++        EXPECT_FEQ(dpdu, copy.get_dpdu(0));
++        EXPECT_FEQ(dpdv, copy.get_dpdv(0));
++    }
++
+     TEST_CASE_F(Trace_GivenAssemblyContainingEmptyBoundingBoxAndRayWithTMaxInsideAssembly_ReturnsFalse, Fixture<false>)
+     {
+         const ShadingRay ray(
+diff --git a/src/appleseed/renderer/meta/tests/test_transformsequence.cpp b/src/appleseed/renderer/meta/tests/test_transformsequence.cpp
+index 749c7312d..e75669944 100644
+--- a/src/appleseed/renderer/meta/tests/test_transformsequence.cpp
++++ b/src/appleseed/renderer/meta/tests/test_transformsequence.cpp
+@@ -45,6 +45,32 @@ using namespace renderer;
+ 
+ TEST_SUITE(Renderer_Utility_TransformSequence)
+ {
++    TEST_CASE(CopyAssignment_ReplacesPreparedSequenceWithIndependentStorage)
++    {
++        TransformSequence source;
++        source.set_transform(0.0f, Transformd::identity());
++        source.set_transform(1.0f, Transformd(Matrix4d::make_translation(Vector3d(2.0, 4.0, 6.0))));
++        ASSERT_TRUE(source.prepare());
++        TransformSequence target;
++        target.set_transform(0.0f, Transformd(Matrix4d::make_scaling(Vector3d(2.0))));
++        ASSERT_TRUE(target.prepare());
++        target = source;
++        source.clear();
++        const Transformd expected(Matrix4d::make_translation(Vector3d(1.0, 2.0, 3.0)));
++        EXPECT_FEQ(expected, target.evaluate(0.5f));
++    }
++
++    TEST_CASE(CopyAssignment_GivenSelfAssignment_PreservesPreparedSequence)
++    {
++        TransformSequence sequence;
++        const Transformd expected(Matrix4d::make_translation(Vector3d(1.0, 2.0, 3.0)));
++        sequence.set_transform(0.0f, expected);
++        ASSERT_TRUE(sequence.prepare());
++        const TransformSequence& alias = sequence;
++        sequence = alias;
++        EXPECT_FEQ(expected, sequence.evaluate(0.0f));
++    }
++
+     TEST_CASE(Clear_GivenSequenceWithOneTransform_RemovesTransform)
+     {
+         TransformSequence sequence;
+diff --git a/src/appleseed/renderer/modeling/object/diskobject.cpp b/src/appleseed/renderer/modeling/object/diskobject.cpp
+index b80298c7c..074462238 100644
+--- a/src/appleseed/renderer/modeling/object/diskobject.cpp
++++ b/src/appleseed/renderer/modeling/object/diskobject.cpp
+@@ -71,6 +71,11 @@ DiskObject::DiskObject(
+ {
+ }
+ 
++DiskObject::~DiskObject()
++{
++    delete impl;
++}
++
+ void DiskObject::release()
+ {
+     delete this;
+@@ -158,6 +163,16 @@ void DiskObject::intersect(
+         result.m_uv[1] = static_cast<float>(v);
+ 
+         result.m_material_slot = 0;
++
++        const Vector3d point = ray.point_at(result.m_distance);
++        const double radial = std::sqrt(point.x * point.x + point.z * point.z);
++        result.m_derivatives.m_valid = radial > 0.0;
++        if (result.m_derivatives.m_valid)
++        {
++            result.m_derivatives.m_dpdu = TwoPi<double>() * Vector3d(point.z, 0.0, -point.x);
++            result.m_derivatives.m_dpdv = -impl->m_radius / radial * Vector3d(point.x, 0.0, point.z);
++            result.m_derivatives.m_dndu = result.m_derivatives.m_dndv = Vector3d(0.0);
++        }
+     }
+ }
+ 
+@@ -170,6 +185,7 @@ bool DiskObject::intersect(const ShadingRay& ray) const
+ 
+ void DiskObject::refine_and_offset(
+     const Ray3d&        obj_inst_ray,
++    const Vector3d&     /*obj_inst_geometric_normal*/,
+     Vector3d&           obj_inst_front_point,
+     Vector3d&           obj_inst_back_point,
+     Vector3d&           obj_inst_geo_normal) const
+diff --git a/src/appleseed/renderer/modeling/object/diskobject.h b/src/appleseed/renderer/modeling/object/diskobject.h
+index 8819e298c..c7288233d 100644
+--- a/src/appleseed/renderer/modeling/object/diskobject.h
++++ b/src/appleseed/renderer/modeling/object/diskobject.h
+@@ -63,6 +63,8 @@ class APPLESEED_DLLSYMBOL DiskObject
+   : public ProceduralObject
+ {
+   public:
++    ~DiskObject() override;
++
+     void release() override;
+ 
+     const char* get_model() const override;
+@@ -95,6 +97,7 @@ class APPLESEED_DLLSYMBOL DiskObject
+ 
+     void refine_and_offset(
+         const foundation::Ray3d&    obj_inst_ray,
++        const foundation::Vector3d& obj_inst_geometric_normal,
+         foundation::Vector3d&       obj_inst_front_point,
+         foundation::Vector3d&       obj_inst_back_point,
+         foundation::Vector3d&       obj_inst_geo_normal) const override;
+diff --git a/src/appleseed/renderer/modeling/object/proceduralobject.h b/src/appleseed/renderer/modeling/object/proceduralobject.h
+index 8fb1ee8f0..962ef5e47 100644
+--- a/src/appleseed/renderer/modeling/object/proceduralobject.h
++++ b/src/appleseed/renderer/modeling/object/proceduralobject.h
+@@ -56,6 +56,18 @@ class APPLESEED_DLLSYMBOL ProceduralObject
+   : public Object
+ {
+   public:
++    // Object-space derivatives of position and the unit, unflipped shading
++    // normal with respect to the supplied UV mapping.  Leave invalid when
++    // the mapping is unavailable or singular; no arbitrary UV basis is implied.
++    struct SurfaceDerivatives
++    {
++        bool                        m_valid = false;
++        foundation::Vector3d        m_dpdu = foundation::Vector3d(0.0);
++        foundation::Vector3d        m_dpdv = foundation::Vector3d(0.0);
++        foundation::Vector3d        m_dndu = foundation::Vector3d(0.0);
++        foundation::Vector3d        m_dndv = foundation::Vector3d(0.0);
++    };
++
+     struct IntersectionResult
+     {
+         bool                        m_hit;
+@@ -64,6 +76,7 @@ class APPLESEED_DLLSYMBOL ProceduralObject
+         foundation::Vector3d        m_shading_normal;
+         foundation::Vector2f        m_uv;
+         std::uint32_t               m_material_slot;
++        SurfaceDerivatives          m_derivatives;
+     };
+ 
+     // Compute the intersection between a ray expressed in object space and
+@@ -79,9 +92,12 @@ class APPLESEED_DLLSYMBOL ProceduralObject
+ 
+     // Compute a front point, a back point and the geometric normal in object
+     // instance space for a given ray with origin being a point on the surface
+-    // of the object.
++    // of the object. The supplied geometric normal is the unflipped normal
++    // reported by intersect(), in object space. Return an offset normal facing
++    // the incoming ray; front and back lie on its positive and negative sides.
+     virtual void refine_and_offset(
+         const foundation::Ray3d&    obj_inst_ray,
++        const foundation::Vector3d& obj_inst_geometric_normal,
+         foundation::Vector3d&       obj_inst_front_point,
+         foundation::Vector3d&       obj_inst_back_point,
+         foundation::Vector3d&       obj_inst_geo_normal) const = 0;
+diff --git a/src/appleseed/renderer/modeling/object/rectangleobject.cpp b/src/appleseed/renderer/modeling/object/rectangleobject.cpp
+index d20b6105b..dbf6985e8 100644
+--- a/src/appleseed/renderer/modeling/object/rectangleobject.cpp
++++ b/src/appleseed/renderer/modeling/object/rectangleobject.cpp
+@@ -77,6 +77,11 @@ RectangleObject::RectangleObject(
+ {
+ }
+ 
++RectangleObject::~RectangleObject()
++{
++    delete impl;
++}
++
+ void RectangleObject::release()
+ {
+     delete this;
+@@ -190,6 +195,10 @@ void RectangleObject::intersect(
+         result.m_uv[0] = static_cast<float>(u);
+         result.m_uv[1] = static_cast<float>(v);
+         result.m_material_slot = 0;
++        result.m_derivatives.m_valid = true;
++        result.m_derivatives.m_dpdu = impl->m_x;
++        result.m_derivatives.m_dpdv = impl->m_y;
++        result.m_derivatives.m_dndu = result.m_derivatives.m_dndv = Vector3d(0.0);
+     }
+ }
+ 
+@@ -208,6 +217,7 @@ bool RectangleObject::intersect(const ShadingRay& ray) const
+ 
+ void RectangleObject::refine_and_offset(
+     const Ray3d&        obj_inst_ray,
++    const Vector3d&     /*obj_inst_geometric_normal*/,
+     Vector3d&           obj_inst_front_point,
+     Vector3d&           obj_inst_back_point,
+     Vector3d&           obj_inst_geo_normal) const
+diff --git a/src/appleseed/renderer/modeling/object/rectangleobject.h b/src/appleseed/renderer/modeling/object/rectangleobject.h
+index 58106418d..d42f4dfb4 100644
+--- a/src/appleseed/renderer/modeling/object/rectangleobject.h
++++ b/src/appleseed/renderer/modeling/object/rectangleobject.h
+@@ -58,6 +58,8 @@ class APPLESEED_DLLSYMBOL RectangleObject
+   : public ProceduralObject
+ {
+   public:
++    ~RectangleObject() override;
++
+     void release() override;
+ 
+     const char* get_model() const override;
+@@ -91,6 +93,7 @@ class APPLESEED_DLLSYMBOL RectangleObject
+ 
+     void refine_and_offset(
+         const foundation::Ray3d&    obj_inst_ray,
++        const foundation::Vector3d& obj_inst_geometric_normal,
+         foundation::Vector3d&       obj_inst_front_point,
+         foundation::Vector3d&       obj_inst_back_point,
+         foundation::Vector3d&       obj_inst_geo_normal) const override;
+diff --git a/src/appleseed/renderer/modeling/object/sphereobject.cpp b/src/appleseed/renderer/modeling/object/sphereobject.cpp
+index 382bd1320..bd402b701 100644
+--- a/src/appleseed/renderer/modeling/object/sphereobject.cpp
++++ b/src/appleseed/renderer/modeling/object/sphereobject.cpp
+@@ -122,6 +122,17 @@ void SphereObject::intersect(
+         result.m_uv[1] = 1.0f - (std::acos(p.y) * RcpPi<float>());
+ 
+         result.m_material_slot = 0;
++
++        const double radial = std::sqrt(n.x * n.x + n.z * n.z);
++        result.m_derivatives.m_valid = radial > 0.0;
++        if (result.m_derivatives.m_valid)
++        {
++            result.m_derivatives.m_dpdu = TwoPi<double>() * Vector3d(n.z, 0.0, -n.x);
++            result.m_derivatives.m_dpdv = Pi<double>() * Vector3d(
++                -n.y * n.x / radial, radial, -n.y * n.z / radial);
++            result.m_derivatives.m_dndu = result.m_derivatives.m_dpdu;
++            result.m_derivatives.m_dndv = result.m_derivatives.m_dpdv;
++        }
+     }
+ }
+ 
+@@ -157,6 +168,7 @@ namespace
+ 
+ void SphereObject::refine_and_offset(
+     const Ray3d&        obj_inst_ray,
++    const Vector3d&     /*obj_inst_geometric_normal*/,
+     Vector3d&           obj_inst_front_point,
+     Vector3d&           obj_inst_back_point,
+     Vector3d&           obj_inst_geo_normal) const
+diff --git a/src/appleseed/renderer/modeling/object/sphereobject.h b/src/appleseed/renderer/modeling/object/sphereobject.h
+index 77bda4eaa..bdb1ee1c9 100644
+--- a/src/appleseed/renderer/modeling/object/sphereobject.h
++++ b/src/appleseed/renderer/modeling/object/sphereobject.h
+@@ -79,6 +79,7 @@ class APPLESEED_DLLSYMBOL SphereObject
+ 
+     void refine_and_offset(
+         const foundation::Ray3d&    obj_inst_ray,
++        const foundation::Vector3d& obj_inst_geometric_normal,
+         foundation::Vector3d&       obj_inst_front_point,
+         foundation::Vector3d&       obj_inst_back_point,
+         foundation::Vector3d&       obj_inst_geo_normal) const override;
+diff --git a/src/appleseed/renderer/utility/transformsequence.cpp b/src/appleseed/renderer/utility/transformsequence.cpp
+index 9f647adeb..98e6934af 100644
+--- a/src/appleseed/renderer/utility/transformsequence.cpp
++++ b/src/appleseed/renderer/utility/transformsequence.cpp
+@@ -41,6 +41,7 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <cstring>
++#include <utility>
+ 
+ using namespace foundation;
+ 
+@@ -58,6 +59,7 @@ TransformSequence::TransformSequence()
+ }
+ 
+ TransformSequence::TransformSequence(const TransformSequence& rhs)
++  : TransformSequence()
+ {
+     copy_from(rhs);
+ }
+@@ -81,7 +83,11 @@ TransformSequence::~TransformSequence()
+ 
+ TransformSequence& TransformSequence::operator=(const TransformSequence& rhs)
+ {
+-    copy_from(rhs);
++    if (this != &rhs)
++    {
++        TransformSequence copy(rhs);
++        *this = std::move(copy);
++    }
+     return *this;
+ }
+ 

@@ -1,0 +1,394 @@
+Subject: [PATCH 20/50] Preserve bump frames and correct texture decoding
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: a6de73dd0b5de70f00392898a0ce2319ec3b2dae
+Original-Commit: 906000ae3cb604ba4a78e35c97547ca6e0268029
+Original-Commit: 4ef210e6063e59e64a0e8c7838120fef8c1cf0b1
+Original-Commit: a37acc2016cceeb120cb346fa8a67d69b6360384
+Original-Commit: 9d297efd14e2e296813828768ea39c3ad953fe40
+
+diff --git a/src/appleseed.shaders/include/appleseed/color/as_transfer_functions.h b/src/appleseed.shaders/include/appleseed/color/as_transfer_functions.h
+index 78ef11e88..9e50362e1 100644
+--- a/src/appleseed.shaders/include/appleseed/color/as_transfer_functions.h
++++ b/src/appleseed.shaders/include/appleseed/color/as_transfer_functions.h
+@@ -132,7 +132,7 @@ float Rec709_OETF(float value)
+ {
+     float prime_out;
+ 
+-    if (value > 0.081)
++    if (value >= 0.018)
+     {
+         prime_out = 1.099 * pow(value, 0.45) - 0.099;
+     }
+@@ -192,7 +192,9 @@ float Rec2020_EOTF(float value, int bitdepth)
+             beta  = 0.0181;
+         }
+ 
+-        if (value < beta)
++        // Decoding compares encoded values with the encoded breakpoint.
++        float encoded_beta = alpha * pow(beta, 0.45) - (alpha - 1);
++        if (value < encoded_beta)
+         {
+             linear_out = value / 4.5;
+         }
+diff --git a/src/appleseed.shaders/src/appleseed/as_bump.osl b/src/appleseed.shaders/src/appleseed/as_bump.osl
+index 6cce8f1cb..6b5ef5b1f 100644
+--- a/src/appleseed.shaders/src/appleseed/as_bump.osl
++++ b/src/appleseed.shaders/src/appleseed/as_bump.osl
+@@ -28,6 +28,22 @@
+ 
+ #include "appleseed/maya/as_maya_helpers.h"
+ 
++// Normal-map frames and vectors may come from user nodes at arbitrary scales.
++// Zero or nonfinite vectors cannot define a direction.
++vector as_bump_unit_vector(vector value)
++{
++    if (!isfinite(value[0]) || !isfinite(value[1]) || !isfinite(value[2]))
++        return vector(0);
++    float scale = max(abs(value));
++    // Avoid re-rounding unit vectors in normal chains. The bounded scale
++    // also keeps the unit-length check from overflowing for large inputs.
++    float unit_length_tolerance = 1.0e-6;
++    if (scale <= 1 + unit_length_tolerance &&
++        abs(dot(value, value) - 1) <= unit_length_tolerance)
++        return value;
++    return scale > 0 ? normalize(value / scale) : vector(0);
++}
++
+ shader as_bump
+ [[
+     string help = "Bump and normal mapping node.",
+@@ -209,9 +225,13 @@ shader as_bump
+     ]]
+ )
+ {
++    // Disabled perturbation must preserve a connected or explicit input normal.
++    normal surface_normal = normal(as_bump_unit_vector(vector(in_surface_normal)));
++    out_normal = surface_normal;
++
+     if (in_mode == "Bump")
+     {
+-        if (in_bump_value * in_bump_depth == 0.0)
++        if (in_bump_depth == 0.0)
+         {
+             return;
+         }
+@@ -223,10 +243,42 @@ shader as_bump
+            -bump_depth,
+             bump_depth);
+ 
+-        normal surface_normal = normalize(in_surface_normal);
++        float dhdx = Dx(bump_offset);
++        float dhdy = Dy(bump_offset);
++        if (dhdx == 0.0 && dhdy == 0.0)
++        {
++            return;
++        }
+ 
+-        out_normal = normalize(calculatenormal(
+-            in_surface_point + (vector) surface_normal * bump_offset));
++        // Surface gradients perturb the supplied normal without replacing
++        // smooth or previously mapped normals with the geometric normal.
++        // Mikkelsen, Surface Gradient-Based Bump Mapping Framework, eq. (4).
++        // https://jcgt.org/published/0009/03/04/
++        vector dpdx = Dx(in_surface_point);
++        vector dpdy = Dy(in_surface_point);
++        float dx_scale = max(abs(dpdx));
++        float dy_scale = max(abs(dpdy));
++        if (!(dx_scale > 0 && dy_scale > 0) ||
++            !isfinite(dx_scale) || !isfinite(dy_scale))
++        {
++            return;
++        }
++
++        // Scale the footprint axes before taking cross products so
++        // changing model units does not underflow their squared lengths.
++        dpdx /= dx_scale;
++        dpdy /= dy_scale;
++        vector rx = cross(dpdy, surface_normal);
++        vector ry = cross(surface_normal, dpdx);
++        float determinant = dot(dpdx, rx);
++        vector gradient = dhdx / dx_scale * rx + dhdy / dy_scale * ry;
++        vector perturbed = abs(determinant) * vector(surface_normal) -
++                           sign(determinant) * gradient;
++        vector unit_normal = as_bump_unit_vector(perturbed);
++        if (dot(unit_normal, unit_normal) > 0)
++        {
++            out_normal = normal(unit_normal);
++        }
+     }
+     else
+     {
+@@ -254,32 +306,37 @@ shader as_bump
+             lookup_normal[1] = lookup_tmp;
+         }
+ 
+-        normal surface_normal = normalize(in_surface_normal);
+-
++        normal mapped_normal;
+         if (in_normal_map_coordsys == "World Space")
+         {
+-            out_normal = transform("world", "common", lookup_normal);
+-            out_normal = mix(surface_normal, out_normal, in_normal_map_weight);
++            mapped_normal = transform("world", "common", lookup_normal);
+         }
+         else if (in_normal_map_coordsys == "Object Space")
+         {
+-            out_normal = transform("object", "common", lookup_normal);
+-            out_normal = mix(surface_normal, out_normal, in_normal_map_weight);
++            mapped_normal = transform("object", "common", lookup_normal);
+         }
+         else
+         {
+-            vector bitangent = cross(Tn, surface_normal);
++            // An upstream normal changes the tangent plane. Re-project U
++            // and use the supplied V direction to retain chart handedness.
++            vector tangent = as_bump_unit_vector(Tn);
++            // The double cross also handles float-unit input normals
++            // without leaving a false tangent when U is parallel to N.
++            tangent = as_bump_unit_vector(cross(surface_normal, cross(tangent, surface_normal)));
++            if (dot(tangent, tangent) == 0)
++                return;
++            vector bitangent = cross(tangent, surface_normal);
++            if (dot(bitangent, as_bump_unit_vector(Bn)) < 0)
++                bitangent = -bitangent;
+ 
+-            normal reoriented_normal =
+-                lookup_normal[0] * Tn +
++            mapped_normal = normal(
++                lookup_normal[0] * tangent +
+                 lookup_normal[1] * bitangent +
+-                lookup_normal[2] * surface_normal;
+-
+-            out_normal = mix(
+-                surface_normal,
+-                reoriented_normal,
+-                in_normal_map_weight);
++                lookup_normal[2] * surface_normal);
+         }
+-        out_normal = normalize(out_normal);
++        vector unit_normal = as_bump_unit_vector(vector(mix(
++            surface_normal, mapped_normal, in_normal_map_weight)));
++        if (dot(unit_normal, unit_normal) > 0)
++            out_normal = normal(unit_normal);
+     }
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_texture.osl b/src/appleseed.shaders/src/appleseed/as_texture.osl
+index 125da1c0b..48257ea07 100644
+--- a/src/appleseed.shaders/src/appleseed/as_texture.osl
++++ b/src/appleseed.shaders/src/appleseed/as_texture.osl
+@@ -32,6 +32,11 @@
+ #include "appleseed/maya/as_maya_helpers.h"
+ #include "appleseed/texture/as_texture_helpers.h"
+ 
++float as_texture_average(color value)
++{
++    return (value[0] + value[1] + value[2]) / 3.0;
++}
++
+ shader as_texture
+ [[
+     string help = "Texture lookup node.",
+@@ -62,6 +67,16 @@ shader as_texture
+         int gafferNoduleLayoutVisible = 0,
+         int divider = 1
+     ]],
++    int in_error_on_missing = 1
++    [[
++        string as_maya_attribute_name = "errorOnMissing",
++        string as_maya_attribute_short_name = "eom",
++        string label = "Error on Missing Texture",
++        string page = "Texture",
++        string widget = "checkBox",
++        int as_maya_attribute_connectable = 0,
++        string help = "Report a missing named texture. Disable to use the default color and alpha instead."
++    ]],
+     int in_atlas_type = 0
+     [[
+         string as_maya_attribute_name = "atlasType",
+@@ -297,6 +312,10 @@ shader as_texture
+     ]]
+ )
+ {
++    out_color = in_color;
++    out_alpha = in_alpha;
++    out_channel = as_texture_average(in_color);
++
+     if (in_filename == "")
+     {
+         return;
+@@ -308,6 +327,8 @@ shader as_texture
+ 
+         if (!valid_file)
+         {
++            if (in_error_on_missing)
++                error("Texture file '%s' is missing or unreadable.", in_filename);
+             return;
+         }
+     }
+@@ -408,107 +429,69 @@ shader as_texture
+         }
+     }
+ 
+-    int numchannels;
+-    gettextureinfo(in_filename, "channels", numchannels);
++    int numchannels = 0;
++    if (!gettextureinfo(in_filename, "channels", numchannels) || numchannels <= 0)
++    {
++        error("Cannot read channels from texture file '%s'.", in_filename);
++        return;
++    }
++
++    string lookup_error = "";
++    float sampled_alpha = in_alpha;
++    color sampled_color = texture(
++        texname,
++        uv_coords[0],
++        uv_coords[1],
++        "sblur", in_s_blur_amount,
++        "tblur", in_t_blur_amount,
++        "swidth", in_s_filter_width,
++        "twidth", in_t_filter_width,
++        "swrap", wrap_mode[0],
++        "twrap", wrap_mode[1],
++        "firstchannel", numchannels == 1 ? 0 : in_starting_channel,
++        "missingalpha", in_alpha,
++        "alpha", sampled_alpha,
++        "errormessage", lookup_error,
++        "interp", get_interpolation_method(in_interpolation_method));
++    if (lookup_error != "")
++    {
++        if (in_error_on_missing)
++            error("Texture file '%s': %s", in_filename, lookup_error);
++        return;
++    }
+ 
+     if (numchannels == 1)
+     {
+-        out_channel = (float) texture(
+-            texname,
+-            uv_coords[0],
+-            uv_coords[1],
+-            "sblur", in_s_blur_amount,
+-            "tblur", in_t_blur_amount,
+-            "swidth", in_s_filter_width,
+-            "twidth", in_t_filter_width,
+-            "swrap", wrap_mode[0],
+-            "twrap", wrap_mode[1],
+-            "interp", get_interpolation_method(in_interpolation_method));
+-
++        out_channel = sampled_color[0];
+         out_color = color(out_channel);
+     }
+     else
+     {
+-        out_color = (color) texture(
+-            texname,
+-            uv_coords[0],
+-            uv_coords[1],
+-            "sblur", in_s_blur_amount,
+-            "tblur", in_t_blur_amount,
+-            "swidth", in_s_filter_width,
+-            "twidth", in_t_filter_width,
+-            "swrap", wrap_mode[0],
+-            "twrap", wrap_mode[1],
+-            "firstchannel", in_starting_channel,
+-            "missingcolor", in_color,
+-            "missingalpha", in_alpha,
+-            "alpha", out_alpha,
+-            "interp", get_interpolation_method(in_interpolation_method));
++        out_color = sampled_color;
++        out_alpha = sampled_alpha;
+ 
+         if (in_enable_cms && max(out_color) > 0.0)
+         {
+-            color linearized_color = color(0);
+-
+-            if (in_eotf == 0)
+-            {
+-                linearized_color = out_color;
+-            }
+-            else if (in_eotf == 1)
+-            {
+-                linearized_color = sRGB_EOTF(out_color);
+-            }
+-            else if (in_eotf == 2)
++            string transfer_functions[8] = {
++                "Raw", "sRGB", "Rec.709", "Gamma 2.2", "Gamma 2.4",
++                "Gamma 2.6 (DCI)", "Rec.1886", "Rec.2020"
++            };
++            if (in_eotf < 0 || in_eotf >= arraylength(transfer_functions))
+             {
+-                linearized_color == Rec709_EOTF(out_color);
++                error("Unknown texture input transfer function %d.", in_eotf);
++                return;
+             }
+-            else if (in_eotf == 3)
+-            {
+-                linearized_color == gamma_CCTF(out_color, 2.2);
+-            }
+-            else if (in_eotf == 4)
+-            {
+-                linearized_color == gamma_CCTF(out_color, 2.4);
+-            }
+-            else if (in_eotf == 5)
+-            {
+-                linearized_color == gamma_CCTF(out_color, DCIP3_GAMMA);
+-            }
+-            else if (in_eotf == 6)
+-            {
+-                linearized_color = Rec1886_EOTF(out_color);
+-            }
+-            else if (in_eotf == 7)
+-            {
+-                linearized_color == Rec2020_EOTF(out_color);
+-            }
+-            else
+-            {
+-                linearized_color = color(0);
+-
+-#ifdef DEBUG
+-                string shadername = "";
+-
+-                getattribute("shader:shadername", shadername);
+-                warning("[WARNING]: Unknown OETF mode %d, in %s, %s:%d\n",
+-                in_eotf, shadername, __FILE__, __LINE__);
+-#endif
+-            }
+-
+-            if (in_rgb_primaries != "Raw" && max(linearized_color) > 0.0)
+-            {
+-                linearized_color = transform_colorspace_to_workingspace(
+-                    linearized_color,
+-                    in_rgb_primaries,
+-                    in_workingspace_rgb_primaries);
+-            }
+-
+-            out_color = linearized_color;
++            out_color = apply_color_management(
++                out_color,
++                transfer_functions[in_eotf],
++                in_rgb_primaries,
++                in_workingspace_rgb_primaries);
+ 
+             // The output is scene-linear and in the same RGBW primaries as
+             // the working space, so use its (working space) Y coefficients.
+ 
+             out_channel = as_luminance(
+-                linearized_color,
++                out_color,
+                 in_workingspace_rgb_primaries);
+         }
+         else
+@@ -516,7 +499,7 @@ shader as_texture
+             // Without CMS, no colorimetry information is known, the input is
+             // assumed as raw, no point in using luminance. Use average of RGB.
+ 
+-            out_channel = (out_color[0] + out_color[1] + out_color[2]) / 3.0;
++            out_channel = as_texture_average(out_color);
+         }
+     }
+ }

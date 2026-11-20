@@ -1,0 +1,638 @@
+Subject: [PATCH 24/50] Correct coat interfaces and expose the glossy layer
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 596a4f70df87b1eb28c83883c19c205936672cb5
+Original-Commit: 4bf42580aab9e58b9da861bd210eb34caaaec2fd
+Original-Commit: dc53a3886063df679e476ef283e6bf88a6471b87
+
+diff --git a/src/appleseed.shaders/CMakeLists.txt b/src/appleseed.shaders/CMakeLists.txt
+index 6320b6664..d1e9ff0ed 100644
+--- a/src/appleseed.shaders/CMakeLists.txt
++++ b/src/appleseed.shaders/CMakeLists.txt
+@@ -291,6 +291,7 @@ set (src_appleseed_sources
+      src/appleseed/as_falloff_angle.osl
+      src/appleseed/as_fresnel.osl
+      src/appleseed/as_glass.osl
++     src/appleseed/as_glossy_layer.osl
+      src/appleseed/as_globals.osl
+      src/appleseed/as_hair_material.osl
+      src/appleseed/as_id_manifold.osl
+diff --git a/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl b/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl
+new file mode 100644
+index 000000000..f3ae627b1
+--- /dev/null
++++ b/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl
+@@ -0,0 +1,56 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#include "appleseed/as_osl_extensions.h"
++
++shader as_glossy_layer
++[[
++    string as_node_name = "asGlossyLayer",
++    string as_category = "shader",
++    string help = "A dielectric coat with reflection and substrate absorption."
++]]
++(
++    closure color in_substrate = 0 [[ string label = "Substrate" ]],
++    color in_reflectance = color(1) [[ string label = "Reflection Tint" ]],
++    float in_roughness = 0.1 [[ string label = "Roughness", float min = 0, float max = 1 ]],
++    float in_anisotropy = 0 [[ string label = "Anisotropy", float min = -1, float max = 1 ]],
++    float in_ior = 1.5 [[ string label = "IOR", float min = 0.001 ]],
++    color in_transmittance = color(1) [[ string label = "Transmittance per Thickness Unit" ]],
++    float in_thickness = 0 [[ string label = "Optical Thickness", float min = 0 ]],
++    normal in_normal = N [[ string label = "Coat Normal" ]],
++    vector in_tangent = dPdu [[ string label = "Coat Tangent" ]],
++    int in_enable = 1 [[ string label = "Enable", string widget = "checkBox" ]],
++    output closure color out_color = 0 [[ string label = "Output" ]]
++)
++{
++    if (in_enable)
++        out_color = as_glossy_layer(in_substrate, in_normal, in_tangent,
++            in_reflectance, in_roughness, in_anisotropy, in_ior, in_transmittance,
++            in_thickness);
++    else out_color = in_substrate;
++}
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index 17b2162a9..d7c559520 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -1516,6 +1516,7 @@ set (renderer_meta_tests_sources
+     renderer/meta/tests/test_forwardlightsampler.cpp
+     renderer/meta/tests/test_frame.cpp
+     renderer/meta/tests/test_glassbsdf.cpp
++    renderer/meta/tests/test_glossylayerbsdf.cpp
+     renderer/meta/tests/test_imagetools.cpp
+     renderer/meta/tests/test_inputarray.cpp
+     renderer/meta/tests/test_intersector.cpp
+diff --git a/src/appleseed/renderer/kernel/shading/closures.cpp b/src/appleseed/renderer/kernel/shading/closures.cpp
+index 2b211612d..d2568bc6c 100644
+--- a/src/appleseed/renderer/kernel/shading/closures.cpp
++++ b/src/appleseed/renderer/kernel/shading/closures.cpp
+@@ -2184,7 +2184,7 @@ namespace
+ 
+         static int modes()
+         {
+-            return ScatteringMode::Glossy;
++            return ScatteringMode::Glossy | ScatteringMode::Specular;
+         }
+ 
+         static void register_closure(OSL::ShadingSystem& shading_system)
+@@ -2226,7 +2226,7 @@ namespace
+                     p->T,
+                     arena);
+ 
+-            const float roughness = clamp(p->roughness, 0.01f, 1.0f);
++            const float roughness = clamp(p->roughness, 0.0f, 1.0f);
+             const float ior = max(p->ior, 0.001f);
+ 
+             composite_closure.override_closure_scalar_weight(
+@@ -2238,7 +2238,7 @@ namespace
+             values->m_anisotropy = clamp(p->anisotropy, -1.0f, 1.0f);
+             values->m_ior = ior;
+             values->m_transmittance.set(Color3f(p->transmittance), g_std_lighting_conditions, Spectrum::Reflectance);
+-            values->m_transmittance = clamp_low(values->m_transmittance, 0.001f);
++            values->m_transmittance = clamp_low(values->m_transmittance, 0.0f);
+             values->m_thickness = std::max(p->thickness, 0.0f);
+         }
+     };
+@@ -2498,7 +2498,7 @@ int CompositeSurfaceClosure::compute_pdfs(
+         const ClosureID cid = m_closure_types[i];
+         const int closure_modes = g_closure_get_modes_funs[cid]();
+ 
+-        if (closure_modes & modes)
++        if ((closure_modes & modes) && m_scalar_weights[i] > 0.0f)
+         {
+             pdfs[i] = m_scalar_weights[i];
+             sum_weights += m_scalar_weights[i];
+diff --git a/src/appleseed/renderer/kernel/shading/closures.h b/src/appleseed/renderer/kernel/shading/closures.h
+index 999798985..1a7d0707b 100644
+--- a/src/appleseed/renderer/kernel/shading/closures.h
++++ b/src/appleseed/renderer/kernel/shading/closures.h
+@@ -164,7 +164,8 @@ class ClosureLayerIDStack
+ 
+     void push(const std::int8_t id)
+     {
+-        assert(m_size < N);
++        if (m_size >= N)
++            throw ExceptionOSLRuntimeError("maximum number of coating layers in osl shader group exceeded");
+         m_ids[m_size++] = id;
+     }
+ 
+diff --git a/src/appleseed/renderer/meta/tests/test_glossylayerbsdf.cpp b/src/appleseed/renderer/meta/tests/test_glossylayerbsdf.cpp
+new file mode 100644
+index 000000000..acfc5c97b
+--- /dev/null
++++ b/src/appleseed/renderer/meta/tests/test_glossylayerbsdf.cpp
+@@ -0,0 +1,219 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.renderer headers.
++#include "renderer/kernel/shading/closures.h"
++#include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/modeling/bsdf/bsdf.h"
++#include "renderer/modeling/bsdf/bsdfsample.h"
++#include "renderer/modeling/bsdf/glossylayerbsdf.h"
++#include "renderer/utility/paramarray.h"
++
++// appleseed.foundation headers.
++#include "foundation/math/rng/xoroshiro128plus.h"
++#include "foundation/memory/arena.h"
++#include "foundation/memory/autoreleaseptr.h"
++#include "foundation/utility/test.h"
++
++// Standard headers.
++#include <cmath>
++
++using namespace foundation;
++using namespace renderer;
++
++TEST_SUITE(Renderer_Modeling_BSDF_GlossyLayer)
++{
++    double fresnel(const double cosine, const double ior)
++    {
++        const double ct = std::sqrt(1.0 - (1.0 - cosine*cosine) / (ior*ior));
++        const double rs = (cosine - ior*ct) / (cosine + ior*ct);
++        const double rp = (ior*cosine - ct) / (ior*cosine + ct);
++        return (rs*rs + rp*rp) * 0.5;
++    }
++
++    struct Fixture
++    {
++        auto_release_ptr<BSDF> bsdf;
++        GlossyLayerBSDFInputValues values{};
++        Basis3f basis;
++        ShadingPoint point;
++        BSDF::LocalGeometry geometry;
++        Xoroshiro128plus rng;
++        SamplingContext sampling;
++
++        Fixture()
++          : bsdf(GlossyLayerBSDFFactory::create("coat", ParamArray()))
++          , basis(Vector3f(0.0f, 1.0f, 0.0f))
++          , sampling(rng, SamplingContext::RNGMode)
++        {
++            values.m_reflectance.set(1.0f);
++            values.m_roughness = 0.5f;
++            values.m_ior = 1.5f;
++            values.m_transmittance[0] = 0.25f;
++            values.m_transmittance[1] = 0.5f;
++            values.m_transmittance[2] = 0.8f;
++            values.m_thickness = 0.4f;
++            point.set_ray(ShadingRay(Vector3d(0.0, 1.0, 0.0), Vector3d(0.0, -1.0, 0.0),
++                ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f),
++                VisibilityFlags::CameraRay, 0));
++            geometry.m_shading_point = &point;
++            geometry.m_geometric_normal = basis.get_normal();
++            geometry.m_shading_basis = basis;
++            prepare();
++        }
++
++        void prepare()
++        {
++            Arena arena;
++            bsdf->prepare_inputs(arena, point, &values);
++        }
++    };
++
++    TEST_CASE(MatchedIndicesHaveZeroDirectionalAndAverageReflectance)
++    {
++        for (const float roughness : {0.0f, 0.2f, 0.8f})
++        {
++            for (const float cosine : {0.0f, 0.1f, 0.6f, 1.0f})
++                EXPECT_EQ(0.0f, get_dielectric_layer_directional_albedo(1.0f, roughness, cosine));
++            EXPECT_EQ(0.0f, get_dielectric_layer_average_albedo(1.0f, roughness));
++        }
++    }
++
++    TEST_CASE_F(MatchedNonAirIndicesHaveNoInterfaceLoss, Fixture)
++    {
++        values.m_precomputed.m_outside_ior = values.m_ior;
++        values.m_thickness = 0.0f;
++        Spectrum value;
++        value.set(1.0f);
++        bsdf->attenuate_substrate(&values, basis, basis.get_normal(), basis.get_normal(), value);
++        EXPECT_EQ(1.0f, value[0]);
++        value.set(1.0f);
++        bsdf->attenuate_emission(&values, basis, basis.get_normal(), value);
++        EXPECT_EQ(1.0f, value[0]);
++    }
++
++    TEST_CASE_F(MatchedIndexSubstrateObeysTwoPassBeerAttenuation, Fixture)
++    {
++        values.m_ior = 1.0f;
++        const Vector3f outgoing(0.6f, 0.8f, 0.0f), incoming(0.8f, 0.6f, 0.0f);
++        Spectrum value;
++        value.set(1.0f);
++        bsdf->attenuate_substrate(&values, basis, outgoing, incoming, value);
++        for (size_t channel = 0; channel < 3; ++channel)
++            EXPECT_FEQ_EPS(std::pow(values.m_transmittance[channel],
++                values.m_thickness * (1.0f / outgoing.y + 1.0f / incoming.y)), value[channel], 1.0e-6f);
++    }
++
++    TEST_CASE_F(MatchedIndexEmissionObeysOnePassBeerAttenuation, Fixture)
++    {
++        values.m_ior = 1.0f;
++        const Vector3f outgoing(0.6f, 0.8f, 0.0f);
++        Spectrum value;
++        value.set(1.0f);
++        bsdf->attenuate_emission(&values, basis, outgoing, value);
++        for (size_t channel = 0; channel < 3; ++channel)
++            EXPECT_FEQ_EPS(std::pow(values.m_transmittance[channel],
++                values.m_thickness / outgoing.y), value[channel], 1.0e-6f);
++    }
++
++    TEST_CASE_F(ZeroTransmittanceDoesNotLeakOrCreateNonfiniteValues, Fixture)
++    {
++        values.m_ior = 1.0f;
++        values.m_thickness = 0.05f;
++        values.m_transmittance[0] = 0.0f;
++        Spectrum value;
++        value.set(1.0f);
++        bsdf->attenuate_emission(&values, basis, basis.get_normal(), value);
++        EXPECT_EQ(0.0f, value[0]);
++        EXPECT_TRUE(std::isfinite(value[1]));
++        EXPECT_TRUE(std::isfinite(value[2]));
++    }
++
++    TEST_CASE_F(SmoothEmissionUsesExactFresnelTransmission, Fixture)
++    {
++        values.m_roughness = 0.0f;
++        values.m_thickness = 0.0f;
++        for (const float cosine : {0.1f, 0.6f, 1.0f})
++        {
++            Spectrum value;
++            value.set(1.0f);
++            const Vector3f outgoing(std::sqrt(1.0f - cosine*cosine), cosine, 0.0f);
++            bsdf->attenuate_emission(&values, basis, outgoing, value);
++            EXPECT_FEQ_EPS(float(1.0 - fresnel(cosine, 1.5)), value[0], 1.0e-6f);
++        }
++    }
++
++    TEST_CASE_F(SmoothReflectionIsAnExactSpecularEvent, Fixture)
++    {
++        values.m_roughness = 0.0f;
++        prepare();
++        const Vector3f outgoing(0.6f, 0.8f, 0.0f);
++        BSDFSample result;
++        bsdf->sample(sampling, &values, false, false, geometry, Dual3f(outgoing),
++            ScatteringMode::Specular, result);
++        ASSERT_EQ(ScatteringMode::Specular, result.get_mode());
++        EXPECT_EQ(BSDF::DiracDelta, result.get_probability());
++        EXPECT_FEQ_EPS(-0.6f, result.m_incoming.get_value().x, 1.0e-6f);
++        EXPECT_FEQ_EPS(0.8f, result.m_incoming.get_value().y, 1.0e-6f);
++        EXPECT_FEQ_EPS(float(fresnel(0.8, 1.5)), result.m_value.m_beauty[0] * 0.8f, 1.0e-6f);
++        EXPECT_EQ(0.0f, bsdf->evaluate_pdf(&values, false, geometry,
++            outgoing, result.m_incoming.get_value(), ScatteringMode::All));
++    }
++
++    TEST_CASE_F(RoughReflectionSamplesMatchEvaluation, Fixture)
++    {
++        prepare();
++        const Vector3f outgoing(0.6f, 0.8f, 0.0f);
++        size_t accepted = 0;
++        for (size_t i = 0; i < 64; ++i)
++        {
++            BSDFSample result;
++            bsdf->sample(sampling, &values, false, false, geometry, Dual3f(outgoing),
++                ScatteringMode::Glossy, result);
++            if (result.get_mode() == ScatteringMode::None)
++                continue;
++            ++accepted;
++            DirectShadingComponents evaluated;
++            const float pdf = bsdf->evaluate(&values, false, false, geometry,
++                outgoing, result.m_incoming.get_value(), ScatteringMode::Glossy, evaluated);
++            EXPECT_FEQ_EPS(pdf, result.get_probability(), 1.0e-5f);
++            EXPECT_FEQ_EPS(evaluated.m_beauty[0], result.m_value.m_beauty[0], 1.0e-5f);
++        }
++        EXPECT_TRUE(accepted > 0);
++    }
++
++    TEST_CASE(LayerDepthLimitThrowsWithoutChangingTheStack)
++    {
++        CompositeClosure::SmallClosureLayerIDStack stack;
++        for (size_t i = 0; i < CompositeClosure::MaxClosureLayers; ++i)
++            stack.push(static_cast<std::int8_t>(i));
++        EXPECT_EQ(CompositeClosure::MaxClosureLayers, stack.size());
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, stack.push(0));
++        EXPECT_EQ(CompositeClosure::MaxClosureLayers, stack.size());
++    }
++}
+diff --git a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+index f740371de..61f776c72 100644
+--- a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
++++ b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+@@ -36,6 +36,8 @@
+ #include "renderer/modeling/bsdf/bsdf.h"
+ #include "renderer/modeling/bsdf/bsdfsample.h"
+ #include "renderer/modeling/bsdf/oslbsdf.h"
++#include "renderer/modeling/bsdf/metalbrdf.h"
++#include "renderer/utility/paramarray.h"
+ #include "renderer/modeling/project/project.h"
+ 
+ // appleseed.foundation headers.
+@@ -147,6 +149,33 @@ TEST_SUITE(Renderer_Modeling_BSDF_OSL)
+         }
+     };
+ 
++    TEST_CASE_F(IdealReflectionHasNoContinuousDensity, Fixture)
++    {
++        add_mirror(0.5f, basis.get_normal());
++        Arena inputs;
++        CompositeSurfaceClosure closure(basis, tree, inputs);
++        bsdf->prepare_inputs(inputs, point, &closure);
++        DirectShadingComponents value;
++        EXPECT_EQ(0.0f, bsdf->evaluate(&closure, false, false, geometry,
++            basis.get_normal(), basis.get_normal(), ScatteringMode::All, value));
++        EXPECT_EQ(0.0f, bsdf->evaluate_pdf(&closure, false, geometry,
++            basis.get_normal(), basis.get_normal(), ScatteringMode::All));
++    }
++
++    TEST_CASE_F(SmoothMetalHasNoContinuousDensity, Fixture)
++    {
++        auto metal = MetalBRDFFactory().create("smooth_metal", ParamArray());
++        MetalBRDFInputValues values{};
++        values.m_normal_reflectance.set(0.5f);
++        values.m_reflectance_multiplier = 1.0f;
++        values.m_precomputed.m_a.set(0.0f);
++        DirectShadingComponents value;
++        EXPECT_EQ(0.0f, metal->evaluate(&values, false, false, geometry,
++            basis.get_normal(), basis.get_normal(), ScatteringMode::All, value));
++        EXPECT_EQ(0.0f, metal->evaluate_pdf(&values, false, geometry,
++            basis.get_normal(), basis.get_normal(), ScatteringMode::All));
++    }
++
+     TEST_CASE_F(DeltaMixture_PreservesTotalReflectionForEitherClosure, Fixture)
+     {
+         const Vector3f tilted(0.6f, 0.8f, 0.0f);
+@@ -269,6 +298,20 @@ TEST_SUITE(Renderer_Modeling_BSDF_OSL)
+             mixture.get_closure_count(), pdfs));
+     }
+ 
++    TEST_CASE_F(ZeroProposalWeightHasNoSamplingDistribution, Fixture)
++    {
++        add_mirror(0.5f, basis.get_normal());
++        Arena inputs;
++        CompositeSurfaceClosure mixture(basis, tree, inputs);
++        mixture.override_closure_scalar_weight(0.0f);
++        float pdfs[CompositeSurfaceClosure::MaxClosureEntries];
++        EXPECT_EQ(0, mixture.compute_pdfs(ScatteringMode::All, pdfs));
++        BSDFSample result;
++        bsdf->sample(sampling, &mixture, false, false, geometry,
++            Dual3f(basis.get_normal()), ScatteringMode::All, result);
++        EXPECT_EQ(ScatteringMode::None, result.get_mode());
++    }
++
+     TEST_CASE_F(EmptyOrExcludedMixturesHaveNoScattering, Fixture)
+     {
+         EXPECT_EQ(ScatteringMode::None, sample().get_mode());
+diff --git a/src/appleseed/renderer/modeling/bsdf/glossybrdf.cpp b/src/appleseed/renderer/modeling/bsdf/glossybrdf.cpp
+index e228d7724..0905b1ad8 100644
+--- a/src/appleseed/renderer/modeling/bsdf/glossybrdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/glossybrdf.cpp
+@@ -213,11 +213,12 @@ namespace
+             const int                   modes,
+             DirectShadingComponents&    value) const override
+         {
+-            if (!ScatteringMode::has_glossy(modes))
+-                return 0.0f;
+-
+             const InputValues* values = static_cast<const InputValues*>(data);
+ 
++            // The zero-roughness branch is a delta distribution, as in sample().
++            if (!ScatteringMode::has_glossy(modes) || values->m_roughness == 0.0f)
++                return 0.0f;
++
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+                 values->m_roughness,
+@@ -261,11 +262,12 @@ namespace
+             const Vector3f&             incoming,
+             const int                   modes) const override
+         {
+-            if (!ScatteringMode::has_glossy(modes))
+-                return 0.0f;
+-
+             const InputValues* values = static_cast<const InputValues*>(data);
+ 
++            // The zero-roughness branch is a delta distribution, as in sample().
++            if (!ScatteringMode::has_glossy(modes) || values->m_roughness == 0.0f)
++                return 0.0f;
++
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+                 values->m_roughness,
+diff --git a/src/appleseed/renderer/modeling/bsdf/glossylayerbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/glossylayerbsdf.cpp
+index bf00bcec0..cd3dd2a8b 100644
+--- a/src/appleseed/renderer/modeling/bsdf/glossylayerbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/glossylayerbsdf.cpp
+@@ -40,6 +40,7 @@
+ #include "renderer/modeling/bsdf/energycompensationtables.h"
+ #include "renderer/modeling/bsdf/fresnel.h"
+ #include "renderer/modeling/bsdf/microfacethelper.h"
++#include "renderer/modeling/bsdf/specularhelper.h"
+ #include "renderer/utility/paramarray.h"
+ 
+ // appleseed.foundation headers.
+@@ -91,7 +92,7 @@ namespace
+         GlossyLayerBSDFImpl(
+             const char*                 name,
+             const ParamArray&           params)
+-          : BSDF(name, Reflective, ScatteringMode::Glossy, params)
++          : BSDF(name, Reflective, ScatteringMode::Glossy | ScatteringMode::Specular, params)
+         {
+         }
+ 
+@@ -135,10 +136,25 @@ namespace
+             const int                   modes,                      // allowed scattering modes
+             BSDFSample&                 sample) const override
+         {
+-            if (!ScatteringMode::has_glossy(modes))
++            const InputValues* values = static_cast<const InputValues*>(data);
++            const FresnelDielectricFun f(
++                values->m_reflectance,
++                1.0f,
++                values->m_precomputed.m_outside_ior / values->m_ior,
++                1.0f);
++
++            if (values->m_roughness == 0.0f)
++            {
++                if (ScatteringMode::has_specular(modes))
++                {
++                    SpecularBRDFHelper::sample(f, local_geometry, outgoing, sample);
++                    sample.m_value.m_beauty = sample.m_value.m_glossy;
++                }
+                 return;
++            }
+ 
+-            const InputValues* values = static_cast<const InputValues*>(data);
++            if (!ScatteringMode::has_glossy(modes))
++                return;
+ 
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+@@ -147,12 +163,6 @@ namespace
+                 alpha_x,
+                 alpha_y);
+ 
+-            const FresnelDielectricFun f(
+-                values->m_reflectance,
+-                1.0f,
+-                values->m_precomputed.m_outside_ior / values->m_ior,
+-                1.0f);
+-
+             MicrofacetBRDFHelper<GGXMDF>::sample(
+                 sampling_context,
+                 values->m_roughness,
+@@ -191,6 +201,8 @@ namespace
+                 return 0.0f;
+ 
+             const InputValues* values = static_cast<const InputValues*>(data);
++            if (values->m_roughness == 0.0f)
++                return 0.0f;
+ 
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+@@ -239,6 +251,8 @@ namespace
+                 return 0.0f;
+ 
+             const InputValues* values = static_cast<const InputValues*>(data);
++            if (values->m_roughness == 0.0f)
++                return 0.0f;
+ 
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+@@ -290,7 +304,7 @@ namespace
+             const Vector3f& normal = shading_basis.get_normal();
+             const float cos_on = dot(normal, outgoing);
+ 
+-            const float eta = 1.0f / values->m_ior;
++            const float eta = values->m_precomputed.m_outside_ior / values->m_ior;
+             const float Eo = get_dielectric_layer_directional_albedo(
+                 eta,
+                 values->m_roughness,
+@@ -339,7 +353,7 @@ namespace
+             const float cos_on = dot(normal, outgoing);
+             const float cos_in = dot(normal, incoming);
+ 
+-            const float eta = 1.0f / values->m_ior;
++            const float eta = values->m_precomputed.m_outside_ior / values->m_ior;
+             const float Eo = get_dielectric_layer_directional_albedo(
+                 eta,
+                 values->m_roughness,
+@@ -506,12 +520,23 @@ auto_release_ptr<BSDF> GlossyLayerBSDFFactory::create(const char* name, const Pa
+ 
+ float get_dielectric_layer_directional_albedo(const float eta, const float roughness, const float cos_theta)
+ {
++    // The finite-roughness table excludes null and ideal interfaces.
++    if (eta == 1.0f)
++        return 0.0f;
++
++    if (roughness == 0.0f)
++    {
++        float reflectance;
++        fresnel_reflectance_dielectric(reflectance, eta, saturate(cos_theta));
++        return reflectance;
++    }
++
+     return g_dir_albedo_tables.m_ggx.get_directional_albedo(eta, roughness, cos_theta);
+ }
+ 
+ float get_dielectric_layer_average_albedo(const float eta, const float roughness)
+ {
+-    return g_dir_albedo_tables.m_ggx.get_average_albedo(eta, roughness);
++    return eta == 1.0f ? 0.0f : g_dir_albedo_tables.m_ggx.get_average_albedo(eta, roughness);
+ }
+ 
+ void write_dielectric_layer_directional_albedo_tables(const char* directory)
+diff --git a/src/appleseed/renderer/modeling/bsdf/metalbrdf.cpp b/src/appleseed/renderer/modeling/bsdf/metalbrdf.cpp
+index 10380bad2..11f10241f 100644
+--- a/src/appleseed/renderer/modeling/bsdf/metalbrdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/metalbrdf.cpp
+@@ -213,11 +213,12 @@ namespace
+             const int                   modes,
+             DirectShadingComponents&    value) const override
+         {
+-            if (!ScatteringMode::has_glossy(modes))
+-                return 0.0f;
+-
+             const InputValues* values = static_cast<const InputValues*>(data);
+ 
++            // The zero-roughness branch is a delta distribution, as in sample().
++            if (!ScatteringMode::has_glossy(modes) || values->m_roughness == 0.0f)
++                return 0.0f;
++
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+                 values->m_roughness,
+@@ -260,11 +261,12 @@ namespace
+             const Vector3f&             incoming,
+             const int                   modes) const override
+         {
+-            if (!ScatteringMode::has_glossy(modes))
+-                return 0.0f;
+-
+             const InputValues* values = static_cast<const InputValues*>(data);
+ 
++            // The zero-roughness branch is a delta distribution, as in sample().
++            if (!ScatteringMode::has_glossy(modes) || values->m_roughness == 0.0f)
++                return 0.0f;
++
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+                 values->m_roughness,

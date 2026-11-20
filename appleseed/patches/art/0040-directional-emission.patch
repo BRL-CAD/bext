@@ -1,0 +1,1969 @@
+Subject: [PATCH 40/50] Evaluate directional emission in its optical context
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 11c7e021f2d68dcfe6dd7b660c787c34061f17cb
+Original-Commit: e38050f85e37e317ed0adee4430061177345a4a9
+Original-Commit: d84b1a65865e060f1eb3574be54743d2a53d502d
+
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index 9e36741f7..e04b26d08 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -1523,6 +1523,7 @@ set (renderer_meta_tests_sources
+     renderer/meta/tests/test_intersector.cpp
+     renderer/meta/tests/test_localsampleaccumulationbuffer.cpp
+     renderer/meta/tests/test_oslbsdf.cpp
++    renderer/meta/tests/test_osledf.cpp
+     renderer/meta/tests/test_paramarray.cpp
+     renderer/meta/tests/test_pinholecamera.cpp
+     renderer/meta/tests/test_pixelsampler.cpp
+diff --git a/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp b/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp
+index dcf20bebd..2cb63d1e5 100644
+--- a/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp
++++ b/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp
+@@ -531,27 +531,22 @@ namespace
+                 light_sample.m_shading_normal,
+                 shading_context.get_intersector());
+ 
+-            if (material_data.m_shader_group)
+-            {
+-                shading_context.execute_osl_emission(
+-                    *material_data.m_shader_group,
+-                    light_shading_point);
+-            }
+-
+             // Sample the EDF.
+             sampling_context.split_in_place(2, 1);
+-            Vector3f emission_direction;
++            ShadingRay light_ray;
+             Spectrum edf_value(Spectrum::Illuminance);
+             float edf_prob;
+-            material_data.m_edf->sample(
++            material_data.m_edf->sample_light_ray(
+                 sampling_context,
+-                material_data.m_edf->evaluate_inputs(shading_context, light_shading_point),
++                shading_context,
++                light_shading_point,
+                 Vector3f(light_sample.m_geometric_normal),
+                 Basis3f(Vector3f(light_sample.m_shading_normal)),
+                 sampling_context.next2<Vector2f>(),
+-                emission_direction,
++                light_ray,
+                 edf_value,
+                 edf_prob);
++            const Vector3f emission_direction(light_ray.m_dir);
+ 
+             // Compute the initial particle weight.
+             Spectrum initial_flux = edf_value * (light_sample.m_estimator_weight / light_sample.m_probability);
+@@ -563,20 +558,6 @@ namespace
+                 Vector3d(emission_direction),
+                 shading_context.get_intersector());
+ 
+-            // Build the light ray.
+-            sampling_context.split_in_place(1, 1);
+-            const ShadingRay::Time time =
+-                ShadingRay::Time::create_with_normalized_time(
+-                    sampling_context.next2<float>(),
+-                    m_shutter_open_begin_time,
+-                    m_shutter_close_end_time);
+-            const ShadingRay light_ray(
+-                light_sample.m_point,
+-                Vector3d(emission_direction),
+-                time,
+-                VisibilityFlags::LightRay,
+-                0);
+-
+             BDPTVertex& bdpt_vertex = vertices[0];
+             bdpt_vertex.m_beta = initial_flux;
+             bdpt_vertex.m_fwd_pdf = light_sample.m_probability;
+@@ -607,7 +588,7 @@ namespace
+                 shading_context.get_max_iterations());  // don't illuminate points closer than the light near start value
+ 
+             const size_t light_path_length =
+-                path_tracer.trace(
++                path_tracer.trace_initialized_ray(
+                     sampling_context,
+                     shading_context,
+                     light_ray,
+diff --git a/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp b/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp
+index e317a1377..ea5321188 100644
+--- a/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp
++++ b/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp
+@@ -411,10 +411,12 @@ void DirectLightingIntegrator::add_emitting_shape_sample_contribution(
+ 
+     // Compute the transmission factor between the light sample and the shading point.
+     Spectrum transmission;
++    ShadingRay visibility_ray;
+     m_material_sampler.trace_between(
+         m_shading_context,
+         sample.m_point,
+-        transmission);
++        transmission,
++        &visibility_ray);
+ 
+     // Discard occluded samples.
+     if (is_zero(transmission))
+@@ -439,6 +441,11 @@ void DirectLightingIntegrator::add_emitting_shape_sample_contribution(
+         -incoming,
+         m_shading_context.get_intersector());
+ 
++    // Visibility stops short of the emitter to avoid self-occlusion.
++    // Restore the full segment length for the emitter's shader context.
++    visibility_ray.m_tmax = norm(sample.m_point - visibility_ray.m_org);
++    light_shading_point.set_ray(visibility_ray);
++
+     if (material_data.m_shader_group)
+     {
+         m_shading_context.execute_osl_emission(
+diff --git a/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.cpp b/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.cpp
+index 47d422a16..3a9dba3db 100644
+--- a/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.cpp
++++ b/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.cpp
+@@ -640,27 +640,22 @@ namespace
+                 light_sample.m_shading_normal,
+                 m_shading_context.get_intersector());
+ 
+-            if (material_data.m_shader_group)
+-            {
+-                m_shading_context.execute_osl_emission(
+-                    *material_data.m_shader_group,
+-                    light_shading_point);
+-            }
+-
+             // Sample the EDF.
+             sampling_context.split_in_place(2, 1);
+-            Vector3f emission_direction;
++            ShadingRay light_ray;
+             Spectrum edf_value(Spectrum::Illuminance);
+             float edf_prob;
+-            material_data.m_edf->sample(
++            material_data.m_edf->sample_light_ray(
+                 sampling_context,
+-                material_data.m_edf->evaluate_inputs(m_shading_context, light_shading_point),
++                m_shading_context,
++                light_shading_point,
+                 Vector3f(light_sample.m_geometric_normal),
+                 Basis3f(Vector3f(light_sample.m_shading_normal)),
+                 sampling_context.next2<Vector2f>(),
+-                emission_direction,
++                light_ray,
+                 edf_value,
+                 edf_prob);
++            const Vector3f emission_direction(light_ray.m_dir);
+ 
+             // Compute the initial particle weight.
+             Spectrum initial_flux = edf_value;
+@@ -675,20 +670,6 @@ namespace
+                 Vector3d(emission_direction),
+                 m_intersector);
+ 
+-            // Build the light ray.
+-            sampling_context.split_in_place(1, 1);
+-            const ShadingRay::Time time =
+-                ShadingRay::Time::create_with_normalized_time(
+-                    sampling_context.next2<float>(),
+-                    m_shutter_open_begin_time,
+-                    m_shutter_close_end_time);
+-            const ShadingRay light_ray(
+-                light_sample.m_point,
+-                Vector3d(emission_direction),
+-                time,
+-                VisibilityFlags::LightRay,
+-                0);
+-
+             // Build the path tracer.
+             PathVisitor path_visitor(
+                 m_params,
+@@ -722,7 +703,7 @@ namespace
+ 
+             // Trace the light path.
+             const size_t path_length =
+-                path_tracer.trace(
++                path_tracer.trace_initialized_ray(
+                     sampling_context,
+                     m_shading_context,
+                     light_ray,
+diff --git a/src/appleseed/renderer/kernel/lighting/materialsamplers.cpp b/src/appleseed/renderer/kernel/lighting/materialsamplers.cpp
+index 95c2cf605..f39fd948c 100644
+--- a/src/appleseed/renderer/kernel/lighting/materialsamplers.cpp
++++ b/src/appleseed/renderer/kernel/lighting/materialsamplers.cpp
+@@ -129,6 +129,15 @@ void BSDFSampler::trace_between(
+     const ShadingContext&       shading_context,
+     const Vector3d&             target_position,
+     Spectrum&                   transmission) const
++{
++    trace_between(shading_context, target_position, transmission, nullptr);
++}
++
++void BSDFSampler::trace_between(
++    const ShadingContext&       shading_context,
++    const Vector3d&             target_position,
++    Spectrum&                   transmission,
++    ShadingRay*                 terminal_ray) const
+ {
+     shading_context.get_tracer().trace_between_simple(
+         shading_context,
+@@ -136,7 +145,8 @@ void BSDFSampler::trace_between(
+         target_position,
+         m_shading_point.get_ray(),
+         VisibilityFlags::ShadowRay,
+-        transmission);
++        transmission,
++        terminal_ray);
+ }
+ 
+ bool BSDFSampler::sample(
+@@ -268,6 +278,15 @@ void VolumeSampler::trace_between(
+     const ShadingContext&       shading_context,
+     const Vector3d&             target_position,
+     Spectrum&                   transmission) const
++{
++    trace_between(shading_context, target_position, transmission, nullptr);
++}
++
++void VolumeSampler::trace_between(
++    const ShadingContext&       shading_context,
++    const Vector3d&             target_position,
++    Spectrum&                   transmission,
++    ShadingRay*                 terminal_ray) const
+ {
+     shading_context.get_tracer().trace_between_simple(
+         shading_context,
+@@ -275,7 +294,8 @@ void VolumeSampler::trace_between(
+         target_position,
+         m_volume_ray,
+         VisibilityFlags::ShadowRay,
+-        transmission);
++        transmission,
++        terminal_ray);
+ }
+ 
+ bool VolumeSampler::sample(
+diff --git a/src/appleseed/renderer/kernel/lighting/materialsamplers.h b/src/appleseed/renderer/kernel/lighting/materialsamplers.h
+index 81d3db807..3ea9ba0f0 100644
+--- a/src/appleseed/renderer/kernel/lighting/materialsamplers.h
++++ b/src/appleseed/renderer/kernel/lighting/materialsamplers.h
+@@ -89,6 +89,13 @@ class IMaterialSampler
+         const foundation::Vector3f&     incoming,
+         const int                       light_sampling_modes,
+         DirectShadingComponents&        value) const = 0;
++
++    // Return the optical context actually used by visibility tracing.
++    virtual void trace_between(
++        const ShadingContext&           shading_context,
++        const foundation::Vector3d&     target_position,
++        Spectrum&                       transmission,
++        ShadingRay*                     terminal_ray) const = 0;
+ };
+ 
+ class BSDFSampler
+@@ -122,6 +129,12 @@ class BSDFSampler
+         const foundation::Vector3d&     target_position,
+         Spectrum&                       transmission) const override;
+ 
++    void trace_between(
++        const ShadingContext&           shading_context,
++        const foundation::Vector3d&     target_position,
++        Spectrum&                       transmission,
++        ShadingRay*                     terminal_ray) const override;
++
+     bool sample(
+         SamplingContext&                sampling_context,
+         const foundation::Dual3d&       outgoing,
+@@ -175,6 +188,12 @@ class VolumeSampler
+         const foundation::Vector3d&     target_position,
+         Spectrum&                       transmission) const override;
+ 
++    void trace_between(
++        const ShadingContext&           shading_context,
++        const foundation::Vector3d&     target_position,
++        Spectrum&                       transmission,
++        ShadingRay*                     terminal_ray) const override;
++
+     bool sample(
+         SamplingContext&                sampling_context,
+         const foundation::Dual3d&       outgoing,
+diff --git a/src/appleseed/renderer/kernel/lighting/pathtracer.h b/src/appleseed/renderer/kernel/lighting/pathtracer.h
+index 2f4fb4ea1..7b2456319 100644
+--- a/src/appleseed/renderer/kernel/lighting/pathtracer.h
++++ b/src/appleseed/renderer/kernel/lighting/pathtracer.h
+@@ -126,6 +126,14 @@ class PathTracer
+         const ShadingPoint*         parent_shading_point = nullptr,
+         const bool                  clear_arena = true);
+ 
++    // The caller has initialized the ray's optical media, including vacuum.
++    size_t trace_initialized_ray(
++        SamplingContext&            sampling_context,
++        const ShadingContext&       shading_context,
++        const ShadingRay&           ray,
++        const ShadingPoint*         parent_shading_point = nullptr,
++        const bool                  clear_arena = true);
++
+     size_t trace(
+         SamplingContext&            sampling_context,
+         const ShadingContext&       shading_context,
+@@ -226,8 +234,20 @@ inline size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace(
+     ShadingRay initialized_ray = ray;
+     shading_context.get_intersector().initialize_media(
+         sampling_context, shading_context, initialized_ray, parent_shading_point);
++    return trace_initialized_ray(sampling_context, shading_context,
++        initialized_ray, parent_shading_point, clear_arena);
++}
++
++template <typename PathVisitor, typename VolumeVisitor, bool Adjoint>
++inline size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace_initialized_ray(
++    SamplingContext&            sampling_context,
++    const ShadingContext&       shading_context,
++    const ShadingRay&           ray,
++    const ShadingPoint*         parent_shading_point,
++    const bool                  clear_arena)
++{
+     ShadingPoint shading_point;
+-    shading_context.get_intersector().trace(initialized_ray, shading_point, parent_shading_point);
++    shading_context.get_intersector().trace(ray, shading_point, parent_shading_point);
+ 
+     return
+         trace(
+diff --git a/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp b/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp
+index 6351c802b..38bb9fa1b 100644
+--- a/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp
++++ b/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp
+@@ -407,27 +407,22 @@ namespace
+                 light_sample.m_shading_normal,
+                 shading_context.get_intersector());
+ 
+-            if (material_data.m_shader_group)
+-            {
+-                shading_context.execute_osl_emission(
+-                    *material_data.m_shader_group,
+-                    light_shading_point);
+-            }
+-
+             // Sample the EDF.
+             sampling_context.split_in_place(2, 1);
+-            Vector3f emission_direction;
++            ShadingRay ray;
+             Spectrum edf_value(Spectrum::Illuminance);
+             float edf_prob;
+-            edf->sample(
++            edf->sample_light_ray(
+                 sampling_context,
+-                edf->evaluate_inputs(shading_context, light_shading_point),
++                shading_context,
++                light_shading_point,
+                 Vector3f(light_sample.m_geometric_normal),
+                 Basis3f(Vector3f(light_sample.m_shading_normal)),
+                 sampling_context.next2<Vector2f>(),
+-                emission_direction,
++                ray,
+                 edf_value,
+                 edf_prob);
++            const Vector3f emission_direction(ray.m_dir);
+ 
+             // Compute the initial particle weight.
+             Spectrum initial_flux = edf_value;
+@@ -442,18 +437,6 @@ namespace
+                 Vector3d(emission_direction),
+                 m_intersector);
+ 
+-            // Build the photon ray.
+-            sampling_context.split_in_place(1, 1);
+-            const ShadingRay ray(
+-                light_sample.m_point,
+-                Vector3d(emission_direction),
+-                ShadingRay::Time::create_with_normalized_time(
+-                    sampling_context.next2<float>(),
+-                    m_shutter_open_begin_time,
+-                    m_shutter_close_end_time),
+-                VisibilityFlags::LightRay,
+-                0);
+-
+             // Build the path tracer.
+             const bool cast_indirect_light = (edf->get_flags() & EDF::CastIndirectLight) != 0;
+             PathVisitor path_visitor(
+@@ -480,7 +463,7 @@ namespace
+                 edf->get_light_near_start());               // don't illuminate points closer than the light near start value
+ 
+             // Trace the photon path.
+-            path_tracer.trace(sampling_context, shading_context, ray, &parent_shading_point);
++            path_tracer.trace_initialized_ray(sampling_context, shading_context, ray, &parent_shading_point);
+         }
+ 
+         void trace_non_physical_light_photon(
+diff --git a/src/appleseed/renderer/kernel/lighting/tracer.cpp b/src/appleseed/renderer/kernel/lighting/tracer.cpp
+index c0aedd3ca..fe7eee5a0 100644
+--- a/src/appleseed/renderer/kernel/lighting/tracer.cpp
++++ b/src/appleseed/renderer/kernel/lighting/tracer.cpp
+@@ -52,6 +52,30 @@ using namespace foundation;
+ namespace renderer
+ {
+ 
++namespace
++{
++    bool is_standalone_volume(const Material::RenderData& data)
++    {
++        return data.m_bsdf == nullptr && data.m_bssrdf == nullptr && data.m_volume != nullptr;
++    }
++
++    void pass_transparent_boundary(
++        const ShadingPoint&     point,
++        const Material&         material,
++        ShadingRay&             next_ray)
++    {
++        const ShadingRay& current_ray = point.get_ray();
++        // Coverage transparency represents an absent surface. Only actual
++        // volume boundaries change the medium occupied by a shadow ray.
++        if (!is_standalone_volume(material.get_render_data()))
++            next_ray.copy_media_from(current_ray);
++        else if (point.is_entering())
++            next_ray.add_medium(current_ray, &point.get_object_instance(), &material, 1.0f);
++        else
++            next_ray.remove_medium(current_ray, &point.get_object_instance());
++    }
++}
++
+ Tracer::Tracer(
+     const Scene&                scene,
+     const Intersector&          intersector,
+@@ -156,9 +180,7 @@ const ShadingPoint& Tracer::do_trace(
+         // Compute alpha.
+         Alpha alpha;
+         evaluate_alpha(*material, *shading_point_ptr, alpha);
+-        if (render_data.m_bsdf == nullptr &&
+-            render_data.m_bssrdf == nullptr &&
+-            render_data.m_volume != nullptr)
++        if (is_standalone_volume(render_data))
+         {
+             alpha[0] = 0.0f;
+         }
+@@ -185,15 +207,7 @@ const ShadingPoint& Tracer::do_trace(
+             current_ray.m_flags,
+             current_ray.m_depth + (volume == nullptr ? 0 : 1));
+ 
+-        // Determine whether the ray is entering or leaving a medium.
+-        const bool entering = shading_point_ptr->is_entering();
+-
+-        // Update the medium list.
+-        const ObjectInstance& object_instance = shading_point_ptr->get_object_instance();
+-        if (entering)
+-            next_ray.add_medium(current_ray, &object_instance, material, 1.0f);
+-        else
+-            next_ray.remove_medium(current_ray, &object_instance);
++        pass_transparent_boundary(*shading_point_ptr, *material, next_ray);
+ 
+         // Trace ray further.
+         m_shading_points[shading_point_index].clear();
+@@ -273,10 +287,7 @@ const ShadingPoint& Tracer::do_trace_between(
+         // Compute alpha.
+         Alpha alpha;
+         evaluate_alpha(*material, *shading_point_ptr, alpha);
+-        if (
+-            render_data.m_bsdf == nullptr &&
+-            render_data.m_bssrdf == nullptr &&
+-            render_data.m_volume != nullptr)
++        if (is_standalone_volume(render_data))
+         {
+             alpha[0] = 0.0f;
+         }
+@@ -308,15 +319,7 @@ const ShadingPoint& Tracer::do_trace_between(
+             current_ray.m_flags,
+             current_ray.m_depth + (volume == nullptr ? 0 : 1));
+ 
+-        // Determine whether the ray is entering or leaving a medium.
+-        const bool entering = shading_point_ptr->is_entering();
+-
+-        // Update the medium list.
+-        const ObjectInstance& object_instance = shading_point_ptr->get_object_instance();
+-        if (entering)
+-            next_ray.add_medium(current_ray, &object_instance, material, 1.0f);
+-        else
+-            next_ray.remove_medium(current_ray, &object_instance);
++        pass_transparent_boundary(*shading_point_ptr, *material, next_ray);
+ 
+         // Trace ray further.
+         m_shading_points[shading_point_index].clear();
+diff --git a/src/appleseed/renderer/kernel/lighting/tracer.h b/src/appleseed/renderer/kernel/lighting/tracer.h
+index d2f8a5cc2..8b1ed88a7 100644
+--- a/src/appleseed/renderer/kernel/lighting/tracer.h
++++ b/src/appleseed/renderer/kernel/lighting/tracer.h
+@@ -99,6 +99,14 @@ class Tracer
+         const ShadingRay&               parent_ray,
+         const VisibilityFlags::Type     ray_flags,
+         Spectrum&                       transmission);
++    void trace_between_simple(
++        const ShadingContext&           shading_context,
++        const ShadingPoint&             origin,
++        const foundation::Vector3d&     target,
++        const ShadingRay&               parent_ray,
++        const VisibilityFlags::Type     ray_flags,
++        Spectrum&                       transmission,
++        ShadingRay*                     terminal_ray);
+     void trace_between_simple(
+         const ShadingContext&           shading_context,
+         const foundation::Vector3d&     origin,
+@@ -106,6 +114,14 @@ class Tracer
+         const ShadingRay&               parent_ray,
+         const VisibilityFlags::Type     ray_flags,
+         Spectrum&                       transmission);
++    void trace_between_simple(
++        const ShadingContext&           shading_context,
++        const foundation::Vector3d&     origin,
++        const foundation::Vector3d&     target,
++        const ShadingRay&               parent_ray,
++        const VisibilityFlags::Type     ray_flags,
++        Spectrum&                       transmission,
++        ShadingRay*                     terminal_ray);
+     void trace_between_simple(
+         const ShadingContext&           shading_context,
+         const foundation::Vector3d&     origin,
+@@ -282,13 +298,26 @@ inline void Tracer::trace_between_simple(
+     const ShadingRay&                   parent_ray,
+     const VisibilityFlags::Type         ray_flags,
+     Spectrum&                           transmission)
++{
++    trace_between_simple(shading_context, origin, target, parent_ray,
++        ray_flags, transmission, nullptr);
++}
++
++inline void Tracer::trace_between_simple(
++    const ShadingContext&               shading_context,
++    const ShadingPoint&                 origin,
++    const foundation::Vector3d&         target,
++    const ShadingRay&                   parent_ray,
++    const VisibilityFlags::Type         ray_flags,
++    Spectrum&                           transmission,
++    ShadingRay*                         terminal_ray)
+ {
+     if (m_assume_no_alpha_mapping && m_assume_no_participating_media)
+     {
+         const foundation::Vector3d direction = target - origin.get_point();
+         const double dist = foundation::norm(direction);
+ 
+-        const ShadingRay ray(
++        ShadingRay ray(
+             origin.get_point(),
+             direction / dist,
+             0.0,                        // ray tmin
+@@ -298,6 +327,12 @@ inline void Tracer::trace_between_simple(
+             parent_ray.m_depth);
+ 
+         transmission.set(m_intersector.trace_probe(ray, &origin) ? 0.0f : 1.0f);
++        if (terminal_ray)
++        {
++            ray.copy_media_from(parent_ray);
++            ray.m_depth = parent_ray.m_depth + 1;
++            *terminal_ray = ray;
++        }
+     }
+     else
+     {
+@@ -312,6 +347,8 @@ inline void Tracer::trace_between_simple(
+ 
+         if (shading_point.hit_surface())
+             transmission.set(0.0f);
++        if (terminal_ray)
++            *terminal_ray = shading_point.get_ray();
+     }
+ }
+ 
+@@ -322,13 +359,26 @@ inline void Tracer::trace_between_simple(
+     const ShadingRay&                   parent_ray,
+     const VisibilityFlags::Type         ray_flags,
+     Spectrum&                           transmission)
++{
++    trace_between_simple(shading_context, origin, target, parent_ray,
++        ray_flags, transmission, nullptr);
++}
++
++inline void Tracer::trace_between_simple(
++    const ShadingContext&               shading_context,
++    const foundation::Vector3d&         origin,
++    const foundation::Vector3d&         target,
++    const ShadingRay&                   parent_ray,
++    const VisibilityFlags::Type         ray_flags,
++    Spectrum&                           transmission,
++    ShadingRay*                         terminal_ray)
+ {
+     if (m_assume_no_alpha_mapping && m_assume_no_participating_media)
+     {
+         const foundation::Vector3d direction = target - origin;
+         const double dist = foundation::norm(direction);
+ 
+-        const ShadingRay ray(
++        ShadingRay ray(
+             origin,
+             direction / dist,
+             0.0,                        // ray tmin
+@@ -338,6 +388,12 @@ inline void Tracer::trace_between_simple(
+             parent_ray.m_depth);
+ 
+         transmission.set(m_intersector.trace_probe(ray) ? 0.0f : 1.0f);
++        if (terminal_ray)
++        {
++            ray.copy_media_from(parent_ray);
++            ray.m_depth = parent_ray.m_depth + 1;
++            *terminal_ray = ray;
++        }
+     }
+     else
+     {
+@@ -352,6 +408,8 @@ inline void Tracer::trace_between_simple(
+ 
+         if (shading_point.hit_surface())
+             transmission.set(0.0f);
++        if (terminal_ray)
++            *terminal_ray = shading_point.get_ray();
+     }
+ }
+ 
+diff --git a/src/appleseed/renderer/kernel/shading/oslshadergroupexec.cpp b/src/appleseed/renderer/kernel/shading/oslshadergroupexec.cpp
+index 767710fc8..0cc712592 100644
+--- a/src/appleseed/renderer/kernel/shading/oslshadergroupexec.cpp
++++ b/src/appleseed/renderer/kernel/shading/oslshadergroupexec.cpp
+@@ -76,6 +76,16 @@ void OSLShaderGroupExec::execute_shading(
+         shading_point.get_ray().m_flags);
+ }
+ 
++void OSLShaderGroupExec::execute_shading(
++    const ShaderGroup&              shader_group,
++    const ShadingPoint&             shading_point,
++    const Vector3f&                 incident,
++    const VisibilityFlags::Type     ray_flags) const
++{
++    assert(is_normalized(incident));
++    do_execute(shader_group, shading_point, ray_flags, &incident);
++}
++
+ void OSLShaderGroupExec::execute_subsurface(
+     const ShaderGroup&              shader_group,
+     const ShadingPoint&             shading_point) const
+@@ -202,7 +212,8 @@ Color3f OSLShaderGroupExec::execute_background(
+ void OSLShaderGroupExec::do_execute(
+     const ShaderGroup&              shader_group,
+     const ShadingPoint&             shading_point,
+-    const VisibilityFlags::Type     ray_flags) const
++    const VisibilityFlags::Type     ray_flags,
++    const Vector3f*                 incident) const
+ {
+     assert(m_osl_shading_context);
+     assert(m_osl_thread_info);
+@@ -212,10 +223,17 @@ void OSLShaderGroupExec::do_execute(
+         ray_flags,
+         m_osl_shading_system.renderer());
+ 
++    auto& globals = shading_point.get_osl_shader_globals();
++    if (incident && Vector3f(globals.I) != *incident)
++    {
++        globals.I = *incident;
++        globals.dIdx = OSL::Vec3(0.0f);
++        globals.dIdy = OSL::Vec3(0.0f);
++    }
+     m_osl_shading_system.execute(
+         m_osl_shading_context,
+         *reinterpret_cast<OSL::ShaderGroup*>(shader_group.osl_shader_group()),
+-        shading_point.get_osl_shader_globals());
++        globals);
+ }
+ 
+ void OSLShaderGroupExec::choose_bsdf_closure_shading_basis(
+diff --git a/src/appleseed/renderer/kernel/shading/oslshadergroupexec.h b/src/appleseed/renderer/kernel/shading/oslshadergroupexec.h
+index 3b7b9ffa1..e3cdaadda 100644
+--- a/src/appleseed/renderer/kernel/shading/oslshadergroupexec.h
++++ b/src/appleseed/renderer/kernel/shading/oslshadergroupexec.h
+@@ -85,6 +85,12 @@ class OSLShaderGroupExec
+         const ShaderGroup&              shader_group,
+         const ShadingPoint&             shading_point) const;
+ 
++    void execute_shading(
++        const ShaderGroup&              shader_group,
++        const ShadingPoint&             shading_point,
++        const foundation::Vector3f&      incident,
++        const VisibilityFlags::Type     ray_flags) const;
++
+     void execute_subsurface(
+         const ShaderGroup&              shader_group,
+         const ShadingPoint&             shading_point) const;
+@@ -119,7 +125,8 @@ class OSLShaderGroupExec
+     void do_execute(
+         const ShaderGroup&              shader_group,
+         const ShadingPoint&             shading_point,
+-        const VisibilityFlags::Type     ray_flags) const;
++        const VisibilityFlags::Type     ray_flags,
++        const foundation::Vector3f*     incident = nullptr) const;
+ 
+     void choose_bsdf_closure_shading_basis(
+         const ShadingPoint&             shading_point,
+diff --git a/src/appleseed/renderer/kernel/shading/shadingcontext.cpp b/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
+index a930ce3c4..b4f5f0ad9 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
+@@ -355,6 +355,15 @@ void ShadingContext::execute_osl_shading(
+         shading_point);
+ }
+ 
++void ShadingContext::execute_osl_shading(
++    const ShaderGroup&          shader_group,
++    const ShadingPoint&         shading_point,
++    const foundation::Vector3f& incident,
++    const VisibilityFlags::Type ray_flags) const
++{
++    m_shadergroup_exec.execute_shading(shader_group, shading_point, incident, ray_flags);
++}
++
+ void ShadingContext::execute_osl_subsurface(
+     const ShaderGroup&      shader_group,
+     const ShadingPoint&     shading_point) const
+diff --git a/src/appleseed/renderer/kernel/shading/shadingcontext.h b/src/appleseed/renderer/kernel/shading/shadingcontext.h
+index 4b08ec128..92bacffcb 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingcontext.h
++++ b/src/appleseed/renderer/kernel/shading/shadingcontext.h
+@@ -106,6 +106,13 @@ class ShadingContext
+         const ShaderGroup&          shader_group,
+         const ShadingPoint&         shading_point) const;
+ 
++    // Override the shader direction and ray type while retaining hit data.
++    void execute_osl_shading(
++        const ShaderGroup&          shader_group,
++        const ShadingPoint&         shading_point,
++        const foundation::Vector3f& incident,
++        const VisibilityFlags::Type ray_flags) const;
++
+     void execute_osl_subsurface(
+         const ShaderGroup&          shader_group,
+         const ShadingPoint&         shading_point) const;
+@@ -202,4 +209,5 @@ inline size_t ShadingContext::get_max_iterations() const
+     return m_max_iterations;
+ }
+ 
++
+ }   // namespace renderer
+diff --git a/src/appleseed/renderer/meta/tests/test_osledf.cpp b/src/appleseed/renderer/meta/tests/test_osledf.cpp
+new file mode 100644
+index 000000000..ccc62a2b5
+--- /dev/null
++++ b/src/appleseed/renderer/meta/tests/test_osledf.cpp
+@@ -0,0 +1,604 @@
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.renderer headers.
++#include "renderer/global/globaltypes.h"
++#include "renderer/kernel/intersection/intersector.h"
++#include "renderer/kernel/intersection/tracecontext.h"
++#include "renderer/kernel/lighting/tracer.h"
++#include "renderer/kernel/rendering/rendererservices.h"
++#include "renderer/kernel/shading/closures.h"
++#include "renderer/kernel/shading/oslshadergroupexec.h"
++#include "renderer/kernel/shading/oslshadingsystem.h"
++#include "renderer/kernel/shading/shadingcontext.h"
++#include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++#include "renderer/kernel/texturing/texturecache.h"
++#include "renderer/kernel/texturing/texturestore.h"
++#include "renderer/modeling/bsdf/glassbsdf.h"
++#include "renderer/modeling/camera/pinholecamera.h"
++#include "renderer/modeling/color/colorspace.h"
++#include "renderer/modeling/edf/diffuseedf.h"
++#include "renderer/modeling/edf/edf.h"
++#include "renderer/modeling/edf/osledf.h"
++#include "renderer/modeling/frame/frame.h"
++#include "renderer/modeling/material/genericmaterial.h"
++#include "renderer/modeling/material/oslmaterial.h"
++#include "renderer/modeling/object/sphereobject.h"
++#include "renderer/modeling/scene/assembly.h"
++#include "renderer/modeling/scene/assemblyinstance.h"
++#include "renderer/modeling/scene/objectinstance.h"
++#include "renderer/modeling/scene/scene.h"
++#include "renderer/modeling/shadergroup/shadercompiler.h"
++#include "renderer/modeling/shadergroup/shadergroup.h"
++#include "renderer/utility/iostreamop.h"
++#include "renderer/utility/paramarray.h"
++#include "renderer/utility/testutils.h"
++
++// appleseed.foundation headers.
++#include "foundation/containers/dictionary.h"
++#include "foundation/math/matrix.h"
++#include "foundation/math/rng/xoroshiro128plus.h"
++#include "foundation/math/scalar.h"
++#include "foundation/memory/arena.h"
++#include "foundation/memory/autoreleaseptr.h"
++#include "foundation/utility/test.h"
++
++// OSL headers.
++#include "foundation/platform/_beginoslheaders.h"
++#include "OSL/oslclosure.h"
++#include "foundation/platform/_endoslheaders.h"
++
++// Standard headers.
++#include <cmath>
++#include <memory>
++#include <stdexcept>
++#include <string>
++
++using namespace foundation;
++using namespace renderer;
++
++TEST_SUITE(Renderer_Modeling_EDF_OSL)
++{
++    enum class Profile { Angular, Constant, Empty, Position, RayType, PathContext, Footprint, OpticalContext };
++
++    template <Profile EmissionProfile, bool Enclosed = false, bool MixedHost = false>
++    struct Fixture : TestSceneBase
++    {
++        std::shared_ptr<OIIOTextureSystem> m_textures;
++        RendererServices m_services;
++        auto_release_ptr<OSLShadingSystem> m_system;
++        TraceContext m_trace;
++        TextureStore m_store;
++        TextureCache m_cache;
++        Intersector m_intersector;
++        Arena m_arena;
++        OSLShaderGroupExec m_exec;
++        Tracer m_tracer;
++        ShadingContext m_context;
++        std::unique_ptr<TestSceneContext> m_scene_context;
++        ShaderGroup* m_group = nullptr;
++        ShaderGroup* m_host_group = nullptr;
++        EDF* m_edf = nullptr;
++        ShadingPoint m_point;
++        Xoroshiro128plus m_rng;
++        SamplingContext m_sampling;
++
++        Fixture()
++          : m_textures(OIIOTextureSystemFactory::create())
++          , m_services(m_project, *m_textures)
++          , m_system(OSLShadingSystemFactory::create(&m_services, m_textures.get()))
++          , m_trace(m_scene)
++          , m_store(m_scene)
++          , m_cache(m_store)
++          , m_intersector(m_trace, m_cache)
++          , m_exec(*m_system, m_arena)
++          , m_tracer(m_scene, m_intersector, m_exec, 0.001f, 1000, false)
++          , m_context(m_intersector, m_tracer, m_cache, *m_textures, m_exec, m_arena, 0)
++          , m_sampling(m_rng, SamplingContext::RNGMode)
++        {
++            m_scene.cameras().insert(PinholeCameraFactory().create("camera", ParamArray()
++                .insert("film_width", "0.025").insert("film_height", "0.025")
++                .insert("focal_length", "0.035")));
++            m_project.set_frame(FrameFactory::create("frame", ParamArray()
++                .insert("resolution", "4 4").insert("camera", "camera")));
++            m_scene.assemblies().insert(AssemblyFactory().create("assembly", ParamArray()));
++            Assembly* assembly = m_scene.assemblies().get_by_name("assembly");
++            m_scene.assembly_instances().insert(AssemblyInstanceFactory::create(
++                "instance", ParamArray(), "assembly"));
++            m_system->attribute("raytypes", OSL::TypeDesc(OSL::TypeDesc::STRING,
++                static_cast<int>(VisibilityFlags::Count)), VisibilityFlags::Names);
++            register_closures(*m_system);
++            auto group = ShaderGroupFactory::create("emission");
++            std::string expression;
++            std::string setup;
++            switch (EmissionProfile)
++            {
++              case Profile::Angular:
++                // The normal is deliberately dark while oblique directions emit.
++                expression = "(abs(dot(normalize(Ng),-normalize(I)))<0.95 ? color(0.25,0.5,0.75) : color(0))";
++                break;
++              case Profile::Constant:
++                expression = "color(0.25,0.5,0.75)";
++                break;
++              case Profile::Empty:
++                expression = "color(0)";
++                break;
++              case Profile::Position:
++                expression = "color(P[1],0.5,abs(dot(normalize(N),-normalize(I))))";
++                break;
++              case Profile::RayType:
++                expression = "(raytype(\"light\") ? color(0.25,0.5,0.75) : color(1))";
++                break;
++              case Profile::PathContext:
++                setup = "float ray_length=0; int depth=0; getattribute(\"path:ray_length\",ray_length); "
++                    "getattribute(\"path:ray_depth\",depth); ";
++                expression = "color(ray_length,depth,raytype(\"light\") ? 0.5 : 1)";
++                break;
++              case Profile::Footprint:
++                expression = "color(length(Dx(P)),length(Dy(P)),0.5)";
++                break;
++              case Profile::OpticalContext:
++                setup = "float ior=0; getattribute(\"path:ray_ior\",ior); ";
++                expression = "color(ior,0,raytype(\"light\") ? 0.5 : 1)";
++                break;
++            }
++            const std::string source = "surface emission_test() { " + setup + "Ci = " + expression + " * emission(); }";
++            group->add_source_shader("surface", "emission_test", "surface", source.c_str(), ParamArray());
++            auto compiler = ShaderCompilerFactory::create("../shaders/stdosl.h");
++            if (!group->create_optimized_osl_shader_group(*m_system, compiler.get()))
++                throw std::runtime_error("Could not compile the emission fixture shader");
++            m_group = group.get();
++            assembly->shader_groups().insert(group);
++            assembly->materials().insert(OSLMaterialFactory().create("material",
++                ParamArray().insert("osl_surface", "emission")));
++            assembly->edfs().insert(OSLEDFFactory().create());
++            assembly->edfs().insert(DiffuseEDFFactory().create("native_edf",
++                ParamArray().insert("radiance", "2.0")));
++            m_edf = assembly->edfs().get_by_name("osl_edf");
++            assembly->objects().insert(SphereObjectFactory().create("sphere", ParamArray()));
++            const StringDictionary mapping = StringDictionary().insert("default", "material");
++            assembly->object_instances().insert(ObjectInstanceFactory::create("sphere_instance",
++                ParamArray(), "sphere", Transformd::identity(), mapping, mapping));
++            if (Enclosed)
++            {
++                const double HostRadius = 5.0;
++                if (MixedHost)
++                {
++                    auto host_group = ShaderGroupFactory::create("host_shader");
++                    const char* host_source =
++                        "closure color as_glass(normal n, vector t, color s, color r, color f, "
++                        "float a, float b, float i, color v, float d) [[ int builtin=1 ]]; "
++                        "surface host_test() { "
++                        "Ci=0.5*as_glass(N,vector(0),color(1),color(1),color(1),0,0,1.2,color(1),0) "
++                        "+0.5*as_glass(N,vector(0),color(1),color(1),color(1),0,0,1.8,color(1),0); }";
++                    host_group->add_source_shader("surface", "host_test", "surface", host_source, ParamArray());
++                    if (!host_group->create_optimized_osl_shader_group(*m_system, compiler.get()))
++                        throw std::runtime_error("Could not compile the mixed-IOR host shader");
++                    m_host_group = host_group.get();
++                    assembly->shader_groups().insert(host_group);
++                    assembly->materials().insert(OSLMaterialFactory().create("host_material",
++                        ParamArray().insert("osl_surface", "host_shader")));
++                }
++                else
++                {
++                    assembly->bsdfs().insert(GlassBSDFFactory().create("glass",
++                        ParamArray().insert("surface_transmittance", "1.0").insert("ior", "1.5")
++                            .insert("volume_parameterization", "transmittance")));
++                    assembly->materials().insert(GenericMaterialFactory().create("host_material",
++                        ParamArray().insert("bsdf", "glass")));
++                }
++                const StringDictionary host_mapping = StringDictionary().insert("default", "host_material");
++                assembly->object_instances().insert(ObjectInstanceFactory::create("host_instance",
++                    ParamArray(), "sphere", Transformd(Matrix4d::make_scaling(Vector3d(HostRadius))),
++                    host_mapping, host_mapping));
++            }
++            m_scene_context.reset(new TestSceneContext(*this));
++            m_services.initialize(m_store);
++            m_trace.update();
++            // A nonzero original hit distance also checks that resampling keeps P.
++            ShadingRay ray(Vector3d(0.0, 3.0, 0.0), Vector3d(0.0, -1.0, 0.0),
++                ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f),
++                VisibilityFlags::CameraRay, 0);
++            m_intersector.trace(ray, m_point);
++            if (!m_point.hit_surface())
++                throw std::runtime_error("Emission fixture ray missed its sphere");
++        }
++
++        ~Fixture()
++        {
++            // Finish scene hooks and release compiled groups while OSL is alive.
++            m_scene_context.reset();
++            m_group->release_optimized_osl_shader_group();
++            if (m_host_group)
++                m_host_group->release_optimized_osl_shader_group();
++        }
++
++        const void* inputs(const bool camera = false)
++        {
++            if (camera)
++                m_context.execute_osl_shading(*m_group, m_point);
++            else m_context.execute_osl_emission(*m_group, m_point);
++            return m_edf->evaluate_inputs(m_context, m_point);
++        }
++
++        void sample(const void* data, Vector3f& outgoing, Spectrum& value, float& pdf)
++        {
++            // This cosine proposal has outgoing cosine one half.
++            m_edf->sample(m_sampling, data, Vector3f(m_point.get_geometric_normal()),
++                Basis3f(m_point.get_shading_basis()), Vector2f(0.4f, 0.75f), outgoing, value, pdf);
++        }
++
++        void sample_light_ray(ShadingRay& ray, Spectrum& value, float& pdf)
++        {
++            m_edf->sample_light_ray(m_sampling, m_context, m_point,
++                Vector3f(m_point.get_geometric_normal()), Basis3f(m_point.get_shading_basis()),
++                Vector2f(0.4f, 0.75f), ray, value, pdf);
++        }
++
++        Spectrum radiance(const Color3f& color)
++        {
++            Spectrum result;
++            result.set(color, g_std_lighting_conditions, Spectrum::Illuminance);
++            return result;
++        }
++    };
++
++    using AngularFixture = Fixture<Profile::Angular>;
++    using ConstantFixture = Fixture<Profile::Constant>;
++    using EmptyFixture = Fixture<Profile::Empty>;
++    using PositionFixture = Fixture<Profile::Position>;
++    using RayTypeFixture = Fixture<Profile::RayType>;
++    using PathContextFixture = Fixture<Profile::PathContext>;
++    using FootprintFixture = Fixture<Profile::Footprint>;
++    using VacuumFixture = Fixture<Profile::OpticalContext>;
++    using EnclosedFixture = Fixture<Profile::OpticalContext, true>;
++    using MixedHostFixture = Fixture<Profile::OpticalContext, true, true>;
++
++    TEST_CASE_F(DarkNormalDoesNotRemoveOtherEmissionDirections, AngularFixture)
++    {
++        const void* data = inputs();
++        Vector3f outgoing;
++        Spectrum value;
++        float pdf;
++        sample(data, outgoing, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(0.25f, 0.5f, 0.75f)), value);
++        EXPECT_TRUE(is_normalized(outgoing));
++        EXPECT_FEQ(0.5f * RcpPi<float>(), pdf);
++        Spectrum evaluated;
++        float evaluated_pdf;
++        m_edf->evaluate(data, Vector3f(m_point.get_geometric_normal()),
++            Basis3f(m_point.get_shading_basis()), outgoing, evaluated, evaluated_pdf);
++        EXPECT_FEQ(value, evaluated);
++        EXPECT_FEQ(pdf, evaluated_pdf);
++        EXPECT_FEQ(pdf, m_edf->evaluate_pdf(data, Vector3f(m_point.get_geometric_normal()),
++            Basis3f(m_point.get_shading_basis()), outgoing));
++    }
++
++    TEST_CASE_F(SamplingSumsWeightedEmissionClosures, ConstantFixture)
++    {
++        ShadingRay ray = m_point.get_ray();
++        ray.m_org = m_point.get_point();
++        ray.m_tmin = ray.m_tmax = 0.0;
++        ray.m_flags = VisibilityFlags::LightRay;
++        m_point.set_ray(ray);
++        m_context.execute_osl_emission(*m_group, m_point);
++        // Preserve the constant shader's value while forcing an unmerged tree.
++        // Selection among its leaves must not square their radiance weights.
++        OSL::ClosureComponent red = {};
++        red.id = EmissionID;
++        red.w = OSL::Vec3(0.25f, 0.0f, 0.0f);
++        OSL::ClosureComponent cyan = {};
++        cyan.id = EmissionID;
++        cyan.w = OSL::Vec3(0.0f, 0.5f, 0.75f);
++        OSL::ClosureAdd sum = {};
++        sum.id = OSL::ClosureColor::ADD;
++        sum.closureA = &red;
++        sum.closureB = &cyan;
++        m_point.get_osl_shader_globals().Ci = &sum;
++        const void* data = m_edf->evaluate_inputs(m_context, m_point);
++        Vector3f outgoing;
++        Spectrum value;
++        float pdf;
++        m_edf->sample(m_sampling, data, Vector3f(m_point.get_geometric_normal()),
++            Basis3f(m_point.get_shading_basis()), Vector2f(0.0f), outgoing, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(0.25f, 0.5f, 0.75f)), value);
++        EXPECT_FEQ(RcpPi<float>(), pdf);
++    }
++
++    TEST_CASE_F(OutsideTheEmissionHemisphereHasZeroRadianceAndDensity, ConstantFixture)
++    {
++        const void* data = inputs();
++        const Vector3f normal(m_point.get_geometric_normal());
++        const Basis3f basis(m_point.get_shading_basis());
++        Spectrum value(1.0f);
++        float pdf = -1.0f;
++        m_edf->evaluate(data, normal, basis, -normal, value, pdf);
++        EXPECT_FEQ(Spectrum(0.0f), value);
++        EXPECT_FEQ(0.0f, pdf);
++        EXPECT_FEQ(0.0f, m_edf->evaluate_pdf(data, normal, basis, -normal));
++    }
++
++    TEST_CASE_F(AngularHemisphereFluxMatchesItsIndependentIntegral, AngularFixture)
++    {
++        const Basis3f basis(m_point.get_shading_basis());
++        const Vector3f normal(m_point.get_geometric_normal());
++        const size_t SampleCount = 16384;
++        Spectrum flux(0.0f);
++        for (size_t i = 0; i < SampleCount; ++i)
++        {
++            // Each emitted photon owns one scratch arena lifetime.
++            m_arena.clear();
++            const void* data = inputs();
++            m_sampling.split_in_place(2, 1);
++            Vector3f outgoing;
++            Spectrum value;
++            float pdf;
++            m_edf->sample(m_sampling, data, normal, basis,
++                m_sampling.next2<Vector2f>(), outgoing, value, pdf);
++            flux += value * (dot(outgoing, basis.get_normal()) / pdf);
++        }
++        flux /= static_cast<float>(SampleCount);
++        // Integral of L*cos(theta) on cos(theta)<c is pi*c^2*L.
++        const float NormalConeCosine = 0.95f;
++        const Spectrum expected = radiance(Color3f(0.25f, 0.5f, 0.75f)) *
++            (Pi<float>() * square(NormalConeCosine));
++        const float RelativeFluxBound = 0.01f;
++        const Spectrum error = flux - expected;
++        EXPECT_TRUE(std::abs(error[max_abs_index(error)]) <= RelativeFluxBound * max_value(expected));
++    }
++
++    TEST_CASE_F(EmptyEmissionHasFiniteBlackSamplesAndAConsistentProposal, EmptyFixture)
++    {
++        const void* data = inputs();
++        Vector3f outgoing;
++        Spectrum value(1.0f);
++        float pdf = -1.0f;
++        sample(data, outgoing, value, pdf);
++        EXPECT_FEQ(Spectrum(0.0f), value);
++        EXPECT_TRUE(is_normalized(outgoing));
++        EXPECT_TRUE(std::isfinite(pdf) && pdf > 0.0f);
++        EXPECT_FEQ(pdf, m_edf->evaluate_pdf(data, Vector3f(m_point.get_geometric_normal()),
++            Basis3f(m_point.get_shading_basis()), outgoing));
++    }
++
++    TEST_CASE_F(ResamplingPreservesTheEmitterPosition, PositionFixture)
++    {
++        const void* data = inputs();
++        Vector3f outgoing;
++        Spectrum value;
++        float pdf;
++        sample(data, outgoing, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(1.0f, 0.5f, 0.5f)), value);
++        EXPECT_FEQ(0.5f * RcpPi<float>(), pdf);
++    }
++
++    TEST_CASE_F(ResamplingPreservesTheShadingFrame, PositionFixture)
++    {
++        m_point.set_shading_basis(Basis3d(Vector3d(0.6, 0.8, 0.0)));
++        const void* data = inputs();
++        Vector3f outgoing;
++        Spectrum value;
++        float pdf;
++        sample(data, outgoing, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(1.0f, 0.5f, 0.5f)), value);
++        EXPECT_FEQ(0.5f * RcpPi<float>(), pdf);
++    }
++
++    TEST_CASE_F(EvaluationUsesTheRequestedShadingFrame, PositionFixture)
++    {
++        const void* data = inputs();
++        const Basis3f tilted(Vector3f(0.6f, 0.8f, 0.0f));
++        Spectrum value;
++        float pdf;
++        m_edf->evaluate(data, Vector3f(m_point.get_geometric_normal()),
++            tilted, Vector3f(0.0f, 1.0f, 0.0f), value, pdf);
++        EXPECT_FEQ(radiance(Color3f(1.0f, 0.5f, 0.8f)), value);
++        EXPECT_FEQ(0.8f * RcpPi<float>(), pdf);
++    }
++
++    TEST_CASE_F(EmissionLaunchResetsPathMetadataWithoutChangingVisibleEvaluation, PathContextFixture)
++    {
++        ShadingRay ray = m_point.get_ray();
++        ray.m_depth = 3;
++        m_point.set_ray(ray);
++        const void* data = inputs(true);
++        Vector3f outgoing;
++        Spectrum value;
++        float pdf;
++        sample(data, outgoing, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(0.0f, 0.0f, 0.5f)), value);
++        m_edf->evaluate(data, Vector3f(m_point.get_geometric_normal()),
++            Basis3f(m_point.get_shading_basis()), outgoing, value);
++        EXPECT_FEQ(radiance(Color3f(2.0f, 3.0f, 1.0f)), value);
++    }
++
++    TEST_CASE_F(VisibleEvaluationRetainsItsFootprintWhileLaunchesHaveNone, FootprintFixture)
++    {
++        ShadingRay ray = m_point.get_ray();
++        ray.m_has_differentials = true;
++        ray.m_rx_org = ray.m_org + Vector3d(0.1, 0.0, 0.0);
++        ray.m_ry_org = ray.m_org + Vector3d(0.0, 0.0, 0.2);
++        ray.m_rx_dir = ray.m_ry_dir = ray.m_dir;
++        m_point.set_ray(ray);
++        const void* data = inputs(true);
++        Vector3f outgoing;
++        Spectrum value;
++        float pdf;
++        sample(data, outgoing, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(0.0f, 0.0f, 0.5f)), value);
++        m_edf->evaluate(data, Vector3f(m_point.get_geometric_normal()),
++            Basis3f(m_point.get_shading_basis()), outgoing, value);
++        EXPECT_FEQ(radiance(Color3f(0.1f, 0.2f, 0.5f)), value);
++    }
++
++    TEST_CASE_F(EmissionSamplingPreservesTheVisibleEvaluationContext, RayTypeFixture)
++    {
++        const void* data = inputs(true);
++        Vector3f outgoing;
++        Spectrum value;
++        float pdf;
++        sample(data, outgoing, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(0.25f, 0.5f, 0.75f)), value);
++        Spectrum visible;
++        m_edf->evaluate(data, Vector3f(m_point.get_geometric_normal()),
++            Basis3f(m_point.get_shading_basis()), outgoing, visible);
++        EXPECT_FEQ(Spectrum(1.0f), visible);
++    }
++
++    TEST_CASE_F(PhysicalLaunchDiscoversTheShaderAndRayMediumTogether, EnclosedFixture)
++    {
++        ShadingRay ray;
++        Spectrum value;
++        float pdf;
++        sample_light_ray(ray, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(1.5f, 0.0f, 0.5f)), value);
++        ASSERT_EQ(1, ray.m_medium_count);
++        EXPECT_FEQ(1.5f, ray.get_current_ior());
++        EXPECT_EQ(m_scene.assemblies().get_by_name("assembly")->object_instances().get_by_name("host_instance"),
++            ray.get_current_medium()->m_object_instance);
++        EXPECT_EQ(0, m_point.get_ray().m_medium_count);
++        EXPECT_FEQ(0.5f * RcpPi<float>(), pdf);
++    }
++
++    TEST_CASE_F(PhysicalLaunchRetainsVacuumWhenNoHostContainsIt, VacuumFixture)
++    {
++        ShadingRay ray;
++        Spectrum value;
++        float pdf;
++        sample_light_ray(ray, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(1.0f, 0.0f, 0.5f)), value);
++        EXPECT_EQ(0, ray.m_medium_count);
++        EXPECT_FEQ(1.0f, ray.get_current_ior());
++    }
++
++    TEST_CASE_F(PhysicalLaunchNeedsNoProvisionalEmissionAndRetainsItsGeometryTime, AngularFixture)
++    {
++        ShadingRay source_ray = m_point.get_ray();
++        source_ray.m_time = ShadingRay::Time::create_with_normalized_time(0.375f, 2.0f, 6.0f);
++        source_ray.m_depth = 3;
++        m_point.set_ray(source_ray);
++        ShadingRay ray;
++        Spectrum value;
++        float pdf;
++        sample_light_ray(ray, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(0.25f, 0.5f, 0.75f)), value);
++        EXPECT_FEQ(m_point.get_point(), ray.m_org);
++        EXPECT_TRUE(is_normalized(ray.m_dir));
++        EXPECT_FEQ(0.375f, ray.m_time.m_normalized);
++        EXPECT_FEQ(3.5f, ray.m_time.m_absolute);
++        EXPECT_EQ(VisibilityFlags::LightRay, ray.m_flags);
++        EXPECT_EQ(0, ray.m_depth);
++        EXPECT_FALSE(ray.m_has_differentials);
++        EXPECT_FEQ(0.0, ray.m_tmin);
++        EXPECT_FEQ(0.5f * RcpPi<float>(), pdf);
++        EXPECT_EQ(3, m_point.get_ray().m_depth);
++    }
++
++    TEST_CASE_F(PhysicalLaunchKeepsSurfacePositionAndDirectionDependentShading, PositionFixture)
++    {
++        ShadingRay ray;
++        Spectrum value;
++        float pdf;
++        sample_light_ray(ray, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(1.0f, 0.5f, 0.5f)), value);
++    }
++
++    TEST_CASE_F(PhysicalLaunchClearsTheCameraFootprint, FootprintFixture)
++    {
++        ShadingRay source_ray = m_point.get_ray();
++        source_ray.m_has_differentials = true;
++        source_ray.m_rx_org = source_ray.m_org + Vector3d(0.1, 0.0, 0.0);
++        source_ray.m_ry_org = source_ray.m_org + Vector3d(0.0, 0.0, 0.2);
++        source_ray.m_rx_dir = source_ray.m_ry_dir = source_ray.m_dir;
++        m_point.set_ray(source_ray);
++        ShadingRay ray;
++        Spectrum value;
++        float pdf;
++        sample_light_ray(ray, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(0.0f, 0.0f, 0.5f)), value);
++        EXPECT_FALSE(ray.m_has_differentials);
++    }
++
++
++    TEST_CASE_F(PhysicalLaunchUsesOneStochasticIorForShaderAndTransport, MixedHostFixture)
++    {
++        const size_t IorSamples = 64;
++        bool lower_seen = false, higher_seen = false;
++        for (size_t i = 0; i < IorSamples; ++i)
++        {
++            ShadingRay ray;
++            Spectrum value;
++            float pdf;
++            sample_light_ray(ray, value, pdf);
++            ASSERT_EQ(1, ray.m_medium_count);
++            const float ior = ray.get_current_ior();
++            EXPECT_FEQ(radiance(Color3f(ior, 0.0f, 0.5f)), value);
++            if (ior < 1.5f)
++            {
++                EXPECT_FEQ(1.2f, ior);
++                lower_seen = true;
++            }
++            else
++            {
++                EXPECT_FEQ(1.8f, ior);
++                higher_seen = true;
++            }
++        }
++        EXPECT_TRUE(lower_seen && higher_seen);
++    }
++
++    TEST_CASE_F(PhysicalLaunchShaderStartsAtZeroLengthAndDepth, PathContextFixture)
++    {
++        ShadingRay source_ray = m_point.get_ray();
++        source_ray.m_depth = 3;
++        m_point.set_ray(source_ray);
++        ShadingRay ray;
++        Spectrum value;
++        float pdf;
++        sample_light_ray(ray, value, pdf);
++        EXPECT_FEQ(radiance(Color3f(0.0f, 0.0f, 0.5f)), value);
++    }
++
++    TEST_CASE_F(NativeEdfsUseTheSamePhysicalLaunchContract, ConstantFixture)
++    {
++        const EDF* native = m_scene.assemblies().get_by_name("assembly")->edfs().get_by_name("native_edf");
++        ShadingRay ray;
++        Spectrum value;
++        float pdf;
++        native->sample_light_ray(m_sampling, m_context, m_point,
++            Vector3f(m_point.get_geometric_normal()), Basis3f(m_point.get_shading_basis()),
++            Vector2f(0.4f, 0.75f), ray, value, pdf);
++        EXPECT_FEQ(Spectrum(2.0f), value);
++        EXPECT_EQ(0, ray.m_medium_count);
++        EXPECT_EQ(VisibilityFlags::LightRay, ray.m_flags);
++        EXPECT_EQ(0, ray.m_depth);
++        EXPECT_FEQ(m_point.get_point(), ray.m_org);
++        EXPECT_FEQ(0.5f * RcpPi<float>(), pdf);
++    }
++
++}
+diff --git a/src/appleseed/renderer/meta/tests/test_tracer.cpp b/src/appleseed/renderer/meta/tests/test_tracer.cpp
+index dd9d87d80..b451ab45b 100644
+--- a/src/appleseed/renderer/meta/tests/test_tracer.cpp
++++ b/src/appleseed/renderer/meta/tests/test_tracer.cpp
+@@ -34,6 +34,7 @@
+ #include "renderer/kernel/lighting/tracer.h"
+ #include "renderer/kernel/lighting/pathtracer.h"
+ #include "renderer/modeling/bsdf/glassbsdf.h"
++#include "renderer/modeling/bsdf/lambertianbrdf.h"
+ #include "renderer/kernel/rendering/rendererservices.h"
+ #include "renderer/kernel/shading/closures.h"
+ #include "renderer/kernel/shading/oslshadergroupexec.h"
+@@ -90,6 +91,7 @@
+ #include <array>
+ #include <cmath>
+ #include <memory>
++#include <stdexcept>
+ 
+ using namespace foundation;
+ using namespace renderer;
+@@ -270,6 +272,139 @@ TEST_SUITE(Renderer_Kernel_Lighting_Tracer)
+         }
+     };
+ 
++    enum class VisibilityProfile { Clear, Alpha, Volume };
++
++    template <VisibilityProfile Profile>
++    struct VisibilityScene : SceneBase
++    {
++        VisibilityScene()
++        {
++            m_assembly->bsdfs().insert(LambertianBRDFFactory().create("receiver_bsdf",
++                ParamArray().insert("reflectance", "0.5")));
++            m_assembly->materials().insert(GenericMaterialFactory().create("receiver_material",
++                ParamArray().insert("bsdf", "receiver_bsdf")));
++            create_plane_object_instance("receiver", Vector3d(0.0), "receiver_material");
++            if (Profile == VisibilityProfile::Alpha)
++                create_plane_object_instance("cutout", Vector3d(2.0, 0.0, 0.0), "transparent_material",
++                    ParamArray().insert("medium_priority", 1));
++            if (Profile == VisibilityProfile::Volume)
++            {
++                m_assembly->volumes().insert(GenericVolumeFactory().create("fog",
++                    ParamArray().insert("absorption", "0.2").insert("scattering", "0")
++                        .insert("phase_function_model", "isotropic")));
++                m_assembly->materials().insert(GenericMaterialFactory().create("fog_material",
++                    ParamArray().insert("volume", "fog")));
++                m_assembly->objects().insert(SphereObjectFactory().create("fog_bounds", ParamArray()));
++                const StringDictionary mapping = StringDictionary().insert("default", "fog_material");
++                m_assembly->object_instances().insert(ObjectInstanceFactory::create("fog_instance",
++                    ParamArray().insert("medium_priority", 1), "fog_bounds",
++                    Transformd(Matrix4d::make_translation(Vector3d(2.0, 0.0, 0.0)) *
++                        Matrix4d::make_scaling(Vector3d(0.5))), mapping, mapping));
++            }
++        }
++    };
++
++    template <VisibilityProfile Profile>
++    struct VisibilityFixture : Fixture<FixtureParams<VisibilityScene<Profile>, false>>
++    {
++        static constexpr float SeededIor = 1.7f;
++
++        ShadingRay trace_visibility(const bool surface_origin, const bool seeded, Spectrum& transmission)
++        {
++            ShadingRay parent(Vector3d(-1.0, 0.0, 0.0), Vector3d(1.0, 0.0, 0.0),
++                ShadingRay::Time::create_with_normalized_time(0.375f, 2.0f, 6.0f),
++                VisibilityFlags::CameraRay, 3);
++            if (seeded)
++            {
++                const ShadingRay vacuum(parent);
++                parent.add_medium(vacuum, this->m_assembly->object_instances().get_by_name("receiver"),
++                    this->m_assembly->materials().get_by_name("receiver_material"), SeededIor);
++            }
++            ShadingPoint point;
++            this->m_intersector.trace(parent, point);
++            if (!point.hit_surface())
++                throw std::runtime_error("Visibility fixture missed its source point");
++            const Vector3d target(Profile == VisibilityProfile::Volume ? 2.0 : 3.0, 0.0, 0.0);
++            ShadingRay terminal;
++            if (surface_origin)
++                this->m_tracer.trace_between_simple(this->m_shading_context, point, target,
++                    parent, VisibilityFlags::ShadowRay, transmission, &terminal);
++            else
++                this->m_tracer.trace_between_simple(this->m_shading_context, Vector3d(0.25, 0.0, 0.0), target,
++                    parent, VisibilityFlags::ShadowRay, transmission, &terminal);
++            return terminal;
++        }
++    };
++
++    using ClearVisibilityFixture = VisibilityFixture<VisibilityProfile::Clear>;
++    using AlphaVisibilityFixture = VisibilityFixture<VisibilityProfile::Alpha>;
++    using VolumeVisibilityFixture = VisibilityFixture<VisibilityProfile::Volume>;
++
++    TEST_CASE_F(VisibilityEndpoint_ProbePreservesSeededOpticalAndPathState, ClearVisibilityFixture)
++    {
++        EXPECT_FALSE(m_scene.uses_alpha_mapping());
++        EXPECT_FALSE(m_scene.has_participating_media());
++        for (const bool surface_origin : {false, true})
++        {
++            Spectrum transmission;
++            const ShadingRay ray = trace_visibility(surface_origin, true, transmission);
++            EXPECT_FEQ(Spectrum(1.0f), transmission);
++            ASSERT_EQ(1, ray.m_medium_count);
++            EXPECT_FEQ(SeededIor, ray.get_current_ior());
++            EXPECT_EQ(4, ray.m_depth);
++            EXPECT_FEQ(3.5f, ray.m_time.m_absolute);
++            EXPECT_FEQ(0.375f, ray.m_time.m_normalized);
++            EXPECT_EQ(VisibilityFlags::ShadowRay, ray.m_flags);
++            EXPECT_FALSE(ray.m_has_differentials);
++        }
++    }
++
++    TEST_CASE_F(VisibilityEndpoint_ProbePreservesVacuum, ClearVisibilityFixture)
++    {
++        for (const bool surface_origin : {false, true})
++        {
++            Spectrum transmission;
++            const ShadingRay ray = trace_visibility(surface_origin, false, transmission);
++            EXPECT_FEQ(Spectrum(1.0f), transmission);
++            EXPECT_EQ(0, ray.m_medium_count);
++            EXPECT_FEQ(1.0f, ray.get_current_ior());
++        }
++    }
++
++    TEST_CASE_F(VisibilityEndpoint_CutoutsDoNotCreateOpticalMedia, AlphaVisibilityFixture)
++    {
++        EXPECT_TRUE(m_scene.uses_alpha_mapping());
++        for (const bool surface_origin : {false, true})
++        {
++            for (const bool seeded : {false, true})
++            {
++                Spectrum transmission;
++                const ShadingRay ray = trace_visibility(surface_origin, seeded, transmission);
++                EXPECT_FEQ(Spectrum(0.5f), transmission);
++                EXPECT_EQ(seeded ? 1 : 0, ray.m_medium_count);
++                EXPECT_FEQ(seeded ? SeededIor : 1.0f, ray.get_current_ior());
++                EXPECT_EQ(4, ray.m_depth);
++            }
++        }
++    }
++
++    TEST_CASE_F(VisibilityEndpoint_ReturnsTheMediumAtTheTarget, VolumeVisibilityFixture)
++    {
++        EXPECT_TRUE(m_scene.has_participating_media());
++        for (const bool surface_origin : {false, true})
++        {
++            Spectrum transmission;
++            const ShadingRay ray = trace_visibility(surface_origin, true, transmission);
++            EXPECT_FEQ_EPS(Spectrum(std::exp(-0.2f * 0.5f)), transmission, 1.0e-6f);
++            ASSERT_EQ(2, ray.m_medium_count);
++            EXPECT_EQ(m_assembly->object_instances().get_by_name("fog_instance"),
++                ray.get_current_medium()->m_object_instance);
++            EXPECT_FEQ(1.0f, ray.get_current_ior());
++            EXPECT_FEQ(SeededIor, ray.get_previous_ior());
++            EXPECT_EQ(4, ray.m_depth);
++        }
++    }
++
+     template <bool HiddenBoundary>
+     struct AbsorptionScene
+       : public SceneBase
+diff --git a/src/appleseed/renderer/modeling/edf/edf.cpp b/src/appleseed/renderer/modeling/edf/edf.cpp
+index b1bafd2f7..3fa4dcf18 100644
+--- a/src/appleseed/renderer/modeling/edf/edf.cpp
++++ b/src/appleseed/renderer/modeling/edf/edf.cpp
+@@ -32,6 +32,7 @@
+ 
+ // appleseed.renderer headers.
+ #include "renderer/global/globallogger.h"
++#include "renderer/kernel/intersection/intersector.h"
+ #include "renderer/kernel/shading/shadingcontext.h"
+ #include "renderer/kernel/shading/shadingpoint.h"
+ #include "renderer/modeling/input/source.h"
+@@ -133,6 +134,37 @@ void* EDF::evaluate_inputs(
+     return data;
+ }
+ 
++void EDF::sample_light_ray(
++    SamplingContext&        sampling_context,
++    const ShadingContext&   shading_context,
++    const ShadingPoint&     shading_point,
++    const Vector3f&         geometric_normal,
++    const Basis3f&          shading_basis,
++    const Vector2f&         s,
++    ShadingRay&             ray,
++    Spectrum&               value,
++    float&                  probability) const
++{
++    Vector3f outgoing;
++    sample(sampling_context, evaluate_inputs(shading_context, shading_point),
++        geometric_normal, shading_basis, s, outgoing, value, probability);
++    initialize_light_ray(sampling_context, shading_context, shading_point, outgoing, ray);
++}
++
++void EDF::initialize_light_ray(
++    SamplingContext&        sampling_context,
++    const ShadingContext&   shading_context,
++    const ShadingPoint&     shading_point,
++    const Vector3f&         outgoing,
++    ShadingRay&             ray)
++{
++    // Use the time that placed the emitter, not a separate temporal sample.
++    ray = ShadingRay(shading_point.get_point(), Vector3d(outgoing),
++        shading_point.get_time(), VisibilityFlags::LightRay, 0);
++    shading_context.get_intersector().initialize_media(
++        sampling_context, shading_context, ray, &shading_point);
++}
++
+ float EDF::get_max_contribution_scalar(const Source* source) const
+ {
+     assert(source);
+diff --git a/src/appleseed/renderer/modeling/edf/edf.h b/src/appleseed/renderer/modeling/edf/edf.h
+index 8a78b7ec0..d1a93e088 100644
+--- a/src/appleseed/renderer/modeling/edf/edf.h
++++ b/src/appleseed/renderer/modeling/edf/edf.h
+@@ -50,6 +50,7 @@ namespace renderer      { class ParamArray; }
+ namespace renderer      { class Project; }
+ namespace renderer      { class ShadingContext; }
+ namespace renderer      { class ShadingPoint; }
++namespace renderer      { class ShadingRay; }
+ 
+ namespace renderer
+ {
+@@ -146,7 +147,27 @@ class APPLESEED_DLLSYMBOL EDF
+         const foundation::Basis3f&  shading_basis,              // world space orthonormal basis around shading normal
+         const foundation::Vector3f& outgoing) const = 0;        // world space emission direction, unit-length
+ 
++    // Sample a physical light launch, including its initial optical media.
++    // Trace the returned ray without initializing those media a second time.
++    virtual void sample_light_ray(
++        SamplingContext&            sampling_context,
++        const ShadingContext&       shading_context,
++        const ShadingPoint&         shading_point,
++        const foundation::Vector3f& geometric_normal,
++        const foundation::Basis3f&  shading_basis,
++        const foundation::Vector2f& s,
++        ShadingRay&                 ray,
++        Spectrum&                   value,
++        float&                      probability) const;
++
+   protected:
++    static void initialize_light_ray(
++        SamplingContext&            sampling_context,
++        const ShadingContext&       shading_context,
++        const ShadingPoint&         shading_point,
++        const foundation::Vector3f& outgoing,
++        ShadingRay&                 ray);
++
+     float get_max_contribution_scalar(const Source* source) const;
+     float get_max_contribution_spectrum(const Source* source) const;
+ 
+diff --git a/src/appleseed/renderer/modeling/edf/osledf.cpp b/src/appleseed/renderer/modeling/edf/osledf.cpp
+index e11c65d9d..6ad8adf52 100644
+--- a/src/appleseed/renderer/modeling/edf/osledf.cpp
++++ b/src/appleseed/renderer/modeling/edf/osledf.cpp
+@@ -41,10 +41,13 @@
+ #include "renderer/modeling/edf/edf.h"
+ #include "renderer/modeling/input/scalarsource.h"
+ #include "renderer/modeling/input/source.h"
++#include "renderer/modeling/material/material.h"
+ #include "renderer/utility/paramarray.h"
+ 
+ // appleseed.foundation headers.
+ #include "foundation/math/basis.h"
++#include "foundation/math/sampling/mappings.h"
++#include "foundation/math/scalar.h"
+ #include "foundation/math/vector.h"
+ #include "foundation/memory/arena.h"
+ #include "foundation/platform/compiler.h"
+@@ -88,6 +91,31 @@ namespace
+         }
+     };
+ 
++    enum class EmissionContext { PreservePath, LaunchLight };
++
++    struct EmissionInputs
++    {
++        CompositeEmissionClosure        m_closure;
++        const ShadingContext&           m_context;
++        const ShaderGroup&              m_shader_group;
++        ShadingPoint                    m_point;
++        Basis3f                         m_basis;
++        Vector3f                        m_outgoing;
++        VisibilityFlags::Type           m_ray_flags;
++
++        EmissionInputs(const ShadingContext& context, const ShadingPoint& point)
++          : m_closure(Basis3f(point.get_shading_basis()),
++                point.get_osl_shader_globals().Ci, context.get_arena())
++          , m_context(context)
++          , m_shader_group(*point.get_material()->get_render_data().m_shader_group)
++          , m_point(point)
++          , m_basis(Basis3f(point.get_shading_basis()))
++          , m_outgoing(-point.get_osl_shader_globals().I)
++          , m_ray_flags(static_cast<VisibilityFlags::Type>(point.get_osl_shader_globals().raytype))
++        {
++        }
++    };
++
+     class OSLEDF
+       : public EDF
+     {
+@@ -100,7 +128,7 @@ namespace
+             m_diffuse_edf->get_inputs().find("radiance_multiplier").bind(new DummyNonUniformSource());
+             m_diffuse_edf->get_inputs().find("exposure").bind(new ScalarSource(0.0f));
+ 
+-           m_glossy_layer_bsdf = GlossyLayerBSDFFactory::create("glossy_layer_bsdf", ParamArray());
++            m_glossy_layer_bsdf = GlossyLayerBSDFFactory::create("glossy_layer_bsdf", ParamArray());
+         }
+ 
+         void release() override
+@@ -117,27 +145,10 @@ namespace
+             const ShadingContext&   shading_context,
+             const ShadingPoint&     shading_point) const override
+         {
+-            CompositeEmissionClosure* c =
+-                shading_context.get_arena().allocate_noinit<CompositeEmissionClosure>();
+-
+-            new (c) CompositeEmissionClosure(
+-                Basis3f(shading_point.get_shading_basis()),
+-                shading_point.get_osl_shader_globals().Ci,
+-                shading_context.get_arena());
+-
+-            for (size_t i = 0, e = c->get_closure_count(); i < e; ++i)
+-            {
+-                if (c->get_closure_type(i) >= FirstLayeredClosure)
+-                {
+-                    bsdf_from_closure_id(c->get_closure_type(i))
+-                        .prepare_inputs(
+-                            shading_context.get_arena(),
+-                            shading_point,
+-                            c->get_closure_input_values(i));
+-                }
+-            }
+-
+-            return c;
++            auto* inputs = shading_context.get_arena().allocate_noinit<EmissionInputs>();
++            new (inputs) EmissionInputs(shading_context, shading_point);
++            prepare_closure(shading_context, shading_point, inputs->m_closure);
++            return inputs;
+         }
+ 
+         bool on_render_begin(
+@@ -186,27 +197,43 @@ namespace
+             Spectrum&               value,
+             float&                  probability) const override
+         {
+-            const CompositeEmissionClosure* c =
+-                static_cast<const CompositeEmissionClosure*>(data);
++            // All OSL emission leaves are diffuse EDFs. Use one proposal
++            // independent of their current weights: emission may be zero
++            // along the provisional normal but positive in other directions.
++            outgoing = sample_direction(shading_basis, s, probability);
++            evaluate_direction(*static_cast<const EmissionInputs*>(data),
++                geometric_normal, shading_basis, outgoing, EmissionContext::LaunchLight, value);
++        }
+ 
+-            if (c->get_closure_count() > 0)
+-            {
+-                sampling_context.split_in_place(1, 1);
+-                const size_t closure_index = c->choose_closure(
+-                    sampling_context.next2<float>());
+-
+-                const EDF& edf = edf_from_closure_id(c->get_closure_type(closure_index));
+-                edf.sample(
+-                    sampling_context,
+-                    c->get_closure_input_values(closure_index),
+-                    geometric_normal,
+-                    shading_basis,
+-                    s,
+-                    outgoing,
+-                    value,
+-                    probability);
+-                attenuate_emission(*c, closure_index, outgoing, value);
+-            }
++        void sample_light_ray(
++            SamplingContext&        sampling_context,
++            const ShadingContext&   shading_context,
++            const ShadingPoint&     shading_point,
++            const Vector3f&         geometric_normal,
++            const Basis3f&          shading_basis,
++            const Vector2f&         s,
++            ShadingRay&             ray,
++            Spectrum&               value,
++            float&                  probability) const override
++        {
++            const Vector3f outgoing = sample_direction(shading_basis, s, probability);
++            initialize_light_ray(sampling_context, shading_context, shading_point, outgoing, ray);
++
++            // Shader queries and subsequent transport must use the same IOR
++            // choices. Keep the geometry ray's direction for surface frames;
++            // OSL's I is supplied separately for the actual launch direction.
++            ShadingPoint point(shading_point);
++            ShadingRay shader_ray = ray;
++            shader_ray.m_dir = shading_point.get_ray().m_dir;
++            shader_ray.m_tmin = shader_ray.m_tmax = 0.0;
++            point.set_ray(shader_ray);
++            point.set_shading_basis(Basis3d(shading_basis));
++            const ShaderGroup& group = *point.get_material()->get_render_data().m_shader_group;
++            shading_context.execute_osl_shading(group, point, -outgoing, VisibilityFlags::LightRay);
++            CompositeEmissionClosure closure(Basis3f(point.get_shading_basis()),
++                point.get_osl_shader_globals().Ci, shading_context.get_arena());
++            prepare_closure(shading_context, point, closure);
++            evaluate_closure(closure, geometric_normal, shading_basis, outgoing, value);
+         }
+ 
+         void evaluate(
+@@ -216,29 +243,9 @@ namespace
+             const Vector3f&         outgoing,
+             Spectrum&               value) const override
+         {
+-            const CompositeEmissionClosure* c =
+-                static_cast<const CompositeEmissionClosure*>(data);
+-
+-            value.set(0.0f);
+-
+-            for (size_t i = 0, e = c->get_closure_count(); i < e; ++i)
+-            {
+-                // Skip closure layers.
+-                if (c->get_closure_type(i) >= FirstLayeredClosure)
+-                    continue;
+-
+-                Spectrum s(Spectrum::Illuminance);
+-
+-                const EDF& edf = edf_from_closure_id(c->get_closure_type(i));
+-                edf.evaluate(
+-                    c->get_closure_input_values(i),
+-                    geometric_normal,
+-                    shading_basis,
+-                    outgoing,
+-                    s);
+-                attenuate_emission(*c, i, outgoing, s);
+-                value += s;
+-            }
++            const auto& inputs = *static_cast<const EmissionInputs*>(data);
++            evaluate_direction(inputs, geometric_normal, shading_basis,
++                outgoing, EmissionContext::PreservePath, value);
+         }
+ 
+         void evaluate(
+@@ -249,40 +256,8 @@ namespace
+             Spectrum&               value,
+             float&                  probability) const override
+         {
+-            const CompositeEmissionClosure* c =
+-                static_cast<const CompositeEmissionClosure*>(data);
+-
+-            value.set(0.0f);
+-            probability = 0.0f;
+-
+-            for (size_t i = 0, e = c->get_closure_count(); i < e; ++i)
+-            {
+-                // Skip closure layers.
+-                if (c->get_closure_type(i) >= FirstLayeredClosure)
+-                    continue;
+-
+-                Spectrum s(Spectrum::Illuminance);
+-                float edf_prob = 0.0f;
+-
+-                const EDF& edf = edf_from_closure_id(c->get_closure_type(i));
+-                edf.evaluate(
+-                    c->get_closure_input_values(i),
+-                    geometric_normal,
+-                    shading_basis,
+-                    outgoing,
+-                    s,
+-                    edf_prob);
+-                assert(edf_prob >= 0.0f);
+-
+-                if (edf_prob > 0.0f)
+-                {
+-                    attenuate_emission(*c, i, outgoing, s);
+-                    value += s;
+-                    probability += edf_prob * c->get_closure_pdf(i);
+-                }
+-            }
+-
+-            assert(probability >= 0.0f);
++            evaluate(data, geometric_normal, shading_basis, outgoing, value);
++            probability = evaluate_pdf(data, geometric_normal, shading_basis, outgoing);
+         }
+ 
+         float evaluate_pdf(
+@@ -291,37 +266,114 @@ namespace
+             const Basis3f&          shading_basis,
+             const Vector3f&         outgoing) const override
+         {
+-            const CompositeEmissionClosure* c =
+-                static_cast<const CompositeEmissionClosure*>(data);
++            return m_diffuse_edf->evaluate_pdf(nullptr, geometric_normal, shading_basis, outgoing);
++        }
++
++        float get_uncached_max_contribution() const override
++        {
++            // We can't know the max contribution of OSL EDFs.
++            return std::numeric_limits<float>::max();
++        }
+ 
+-            float probability = 0.0f;
++      private:
++        static Vector3f sample_direction(
++            const Basis3f&          shading_basis,
++            const Vector2f&         s,
++            float&                  probability)
++        {
++            const Vector3f local_outgoing = sample_hemisphere_cosine(s);
++            probability = local_outgoing.y * RcpPi<float>();
++            assert(probability > 0.0f);
++            return shading_basis.transform_to_parent(local_outgoing);
++        }
+ 
+-            for (size_t i = 0, e = c->get_closure_count(); i < e; ++i)
++        void prepare_closure(
++            const ShadingContext&       context,
++            const ShadingPoint&         point,
++            CompositeEmissionClosure&   closure) const
++        {
++            for (size_t i = 0; i < closure.get_closure_count(); ++i)
+             {
+-                const EDF& edf = edf_from_closure_id(c->get_closure_type(i));
+-                const float edf_prob =
+-                    edf.evaluate_pdf(
+-                        c->get_closure_input_values(i),
+-                        geometric_normal,
+-                        shading_basis,
+-                        outgoing);
+-                assert(edf_prob >= 0.0f);
+-
+-                if (edf_prob > 0.0f)
+-                    probability += edf_prob * c->get_closure_pdf(i);
++                if (closure.get_closure_type(i) >= FirstLayeredClosure)
++                {
++                    bsdf_from_closure_id(closure.get_closure_type(i)).prepare_inputs(
++                        context.get_arena(), point, closure.get_closure_input_values(i));
++                }
++            }
++        }
++
++        void evaluate_direction(
++            const EmissionInputs&       inputs,
++            const Vector3f&             geometric_normal,
++            const Basis3f&              shading_basis,
++            const Vector3f&             outgoing,
++            const EmissionContext       context,
++            Spectrum&                   value) const
++        {
++            if (dot(outgoing, shading_basis.get_normal()) <= 0.0f)
++            {
++                value.set(0.0f);
++                return;
++            }
++            const bool launch = context == EmissionContext::LaunchLight;
++            const VisibilityFlags::Type ray_flags = launch ? VisibilityFlags::LightRay : inputs.m_ray_flags;
++            const ShadingRay& source_ray = inputs.m_point.get_ray();
++            const bool same_path = !launch || (source_ray.m_tmax == 0.0 &&
++                source_ray.m_depth == 0 && !source_ray.m_has_differentials);
++            const bool same_direction = outgoing == inputs.m_outgoing;
++            // Exact reuse preserves discontinuous direction and ray-type
++            // predicates; an angular tolerance would change shader results.
++            const bool same_basis =
++                shading_basis.get_normal() == inputs.m_basis.get_normal() &&
++                shading_basis.get_tangent_u() == inputs.m_basis.get_tangent_u() &&
++                shading_basis.get_tangent_v() == inputs.m_basis.get_tangent_v();
++            if (ray_flags == inputs.m_ray_flags && same_path && same_direction && same_basis)
++            {
++                evaluate_closure(inputs.m_closure, geometric_normal, shading_basis, outgoing, value);
++                return;
+             }
+ 
+-            assert(probability >= 0.0f);
+-            return probability;
++            ShadingPoint point(inputs.m_point);
++            if (launch && !same_path)
++            {
++                ShadingRay ray = source_ray;
++                ray.m_org = inputs.m_point.get_point();
++                ray.m_tmin = ray.m_tmax = 0.0;
++                ray.m_depth = 0;
++                ray.m_has_differentials = false;
++                point.set_ray(ray);
++            }
++            point.set_shading_basis(Basis3d(shading_basis));
++            // Retain the hit's geometry, path metadata and surface footprint.
++            // New light launches have no camera footprint.
++            inputs.m_context.execute_osl_shading(inputs.m_shader_group, point, -outgoing, ray_flags);
++            CompositeEmissionClosure closure(Basis3f(point.get_shading_basis()),
++                point.get_osl_shader_globals().Ci, inputs.m_context.get_arena());
++            prepare_closure(inputs.m_context, point, closure);
++            evaluate_closure(closure, geometric_normal, shading_basis, outgoing, value);
+         }
+ 
+-        float get_uncached_max_contribution() const override
++        void evaluate_closure(
++            const CompositeEmissionClosure& closure,
++            const Vector3f&                 geometric_normal,
++            const Basis3f&                  shading_basis,
++            const Vector3f&                 outgoing,
++            Spectrum&                       value) const
+         {
+-            // We can't know the max contribution of OSL EDFs.
+-            return std::numeric_limits<float>::max();
++            value.set(0.0f);
++            for (size_t i = 0; i < closure.get_closure_count(); ++i)
++            {
++                if (closure.get_closure_type(i) >= FirstLayeredClosure)
++                    continue;
++                Spectrum component(Spectrum::Illuminance);
++                edf_from_closure_id(closure.get_closure_type(i)).evaluate(
++                    closure.get_closure_input_values(i), geometric_normal,
++                    shading_basis, outgoing, component);
++                attenuate_emission(closure, i, outgoing, component);
++                value += component;
++            }
+         }
+ 
+-      private:
+         void attenuate_emission(
+             const CompositeClosure& c,
+             const size_t            closure_index,

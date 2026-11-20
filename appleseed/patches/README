@@ -3,11 +3,42 @@ Appleseed patch series
 
 Upstream: https://github.com/appleseedhq/appleseed
 Base: c4ba82893febd711befb194f905e955d3ee143a3
-The numbered bootstrap patches adapt Appleseed to the bundled
-dependencies and native toolchains. The Boost group uses the C++17
-standard library and PCRE2 for the core renderer and command-line tools.
-Series.cmake applies both groups in order. The optional Python bindings
-still require Boost.Python.
+Former fork: e85844681afba97a8d9ff72b444c7d05230ac346
+
+Apply bootstrap, boost, and art groups in the order declared in
+Series.cmake. Each numbered patch is a consolidated review topic.
+HISTORY preserves all 205 original downstream commit messages, authors,
+dates, and parent IDs, including the earlier fork merges.
+
+The bootstrap group establishes dependency and platform compatibility,
+including shared-library exports used by basic framebuffer display.
+The bootstrap plus boost groups form a separately buildable core/CLI
+subset. Apply patches 01 through 17 to remove core Boost requirements
+without taking the art and rendering enhancements. Configure bext with
+-DAPPLESEED_PATCH_STAGE=CORE to select that prefix; the default ART
+selects the complete series. Invalid stage names are rejected.
+The final core topic
+stages the shader resources needed to compile and test against modern
+OSL. Disable both optional Python bindings; they continue to require
+Boost.Python. The core uses PCRE2 for Perl-style filters, preserving their
+established syntax.
+
+The art group adds procedural geometry, material and shader contracts,
+resource/font updates, optical transport, emitters, volumes, and ray
+differentials. These patches are ordered cumulatively; their numbering
+does not imply that every art topic is independent of earlier topics.
+
+The core prefix does not include the renderer APIs used by the enhanced
+BRL-CAD art implementation. Pair current art with the complete series.
+The original art sources used Boost only through their build rules;
+removing those discovery, include, link, and definition requirements is
+a separate compatibility change from the later art features. The core
+qualification covers Appleseed itself, not a rebuilt original art.
+
+The complete series reproduces the former fork plus the two existing
+bext adapters exactly, including file modes. Those adapters now belong
+to the bootstrap group. The original brlcad branch remains available
+as historical reference; builds use the unchanged upstream base.
 
 Review topics
 -------------
@@ -29,3 +60,36 @@ Review topics
 15. boost: Remove Bind and synchronize denoiser workers
 16. boost: Use standard helpers and PCRE2 without core Boost
 17. boost: Stage complete shader resources and executable tools
+18. art: Preserve procedural hit data, derivatives and ownership
+19. art: Validate OSL inputs and align query search policy
+20. art: Preserve bump frames and correct texture decoding
+21. art: Replace vendored font code with bounded struetype
+22. art: Correct ideal glass and ray differential sampling
+23. art: Correct OSL mixtures and plastic material sampling
+24. art: Correct coat interfaces and expose the glossy layer
+25. art: Correct panorama filtering, depth and image helpers
+26. art: Honor cancellation during samples and job waits
+27. art: Support orthographic contours through translucent covers
+28. art: Initialize media and correct glass transport scaling
+29. art: Resolve coincident optical state before shading
+30. art: Preserve physical origins through procedural boundaries
+31. art: Keep trace messages current and expose typed object data
+32. art: Preserve sampled emitter attributes, transforms and sides
+33. art: Preserve hierarchical emitter geometry and ray parameters
+34. art: Propagate procedural emitter weights and densities
+35. art: Use physical origins and finite guides for emitter MIS
+36. art: Integrate participating media from physical path origins
+37. art: Keep image channel names and color interpretations valid
+38. art: Stabilize thin-media sampling and panorama densities
+39. art: Integrate environment light through hidden boundaries
+40. art: Evaluate directional emission in its optical context
+41. art: Resolve real surfaces behind invisible covers
+42. art: Propagate selected normals through specular closures
+43. art: Differentiate GGX visible-normal sampled paths
+44. art: Differentiate native and OSL surface frames
+45. art: Stabilize grazing and normal-incidence sampling
+46. art: Wire standard OSL microfacet reflection and frames
+47. art: Resolve closure indices in their adjacent media
+48. art: Support standard OSL microfacet transmission
+49. art: Keep OSL emission normalization finite
+50. art: Recover height curvature with isolated bump prefixes

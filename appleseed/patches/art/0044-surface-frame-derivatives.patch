@@ -1,0 +1,1331 @@
+Subject: [PATCH 44/50] Differentiate native and OSL surface frames
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 3820efa05a6b005c4240e04441ed2bf1d1c0c60b
+Original-Commit: 7c67cee0683ea706ff3ddd5f0219b54f27d678d9
+Original-Commit: bcfb9388bd9343057c153df4f6e555df376b944d
+
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index 1a821a2d7..222c28b91 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -408,6 +408,7 @@ set (foundation_math_sources
+     foundation/math/combination.h
+     foundation/math/compressedunitvector.h
+     foundation/math/distance.h
++    foundation/math/differentials.h
+     foundation/math/dual.h
+     foundation/math/fastmath.h
+     foundation/math/filter.h
+@@ -577,6 +578,7 @@ set (foundation_meta_tests_sources
+     foundation/meta/tests/test_countof.cpp
+     foundation/meta/tests/test_datetime.cpp
+     foundation/meta/tests/test_dictionary.cpp
++    foundation/meta/tests/test_differentials.cpp
+     foundation/meta/tests/test_distance.cpp
+     foundation/meta/tests/test_fastmath.cpp
+     foundation/meta/tests/test_filesystem_path.cpp
+diff --git a/src/appleseed/foundation/math/differentials.h b/src/appleseed/foundation/math/differentials.h
+new file mode 100644
+index 000000000..a5536c595
+--- /dev/null
++++ b/src/appleseed/foundation/math/differentials.h
+@@ -0,0 +1,93 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2010-2013 Francois Beaune, Jupiter Jazz Limited
++// Copyright (c) 2014-2018 Francois Beaune, The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#pragma once
++
++#include "foundation/math/basis.h"
++#include "foundation/math/vector.h"
++
++#include <cassert>
++#include <cmath>
++
++namespace foundation
++{
++
++// Differentiate normalization of a nonzero vector, retaining its computed
++// unit value so callers follow the same value path.
++template <typename T, size_t N>
++inline Vector<T, N> differentiate_normalize(
++    const Vector<T, N>& raw,
++    const Vector<T, N>& unit,
++    const Vector<T, N>& derivative)
++{
++    const T length = norm(raw);
++    assert(length > T(0.0));
++    return (derivative - unit * dot(unit, derivative)) / length;
++}
++
++// Differentiate Basis3(normal, tangent). The reference tangent must not be
++// collinear with the unit normal; its normal component must be retained.
++template <typename T>
++inline void differentiate_basis(
++    const Basis3<T>& basis,
++    const Vector<T, 3>& tangent,
++    const Vector<T, 3>& normal_derivative,
++    const Vector<T, 3>& tangent_derivative,
++    Vector<T, 3>& du,
++    Vector<T, 3>& dv)
++{
++    const auto& n = basis.get_normal();
++    const auto& v = basis.get_tangent_v();
++    dv = differentiate_normalize(cross(tangent, n), v,
++        cross(tangent_derivative, n) + cross(tangent, normal_derivative));
++    du = cross(normal_derivative, v) + cross(n, dv);
++}
++
++// Differentiate Basis3(normal)'s signed Duff construction within its current
++// hemisphere branch, including the arbitrary-frame fallback used by shading.
++template <typename T>
++inline void differentiate_basis(
++    const Vector<T, 3>& normal,
++    const Vector<T, 3>& derivative,
++    Vector<T, 3>& du,
++    Vector<T, 3>& dv)
++{
++    const T sign = std::copysign(T(1.0), normal.z);
++    const T a = T(-1.0) / (sign + normal.z);
++    const T da = a * a * derivative.z;
++    const T db = (derivative.x * normal.y + normal.x * derivative.y) * a
++        + normal.x * normal.y * da;
++    du = Vector<T, 3>(db,
++        T(2.0) * normal.y * derivative.y * a + normal.y * normal.y * da,
++        -derivative.y);
++    dv = Vector<T, 3>(sign * (T(2.0) * normal.x * derivative.x * a + normal.x * normal.x * da),
++        sign * db, -sign * derivative.x);
++}
++
++}   // namespace foundation
+diff --git a/src/appleseed/foundation/math/microfacet.cpp b/src/appleseed/foundation/math/microfacet.cpp
+index 8faed908d..ec0b3c0b5 100644
+--- a/src/appleseed/foundation/math/microfacet.cpp
++++ b/src/appleseed/foundation/math/microfacet.cpp
+@@ -30,6 +30,7 @@
+ #include "microfacet.h"
+ 
+ // appleseed.foundation headers.
++#include "foundation/math/differentials.h"
+ #include "foundation/math/scalar.h"
+ #include "foundation/math/specialfunctions.h"
+ 
+@@ -496,11 +497,6 @@ namespace
+         const Vector3f normal = normalize(m);
+         if (jacobian)
+         {
+-            const auto normalized_derivative = [](
+-                const Vector3f& raw, const Vector3f& unit, const Vector3f& derivative)
+-            {
+-                return (derivative - unit * dot(unit, derivative)) / norm(raw);
+-            };
+             const bool polar_frame = stretched.y >= FramePoleThreshold;
+             const bool lower_disk = s[1] < a;
+             const float disk_height = std::sqrt(std::max(0.0f, 1.0f - p1 * p1 - p2 * p2));
+@@ -508,10 +504,10 @@ namespace
+             {
+                 Vector3f dv(0.0f);
+                 dv[column] = 1.0f;
+-                const Vector3f ds = normalized_derivative(raw_stretched, stretched,
++                const Vector3f ds = differentiate_normalize(raw_stretched, stretched,
+                     sign_cos_vn * Vector3f(alpha_x * dv.x, dv.y, alpha_y * dv.z));
+                 const Vector3f dt1 = polar_frame ? Vector3f(0.0f) :
+-                    normalized_derivative(cross(stretched, Vector3f(0.0f, 1.0f, 0.0f)), t1,
++                    differentiate_normalize(cross(stretched, Vector3f(0.0f, 1.0f, 0.0f)), t1,
+                         cross(ds, Vector3f(0.0f, 1.0f, 0.0f)));
+                 const Vector3f dt2 = cross(dt1, stretched) + cross(t1, ds);
+                 const float da = -a * a * ds.y;
+@@ -523,7 +519,7 @@ namespace
+                 const float dp3 = disk_height > 0.0f ? -(p1 * dp1 + p2 * dp2) / disk_height : 0.0f;
+                 const Vector3f dh = dp1 * t1 + p1 * dt1 + dp2 * t2 + p2 * dt2
+                     + dp3 * stretched + disk_height * ds;
+-                const Vector3f dm = normalized_derivative(m, normal,
++                const Vector3f dm = differentiate_normalize(m, normal,
+                     Vector3f(alpha_x * dh.x, h.y > 0.0f ? dh.y : 0.0f, alpha_y * dh.z));
+                 for (std::size_t row = 0; row < 3; ++row)
+                     (*jacobian)(row, column) = dm[row];
+diff --git a/src/appleseed/foundation/meta/tests/test_differentials.cpp b/src/appleseed/foundation/meta/tests/test_differentials.cpp
+new file mode 100644
+index 000000000..9364d48d8
+--- /dev/null
++++ b/src/appleseed/foundation/meta/tests/test_differentials.cpp
+@@ -0,0 +1,96 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2010-2013 Francois Beaune, Jupiter Jazz Limited
++// Copyright (c) 2014-2018 Francois Beaune, The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#include "foundation/math/differentials.h"
++#include "foundation/utility/test.h"
++#include <algorithm>
++
++using namespace foundation;
++
++TEST_SUITE(Foundation_Math_Differentials)
++{
++    TEST_CASE(UnitVectorGradientsAgreeWithNeighboringValues)
++    {
++        for (const double scale : {0.001, 1.0, 1000.0})
++        for (const Vector3d raw_direction : {Vector3d(0.2, 1.0, 0.1), Vector3d(1.0, -0.4, -0.2)})
++        for (const Vector3d slope : {Vector3d(0.3, -0.2, 0.4), Vector3d(0.0), raw_direction})
++        {
++            const Vector3d raw = scale * raw_direction;
++            const Vector3d unit = normalize(raw);
++            const double step = 1.0e-5 * norm(raw);
++            const Vector3d expected = (normalize(raw + step * slope) - normalize(raw - step * slope)) / (2.0 * step);
++            const Vector3d actual = differentiate_normalize(raw, unit, slope);
++            EXPECT_LT(1.0e-8 * std::max(1.0, norm(expected)), norm(actual - expected));
++            EXPECT_LT(1.0e-10 * std::max(1.0, norm(actual)), std::abs(dot(unit, actual)));
++        }
++    }
++
++    TEST_CASE(ReferenceFramesDifferentiateTheirRawTangents)
++    {
++        const double Step = 1.0e-5;
++        const Vector3d normal_slope(0.3, -0.2, 0.4);
++        const Vector3d tangent_slope(-0.4, 0.1, 0.3);
++        for (const Vector3d raw_normal : {Vector3d(0.2, 1.0, 0.1), Vector3d(0.4, -0.2, -1.0), Vector3d(0.0, 0.0, 1.0)})
++        for (const double scale : {0.3, 1.0, 3.0})
++        {
++            const Vector3d tangent = scale * Vector3d(1.0, 0.3, 0.2);
++            const Vector3d n = normalize(raw_normal);
++            const Vector3d dn = (normal_slope - n * dot(n, normal_slope)) / norm(raw_normal);
++            const Basis3d basis(n, tangent);
++            const Basis3d left(normalize(raw_normal - Step * normal_slope), tangent - Step * tangent_slope);
++            const Basis3d right(normalize(raw_normal + Step * normal_slope), tangent + Step * tangent_slope);
++            Vector3d du, dv;
++            differentiate_basis(basis, tangent, dn, tangent_slope, du, dv);
++            EXPECT_LT(1.0e-7, norm(du - (right.get_tangent_u() - left.get_tangent_u()) / (2.0 * Step)));
++            EXPECT_LT(1.0e-7, norm(dv - (right.get_tangent_v() - left.get_tangent_v()) / (2.0 * Step)));
++            EXPECT_LT(1.0e-12, std::abs(dot(du, basis.get_tangent_u())));
++            EXPECT_LT(1.0e-12, std::abs(dot(dv, basis.get_tangent_v())));
++            EXPECT_LT(1.0e-12, std::abs(dot(du, basis.get_tangent_v()) + dot(basis.get_tangent_u(), dv)));
++            EXPECT_LT(1.0e-12, std::abs(dot(du, n) + dot(basis.get_tangent_u(), dn)));
++        }
++    }
++
++    TEST_CASE(NormalOnlyFramesFollowBothHemisphereBranches)
++    {
++        const double Step = 1.0e-5;
++        const Vector3d slope(0.3, -0.2, 0.4);
++        for (const Vector3d raw : {Vector3d(0.2, 1.0, 0.1), Vector3d(0.4, -0.2, -1.0),
++             Vector3d(0.0, 0.0, 1.0), Vector3d(0.0, 0.0, -1.0)})
++        {
++            const Vector3d n = normalize(raw);
++            const Vector3d dn = (slope - n * dot(n, slope)) / norm(raw);
++            const Basis3d left(normalize(raw - Step * slope));
++            const Basis3d right(normalize(raw + Step * slope));
++            Vector3d du, dv;
++            differentiate_basis(n, dn, du, dv);
++            EXPECT_LT(1.0e-8, norm(du - (right.get_tangent_u() - left.get_tangent_u()) / (2.0 * Step)));
++            EXPECT_LT(1.0e-8, norm(dv - (right.get_tangent_v() - left.get_tangent_v()) / (2.0 * Step)));
++        }
++    }
++}
+diff --git a/src/appleseed/renderer/kernel/rendering/rendererservices.cpp b/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+index 6cbf9212e..9f75a9bb1 100644
+--- a/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
++++ b/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+@@ -1213,7 +1213,13 @@ IMPLEMENT_USER_DATA_GETTER(tn)
+         reinterpret_cast<float*>(val)[2] = static_cast<float>(tn.z);
+ 
+         if (derivatives)
+-            clear_derivatives(type, val);
++        {
++            Vector3f ux, uy, vx, vy;
++            shading_point->compute_screen_space_basis_derivatives(ux, uy, vx, vy);
++            auto* result = reinterpret_cast<OSL::Vec3*>(val);
++            result[1] = ux;
++            result[2] = uy;
++        }
+ 
+         return true;
+     }
+@@ -1235,7 +1241,8 @@ IMPLEMENT_USER_DATA_GETTER(bn)
+             static_cast<float>(bn.z));
+ 
+         // Make sure Bn points in the same direction as dPdv.
+-        if (v.dot(sg->dPdv) < 0.0f)
++        const bool reverse = v.dot(sg->dPdv) < 0.0f;
++        if (reverse)
+             v = -v;
+ 
+         reinterpret_cast<float*>(val)[0] = v.x;
+@@ -1243,7 +1250,13 @@ IMPLEMENT_USER_DATA_GETTER(bn)
+         reinterpret_cast<float*>(val)[2] = v.z;
+ 
+         if (derivatives)
+-            clear_derivatives(type, val);
++        {
++            Vector3f ux, uy, vx, vy;
++            shading_point->compute_screen_space_basis_derivatives(ux, uy, vx, vy);
++            auto* result = reinterpret_cast<OSL::Vec3*>(val);
++            result[1] = reverse ? -vx : vx;
++            result[2] = reverse ? -vy : vy;
++        }
+ 
+         return true;
+     }
+diff --git a/src/appleseed/renderer/kernel/shading/closures.cpp b/src/appleseed/renderer/kernel/shading/closures.cpp
+index bbea9e02f..bcad6d2de 100644
+--- a/src/appleseed/renderer/kernel/shading/closures.cpp
++++ b/src/appleseed/renderer/kernel/shading/closures.cpp
+@@ -2356,6 +2356,7 @@ void CompositeClosure::compute_closure_shading_basis(
+     const Basis3f&  original_shading_basis)
+ {
+     m_basis_references[m_closure_count].m_tangent = original_shading_basis.get_tangent_u();
++    m_uses_surface_tangent[m_closure_count] = true;
+     const float normal_square_norm = square_norm(normal);
+     if APPLESEED_LIKELY(normal_square_norm != 0.0f)
+     {
+@@ -2383,6 +2384,7 @@ void CompositeClosure::compute_closure_shading_basis(
+         if APPLESEED_LIKELY(normal_square_norm != 0.0f)
+         {
+             m_basis_references[m_closure_count].m_tangent = tangent;
++            m_uses_surface_tangent[m_closure_count] = false;
+             m_bases[m_closure_count] =
+                 Basis3f(
+                     normal / std::sqrt(normal_square_norm),
+@@ -2392,6 +2394,7 @@ void CompositeClosure::compute_closure_shading_basis(
+         {
+             // Fallback to the original shading basis if the normal is zero.
+             m_basis_references[m_closure_count].m_tangent = original_shading_basis.get_tangent_u();
++            m_uses_surface_tangent[m_closure_count] = true;
+             m_bases[m_closure_count] = original_shading_basis;
+         }
+     }
+@@ -2496,6 +2499,18 @@ void CompositeClosure::set_closure_normal_derivatives(
+     m_normal_derivatives[index] = derivatives;
+ }
+ 
++void CompositeClosure::set_surface_tangent_derivatives(const Vector3f& dx, const Vector3f& dy)
++{
++    for (size_t index = 0; index < m_closure_count; ++index)
++    {
++        if (m_uses_surface_tangent[index])
++        {
++            m_basis_references[index].m_dx = dx;
++            m_basis_references[index].m_dy = dy;
++        }
++    }
++}
++
+ void CompositeClosure::set_closure_tangent_derivatives(
+     const Vector3f& dtdx,
+     const Vector3f& dtdy)
+diff --git a/src/appleseed/renderer/kernel/shading/closures.h b/src/appleseed/renderer/kernel/shading/closures.h
+index 8ce1958d2..e815c8fec 100644
+--- a/src/appleseed/renderer/kernel/shading/closures.h
++++ b/src/appleseed/renderer/kernel/shading/closures.h
+@@ -207,6 +207,10 @@ class APPLESEED_ALIGN(16) CompositeClosure
+     const BSDF::NormalDerivatives* get_closure_normal_derivatives(const std::size_t index) const;
+     const BSDF::BasisReference& get_closure_basis_reference(const std::size_t index) const;
+ 
++    void set_surface_tangent_derivatives(
++        const foundation::Vector3f& dx,
++        const foundation::Vector3f& dy);
++
+     void set_closure_tangent_derivatives(
+         const foundation::Vector3f& dtdx,
+         const foundation::Vector3f& dtdy);
+@@ -264,6 +268,7 @@ class APPLESEED_ALIGN(16) CompositeClosure
+     foundation::Basis3f             m_bases[MaxClosureEntries];
+     const BSDF::NormalDerivatives*   m_normal_derivatives[MaxClosureEntries];
+     BSDF::BasisReference            m_basis_references[MaxClosureEntries];
++    bool                            m_uses_surface_tangent[MaxClosureEntries];
+     std::size_t                     m_ior_count;
+     float                           m_iors[MaxClosureEntries];
+     float                           m_ior_cdf[MaxClosureEntries];
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+index 592367d11..715729876 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+@@ -45,6 +45,7 @@
+ #include "renderer/utility/triangle.h"
+ 
+ // appleseed.foundation headers.
++#include "foundation/math/differentials.h"
+ #include "foundation/math/intersection/rayplane.h"
+ #include "foundation/math/scalar.h"
+ #include "foundation/utility/attributeset.h"
+@@ -60,6 +61,21 @@ using namespace foundation;
+ namespace renderer
+ {
+ 
++namespace
++{
++    constexpr double MinReferenceTangentLength = 1.0e-6;
++
++    Basis3d make_surface_basis(const Vector3d& normal, const Vector3d& tangent)
++    {
++        const Vector3d bitangent = cross(tangent, normal);
++        const double length = norm(bitangent);
++        if (length < MinReferenceTangentLength)
++            return Basis3d(normal);
++        const Vector3d v = bitangent / length;
++        return Basis3d(normal, cross(normal, v), v);
++    }
++}
++
+ //
+ // ShadingPoint class implementation.
+ //
+@@ -503,19 +519,8 @@ void ShadingPoint::compute_world_space_partial_derivatives() const
+                 m_dpdu = (dv1 * dp0 - dv0 * dp1) * rcp_det;
+                 m_dpdv = (du0 * dp1 - du1 * dp0) * rcp_det;
+ 
+-                //
+-                // Subtract the component of dPdu (resp. dPdv) that is not orthogonal to the shading normal.
+-                // Assuming that the geometric and shading normals don't differ excessively, this leads to a
+-                // very negligible shortening of dPdu (resp. dPdv).
+-                //
+-                // A length-preserving but more costly approach is as follow:
+-                //
+-                //   m_dpdu = normalize(cross(n, cross(m_dpdu, n))) * norm(m_dpdu);
+-                //   m_dpdv = normalize(cross(n, cross(m_dpdv, n))) * norm(m_dpdv);
+-                //
+-
+-                m_dpdu -= dot(m_dpdu, n) * n;
+-                m_dpdv -= dot(m_dpdv, n) * n;
++                // The position chart belongs to the geometric triangle.
++                // Projecting it onto a smooth normal changes UV footprints.
+ 
+                 if (m_members & HasTriangleVertexNormals)
+                 {
+@@ -533,6 +538,14 @@ void ShadingPoint::compute_world_space_partial_derivatives() const
+                     m_dndv =
+                         m_assembly_instance_transform.normal_to_parent(
+                             obj_instance_transform.normal_to_parent(m_dndv));
++                    const Vector3d raw = m_assembly_instance_transform.normal_to_parent(
++                        obj_instance_transform.normal_to_parent(
++                            Vector3d(m_n0) * static_cast<double>(1.0 - m_bary[0] - m_bary[1])
++                            + Vector3d(m_n1) * static_cast<double>(m_bary[0])
++                            + Vector3d(m_n2) * static_cast<double>(m_bary[1])));
++                    const double sign = dot(raw, n) < 0.0 ? -1.0 : 1.0;
++                    m_dndu = sign * differentiate_normalize(raw, sign * n, m_dndu);
++                    m_dndv = sign * differentiate_normalize(raw, sign * n, m_dndv);
+                 }
+                 else
+                 {
+@@ -621,8 +634,7 @@ void ShadingPoint::compute_screen_space_partial_derivatives() const
+     }
+ 
+     const Vector3d& p = get_point();
+-    const Vector3d& n = m_primitive_type == PrimitiveProceduralSurface
+-        ? get_geometric_normal() : get_original_shading_normal();
++    const Vector3d& n = get_geometric_normal();
+ 
+     double tx, ty;
+     if (!intersect_ray_plane(m_ray.m_rx_org, m_ray.m_rx_dir, p, n, tx) ||
+@@ -671,6 +683,31 @@ void ShadingPoint::compute_screen_space_normal_derivatives(
+     Vector3f& dndx,
+     Vector3f& dndy) const
+ {
++    dndx = dndy = Vector3f(0.0f);
++    if (!m_scene || !m_ray.m_has_differentials)
++        return;
++    cache_source_geometry();
++    if (m_primitive_type == PrimitiveTriangle && (m_members & HasTriangleVertexNormals))
++    {
++        Vector2d bx, by;
++        if (!compute_triangle_barycentric_derivatives(bx, by))
++            return;
++        const Transformd& object = m_object_instance->get_transform();
++        const auto transform = [&](const Vector3d& value)
++        {
++            return m_assembly_instance_transform.normal_to_parent(object.normal_to_parent(value));
++        };
++        const Vector3d raw = transform(Vector3d(m_n0) * static_cast<double>(1.0 - m_bary[0] - m_bary[1])
++            + Vector3d(m_n1) * static_cast<double>(m_bary[0])
++            + Vector3d(m_n2) * static_cast<double>(m_bary[1]));
++        const Vector3d du = transform(Vector3d(m_n1 - m_n0));
++        const Vector3d dv = transform(Vector3d(m_n2 - m_n0));
++        const Vector3d& normal = get_original_shading_normal();
++        const double sign = dot(raw, normal) < 0.0 ? -1.0 : 1.0;
++        dndx = Vector3f(sign * differentiate_normalize(raw, sign * normal, bx.x * du + bx.y * dv));
++        dndy = Vector3f(sign * differentiate_normalize(raw, sign * normal, by.x * du + by.y * dv));
++        return;
++    }
+     const Vector3f dndu(get_dndu(0));
+     const Vector3f dndv(get_dndv(0));
+     const Vector2f& duvdx = get_duvdx(0);
+@@ -679,6 +716,197 @@ void ShadingPoint::compute_screen_space_normal_derivatives(
+     dndy = dndu * duvdy.x + dndv * duvdy.y;
+ }
+ 
++bool ShadingPoint::compute_triangle_barycentric_derivatives(Vector2d& dx, Vector2d& dy) const
++{
++    dx = dy = Vector2d(0.0);
++    const Vector3d e1 = get_vertex(1) - get_vertex(0);
++    const Vector3d e2 = get_vertex(2) - get_vertex(0);
++    const size_t omitted = max_abs_index(get_geometric_normal());
++    const size_t axis0 = omitted == 0 ? 1 : 0;
++    const size_t axis1 = omitted == 2 ? 1 : 2;
++    const Vector2d a(e1[axis0], e1[axis1]);
++    const Vector2d b(e2[axis0], e2[axis1]);
++    const double determinant = det(a, b);
++    if (determinant == 0.0 || !std::isfinite(determinant))
++        return false;
++    const auto coordinates = [&](const Vector3d& value)
++    {
++        const Vector2d projected(value[axis0], value[axis1]);
++        return Vector2d(det(projected, b), det(a, projected)) / determinant;
++    };
++    dx = coordinates(get_dpdx());
++    dy = coordinates(get_dpdy());
++    return true;
++}
++
++bool ShadingPoint::compute_screen_space_geometric_normal_derivatives(Vector3f& dx, Vector3f& dy) const
++{
++    dx = dy = Vector3f(0.0f);
++    if (!m_ray.m_has_differentials || m_primitive_type == PrimitiveTriangle)
++        return true;
++    if (!m_scene || m_primitive_type != PrimitiveProceduralSurface ||
++        !m_procedural_derivatives.m_valid || !m_procedural_derivatives.m_has_geometric_normal_partials)
++        return false;
++    cache_source_geometry();
++    const Transformd& object = m_object_instance->get_transform();
++    const auto transform = [&](const Vector3d& value)
++    {
++        return m_assembly_instance_transform.normal_to_parent(object.normal_to_parent(value));
++    };
++    const Vector3d raw = transform(m_procedural_geometric_normal);
++    const Vector3d& normal = get_geometric_normal();
++    const double sign = dot(raw, normal) < 0.0 ? -1.0 : 1.0;
++    const Vector3d du = sign * differentiate_normalize(raw, sign * normal,
++        transform(m_procedural_derivatives.m_dngdu));
++    const Vector3d dv = sign * differentiate_normalize(raw, sign * normal,
++        transform(m_procedural_derivatives.m_dngdv));
++    const Vector2d uv_dx(get_duvdx(0));
++    const Vector2d uv_dy(get_duvdy(0));
++    dx = Vector3f(uv_dx.x * du + uv_dx.y * dv);
++    dy = Vector3f(uv_dy.x * du + uv_dy.y * dv);
++    return true;
++}
++
++bool ShadingPoint::compute_shading_basis_reference(
++    Vector3d& tangent, Vector3d* dx, Vector3d* dy) const
++{
++    assert((dx == nullptr) == (dy == nullptr));
++    const bool derivatives = dx != nullptr;
++    if (derivatives)
++        *dx = *dy = Vector3d(0.0);
++    const Material* material = get_material();
++    const Transformd& object = m_object_instance->get_transform();
++    const auto transform = [&](const Vector3d& value)
++    {
++        return m_assembly_instance_transform.vector_to_parent(object.vector_to_parent(value));
++    };
++    if (m_members & HasTriangleVertexTangents)
++    {
++        tangent = transform(Vector3d(m_t0) * static_cast<double>(1.0f - m_bary[0] - m_bary[1])
++            + Vector3d(m_t1) * static_cast<double>(m_bary[0])
++            + Vector3d(m_t2) * static_cast<double>(m_bary[1]));
++        if (derivatives)
++        {
++            Vector2d bary_dx, bary_dy;
++            if (!compute_triangle_barycentric_derivatives(bary_dx, bary_dy))
++                return false;
++            const Vector3d du = transform(Vector3d(m_t1 - m_t0));
++            const Vector3d dv = transform(Vector3d(m_t2 - m_t0));
++            *dx = bary_dx.x * du + bary_dx.y * dv;
++            *dy = bary_dy.x * du + bary_dy.y * dv;
++        }
++    }
++    else if (material == nullptr ||
++             material->get_render_data().m_default_tangent_mode == Material::RenderData::DefaultTangentMode::Radial)
++    {
++        tangent = get_point() - m_assembly_instance_transform.point_to_parent(object.get_parent_origin());
++        if (derivatives)
++        {
++            *dx = get_dpdx();
++            *dy = get_dpdy();
++        }
++    }
++    else
++    {
++        switch (material->get_render_data().m_default_tangent_mode)
++        {
++          case Material::RenderData::DefaultTangentMode::UV:
++            tangent = get_dpdu(0);
++            if (derivatives)
++            {
++                if (m_primitive_type == PrimitiveProceduralSurface)
++                {
++                    if (!m_procedural_derivatives.m_valid || !m_procedural_derivatives.m_has_tangent_partials)
++                        return false;
++                    const Vector3d du = transform(m_procedural_derivatives.m_d2pduu);
++                    const Vector3d dv = transform(m_procedural_derivatives.m_d2pduv);
++                    const Vector2d uv_dx(get_duvdx(0));
++                    const Vector2d uv_dy(get_duvdy(0));
++                    *dx = uv_dx.x * du + uv_dx.y * dv;
++                    *dy = uv_dy.x * du + uv_dy.y * dv;
++                }
++                else if (m_primitive_type == PrimitiveTriangle)
++                {
++                    const double du0 = static_cast<double>(m_v0_uv.x - m_v2_uv.x);
++                    const double dv0 = static_cast<double>(m_v0_uv.y - m_v2_uv.y);
++                    const double du1 = static_cast<double>(m_v1_uv.x - m_v2_uv.x);
++                    const double dv1 = static_cast<double>(m_v1_uv.y - m_v2_uv.y);
++                    if (dv1 * du0 - dv0 * du1 == 0.0)
++                    {
++                        // Unmapped triangles use the normal-only frame as dPdu.
++                        Vector3f nx, ny;
++                        Vector3d unused;
++                        compute_screen_space_normal_derivatives(nx, ny);
++                        differentiate_basis(get_original_shading_normal(), Vector3d(nx), *dx, unused);
++                        differentiate_basis(get_original_shading_normal(), Vector3d(ny), *dy, unused);
++                    }
++                    // Otherwise the triangle's position chart is affine.
++                }
++                else return false;
++            }
++            if (square_norm(tangent) > 0.0)
++            {
++                const Vector3d unit = normalize(tangent);
++                if (derivatives)
++                {
++                    *dx = differentiate_normalize(tangent, unit, *dx);
++                    *dy = differentiate_normalize(tangent, unit, *dy);
++                }
++                tangent = unit;
++            }
++            break;
++          case Material::RenderData::DefaultTangentMode::LocalX:
++            tangent = m_assembly_instance_transform.vector_to_parent(object.get_parent_x());
++            break;
++          case Material::RenderData::DefaultTangentMode::LocalY:
++            tangent = m_assembly_instance_transform.vector_to_parent(object.get_parent_y());
++            break;
++          case Material::RenderData::DefaultTangentMode::LocalZ:
++            tangent = m_assembly_instance_transform.vector_to_parent(object.get_parent_z());
++            break;
++        }
++    }
++    return true;
++}
++
++bool ShadingPoint::compute_screen_space_basis_derivatives(
++    Vector3f& du_dx, Vector3f& du_dy, Vector3f& dv_dx, Vector3f& dv_dy) const
++{
++    du_dx = du_dy = dv_dx = dv_dy = Vector3f(0.0f);
++    if (!m_scene || !hit_surface() || !m_ray.m_has_differentials)
++        return false;
++    cache_source_geometry();
++    if (is_curve_primitive())
++        return false;
++    const Material* material = get_material();
++    if (material && material->get_render_data().m_basis_modifier)
++        return false;
++    Vector3d tangent, tx, ty;
++    if (!compute_shading_basis_reference(tangent, &tx, &ty))
++        return false;
++    const Vector3d& normal = get_original_shading_normal();
++    Vector3f nx, ny;
++    compute_screen_space_normal_derivatives(nx, ny);
++    Vector3d ux, uy, vx, vy;
++    if (norm(cross(tangent, normal)) >= MinReferenceTangentLength)
++    {
++        const Basis3d basis = make_surface_basis(normal, tangent);
++        differentiate_basis(basis, tangent, Vector3d(nx), tx, ux, vx);
++        differentiate_basis(basis, tangent, Vector3d(ny), ty, uy, vy);
++    }
++    else
++    {
++        differentiate_basis(normal, Vector3d(nx), ux, vx);
++        differentiate_basis(normal, Vector3d(ny), uy, vy);
++    }
++    du_dx = Vector3f(ux);
++    du_dy = Vector3f(uy);
++    dv_dx = Vector3f(vx);
++    dv_dy = Vector3f(vy);
++    return true;
++}
++
++
+ void ShadingPoint::compute_normals() const
+ {
+     cache_source_geometry();
+@@ -802,52 +1030,8 @@ void ShadingPoint::compute_shading_basis() const
+ {
+     const Material* material = get_material();
+ 
+-    // Compute the first tangent.
+     Vector3d tangent;
+-    const Transformd& object_instance_transform = m_object_instance->get_transform();
+-    if ((m_members & HasTriangleVertexTangents) != 0)
+-    {
+-        // Explicit per-vertex tangents.
+-        tangent =
+-            m_assembly_instance_transform.vector_to_parent(
+-                object_instance_transform.vector_to_parent(
+-                      Vector3d(m_t0) * static_cast<double>(1.0f - m_bary[0] - m_bary[1])
+-                    + Vector3d(m_t1) * static_cast<double>(m_bary[0])
+-                    + Vector3d(m_t2) * static_cast<double>(m_bary[1])));
+-    }
+-    else if (material == nullptr ||
+-             material->get_render_data().m_default_tangent_mode == Material::RenderData::DefaultTangentMode::Radial)
+-    {
+-        // Radial default tangent mode.
+-        tangent =
+-            get_point() -
+-            m_assembly_instance_transform.point_to_parent(
+-                object_instance_transform.get_parent_origin());
+-    }
+-    else
+-    {
+-        // UV/X+/Y+/Z+ default tangent modes.
+-        switch (material->get_render_data().m_default_tangent_mode)
+-        {
+-          case Material::RenderData::DefaultTangentMode::UV:
+-            tangent = get_dpdu(0);
+-            if (square_norm(tangent) > 0.0)
+-                tangent = normalize(tangent);
+-            break;
+-
+-          case Material::RenderData::DefaultTangentMode::LocalX:
+-            tangent = m_assembly_instance_transform.vector_to_parent(object_instance_transform.get_parent_x());
+-            break;
+-
+-          case Material::RenderData::DefaultTangentMode::LocalY:
+-            tangent = m_assembly_instance_transform.vector_to_parent(object_instance_transform.get_parent_y());
+-            break;
+-
+-          case Material::RenderData::DefaultTangentMode::LocalZ:
+-            tangent = m_assembly_instance_transform.vector_to_parent(object_instance_transform.get_parent_z());
+-            break;
+-        }
+-    }
++    compute_shading_basis_reference(tangent);
+ 
+     if (m_primitive_type == PrimitiveCurve3)
+     {
+@@ -861,21 +1045,7 @@ void ShadingPoint::compute_shading_basis() const
+     }
+     else
+     {
+-        // Construct an orthonormal basis.
+-        const Vector3d& sn = get_original_shading_normal();
+-        const Vector3d bitangent = cross(tangent, sn);
+-        const double norm_bitangent = norm(bitangent);
+-        if (norm_bitangent >= 1.0e-6)
+-        {
+-            const Vector3d t = bitangent / norm_bitangent;
+-            const Vector3d s = cross(sn, t);
+-            m_shading_basis.build(sn, s, t);
+-        }
+-        else
+-        {
+-            // Fall back to arbitrary tangents if the tangent and the shading normal are colinear.
+-            m_shading_basis.build(sn);
+-        }
++        m_shading_basis = make_surface_basis(get_original_shading_normal(), tangent);
+     }
+ 
+     // Apply the basis modifier if the material has one.
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.h b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+index 2071a975e..77ced37f2 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.h
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+@@ -193,6 +193,14 @@ class ShadingPoint
+         foundation::Vector3f& dndx,
+         foundation::Vector3f& dndy) const;
+ 
++    // Derivatives of the original shading frame; false means unavailable.
++    bool compute_screen_space_basis_derivatives(
++        foundation::Vector3f& du_dx, foundation::Vector3f& du_dy,
++        foundation::Vector3f& dv_dx, foundation::Vector3f& dv_dy) const;
++
++    bool compute_screen_space_geometric_normal_derivatives(
++        foundation::Vector3f& dx, foundation::Vector3f& dy) const;
++
+     // Return the screen space partial derivatives of the intersection point.
+     const foundation::Vector3d& get_dpdx() const;
+     const foundation::Vector3d& get_dpdy() const;
+@@ -422,6 +430,13 @@ class ShadingPoint
+     // Refine and offset the intersection point.
+     void refine_and_offset() const;
+ 
++    bool compute_triangle_barycentric_derivatives(
++        foundation::Vector2d& dx, foundation::Vector2d& dy) const;
++    bool compute_shading_basis_reference(
++        foundation::Vector3d& tangent,
++        foundation::Vector3d* dx = nullptr,
++        foundation::Vector3d* dy = nullptr) const;
++
+     void compute_world_space_partial_derivatives() const;
+     void compute_screen_space_partial_derivatives() const;
+     void compute_normals() const;
+@@ -515,6 +530,7 @@ APPLESEED_FORCE_INLINE void ShadingPoint::clear()
+ {
+     m_texture_cache = nullptr;
+     m_scene = nullptr;
++    m_object_instance = nullptr;
+     m_primitive_type = PrimitiveNone;
+     m_members = 0;
+ }
+diff --git a/src/appleseed/renderer/meta/tests/test_intersector.cpp b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+index 5ba1dfaa0..4e32026d6 100644
+--- a/src/appleseed/renderer/meta/tests/test_intersector.cpp
++++ b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+@@ -52,6 +52,8 @@
+ #include "renderer/kernel/shading/shadingray.h"
+ #include "renderer/kernel/texturing/texturecache.h"
+ #include "renderer/kernel/texturing/texturestore.h"
++#include "renderer/modeling/object/meshobject.h"
++#include "renderer/modeling/object/triangle.h"
+ #include "renderer/modeling/object/object.h"
+ #include "renderer/modeling/edf/diffuseedf.h"
+ #include "renderer/modeling/light/pointlight.h"
+@@ -85,6 +87,7 @@
+ 
+ // Standard headers.
+ #include <algorithm>
++#include <cmath>
+ #include <string>
+ #include <type_traits>
+ #include <vector>
+@@ -197,6 +200,8 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+                 result.m_uv = Vector2f(static_cast<float>(0.25 + u), static_cast<float>(0.75 + v));
+                 result.m_material_slot = 2;
+                 result.m_derivatives.m_valid = m_supply_derivatives;
++                result.m_derivatives.m_has_tangent_partials = m_supply_derivatives;
++                result.m_derivatives.m_has_geometric_normal_partials = m_supply_derivatives;
+                 result.m_derivatives.m_dpdu = dpdu();
+                 result.m_derivatives.m_dpdv = dpdv();
+                 const Vector3d du = NormalSlopeU * dpdu();
+@@ -369,6 +374,255 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+     using RectangleFixture = Fixture<false, AnalyticScene<RectangleObjectFactory>>;
+     using DiskFixture = Fixture<false, AnalyticScene<DiskObjectFactory>>;
+ 
++    void assign_frame_material(Assembly& assembly, const char* mode)
++    {
++        assembly.materials().insert(GenericMaterialFactory().create("frame_material",
++            ParamArray().insert("default_tangent_mode", mode)));
++        for (const auto side : {ObjectInstance::FrontSide, ObjectInstance::BackSide})
++            assembly.object_instances().get_by_index(0)->assign_material("default", side, "frame_material");
++    }
++
++    template <Material::RenderData::DefaultTangentMode Mode>
++    struct FrameProbeScene : ProceduralTestScene<>
++    {
++        static constexpr bool HasUV = true;
++        static constexpr double CenterU = 0.05;
++        static constexpr double CenterV = 0.1;
++
++        FrameProbeScene()
++        {
++            const char* mode = nullptr;
++            switch (Mode)
++            {
++              case Material::RenderData::DefaultTangentMode::UV: mode = "uv"; break;
++              case Material::RenderData::DefaultTangentMode::LocalX: mode = "local_x"; break;
++              case Material::RenderData::DefaultTangentMode::LocalY: mode = "local_y"; break;
++              case Material::RenderData::DefaultTangentMode::LocalZ: mode = "local_z"; break;
++              case Material::RenderData::DefaultTangentMode::Radial: mode = "radial"; break;
++            }
++            assign_frame_material(*m_scene.assemblies().get_by_name("assembly"), mode);
++            m_probe->m_shading_offset = 0.1 * NormalProbeObject::dpdu();
++        }
++
++        Vector3d chart_u() const { return world_vector(NormalProbeObject::dpdu()); }
++        Vector3d chart_v() const { return world_vector(NormalProbeObject::dpdv()); }
++
++        ShadingRay ray_at(const double u, const double v, const bool back) const
++        {
++            ShadingRay ray = ray_to_plane(back);
++            ray.m_org += u * chart_u() + v * chart_v();
++            return ray;
++        }
++    };
++
++    template <bool Tangents, bool UV>
++    struct MeshFrameScene : TestSceneBase
++    {
++        static constexpr bool HasUV = UV;
++        static constexpr double CenterU = 0.2;
++        static constexpr double CenterV = 0.25;
++        const Transformd m_transform = Transformd(Matrix4d::make_scaling(Vector3d(2.0, 3.0, 4.0)));
++
++        MeshFrameScene()
++        {
++            auto_release_ptr<Assembly> assembly(AssemblyFactory().create("assembly", ParamArray()));
++            auto_release_ptr<Object> object = MeshObjectFactory().create("object", ParamArray());
++            auto* mesh = static_cast<MeshObject*>(object.get());
++            mesh->push_vertex(GVector3(0.0f));
++            mesh->push_vertex(GVector3(2.0f, 0.0f, 0.0f));
++            mesh->push_vertex(GVector3(0.0f, 3.0f, 0.0f));
++            for (const GVector3 n : {GVector3(0.1f, 0.2f, 1.0f),
++                 GVector3(0.7f, -0.1f, 1.0f), GVector3(-0.2f, 0.6f, 1.0f)})
++                mesh->push_vertex_normal(normalize(n));
++            if constexpr (Tangents)
++            {
++                for (const GVector3 t : {GVector3(1.0f, 0.1f, 0.2f),
++                     GVector3(0.7f, 0.3f, -0.1f), GVector3(0.8f, -0.2f, 0.4f)})
++                    mesh->push_vertex_tangent(normalize(t));
++            }
++            if constexpr (UV)
++            {
++                mesh->push_tex_coords(GVector2(0.0f));
++                mesh->push_tex_coords(GVector2(1.0f, 0.0f));
++                mesh->push_tex_coords(GVector2(0.0f, 1.0f));
++            }
++            mesh->push_material_slot("default");
++            const auto absent = Triangle::None;
++            mesh->push_triangle(Triangle(0, 1, 2, 0, 1, 2,
++                UV ? 0 : absent, UV ? 1 : absent, UV ? 2 : absent, 0));
++            assembly->objects().insert(object);
++            assembly->object_instances().insert(ObjectInstanceFactory::create(
++                "object_instance", ParamArray(), "object", m_transform, StringDictionary()));
++            assign_frame_material(*assembly, "uv");
++            m_scene.assembly_instances().insert(AssemblyInstanceFactory::create(
++                "assembly_instance", ParamArray(), "assembly"));
++            m_scene.assemblies().insert(assembly);
++        }
++
++        Vector3d chart_u() const { return m_transform.vector_to_parent(Vector3d(2.0, 0.0, 0.0)); }
++        Vector3d chart_v() const { return m_transform.vector_to_parent(Vector3d(0.0, 3.0, 0.0)); }
++
++        ShadingRay ray_at(const double u, const double v, const bool back) const
++        {
++            const Vector3d point = u * chart_u() + v * chart_v();
++            const Vector3d direction = (back ? -1.0 : 1.0) * normalize(Vector3d(0.2, -0.1, -1.0));
++            return ShadingRay(point - 5.0 * direction, direction,
++                ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        }
++    };
++
++    template <typename Factory>
++    struct AnalyticFrameScene : AnalyticScene<Factory>
++    {
++        static constexpr bool HasUV = true;
++        static constexpr double CenterU = 0.15;
++        static constexpr double CenterV = 0.4;
++
++        AnalyticFrameScene()
++          : AnalyticScene<Factory>(Transformd(Matrix4d::make_scaling(Vector3d(2.0, 3.0, 4.0))))
++        {
++            assign_frame_material(*this->m_scene.assemblies().get_by_name("assembly"), "uv");
++        }
++
++        const Transformd& object_transform() const
++        {
++            return this->m_scene.assemblies().get_by_name("assembly")->object_instances().get_by_index(0)->get_transform();
++        }
++
++        Vector3d local_point(const double u, const double v) const
++        {
++            if constexpr (std::is_same<Factory, RectangleObjectFactory>::value)
++            {
++                Vector3d origin, x, y, n;
++                static_cast<const RectangleObject*>(this->m_analytic)->get_origin_and_axes(origin, x, y, n);
++                return origin + u * x + v * y;
++            }
++            else
++            {
++                const double phi = TwoPi<double>() * u;
++                if constexpr (std::is_same<Factory, SphereObjectFactory>::value)
++                {
++                    const double latitude = Pi<double>() * (v - 0.5);
++                    return Vector3d(std::cos(latitude) * std::cos(phi), std::sin(latitude),
++                        -std::cos(latitude) * std::sin(phi));
++                }
++                else
++                {
++                    Vector3d x, y, n;
++                    static_cast<const DiskObject*>(this->m_analytic)->get_axes(x, y, n);
++                    return (1.0 - v) * (std::cos(phi) * x - std::sin(phi) * y);
++                }
++            }
++        }
++
++        Vector3d chart_u() const
++        {
++            const double Step = 1.0e-5;
++            return object_transform().vector_to_parent(
++                (local_point(CenterU + Step, CenterV) - local_point(CenterU - Step, CenterV)) / (2.0 * Step));
++        }
++        Vector3d chart_v() const
++        {
++            const double Step = 1.0e-5;
++            return object_transform().vector_to_parent(
++                (local_point(CenterU, CenterV + Step) - local_point(CenterU, CenterV - Step)) / (2.0 * Step));
++        }
++        ShadingRay ray_at(const double u, const double v, const bool back) const
++        {
++            const Vector3d p = local_point(u, v);
++            Vector3d normal(0.0, 1.0, 0.0);
++            if constexpr (std::is_same<Factory, SphereObjectFactory>::value)
++                normal = p;
++            else if constexpr (std::is_same<Factory, RectangleObjectFactory>::value)
++            {
++                Vector3d origin, x, y;
++                static_cast<const RectangleObject*>(this->m_analytic)->get_origin_and_axes(origin, x, y, normal);
++            }
++            const Vector3d direction = (back ? 1.0 : -1.0) * normalize(object_transform().vector_to_parent(normal));
++            return ShadingRay(object_transform().point_to_parent(p) - 0.5 * direction, direction,
++                ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        }
++    };
++
++    template <typename SceneType>
++    struct FrameFixture : Fixture<false, SceneType>
++    {
++        void check_frame(ITestListener& test_listener, TestResult& case_result, const char* test_name)
++        {
++            const auto get_name = [test_name]() { return test_name; };
++            const double Footprint = 0.001;
++            const double Tolerance = 2.0e-7;
++            // Refine the curved radial reference while checking float-valued
++            // triangle inputs at both neighboring-frame step sizes.
++            for (const double Step : {0.0005, 0.00025})
++            for (const bool back : {false, true})
++            {
++                ShadingRay ray = this->ray_at(SceneType::CenterU, SceneType::CenterV, back);
++                ray.m_has_differentials = true;
++                ray.m_rx_org = ray.m_org + Footprint * this->chart_u();
++                ray.m_ry_org = ray.m_org + Footprint * this->chart_v();
++                ray.m_rx_dir = ray.m_ry_dir = ray.m_dir;
++                ShadingPoint point;
++                ASSERT_TRUE(this->m_intersector.trace(ray, point));
++                Vector3f ux, uy, vx, vy, nx, ny, gx, gy;
++                ASSERT_TRUE(point.compute_screen_space_basis_derivatives(ux, uy, vx, vy));
++                ASSERT_TRUE(point.compute_screen_space_geometric_normal_derivatives(gx, gy));
++                point.compute_screen_space_normal_derivatives(nx, ny);
++                EXPECT_LT(Tolerance, norm(point.get_dpdx() - Footprint * this->chart_u()));
++                EXPECT_LT(Tolerance, norm(point.get_dpdy() - Footprint * this->chart_v()));
++                if constexpr (SceneType::HasUV)
++                {
++                    EXPECT_LT(Tolerance, norm(point.get_duvdx(0) - Vector2f(Footprint, 0.0f)));
++                    EXPECT_LT(Tolerance, norm(point.get_duvdy(0) - Vector2f(0.0f, Footprint)));
++                }
++                for (const bool vertical : {false, true})
++                {
++                    ShadingPoint left, right;
++                    const double du = vertical ? 0.0 : Step;
++                    const double dv = vertical ? Step : 0.0;
++                    ASSERT_TRUE(this->m_intersector.trace(this->ray_at(SceneType::CenterU - du, SceneType::CenterV - dv, back), left));
++                    ASSERT_TRUE(this->m_intersector.trace(this->ray_at(SceneType::CenterU + du, SceneType::CenterV + dv, back), right));
++                    const double scale = Footprint / (2.0 * Step);
++                    EXPECT_LT(Tolerance, norm(Vector3d(vertical ? uy : ux) - scale *
++                        (right.get_shading_basis().get_tangent_u() - left.get_shading_basis().get_tangent_u())));
++                    EXPECT_LT(Tolerance, norm(Vector3d(vertical ? vy : vx) - scale *
++                        (right.get_shading_basis().get_tangent_v() - left.get_shading_basis().get_tangent_v())));
++                    EXPECT_LT(Tolerance, norm(Vector3d(vertical ? ny : nx) - scale *
++                        (right.get_original_shading_normal() - left.get_original_shading_normal())));
++                    EXPECT_LT(Tolerance, norm(Vector3d(vertical ? gy : gx) - scale *
++                        (right.get_geometric_normal() - left.get_geometric_normal())));
++                }
++            }
++        }
++    };
++
++    using FrameUVFixture = FrameFixture<FrameProbeScene<Material::RenderData::DefaultTangentMode::UV>>;
++    using FrameXFixture = FrameFixture<FrameProbeScene<Material::RenderData::DefaultTangentMode::LocalX>>;
++    using FrameYFixture = FrameFixture<FrameProbeScene<Material::RenderData::DefaultTangentMode::LocalY>>;
++    using FrameZFixture = FrameFixture<FrameProbeScene<Material::RenderData::DefaultTangentMode::LocalZ>>;
++    using FrameRadialFixture = FrameFixture<FrameProbeScene<Material::RenderData::DefaultTangentMode::Radial>>;
++    using MeshUVFrameFixture = FrameFixture<MeshFrameScene<false, true>>;
++    using MeshTangentFrameFixture = FrameFixture<MeshFrameScene<true, true>>;
++    using MeshUnmappedFrameFixture = FrameFixture<MeshFrameScene<false, false>>;
++    using MeshUnmappedTangentFrameFixture = FrameFixture<MeshFrameScene<true, false>>;
++    using SphereFrameFixture = FrameFixture<AnalyticFrameScene<SphereObjectFactory>>;
++    using RectangleFrameFixture = FrameFixture<AnalyticFrameScene<RectangleObjectFactory>>;
++    using DiskFrameFixture = FrameFixture<AnalyticFrameScene<DiskObjectFactory>>;
++
++    TEST_CASE_F(ShadingFrames_UV, FrameUVFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_LocalX, FrameXFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_LocalY, FrameYFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_LocalZ, FrameZFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_Radial, FrameRadialFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_MeshUV, MeshUVFrameFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_MeshTangents, MeshTangentFrameFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_MeshUnmapped, MeshUnmappedFrameFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_MeshUnmappedTangents, MeshUnmappedTangentFrameFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_Sphere, SphereFrameFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_Rectangle, RectangleFrameFixture) { check_frame(test_listener, case_result, get_name()); }
++    TEST_CASE_F(ShadingFrames_Disk, DiskFrameFixture) { check_frame(test_listener, case_result, get_name()); }
++
++
+     template <typename Factory>
+     struct EmitterScene : AnalyticScene<Factory>
+     {
+diff --git a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+index fb34c22ea..a5ef332a7 100644
+--- a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
++++ b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+@@ -306,6 +306,34 @@ TEST_SUITE(Renderer_Modeling_BSDF_OSL)
+         }
+     }
+ 
++    TEST_CASE_F(SurfaceTangentDerivativesRespectTheReferenceSource, Fixture)
++    {
++        const Vector3f surface_dx(0.7f, 0.8f, 0.9f), surface_dy(-0.5f, 0.4f, 0.3f);
++        const OSL::Vec3 explicit_dx(0.1f, 0.2f, 0.3f), explicit_dy(-0.2f, 0.3f, 0.4f);
++        for (const bool valid_normal : {false, true})
++        for (const bool valid_tangent : {false, true})
++        {
++            tree = nullptr;
++            auto* node = add_closure(GlossyID, 1.0f, valid_normal ? basis.get_normal() : Vector3f(0.0f));
++            const OSL::ClosureParam* params = nullptr;
++            ASSERT_TRUE(system->query_closure(nullptr, &node->id, &params));
++            const Vector3f tangent = valid_tangent ? basis.get_tangent_u() : Vector3f(0.0f);
++            const OSL::Vec3 raw_tangent(tangent.x, tangent.y, tangent.z);
++            std::memcpy(static_cast<char*>(node->data()) + params[1].offset, &raw_tangent, sizeof(raw_tangent));
++            set_keyword(node, "normal_derivatives", 1);
++            set_keyword(node, "dTdx", explicit_dx);
++            set_keyword(node, "dTdy", explicit_dy);
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            closure.set_surface_tangent_derivatives(surface_dx, surface_dy);
++            const auto& reference = closure.get_closure_basis_reference(0);
++            // Equal tangent values do not imply equal derivative sources.
++            const bool explicit_reference = valid_normal && valid_tangent;
++            EXPECT_EQ(explicit_reference ? Vector3f(explicit_dx) : surface_dx, reference.m_dx);
++            EXPECT_EQ(explicit_reference ? Vector3f(explicit_dy) : surface_dy, reference.m_dy);
++        }
++    }
++
+     TEST_CASE_F(StandardReflection_LeavesUnspecifiedNormalDerivativesOnTheLegacyPath, Fixture)
+     {
+         add_mirror(1.0f, basis.get_normal());
+diff --git a/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp b/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
+index 02343adce..7a4eb131a 100644
+--- a/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
+@@ -30,6 +30,7 @@
+ #include "bsdfsample.h"
+ 
+ // appleseed.foundation headers.
++#include "foundation/math/differentials.h"
+ #include "foundation/math/basis.h"
+ 
+ // Standard headers.
+@@ -53,23 +54,14 @@ namespace
+         else geometry.m_shading_point->compute_screen_space_normal_derivatives(dx, dy);
+     }
+ 
+-    Vector3f normalized_derivative(
+-        const Vector3f& raw, const Vector3f& unit, const Vector3f& derivative)
+-    {
+-        return (derivative - unit * dot(unit, derivative)) / norm(raw);
+-    }
+-
+     Matrix3f basis_derivative(
+         const BSDF::LocalGeometry& geometry, const Vector3f& dn, const Vector3f& dt)
+     {
+         const Basis3f& basis = geometry.m_shading_basis;
+-        const Vector3f& n = basis.get_normal();
+         const Vector3f& tangent = geometry.m_basis_reference ?
+             geometry.m_basis_reference->m_tangent : basis.get_tangent_u();
+-        const Vector3f& v = basis.get_tangent_v();
+-        const Vector3f dv = normalized_derivative(cross(tangent, n), v,
+-            cross(dt, n) + cross(tangent, dn));
+-        const Vector3f du = cross(dn, v) + cross(n, dv);
++        Vector3f du, dv;
++        differentiate_basis(basis, tangent, dn, dt, du, dv);
+         Matrix3f derivative;
+         for (std::size_t row = 0; row < 3; ++row)
+         {
+@@ -104,12 +96,19 @@ namespace
+         const Basis3f& basis = geometry.m_shading_basis;
+         Vector3f dn[2];
+         get_normal_derivatives(geometry, dn[0], dn[1]);
++        Vector3f surface_dx(0.0f), surface_dy(0.0f);
++        if (!geometry.m_basis_reference && geometry.m_shading_point)
++        {
++            Vector3f vx, vy;
++            geometry.m_shading_point->compute_screen_space_basis_derivatives(surface_dx, surface_dy, vx, vy);
++        }
+         const Vector3f outgoing_neighbors[] = {outgoing.get_dx(), outgoing.get_dy()};
+         Vector3f incoming_neighbors[2];
+         for (std::size_t axis = 0; axis < 2; ++axis)
+         {
+             const Vector3f dt = geometry.m_basis_reference ?
+-                (axis == 0 ? geometry.m_basis_reference->m_dx : geometry.m_basis_reference->m_dy) : Vector3f(0.0f);
++                (axis == 0 ? geometry.m_basis_reference->m_dx : geometry.m_basis_reference->m_dy) :
++                (axis == 0 ? surface_dx : surface_dy);
+             const Matrix3f db = basis_derivative(geometry, dn[axis], dt);
+             const Vector3f dwo = local_direction_derivative(basis, db, outgoing.get_value(),
+                 outgoing_neighbors[axis] - outgoing.get_value());
+@@ -266,6 +265,15 @@ void BSDFSample::compute_microfacet_reflected_differentials(
+     const Vector3f raw_wi = reflect(wo, m);
+     const Vector3f ng = basis.transform_to_local(geometry.m_geometric_normal);
+     const float correction = BSDF::MinGeometricCosine - dot(raw_wi, ng);
++    Vector3f geometric_dx(0.0f), geometric_dy(0.0f);
++    if (geometry.m_geometric_normal_derivatives)
++    {
++        geometric_dx = geometry.m_geometric_normal_derivatives->m_dx;
++        geometric_dy = geometry.m_geometric_normal_derivatives->m_dy;
++    }
++    else if (mode == MicrofacetReflectionMode::GeometricCorrection && correction > 0.0f &&
++             geometry.m_shading_point)
++        geometry.m_shading_point->compute_screen_space_geometric_normal_derivatives(geometric_dx, geometric_dy);
+     propagate_microfacet_differentials(geometry, outgoing, normal_jacobian, m_incoming,
+         [&](const Matrix3f& db, const Vector3f& dwo, const Vector3f& dm, const std::size_t axis)
+         {
+@@ -281,14 +289,12 @@ void BSDFSample::compute_microfacet_reflected_differentials(
+             }
+             else if (mode == MicrofacetReflectionMode::GeometricCorrection && correction > 0.0f)
+             {
+-                const Vector3f dng_world = geometry.m_geometric_normal_derivatives ?
+-                    (axis == 0 ? geometry.m_geometric_normal_derivatives->m_dx :
+-                                 geometry.m_geometric_normal_derivatives->m_dy) : Vector3f(0.0f);
++                const Vector3f& dng_world = axis == 0 ? geometric_dx : geometric_dy;
+                 const Vector3f dng = local_direction_derivative(basis, db, geometry.m_geometric_normal, dng_world);
+                 const float dcorr = -dot(dwi, ng) - dot(raw_wi, dng);
+                 const Vector3f corrected = raw_wi + correction * ng;
+                 wi = normalize(corrected);
+-                dwi = normalized_derivative(corrected, wi, dwi + dcorr * ng + correction * dng);
++                dwi = differentiate_normalize(corrected, wi, dwi + dcorr * ng + correction * dng);
+             }
+             return DirectionDerivative{wi, dwi};
+         });
+diff --git a/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+index b9995729c..da2665412 100644
+--- a/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+@@ -172,6 +172,10 @@ namespace
+                 shading_point.get_osl_shader_globals().Ci,
+                 arena);
+ 
++            Vector3f ux, uy, vx, vy;
++            shading_point.compute_screen_space_basis_derivatives(ux, uy, vx, vy);
++            c->set_surface_tangent_derivatives(ux, uy);
++
+             for (size_t i = 0, e = c->get_closure_count(); i < e; ++i)
+             {
+                 bsdf_from_closure_id(c->get_closure_type(i))
+diff --git a/src/appleseed/renderer/modeling/object/diskobject.cpp b/src/appleseed/renderer/modeling/object/diskobject.cpp
+index d14e7e6b7..337006943 100644
+--- a/src/appleseed/renderer/modeling/object/diskobject.cpp
++++ b/src/appleseed/renderer/modeling/object/diskobject.cpp
+@@ -163,11 +163,17 @@ void DiskObject::get_surface_attributes(
+ 
+     const double radial = std::sqrt(point.x * point.x + point.z * point.z);
+     result.m_derivatives.m_valid = radial > 0.0;
++    result.m_derivatives.m_has_tangent_partials = result.m_derivatives.m_valid;
++    result.m_derivatives.m_has_geometric_normal_partials = result.m_derivatives.m_valid;
+     if (result.m_derivatives.m_valid)
+     {
+         result.m_derivatives.m_dpdu = TwoPi<double>() * Vector3d(point.z, 0.0, -point.x);
+         result.m_derivatives.m_dpdv = -impl->m_radius / radial * Vector3d(point.x, 0.0, point.z);
+         result.m_derivatives.m_dndu = result.m_derivatives.m_dndv = Vector3d(0.0);
++        result.m_derivatives.m_d2pduu = -square(TwoPi<double>()) * Vector3d(point.x, 0.0, point.z);
++        const Vector3d& dv = result.m_derivatives.m_dpdv;
++        result.m_derivatives.m_d2pduv = TwoPi<double>() * Vector3d(dv.z, 0.0, -dv.x);
++        result.m_derivatives.m_dngdu = result.m_derivatives.m_dngdv = Vector3d(0.0);
+     }
+ }
+ 
+diff --git a/src/appleseed/renderer/modeling/object/proceduralobject.h b/src/appleseed/renderer/modeling/object/proceduralobject.h
+index 14586abe2..3f26871b3 100644
+--- a/src/appleseed/renderer/modeling/object/proceduralobject.h
++++ b/src/appleseed/renderer/modeling/object/proceduralobject.h
+@@ -67,6 +67,12 @@ class APPLESEED_DLLSYMBOL ProceduralObject
+         foundation::Vector3d        m_dpdv = foundation::Vector3d(0.0);
+         foundation::Vector3d        m_dndu = foundation::Vector3d(0.0);
+         foundation::Vector3d        m_dndv = foundation::Vector3d(0.0);
++        bool                        m_has_tangent_partials = false;
++        foundation::Vector3d        m_d2pduu = foundation::Vector3d(0.0);
++        foundation::Vector3d        m_d2pduv = foundation::Vector3d(0.0);
++        bool                        m_has_geometric_normal_partials = false;
++        foundation::Vector3d        m_dngdu = foundation::Vector3d(0.0);
++        foundation::Vector3d        m_dngdv = foundation::Vector3d(0.0);
+     };
+ 
+     struct IntersectionResult
+diff --git a/src/appleseed/renderer/modeling/object/rectangleobject.cpp b/src/appleseed/renderer/modeling/object/rectangleobject.cpp
+index f56ada4f4..2710b6f80 100644
+--- a/src/appleseed/renderer/modeling/object/rectangleobject.cpp
++++ b/src/appleseed/renderer/modeling/object/rectangleobject.cpp
+@@ -205,6 +205,10 @@ void RectangleObject::get_surface_attributes(
+     result.m_derivatives.m_dpdu = impl->m_x;
+     result.m_derivatives.m_dpdv = impl->m_y;
+     result.m_derivatives.m_dndu = result.m_derivatives.m_dndv = Vector3d(0.0);
++    result.m_derivatives.m_has_tangent_partials = true;
++    result.m_derivatives.m_d2pduu = result.m_derivatives.m_d2pduv = Vector3d(0.0);
++    result.m_derivatives.m_has_geometric_normal_partials = true;
++    result.m_derivatives.m_dngdu = result.m_derivatives.m_dngdv = Vector3d(0.0);
+ }
+ 
+ bool RectangleObject::intersect(const ShadingRay& ray) const
+diff --git a/src/appleseed/renderer/modeling/object/sphereobject.cpp b/src/appleseed/renderer/modeling/object/sphereobject.cpp
+index bff8937e1..06d6075bb 100644
+--- a/src/appleseed/renderer/modeling/object/sphereobject.cpp
++++ b/src/appleseed/renderer/modeling/object/sphereobject.cpp
+@@ -131,6 +131,8 @@ void SphereObject::get_surface_attributes(
+ 
+     const double radial = std::sqrt(n.x * n.x + n.z * n.z);
+     result.m_derivatives.m_valid = radial > 0.0;
++    result.m_derivatives.m_has_tangent_partials = result.m_derivatives.m_valid;
++    result.m_derivatives.m_has_geometric_normal_partials = result.m_derivatives.m_valid;
+     if (result.m_derivatives.m_valid)
+     {
+         result.m_derivatives.m_dpdu = TwoPi<double>() * Vector3d(n.z, 0.0, -n.x);
+@@ -138,6 +140,11 @@ void SphereObject::get_surface_attributes(
+             -n.y * n.x / radial, radial, -n.y * n.z / radial);
+         result.m_derivatives.m_dndu = result.m_derivatives.m_dpdu;
+         result.m_derivatives.m_dndv = result.m_derivatives.m_dpdv;
++        result.m_derivatives.m_d2pduu = -square(TwoPi<double>()) * Vector3d(n.x, 0.0, n.z);
++        const Vector3d& dv = result.m_derivatives.m_dpdv;
++        result.m_derivatives.m_d2pduv = TwoPi<double>() * Vector3d(dv.z, 0.0, -dv.x);
++        result.m_derivatives.m_dngdu = result.m_derivatives.m_dndu;
++        result.m_derivatives.m_dngdv = result.m_derivatives.m_dndv;
+     }
+ }
+ 

@@ -1,0 +1,179 @@
+Subject: [PATCH 41/50] Resolve real surfaces behind invisible covers
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 64fb83ad7a991008a49d43b11e88f40d4fc2fa02
+
+diff --git a/src/appleseed/renderer/kernel/shading/shadingcontext.cpp b/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
+index b4f5f0ad9..6ca0713d6 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
+@@ -184,9 +184,9 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+         return;
+ 
+     const InterfaceBoundary first = classify_boundary(*this, point, hit_material);
+-    // Ordinary opaque hits already own their surface. Transmissive alpha
+-    // layers still need classification when they coincide with glass.
+-    if (!first.m_medium && !first.m_transmissive)
++    // A transparent hit may precede the actual surface at the same point.
++    // Opaque ordinary hits already own their surface.
++    if (!first.m_medium && !first.m_transmissive && first.m_alpha >= 1.0f)
+         return;
+ 
+     const bool hidden_boundary = first.m_medium && lower_priority;
+@@ -216,8 +216,17 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+         else if (!boundary.m_medium)
+             opaque.push_back(i);
+     }
+-    if (media.empty() || (media.size() == 1 && opaque.empty() &&
+-        !hidden_boundary && !adjacent_surface && !unsupported))
++    if (media.empty())
++    {
++        if (first.m_alpha <= 0.0f && !unsupported && opaque.size() == 1)
++        {
++            point = points[opaque.front()];
++            point.set_no_optical_interface();
++        }
++        return;
++    }
++    if (media.size() == 1 && media.front() == 0 && opaque.empty() &&
++        !hidden_boundary && !adjacent_surface && !unsupported)
+         return;
+     if (unsupported)
+         throw std::runtime_error("shared optical interfaces require opaque coverage and supported glass or volume interiors");
+diff --git a/src/appleseed/renderer/meta/tests/test_tracer.cpp b/src/appleseed/renderer/meta/tests/test_tracer.cpp
+index b451ab45b..d1bcc3628 100644
+--- a/src/appleseed/renderer/meta/tests/test_tracer.cpp
++++ b/src/appleseed/renderer/meta/tests/test_tracer.cpp
+@@ -92,6 +92,8 @@
+ #include <cmath>
+ #include <memory>
+ #include <stdexcept>
++#include <string>
++#include <vector>
+ 
+ using namespace foundation;
+ using namespace renderer;
+@@ -272,6 +274,120 @@ TEST_SUITE(Renderer_Kernel_Lighting_Tracer)
+         }
+     };
+ 
++    template <bool PartialCoverage, bool OpticalOwner = true>
++    struct TransparentContactScene : SceneBase
++    {
++        TransparentContactScene()
++        {
++            const float Coverage = PartialCoverage ? 0.25f : 0.0f;
++            create_material("cover_material", "constant_white_surface_shader", Coverage);
++            if (OpticalOwner)
++            {
++                m_assembly->bsdfs().insert(GlassBSDFFactory().create("glass_bsdf",
++                    ParamArray().insert("surface_transmittance", "1.0").insert("ior", "1.5")
++                        .insert("volume_parameterization", "transmittance")));
++                m_assembly->materials().insert(GenericMaterialFactory().create("owner_material",
++                    ParamArray().insert("bsdf", "glass_bsdf")));
++            }
++            else create_material("owner_material", "constant_white_surface_shader", 1.0f);
++            m_assembly->objects().insert(SphereObjectFactory().create("sphere", ParamArray()));
++            for (const char* name : {"owner", "cover"})
++            {
++                const std::string material = std::string(name) + "_material";
++                const StringDictionary mapping = StringDictionary().insert("default", material.c_str());
++                const std::string instance = std::string(name) + "_instance";
++                m_assembly->object_instances().insert(ObjectInstanceFactory::create(instance.c_str(),
++                    ParamArray(), "sphere", Transformd(Matrix4d::make_scaling(Vector3d(2.0))), mapping, mapping));
++            }
++        }
++    };
++
++    template <bool PartialCoverage, bool OpticalOwner = true>
++    struct TransparentContactFixture : Fixture<FixtureParams<TransparentContactScene<PartialCoverage, OpticalOwner>, false>>
++    {
++        ShadingPoint cover_hit(const bool inside)
++        {
++            ShadingRay ray(inside ? Vector3d(0.0) : Vector3d(3.0, 0.0, 0.0),
++                inside ? Vector3d(1.0, 0.0, 0.0) : Vector3d(-1.0, 0.0, 0.0),
++                ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f),
++                VisibilityFlags::CameraRay, 0);
++            if (inside)
++            {
++                const ShadingRay vacuum(ray);
++                ray.add_medium(vacuum, this->m_assembly->object_instances().get_by_name("owner_instance"),
++                    this->m_assembly->materials().get_by_name("owner_material"), 1.5f);
++            }
++            ShadingPoint first;
++            this->m_intersector.trace(ray, first);
++            if (!first.hit_surface())
++                throw std::runtime_error("Shared coverage fixture missed its spheres");
++            std::vector<ShadingPoint> points;
++            this->m_intersector.collect_coincident_surfaces(first, points);
++            for (const ShadingPoint& point : points)
++            {
++                if (&point.get_object_instance() == this->m_assembly->object_instances().get_by_name("cover_instance"))
++                    return ShadingPoint(point);
++            }
++            throw std::runtime_error("Shared coverage fixture did not collect its cover");
++        }
++    };
++
++    using InvisibleContactFixture = TransparentContactFixture<false>;
++    using PartialContactFixture = TransparentContactFixture<true>;
++    using OpaqueContactFixture = TransparentContactFixture<false, false>;
++
++    TEST_CASE_F(SharedInterface_InvisibleCoverCannotOwnGlassEntry, InvisibleContactFixture)
++    {
++        ShadingPoint point = cover_hit(false);
++        Xoroshiro128plus rng;
++        SamplingContext sampling(rng, SamplingContext::RNGMode);
++        m_shading_context.resolve_optical_interface(sampling, point);
++        EXPECT_EQ(m_assembly->materials().get_by_name("owner_material"), point.get_material());
++        ASSERT_TRUE(point.get_optical_interface() == ShadingPoint::OpticalInterface::Surface);
++        ShadingRay transmitted;
++        point.copy_transmitted_media(transmitted);
++        ASSERT_EQ(1, transmitted.m_medium_count);
++        EXPECT_FEQ(1.5f, transmitted.get_current_ior());
++        EXPECT_FEQ(1.0f, point.get_outside_ior());
++    }
++
++    TEST_CASE_F(SharedInterface_InvisibleCoverCannotOwnGlassExit, InvisibleContactFixture)
++    {
++        ShadingPoint point = cover_hit(true);
++        Xoroshiro128plus rng;
++        SamplingContext sampling(rng, SamplingContext::RNGMode);
++        m_shading_context.resolve_optical_interface(sampling, point);
++        EXPECT_EQ(m_assembly->materials().get_by_name("owner_material"), point.get_material());
++        ASSERT_TRUE(point.get_optical_interface() == ShadingPoint::OpticalInterface::Surface);
++        ShadingRay transmitted;
++        point.copy_transmitted_media(transmitted);
++        EXPECT_EQ(0, transmitted.m_medium_count);
++        EXPECT_FEQ(1.5f, point.get_ray().get_current_ior());
++        EXPECT_FEQ(1.0f, point.get_outside_ior());
++    }
++
++    TEST_CASE_F(SharedInterface_AmbiguousCoverageIsRejectedEvenWhenItIsTheFirstHit, PartialContactFixture)
++    {
++        for (const bool inside : {false, true})
++        {
++            ShadingPoint point = cover_hit(inside);
++            Xoroshiro128plus rng;
++            SamplingContext sampling(rng, SamplingContext::RNGMode);
++            EXPECT_EXCEPTION(std::runtime_error, m_shading_context.resolve_optical_interface(sampling, point));
++        }
++    }
++
++    TEST_CASE_F(SharedInterface_InvisibleCoverCannotOwnOpaqueSurface, OpaqueContactFixture)
++    {
++        ShadingPoint point = cover_hit(false);
++        Xoroshiro128plus rng;
++        SamplingContext sampling(rng, SamplingContext::RNGMode);
++        m_shading_context.resolve_optical_interface(sampling, point);
++        EXPECT_EQ(m_assembly->materials().get_by_name("owner_material"), point.get_material());
++        EXPECT_EQ(m_assembly->object_instances().get_by_name("owner_instance"), &point.get_object_instance());
++        EXPECT_TRUE(point.get_optical_interface() == ShadingPoint::OpticalInterface::None);
++    }
++
+     enum class VisibilityProfile { Clear, Alpha, Volume };
+ 
+     template <VisibilityProfile Profile>

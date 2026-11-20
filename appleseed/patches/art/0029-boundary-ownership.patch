@@ -1,0 +1,1339 @@
+Subject: [PATCH 29/50] Resolve coincident optical state before shading
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: e50c085bcd7f75cd0c7697b5dde9cb2db377900f
+Original-Commit: deae1819ecc4bc9a8fc62de89994c31685ce6257
+Original-Commit: 332d4947c0e210d4d44f737b13f428b3c2cfe8c1
+
+diff --git a/src/appleseed/renderer/kernel/intersection/assemblytree.cpp b/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
+index 821a74cd3..b070a9dcd 100644
+--- a/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
++++ b/src/appleseed/renderer/kernel/intersection/assemblytree.cpp
+@@ -614,99 +614,103 @@ bool AssemblyLeafVisitor::visit(
+             asm_inst_shading_point.m_ray);
+         const RayInfo3d asm_inst_ray_info(asm_inst_shading_point.m_ray);
+ 
++        if (m_coincident_points == nullptr)
++        {
+ #ifdef APPLESEED_WITH_EMBREE
+ 
+-        if (m_tree.use_embree())
+-        {
+-            const EmbreeScene& embree_scene =
+-                *m_embree_scene_cache.access(
+-                    item.m_assembly_uid,
+-                    m_tree.m_embree_scenes);
++            if (m_tree.use_embree())
++            {
++                const EmbreeScene& embree_scene =
++                    *m_embree_scene_cache.access(
++                        item.m_assembly_uid,
++                        m_tree.m_embree_scenes);
+ 
+-            embree_scene.intersect(asm_inst_shading_point);
+-        }
+-        else
++                embree_scene.intersect(asm_inst_shading_point);
++            }
++            else
+ 
+ #endif
+-        {
+-            // Retrieve the triangle tree of this assembly.
+-            const TriangleTree* triangle_tree =
+-                m_triangle_tree_cache.access(
+-                    item.m_assembly_uid,
+-                    m_tree.m_triangle_trees);
+-
+-            if (triangle_tree)
+             {
+-                // Check the intersection between the ray and the triangle tree.
+-                TriangleTreeIntersector intersector;
+-                TriangleLeafVisitor visitor(*triangle_tree, asm_inst_shading_point);
+-                if (triangle_tree->get_moving_triangle_count() > 0)
++                // Retrieve the triangle tree of this assembly.
++                const TriangleTree* triangle_tree =
++                    m_triangle_tree_cache.access(
++                        item.m_assembly_uid,
++                        m_tree.m_triangle_trees);
++
++                if (triangle_tree)
+                 {
+-                    intersector.intersect_motion(
+-                        *triangle_tree,
+-                        asm_inst_shading_point.m_ray,
+-                        asm_inst_ray_info,
+-                        asm_inst_shading_point.m_ray.m_time.m_normalized,
+-                        visitor
++                    // Check the intersection between the ray and the triangle tree.
++                    TriangleTreeIntersector intersector;
++                    TriangleLeafVisitor visitor(*triangle_tree, asm_inst_shading_point);
++                    if (triangle_tree->get_moving_triangle_count() > 0)
++                    {
++                        intersector.intersect_motion(
++                            *triangle_tree,
++                            asm_inst_shading_point.m_ray,
++                            asm_inst_ray_info,
++                            asm_inst_shading_point.m_ray.m_time.m_normalized,
++                            visitor
+ #ifdef FOUNDATION_BVH_ENABLE_TRAVERSAL_STATS
+-                        , m_triangle_tree_stats
++                            , m_triangle_tree_stats
+ #endif
+-                        );
+-                }
+-                else
+-                {
+-                    intersector.intersect_no_motion(
+-                        *triangle_tree,
+-                        asm_inst_shading_point.m_ray,
+-                        asm_inst_ray_info,
+-                        visitor
++                            );
++                    }
++                    else
++                    {
++                        intersector.intersect_no_motion(
++                            *triangle_tree,
++                            asm_inst_shading_point.m_ray,
++                            asm_inst_ray_info,
++                            visitor
+ #ifdef FOUNDATION_BVH_ENABLE_TRAVERSAL_STATS
+-                        , m_triangle_tree_stats
++                            , m_triangle_tree_stats
+ #endif
+-                        );
++                            );
++                    }
++                    visitor.read_hit_triangle_data();
+                 }
+-                visitor.read_hit_triangle_data();
+             }
+-        }
+ 
+-        // Retrieve the curve tree of this assembly.
+-        const CurveTree* curve_tree =
+-            m_curve_tree_cache.access(
+-                item.m_assembly_uid,
+-                m_tree.m_curve_trees);
++            // Retrieve the curve tree of this assembly.
++            const CurveTree* curve_tree =
++                m_curve_tree_cache.access(
++                    item.m_assembly_uid,
++                    m_tree.m_curve_trees);
+ 
+-        if (curve_tree)
+-        {
+-            // Check the intersection between the ray and the curve tree.
+-            const GRay3 ray(asm_inst_shading_point.m_ray);
+-            const GRayInfo3 ray_info(asm_inst_ray_info);
+-            CurveMatrixType xfm_matrix;
+-            make_curve_projection_transform(xfm_matrix, ray);
+-            CurveLeafVisitor visitor(*curve_tree, xfm_matrix, asm_inst_shading_point);
+-            CurveTreeIntersector intersector;
+-            intersector.intersect_no_motion(
+-                *curve_tree,
+-                ray,
+-                ray_info,
+-                visitor
++            if (curve_tree)
++            {
++                // Check the intersection between the ray and the curve tree.
++                const GRay3 ray(asm_inst_shading_point.m_ray);
++                const GRayInfo3 ray_info(asm_inst_ray_info);
++                CurveMatrixType xfm_matrix;
++                make_curve_projection_transform(xfm_matrix, ray);
++                CurveLeafVisitor visitor(*curve_tree, xfm_matrix, asm_inst_shading_point);
++                CurveTreeIntersector intersector;
++                intersector.intersect_no_motion(
++                    *curve_tree,
++                    ray,
++                    ray_info,
++                    visitor
+ #ifdef FOUNDATION_BVH_ENABLE_TRAVERSAL_STATS
+-                , m_curve_tree_stats
++                    , m_curve_tree_stats
+ #endif
+-                );
+-        }
++                    );
++            }
++
++            // Keep track of the closest hit.
++            if (asm_inst_shading_point.hit_surface() && asm_inst_shading_point.m_ray.m_tmax < m_shading_point.m_ray.m_tmax)
++            {
++                m_shading_point.m_ray.m_tmax = asm_inst_shading_point.m_ray.m_tmax;
++                m_shading_point.m_primitive_type = asm_inst_shading_point.m_primitive_type;
++                m_shading_point.m_bary = asm_inst_shading_point.m_bary;
++                m_shading_point.m_assembly_instance = item.m_assembly_instance;
++                m_shading_point.m_assembly_instance_transform = assembly_instance_transform;
++                m_shading_point.m_assembly_instance_transform_seq = assembly_instance_transform_seq;
++                m_shading_point.m_object_instance_index = asm_inst_shading_point.m_object_instance_index;
++                m_shading_point.m_primitive_index = asm_inst_shading_point.m_primitive_index;
++                m_shading_point.m_triangle_support_plane = asm_inst_shading_point.m_triangle_support_plane;
++            }
+ 
+-        // Keep track of the closest hit.
+-        if (asm_inst_shading_point.hit_surface() && asm_inst_shading_point.m_ray.m_tmax < m_shading_point.m_ray.m_tmax)
+-        {
+-            m_shading_point.m_ray.m_tmax = asm_inst_shading_point.m_ray.m_tmax;
+-            m_shading_point.m_primitive_type = asm_inst_shading_point.m_primitive_type;
+-            m_shading_point.m_bary = asm_inst_shading_point.m_bary;
+-            m_shading_point.m_assembly_instance = item.m_assembly_instance;
+-            m_shading_point.m_assembly_instance_transform = assembly_instance_transform;
+-            m_shading_point.m_assembly_instance_transform_seq = assembly_instance_transform_seq;
+-            m_shading_point.m_object_instance_index = asm_inst_shading_point.m_object_instance_index;
+-            m_shading_point.m_primitive_index = asm_inst_shading_point.m_primitive_index;
+-            m_shading_point.m_triangle_support_plane = asm_inst_shading_point.m_triangle_support_plane;
+         }
+ 
+         // Check the intersection between the ray and procedural objects.
+@@ -785,19 +789,29 @@ bool AssemblyLeafVisitor::visit(
+             // Keep track of the closest hit in the original world-space ray.
+             if (distance < m_shading_point.m_ray.m_tmax)
+             {
+-                m_shading_point.m_ray.m_tmax = distance;
+-                m_shading_point.m_procedural_point = object_point;
+-                m_shading_point.m_primitive_type = ShadingPoint::PrimitiveProceduralSurface;
+-                m_shading_point.m_bary = result.m_uv;
+-                m_shading_point.m_assembly_instance = item.m_assembly_instance;
+-                m_shading_point.m_assembly_instance_transform = assembly_instance_transform;
+-                m_shading_point.m_assembly_instance_transform_seq = assembly_instance_transform_seq;
+-                m_shading_point.m_object_instance_index = object_instance_index_pair.second;
+-                m_shading_point.m_primitive_index = 0;
+-                m_shading_point.m_procedural_geometric_normal = result.m_geometric_normal;
+-                m_shading_point.m_procedural_shading_normal = result.m_shading_normal;
+-                m_shading_point.m_procedural_material_slot = result.m_material_slot;
+-                m_shading_point.m_procedural_derivatives = result.m_derivatives;
++                ShadingPoint candidate;
++                ShadingPoint& hit = m_coincident_points ? candidate : m_shading_point;
++                if (m_coincident_points)
++                {
++                    hit.m_texture_cache = m_shading_point.m_texture_cache;
++                    hit.m_scene = m_shading_point.m_scene;
++                    hit.m_ray = ray;
++                }
++                hit.m_ray.m_tmax = distance;
++                hit.m_procedural_point = object_point;
++                hit.m_primitive_type = ShadingPoint::PrimitiveProceduralSurface;
++                hit.m_bary = result.m_uv;
++                hit.m_assembly_instance = item.m_assembly_instance;
++                hit.m_assembly_instance_transform = assembly_instance_transform;
++                hit.m_assembly_instance_transform_seq = assembly_instance_transform_seq;
++                hit.m_object_instance_index = object_instance_index_pair.second;
++                hit.m_primitive_index = 0;
++                hit.m_procedural_geometric_normal = result.m_geometric_normal;
++                hit.m_procedural_shading_normal = result.m_shading_normal;
++                hit.m_procedural_material_slot = result.m_material_slot;
++                hit.m_procedural_derivatives = result.m_derivatives;
++                if (m_coincident_points)
++                    m_coincident_points->push_back(hit);
+             }
+         }
+     }
+diff --git a/src/appleseed/renderer/kernel/intersection/assemblytree.h b/src/appleseed/renderer/kernel/intersection/assemblytree.h
+index c97bb6c54..571f4ab42 100644
+--- a/src/appleseed/renderer/kernel/intersection/assemblytree.h
++++ b/src/appleseed/renderer/kernel/intersection/assemblytree.h
+@@ -198,7 +198,8 @@ class AssemblyLeafVisitor
+         , foundation::bvh::TraversalStatistics&     triangle_tree_stats
+         , foundation::bvh::TraversalStatistics&     curve_tree_stats
+ #endif
+-        , const bool                                initial_media);
++        , const bool                                initial_media,
++        std::vector<ShadingPoint>*                   coincident_points);
+ 
+     // Visit a leaf.
+     bool visit(
+@@ -221,6 +222,7 @@ class AssemblyLeafVisitor
+ #endif
+     const ShadingPoint*                             m_parent_shading_point;
+     const bool                                     m_initial_media;
++    std::vector<ShadingPoint>*                      m_coincident_points;
+ #ifdef FOUNDATION_BVH_ENABLE_TRAVERSAL_STATS
+     foundation::bvh::TraversalStatistics&           m_triangle_tree_stats;
+     foundation::bvh::TraversalStatistics&           m_curve_tree_stats;
+@@ -312,7 +314,8 @@ inline AssemblyLeafVisitor::AssemblyLeafVisitor(
+     , foundation::bvh::TraversalStatistics&         triangle_tree_stats
+     , foundation::bvh::TraversalStatistics&         curve_tree_stats
+ #endif
+-    , const bool                                    initial_media)
++    , const bool                                    initial_media,
++    std::vector<ShadingPoint>*                       coincident_points)
+   : m_shading_point(shading_point)
+   , m_tree(tree)
+   , m_triangle_tree_cache(triangle_tree_cache)
+@@ -322,6 +325,7 @@ inline AssemblyLeafVisitor::AssemblyLeafVisitor(
+ #endif
+   , m_parent_shading_point(parent_shading_point)
+   , m_initial_media(initial_media)
++  , m_coincident_points(coincident_points)
+ #ifdef FOUNDATION_BVH_ENABLE_TRAVERSAL_STATS
+   , m_triangle_tree_stats(triangle_tree_stats)
+   , m_curve_tree_stats(curve_tree_stats)
+diff --git a/src/appleseed/renderer/kernel/intersection/intersector.cpp b/src/appleseed/renderer/kernel/intersection/intersector.cpp
+index 43393e53f..143e11cfc 100644
+--- a/src/appleseed/renderer/kernel/intersection/intersector.cpp
++++ b/src/appleseed/renderer/kernel/intersection/intersector.cpp
+@@ -139,25 +139,73 @@ bool Intersector::trace_for_initial_media(
+     return do_trace(ray, shading_point, nullptr, true);
+ }
+ 
+-void Intersector::advance_past_hit(ShadingRay& ray, const ShadingPoint& hit) const
++double Intersector::get_hit_roundoff(const ShadingRay& ray, const ShadingPoint& hit) const
+ {
+-    assert(hit.hit_surface());
+     // Transforming and reconstructing hits can lose several position ULPs,
+     // especially when a short ray starts at large model coordinates.
+     const double ProgressRoundingSteps = 32.0;
+     const double scale = norm(ray.m_org) + norm(hit.get_point()) +
+         m_trace_context.get_scene().get_render_data().m_safe_diameter;
++    return ProgressRoundingSteps * std::numeric_limits<double>::epsilon() * scale;
++}
++
++void Intersector::advance_past_hit(ShadingRay& ray, const ShadingPoint& hit) const
++{
++    assert(hit.hit_surface());
+     ray.m_tmin = std::nextafter(
+-        std::max(ray.m_tmin, hit.get_distance()) +
+-            ProgressRoundingSteps * std::numeric_limits<double>::epsilon() * scale,
++        std::max(ray.m_tmin, hit.get_distance()) + get_hit_roundoff(ray, hit),
++        std::numeric_limits<double>::max());
++}
++
++void Intersector::offset_shared_interface_ray(ShadingRay& ray, const ShadingPoint& hit) const
++{
++    // The collector admits hits on either side of the reconstructed point.
++    // Twice its allowance clears the entire group, on the outgoing side.
++    const double InterfaceOffsetFactor = 2.0;
++    const Vector3d normal = hit.get_geometric_normal();
++    const double side = dot(ray.m_dir, normal) > 0.0 ? 1.0 : -1.0;
++    const Vector3d offset = side * InterfaceOffsetFactor * get_hit_roundoff(hit.get_ray(), hit) * normal;
++    ray.m_org = hit.get_point() + offset;
++    if (ray.m_has_differentials)
++    {
++        ray.m_rx_org += offset;
++        ray.m_ry_org += offset;
++    }
++}
++
++void Intersector::collect_coincident_surfaces(
++    const ShadingPoint&                 first,
++    std::vector<ShadingPoint>&           points) const
++{
++    points.clear();
++    if (!first.hit_surface())
++        return;
++    points.push_back(first);
++    if (first.get_primitive_type() != ShadingPoint::PrimitiveProceduralSurface)
++        return;
++
++    ShadingRay ray = first.get_ray();
++    const double allowance = get_hit_roundoff(ray, first);
++    ray.m_tmin = std::max(ray.m_tmin, first.get_distance() - allowance);
++    ray.m_tmax = std::nextafter(first.get_distance() + allowance,
+         std::numeric_limits<double>::max());
++    std::vector<ShadingPoint> candidates;
++    ShadingPoint scratch;
++    do_trace(ray, scratch, nullptr, false, &candidates);
++    for (const ShadingPoint& candidate : candidates)
++    {
++        if (&candidate.get_assembly_instance() != &first.get_assembly_instance() ||
++            &candidate.get_object_instance() != &first.get_object_instance())
++            points.push_back(candidate);
++    }
+ }
+ 
+ bool Intersector::do_trace(
+     const ShadingRay&                   ray,
+     ShadingPoint&                       shading_point,
+     const ShadingPoint*                 parent_shading_point,
+-    const bool                          initial_media) const
++    const bool                          initial_media,
++    std::vector<ShadingPoint>*           coincident_points) const
+ {
+     assert(is_normalized(ray.m_dir));
+     assert(shading_point.m_scene == nullptr);
+@@ -200,7 +248,7 @@ bool Intersector::do_trace(
+         , m_triangle_tree_traversal_stats
+         , m_curve_tree_traversal_stats
+ #endif
+-        , initial_media);
++        , initial_media, coincident_points);
+     intersector.intersect_no_motion(
+         assembly_tree,
+         shading_point.m_ray,
+diff --git a/src/appleseed/renderer/kernel/intersection/intersector.h b/src/appleseed/renderer/kernel/intersection/intersector.h
+index c4811437d..17fc0d535 100644
+--- a/src/appleseed/renderer/kernel/intersection/intersector.h
++++ b/src/appleseed/renderer/kernel/intersection/intersector.h
+@@ -48,6 +48,7 @@
+ // Standard headers.
+ #include <cstddef>
+ #include <cstdint>
++#include <vector>
+ 
+ // Forward declarations.
+ namespace foundation    { class StatisticsVector; }
+@@ -84,10 +85,19 @@ class Intersector
+         const ShadingRay&                   ray,
+         ShadingPoint&                       shading_point) const;
+ 
++    // Collect procedural boundaries indistinguishable from this hit within
++    // the common hit-reconstruction allowance. Preserve the supplied hit.
++    void collect_coincident_surfaces(
++        const ShadingPoint&                 first,
++        std::vector<ShadingPoint>&           points) const;
++
+     // Advance a fixed-origin ray past its hit, allowing for reconstruction
+     // roundoff. The hit must use the same origin and direction as the ray.
+     void advance_past_hit(ShadingRay& ray, const ShadingPoint& hit) const;
+ 
++    // Offset an outgoing world-space ray beyond a resolved shared interface.
++    void offset_shared_interface_ray(ShadingRay& ray, const ShadingPoint& hit) const;
++
+     // Trace a world space probe ray through the scene.
+     bool trace_probe(
+         const ShadingRay&                   ray,
+@@ -138,7 +148,10 @@ class Intersector
+         const ShadingRay&                   ray,
+         ShadingPoint&                       shading_point,
+         const ShadingPoint*                 parent_shading_point,
+-        const bool                          initial_media) const;
++        const bool                          initial_media,
++        std::vector<ShadingPoint>*           coincident_points = nullptr) const;
++
++    double get_hit_roundoff(const ShadingRay& ray, const ShadingPoint& hit) const;
+ 
+     const TraceContext&                             m_trace_context;
+     TextureCache&                                   m_texture_cache;
+diff --git a/src/appleseed/renderer/kernel/lighting/pathtracer.h b/src/appleseed/renderer/kernel/lighting/pathtracer.h
+index 853cc4b4c..f6841b0e1 100644
+--- a/src/appleseed/renderer/kernel/lighting/pathtracer.h
++++ b/src/appleseed/renderer/kernel/lighting/pathtracer.h
+@@ -61,6 +61,7 @@
+ #include "foundation/string/string.h"
+ 
+ // Standard headers.
++#include <limits>
+ #include <algorithm>
+ #include <cassert>
+ #include <cstddef>
+@@ -289,6 +290,14 @@ size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace(
+             break;
+         }
+ 
++        if (vertex.m_shading_point->get_optical_interface() == ShadingPoint::OpticalInterface::Unresolved)
++        {
++            ShadingPoint* resolved = m_shading_point_arena.allocate<ShadingPoint>();
++            *resolved = *vertex.m_shading_point;
++            shading_context.resolve_optical_interface(sampling_context, *resolved);
++            vertex.m_shading_point = resolved;
++        }
++
+         // Retrieve the ray.
+         const ShadingRay& ray = vertex.get_ray();
+         assert(foundation::is_normalized(ray.m_dir));
+@@ -309,6 +318,20 @@ size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace(
+             break;
+         }
+ 
++        if (vertex.m_shading_point->get_optical_interface() == ShadingPoint::OpticalInterface::Displaced)
++        {
++            // A hidden group changes only subordinate media. Retain the
++            // physical segment origin for absorption at the next real hit.
++            ShadingRay next_ray = ray;
++            next_ray.m_tmax = std::numeric_limits<double>::max();
++            next_ray.m_medium_count = 0;
++            vertex.m_shading_point->copy_transmitted_media(next_ray);
++            shading_context.get_intersector().advance_past_hit(next_ray, *vertex.m_shading_point);
++            shading_context.get_intersector().trace(next_ray, *next_shading_point);
++            vertex.m_shading_point = next_shading_point;
++            continue;
++        }
++
+         // Retrieve the material at the shading point.
+         const Material* material = vertex.get_material();
+ 
+@@ -325,60 +348,6 @@ size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace(
+         // Determine whether the ray is entering or leaving a medium.
+         const bool entering = vertex.m_shading_point->is_entering();
+ 
+-        // Medium priorities displace optical boundaries, not ordinary
+-        // opaque BSDFs embedded in the current optical volume.
+-        if (ray.get_current_medium() &&
+-            ray.get_current_medium()->m_object_instance->get_medium_priority() > object_instance.get_medium_priority() &&
+-            material_data.m_bsdf != nullptr)
+-        {
+-            if (material_data.m_shader_group)
+-            {
+-                shading_context.execute_osl_shading(
+-                    *material_data.m_shader_group,
+-                    *vertex.m_shading_point);
+-            }
+-            const void* boundary_inputs =
+-                material_data.m_bsdf->evaluate_inputs(shading_context, *vertex.m_shading_point);
+-            if (material_data.m_bsdf->has_interior(boundary_inputs))
+-            {
+-                // Construct a ray that continues in the same direction as the incoming ray.
+-                ShadingRay next_ray(
+-                    vertex.get_point(),
+-                    ray.m_dir,
+-                    ray.m_time,
+-                    ray.m_flags,
+-                    ray.m_depth);
+-
+-                // Advance the differentials if the ray has them.
+-                if (ray.m_has_differentials)
+-                {
+-                    next_ray.m_rx_org = ray.m_rx_org + ray.m_tmax * ray.m_rx_dir;
+-                    next_ray.m_ry_org = ray.m_ry_org + ray.m_tmax * ray.m_ry_dir;
+-                    next_ray.m_rx_dir = ray.m_rx_dir;
+-                    next_ray.m_ry_dir = ray.m_ry_dir;
+-                    next_ray.m_has_differentials = true;
+-                }
+-
+-                // Initialize the ray's medium list.
+-                if (entering)
+-                {
+-                    const float ior = material_data.m_bsdf->sample_ior(sampling_context, boundary_inputs);
+-                    next_ray.add_medium(ray, &object_instance, material, ior);
+-                }
+-                else next_ray.remove_medium(ray, &object_instance);
+-
+-                // Trace the ray.
+-                shading_context.get_intersector().trace(
+-                    next_ray,
+-                    *next_shading_point,
+-                    vertex.m_shading_point);
+-
+-                // Update the pointers to the shading points and loop.
+-                vertex.m_shading_point = next_shading_point;
+-                continue;
+-            }
+-        }
+-
+         // Handle alpha mapping.
+         if (vertex.m_path_length > 1)
+         {
+@@ -587,7 +556,12 @@ size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace(
+         const bool crossing_interface = vertex.m_bssrdf == nullptr &&
+             foundation::dot(vertex.m_outgoing.get_value(), geometric_normal) *
+             foundation::dot(next_ray.m_dir, geometric_normal) < 0.0;
+-        if (crossing_interface)
++        if (crossing_interface &&
++            vertex.m_shading_point->get_optical_interface() == ShadingPoint::OpticalInterface::Surface)
++        {
++            vertex.m_shading_point->copy_transmitted_media(next_ray);
++        }
++        else if (crossing_interface)
+         {
+             // Ray goes under the surface:
+             // inherit the medium list of the parent ray and add/remove the current medium.
+@@ -612,6 +586,10 @@ size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace(
+         }
+ 
+         medium_start = vertex.get_point();
++        const bool shared_interface =
++            vertex.m_shading_point->get_optical_interface() == ShadingPoint::OpticalInterface::Surface;
++        if (shared_interface)
++            shading_context.get_intersector().offset_shared_interface_ray(next_ray, *vertex.m_shading_point);
+ 
+         const ShadingRay::Medium* current_medium = next_ray.get_current_medium();
+         if (current_medium != nullptr &&
+@@ -632,7 +610,7 @@ size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace(
+             shading_context.get_intersector().trace(
+                 next_ray,
+                 *next_shading_point,
+-                vertex.m_shading_point);
++                shared_interface ? nullptr : vertex.m_shading_point);
+         }
+ 
+         // Update the pointers to the shading points.
+diff --git a/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.cpp b/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.cpp
+index ff54d04d9..6bc927d18 100644
+--- a/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.cpp
++++ b/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.cpp
+@@ -73,6 +73,7 @@
+ #include <stdexcept>
+ #include <string>
+ #include <utility>
++#include <vector>
+ 
+ // Forward declarations.
+ namespace renderer  { class PixelContext; }
+@@ -200,6 +201,7 @@ namespace
+             size_t shading_point_index = 0;
+             const ShadingPoint* shading_point_ptr = nullptr;
+             size_t iterations = 0;
++            bool has_shaded = false;
+ 
+             // Inform the AOV accumulators that we are about to render a sample.
+             aov_accumulators.on_sample_begin(pixel_context);
+@@ -209,10 +211,7 @@ namespace
+                 // Put a hard limit on the number of iterations.
+                 if (++iterations >= m_params.m_max_iterations)
+                 {
+-                    RENDERER_LOG_WARNING(
+-                        "reached hard iteration limit (%s), breaking primary ray trace loop.",
+-                        pretty_int(m_params.m_max_iterations).c_str());
+-                    break;
++                    throw std::runtime_error("reached primary-ray intersection limit");
+                 }
+ 
+                 m_arena.clear();
+@@ -224,12 +223,26 @@ namespace
+                     shading_points[shading_point_index],
+                     shading_point_ptr);
+ 
++                ShadingPoint& hit = shading_points[shading_point_index];
++                m_shading_context.resolve_optical_interface(sampling_context, hit);
++                if (hit.get_optical_interface() == ShadingPoint::OpticalInterface::Displaced)
++                {
++                    primary_ray = hit.get_ray();
++                    primary_ray.m_tmax = std::numeric_limits<double>::max();
++                    primary_ray.m_medium_count = 0;
++                    hit.copy_transmitted_media(primary_ray);
++                    m_intersector.advance_past_hit(primary_ray, hit);
++                    shading_point_ptr = nullptr;
++                    continue;
++                }
++
+                 // Update the pointers to the shading points.
+                 shading_point_ptr = &shading_points[shading_point_index];
+                 shading_point_index = 1 - shading_point_index;
+ 
+-                if (iterations == 1)
++                if (!has_shaded)
+                 {
++                    has_shaded = true;
+                     // Shade the first intersection point along the ray.
+                     const bool terminate_path =
+                         m_shading_engine.shade(
+@@ -273,6 +286,8 @@ namespace
+ 
+                 // Move the ray origin to the intersection point.
+                 primary_ray.m_org = shading_point_ptr->get_point();
++                primary_ray.m_tmin = 0.0;
++                primary_ray.m_tmax = std::numeric_limits<double>::max();
+                 if (primary_ray.m_has_differentials)
+                 {
+                     const double t = shading_point_ptr->get_distance();
+@@ -332,6 +347,7 @@ namespace
+             query.m_tmax = std::numeric_limits<double>::max();
+             query.m_has_differentials = false;
+             std::set<std::pair<UniqueID, UniqueID>> seen;
++            std::vector<ShadingPoint> boundaries;
+             for (size_t iteration = 0; iteration < m_params.m_max_iterations; ++iteration)
+             {
+                 ShadingPoint point;
+@@ -339,27 +355,33 @@ namespace
+                 if (!point.hit_surface())
+                     return;
+ 
+-                const ObjectInstance* object = &point.get_object_instance();
+-                const bool first_boundary = seen.emplace(point.get_assembly_instance().get_uid(), object->get_uid()).second;
+-                const Material* material = point.get_material();
+-                if (first_boundary && !point.is_entering() && material != nullptr)
++                // Every object at a shared interface needs its own first-boundary
++                // classification before advancing beyond the coincident group.
++                m_intersector.collect_coincident_surfaces(point, boundaries);
++                for (const ShadingPoint& boundary : boundaries)
+                 {
+-                    const Material::RenderData& data = material->get_render_data();
+-                    if (data.m_bsdf != nullptr)
++                    const ObjectInstance* object = &boundary.get_object_instance();
++                    const bool first_boundary = seen.emplace(boundary.get_assembly_instance().get_uid(), object->get_uid()).second;
++                    const Material* material = boundary.get_material();
++                    if (first_boundary && !boundary.is_entering() && material != nullptr)
+                     {
+-                        m_arena.clear();
+-                        if (data.m_shader_group)
+-                            m_shading_context.execute_osl_shading(*data.m_shader_group, point);
+-                        const void* inputs = data.m_bsdf->evaluate_inputs(m_shading_context, point);
+-                        if (data.m_bsdf->has_interior(inputs))
++                        const Material::RenderData& data = material->get_render_data();
++                        if (data.m_bsdf != nullptr)
+                         {
+-                            if (primary_ray.m_medium_count == ShadingRay::MaxMediumCount)
+-                                throw std::runtime_error("too many initial optical media");
+-                            const float ior = data.m_bsdf->sample_ior(sampling_context, inputs);
+-                            ShadingRay next;
+-                            next.add_medium(primary_ray, object, material, ior);
+-                            primary_ray.m_medium_count = 0;
+-                            primary_ray.copy_media_from(next);
++                            m_arena.clear();
++                            if (data.m_shader_group)
++                                m_shading_context.execute_osl_shading(*data.m_shader_group, boundary);
++                            const void* inputs = data.m_bsdf->evaluate_inputs(m_shading_context, boundary);
++                            if (data.m_bsdf->has_interior(inputs))
++                            {
++                                if (primary_ray.m_medium_count == ShadingRay::MaxMediumCount)
++                                    throw std::runtime_error("too many initial optical media");
++                                const float ior = data.m_bsdf->sample_ior(sampling_context, inputs);
++                                ShadingRay next;
++                                next.add_medium(primary_ray, object, material, ior);
++                                primary_ray.m_medium_count = 0;
++                                primary_ray.copy_media_from(next);
++                            }
+                         }
+                     }
+                 }
+diff --git a/src/appleseed/renderer/kernel/shading/shadingcontext.cpp b/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
+index d3c8f098d..054517c72 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
+@@ -31,12 +31,21 @@
+ #include "shadingcontext.h"
+ 
+ // appleseed.renderer headers.
++#include "renderer/kernel/intersection/intersector.h"
+ #include "renderer/kernel/shading/closures.h"
++#include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/modeling/bsdf/bsdf.h"
++#include "renderer/modeling/material/material.h"
+ #include "renderer/kernel/shading/oslshadingsystem.h"
+ #include "renderer/kernel/texturing/oiiotexturesystem.h"
+ #include "renderer/modeling/color/colorspace.h"
+ #include "renderer/modeling/shadergroup/shadergroup.h"
+ 
++// Standard headers.
++#include <cmath>
++#include <stdexcept>
++#include <vector>
++
+ using namespace foundation;
+ 
+ namespace renderer
+@@ -85,6 +94,195 @@ OSL::ShadingContext* ShadingContext::get_osl_shading_context() const
+     return m_shadergroup_exec.m_osl_shading_context;
+ }
+ 
++namespace
++{
++    struct InterfaceBoundary
++    {
++        const Material* m_material = nullptr;
++        const BSDF* m_bsdf = nullptr;
++        const void* m_inputs = nullptr;
++        float m_alpha = 1.0f;
++        bool m_optical = false;
++        bool m_transmissive = false;
++        bool m_volume = false;
++    };
++
++    InterfaceBoundary classify_boundary(const ShadingContext& context, const ShadingPoint& point)
++    {
++        InterfaceBoundary boundary;
++        boundary.m_alpha = point.get_alpha()[0];
++        boundary.m_material = point.get_material();
++        if (boundary.m_material == nullptr)
++            return boundary;
++        const Material::RenderData& data = boundary.m_material->get_render_data();
++        boundary.m_volume = data.m_volume != nullptr;
++        if (data.m_shader_group && data.m_shader_group->has_transparency())
++        {
++            Alpha alpha;
++            context.execute_osl_transparency(*data.m_shader_group, point, alpha);
++            boundary.m_alpha *= alpha[0];
++        }
++        boundary.m_bsdf = data.m_bsdf;
++        if (boundary.m_bsdf)
++        {
++            if (data.m_shader_group)
++                context.execute_osl_shading(*data.m_shader_group, point);
++            boundary.m_inputs = boundary.m_bsdf->evaluate_inputs(context, point);
++            boundary.m_optical = boundary.m_bsdf->has_interior(boundary.m_inputs);
++            boundary.m_transmissive = boundary.m_bsdf->has_transmission(boundary.m_inputs);
++        }
++        return boundary;
++    }
++
++    bool contains_medium(const ShadingRay& ray, const ObjectInstance* object)
++    {
++        for (std::uint8_t i = 0; i < ray.m_medium_count; ++i)
++        {
++            if (ray.m_media[i].m_object_instance == object)
++                return true;
++        }
++        return false;
++    }
++}
++
++void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context, ShadingPoint& point) const
++{
++    using Interface = ShadingPoint::OpticalInterface;
++    if (point.get_optical_interface() != Interface::Unresolved)
++        return;
++    point.set_no_optical_interface();
++    if (!point.hit_surface())
++        return;
++    const ShadingRay::Medium* current = point.get_ray().get_current_medium();
++    const bool lower_priority = current &&
++        current->m_object_instance->get_medium_priority() > point.get_object_instance().get_medium_priority();
++    const bool procedural = point.get_primitive_type() == ShadingPoint::PrimitiveProceduralSurface;
++    // Native meshes retain their existing single-boundary displacement
++    // behavior; only procedural objects supply coincident groups.
++    if (!procedural && !lower_priority)
++        return;
++
++    const InterfaceBoundary first = classify_boundary(*this, point);
++    // Ordinary opaque hits already own their surface. Transmissive alpha
++    // layers still need classification when they coincide with glass.
++    if ((!first.m_optical && !first.m_transmissive) || first.m_volume)
++        return;
++
++    const bool hidden_boundary = first.m_optical && lower_priority;
++    std::vector<ShadingPoint> points;
++    m_intersector.collect_coincident_surfaces(point, points);
++    if (points.size() < 2 && !hidden_boundary)
++        return;
++    std::vector<InterfaceBoundary> boundaries;
++    boundaries.reserve(points.size());
++    boundaries.push_back(first);
++    for (size_t i = 1; i < points.size(); ++i)
++        boundaries.push_back(classify_boundary(*this, points[i]));
++
++    std::vector<size_t> optical;
++    std::vector<size_t> opaque;
++    bool unsupported = false;
++    for (size_t i = 0; i < points.size(); ++i)
++    {
++        const InterfaceBoundary& boundary = boundaries[i];
++        if (boundary.m_alpha <= 0.0f)
++            continue;
++        if (boundary.m_optical)
++            optical.push_back(i);
++        if (boundary.m_alpha < 1.0f || boundary.m_volume ||
++            (boundary.m_transmissive && !boundary.m_optical))
++            unsupported = true;
++        else if (!boundary.m_optical)
++            opaque.push_back(i);
++    }
++    if (optical.empty() || (optical.size() == 1 && opaque.empty() && !hidden_boundary && !unsupported))
++        return;
++    if (unsupported)
++        throw std::runtime_error("shared optical interfaces require opaque coverage and glass interiors");
++    if (opaque.size() > 1)
++        throw std::runtime_error("shared optical interface has multiple opaque surface owners");
++
++    const ShadingRay before = point.get_ray();
++    ShadingRay after;
++    after.copy_media_from(before);
++    size_t owner = opaque.empty() ? optical.front() : opaque.front();
++    // An opaque contact cannot transmit. Its reflection retains the incoming
++    // state and need not establish media hidden beyond that surface.
++    if (opaque.empty())
++    {
++        // Remove every exit before adding entries so a simultaneous exchange
++        // does not temporarily exceed the fixed native medium capacity.
++        for (size_t i : optical)
++        {
++            if (points[i].is_leaving())
++            {
++                ShadingRay next;
++                next.remove_medium(after, &points[i].get_object_instance());
++                after.m_medium_count = 0;
++                after.copy_media_from(next);
++            }
++        }
++        for (size_t i : optical)
++        {
++            const ObjectInstance* object = &points[i].get_object_instance();
++            if (points[i].is_entering() && !contains_medium(after, object))
++            {
++                if (after.m_medium_count == ShadingRay::MaxMediumCount)
++                    throw std::runtime_error("too many optical media at a shared interface");
++                const float ior = boundaries[i].m_bsdf->sample_ior(sampling_context, boundaries[i].m_inputs);
++                ShadingRay next;
++                next.add_medium(after, object, boundaries[i].m_material, ior);
++                after.m_medium_count = 0;
++                after.copy_media_from(next);
++            }
++        }
++
++        for (size_t i : optical)
++        {
++            if (points[i].get_object_instance().get_medium_priority() >
++                points[owner].get_object_instance().get_medium_priority())
++                owner = i;
++        }
++
++    }
++    const ShadingRay::Medium* incoming = before.get_current_medium();
++    const ShadingRay::Medium* outgoing = after.get_current_medium();
++    const bool same_medium = incoming && outgoing
++        ? incoming->m_object_instance == outgoing->m_object_instance
++        : incoming == outgoing;
++    const bool displaced = opaque.empty() && same_medium;
++    if (!displaced)
++    {
++        // A shared interface has one tangent plane. Intersecting boundary
++        // planes describe a multi-medium corner, not a single refraction event.
++        const double NormalAlignmentTolerance = 1.0e-8;
++        const Vector3d normal = point.get_geometric_normal();
++        for (size_t i = 0; i < points.size(); ++i)
++        {
++            if (boundaries[i].m_alpha <= 0.0f)
++                continue;
++            if (std::abs(dot(normal, points[i].get_geometric_normal())) < 1.0 - NormalAlignmentTolerance)
++                throw std::runtime_error("shared optical boundaries have different tangent planes");
++        }
++
++    }
++    if (!displaced && opaque.empty())
++    {
++        for (size_t i : optical)
++        {
++            if (i != owner && points[i].get_object_instance().get_medium_priority() ==
++                points[owner].get_object_instance().get_medium_priority())
++                throw std::runtime_error("shared optical interfaces require distinct medium priorities");
++        }
++    }
++    ShadingRay owner_ray = before;
++    owner_ray.m_tmax = points[owner].get_distance();
++    point = points[owner];
++    point.set_ray(owner_ray);
++    const float outside_ior = point.is_entering() ? before.get_current_ior() : after.get_current_ior();
++    point.set_optical_interface(displaced ? Interface::Displaced : Interface::Surface, after, outside_ior);
++}
++
+ void ShadingContext::execute_osl_shading(
+     const ShaderGroup&      shader_group,
+     const ShadingPoint&     shading_point) const
+diff --git a/src/appleseed/renderer/kernel/shading/shadingcontext.h b/src/appleseed/renderer/kernel/shading/shadingcontext.h
+index 16a5b0fab..4b08ec128 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingcontext.h
++++ b/src/appleseed/renderer/kernel/shading/shadingcontext.h
+@@ -32,6 +32,7 @@
+ #include "renderer/kernel/texturing/oiiotexturesystem.h"
+ 
+ // appleseed.renderer headers.
++#include "renderer/global/globaltypes.h"
+ #include "renderer/kernel/shading/oslshadergroupexec.h"
+ 
+ // appleseed.foundation headers.
+@@ -98,6 +99,9 @@ class ShadingContext
+     OSLShadingSystem& get_osl_shading_system() const;
+     OSL::ShadingContext* get_osl_shading_context() const;
+ 
++    // Resolve coincident procedural optical boundaries before shading them.
++    void resolve_optical_interface(SamplingContext& sampling_context, ShadingPoint& point) const;
++
+     void execute_osl_shading(
+         const ShaderGroup&          shader_group,
+         const ShadingPoint&         shading_point) const;
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.h b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+index 21c1fbba2..8efb4decb 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.h
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+@@ -60,6 +60,7 @@
+ #include "foundation/platform/_endoslheaders.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <cassert>
+ #include <cstddef>
+ #include <cstdint>
+@@ -122,6 +123,23 @@ class ShadingPoint
+     void set_ray(const ShadingRay& ray);
+     const ShadingRay& get_ray() const;
+ 
++    enum class OpticalInterface : std::uint8_t
++    {
++        Unresolved,
++        None,
++        Surface,
++        Displaced
++    };
++
++    OpticalInterface get_optical_interface() const;
++    void set_no_optical_interface();
++    void set_optical_interface(
++        const OpticalInterface  type,
++        const ShadingRay&       transmitted,
++        const float             outside_ior);
++    void copy_transmitted_media(ShadingRay& ray) const;
++    float get_outside_ior() const;
++
+     // Return the time stored in the ray.
+     const ShadingRay::Time& get_time() const;
+ 
+@@ -307,6 +325,14 @@ class ShadingPoint
+     std::uint32_t                       m_procedural_material_slot;
+     ProceduralObject::SurfaceDerivatives m_procedural_derivatives;
+ 
++    // Inline state is required: arena-allocated shading points are not destroyed.
++    ShadingRay::Medium                  m_transmitted_media[ShadingRay::MaxMediumCount];
++    float                              m_interface_outside_ior;
++    std::uint8_t                       m_transmitted_medium_count;
++    OpticalInterface                   m_optical_interface;
++
++    void copy_optical_interface(const ShadingPoint& rhs);
++
+     // Flags to keep track of which on-demand results have been computed and cached.
+     enum Members
+     {
+@@ -326,7 +352,8 @@ class ShadingPoint
+         HasAlpha                        = 1UL << 13,
+         HasPerVertexColor               = 1UL << 14,
+         HasScreenSpaceDerivatives       = 1UL << 15,
+-        HasOSLShaderGlobals             = 1UL << 16
++        HasOSLShaderGlobals             = 1UL << 16,
++        HasOpticalInterface             = 1UL << 17
+     };
+     mutable std::uint32_t               m_members;
+ 
+@@ -437,6 +464,7 @@ inline ShadingPoint::ShadingPoint(const ShadingPoint& rhs)
+   , m_triangle_support_plane(rhs.m_triangle_support_plane)
+   , m_members(0)
+ {
++    copy_optical_interface(rhs);
+     if (m_primitive_type == PrimitiveProceduralSurface)
+     {
+         m_procedural_point = rhs.m_procedural_point;
+@@ -449,6 +477,9 @@ inline ShadingPoint::ShadingPoint(const ShadingPoint& rhs)
+ 
+ inline ShadingPoint& ShadingPoint::operator=(const ShadingPoint& rhs)
+ {
++    if (this == &rhs)
++        return *this;
++
+     m_texture_cache = rhs.m_texture_cache;
+     m_scene = rhs.m_scene;
+     m_ray = rhs.m_ray;
+@@ -461,6 +492,7 @@ inline ShadingPoint& ShadingPoint::operator=(const ShadingPoint& rhs)
+     m_primitive_index = rhs.m_primitive_index;
+     m_triangle_support_plane = rhs.m_triangle_support_plane;
+     m_members = 0;
++    copy_optical_interface(rhs);
+     if (m_primitive_type == PrimitiveProceduralSurface)
+     {
+         m_procedural_point = rhs.m_procedural_point;
+@@ -490,6 +522,7 @@ inline void ShadingPoint::set_ray(const ShadingRay& ray)
+ {
+     assert(foundation::is_normalized(ray.m_dir));
+     m_ray = ray;
++    m_members &= ~HasOpticalInterface;
+ }
+ 
+ inline const ShadingRay& ShadingPoint::get_ray() const
+@@ -497,6 +530,61 @@ inline const ShadingRay& ShadingPoint::get_ray() const
+     return m_ray;
+ }
+ 
++inline ShadingPoint::OpticalInterface ShadingPoint::get_optical_interface() const
++{
++    return m_members & HasOpticalInterface ? m_optical_interface : OpticalInterface::Unresolved;
++}
++
++inline void ShadingPoint::set_no_optical_interface()
++{
++    m_optical_interface = OpticalInterface::None;
++    m_members |= HasOpticalInterface;
++}
++
++inline void ShadingPoint::set_optical_interface(
++    const OpticalInterface  type,
++    const ShadingRay&       transmitted,
++    const float             outside_ior)
++{
++    assert(type == OpticalInterface::Surface || type == OpticalInterface::Displaced);
++    m_optical_interface = type;
++    m_interface_outside_ior = outside_ior;
++    m_transmitted_medium_count = transmitted.m_medium_count;
++    std::copy_n(transmitted.m_media, m_transmitted_medium_count, m_transmitted_media);
++    m_members |= HasOpticalInterface;
++}
++
++inline void ShadingPoint::copy_optical_interface(const ShadingPoint& rhs)
++{
++    const OpticalInterface type = rhs.get_optical_interface();
++    if (type == OpticalInterface::Unresolved)
++        return;
++    m_optical_interface = type;
++    m_members |= HasOpticalInterface;
++    if (type != OpticalInterface::None)
++    {
++        m_interface_outside_ior = rhs.m_interface_outside_ior;
++        m_transmitted_medium_count = rhs.m_transmitted_medium_count;
++        std::copy_n(rhs.m_transmitted_media, m_transmitted_medium_count, m_transmitted_media);
++    }
++}
++
++inline void ShadingPoint::copy_transmitted_media(ShadingRay& ray) const
++{
++    assert(get_optical_interface() == OpticalInterface::Surface ||
++        get_optical_interface() == OpticalInterface::Displaced);
++    assert(ray.m_medium_count == 0);
++    ray.m_medium_count = m_transmitted_medium_count;
++    std::copy_n(m_transmitted_media, m_transmitted_medium_count, ray.m_media);
++}
++
++inline float ShadingPoint::get_outside_ior() const
++{
++    if (get_optical_interface() == OpticalInterface::Surface)
++        return m_interface_outside_ior;
++    return is_entering() ? m_ray.get_current_ior() : m_ray.get_previous_ior();
++}
++
+ inline const ShadingRay::Time& ShadingPoint::get_time() const
+ {
+     return m_ray.m_time;
+diff --git a/src/appleseed/renderer/meta/tests/test_intersector.cpp b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+index 082d0d725..cda788732 100644
+--- a/src/appleseed/renderer/meta/tests/test_intersector.cpp
++++ b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+@@ -75,12 +75,18 @@
+ 
+ // Standard headers.
+ #include <algorithm>
++#include <string>
++#include <type_traits>
++#include <vector>
+ 
+ using namespace foundation;
+ using namespace renderer;
+ 
+ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+ {
++    static_assert(std::is_trivially_destructible<ShadingPoint>::value,
++        "Arena-allocated shading points must not own resources");
++
+     struct TestScene
+       : public TestSceneBase
+     {
+@@ -353,6 +359,43 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+     using RectangleFixture = Fixture<false, AnalyticScene<RectangleObjectFactory>>;
+     using DiskFixture = Fixture<false, AnalyticScene<DiskObjectFactory>>;
+ 
++    struct CoincidentSphereScene : TestSceneBase
++    {
++        static constexpr double NearSurfaceSeparation = 0.01;
++        static Vector3d center() { return Vector3d(5.0, 6.0, 7.0); }
++
++        CoincidentSphereScene()
++        {
++            auto_release_ptr<Assembly> assembly(AssemblyFactory().create("assembly", ParamArray()));
++            assembly->objects().insert(SphereObjectFactory().create("sphere",
++                ParamArray().insert("radius", 2.0)));
++            const Matrix4d scale = Matrix4d::make_scaling(Vector3d(2.0, 3.0, 4.0));
++            assembly->object_instances().insert(ObjectInstanceFactory::create(
++                "first", ParamArray(), "sphere", Transformd(scale), StringDictionary()));
++            assembly->object_instances().insert(ObjectInstanceFactory::create(
++                "second", ParamArray(), "sphere", Transformd(scale), StringDictionary()));
++            assembly->object_instances().insert(ObjectInstanceFactory::create(
++                "nearby", ParamArray(), "sphere",
++                Transformd(Matrix4d::make_translation(Vector3d(0.0, 0.0, -NearSurfaceSeparation)) * scale),
++                StringDictionary()));
++            auto_release_ptr<AssemblyInstance> instance(AssemblyInstanceFactory::create(
++                "assembly_instance", ParamArray(), "assembly"));
++            instance->transform_sequence().set_transform(0.0f,
++                Transformd(Matrix4d::make_translation(center())));
++            m_scene.assembly_instances().insert(instance);
++            m_scene.assemblies().insert(assembly);
++        }
++
++        ShadingRay ray_to_boundary(const bool inside) const
++        {
++            const Vector3d origin = center() + Vector3d(0.0, 0.0, inside ? 0.0 : 18.0);
++            return ShadingRay(origin, Vector3d(0.0, 0.0, -1.0),
++                ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f),
++                VisibilityFlags::CameraRay, 0);
++        }
++    };
++    using CoincidentSphereFixture = Fixture<false, CoincidentSphereScene>;
++
+     using SlabFixture = Fixture<false, ProceduralTestScene<SlabProbeObject>>;
+ 
+     struct DepthCameraScene : ProceduralTestScene<>
+@@ -428,6 +471,70 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+         EXPECT_FEQ(0.25f, sample.unrelated_alpha);
+     }
+ 
++    TEST_CASE_F(CoincidentSurfaces_CollectsTransformedEntriesAndExitsWithoutNearbyBoundary, CoincidentSphereFixture)
++    {
++        for (const bool inside : {false, true})
++        {
++            ShadingPoint first;
++            ASSERT_TRUE(m_intersector.trace(ray_to_boundary(inside), first));
++            std::vector<ShadingPoint> points;
++            m_intersector.collect_coincident_surfaces(first, points);
++            ASSERT_EQ(2, points.size());
++            EXPECT_EQ(&first.get_object_instance(), &points.front().get_object_instance());
++            EXPECT_TRUE(&points[0].get_object_instance() != &points[1].get_object_instance());
++            for (const ShadingPoint& point : points)
++            {
++                EXPECT_TRUE(std::string(point.get_object_instance().get_name()) != "nearby");
++                EXPECT_FEQ_EPS(first.get_point(), point.get_point(), 1.0e-12);
++                EXPECT_FEQ_EPS(first.get_geometric_normal(), point.get_geometric_normal(), 1.0e-12);
++                EXPECT_EQ(!inside, point.is_entering());
++            }
++        }
++    }
++
++    TEST_CASE_F(OpticalInterface_CopyAndResetPreserveSemanticState, SphereFixture)
++    {
++        const float InteriorIOR = 1.33f;
++        const float ExteriorIOR = 2.4f;
++        const ShadingRay ray(Vector3d(0.0, 0.0, 4.0), Vector3d(0.0, 0.0, -1.0),
++            ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f),
++            VisibilityFlags::CameraRay, 0);
++        ShadingPoint point;
++        ASSERT_TRUE(m_intersector.trace(ray, point));
++        ShadingRay transmitted;
++        transmitted.add_medium(ray, &point.get_object_instance(), nullptr, InteriorIOR);
++        point.set_optical_interface(ShadingPoint::OpticalInterface::Surface, transmitted, ExteriorIOR);
++        ShadingPoint copy(point), assigned;
++        assigned = point;
++        const ShadingPoint* self = &assigned;
++        assigned = *self;
++        point.clear();
++        EXPECT_TRUE(point.get_optical_interface() == ShadingPoint::OpticalInterface::Unresolved);
++        for (const ShadingPoint* saved : {&copy, &assigned})
++        {
++            EXPECT_TRUE(saved->get_optical_interface() == ShadingPoint::OpticalInterface::Surface);
++            EXPECT_FEQ(ExteriorIOR, saved->get_outside_ior());
++            ShadingRay next;
++            saved->copy_transmitted_media(next);
++            EXPECT_EQ(1, next.m_medium_count);
++            EXPECT_FEQ(InteriorIOR, next.get_current_ior());
++            EXPECT_EQ(&saved->get_object_instance(), next.get_current_medium()->m_object_instance);
++        }
++        assigned.set_ray(ray);
++        EXPECT_TRUE(assigned.get_optical_interface() == ShadingPoint::OpticalInterface::Unresolved);
++        EXPECT_FEQ(1.0f, assigned.get_outside_ior());
++        assigned.set_no_optical_interface();
++        ShadingPoint checked(assigned);
++        EXPECT_TRUE(checked.get_optical_interface() == ShadingPoint::OpticalInterface::None);
++    }
++
++    TEST_CASE_F(CoincidentSurfaces_MissClearsOutput, CoincidentSphereFixture)
++    {
++        std::vector<ShadingPoint> points(1);
++        m_intersector.collect_coincident_surfaces(ShadingPoint(), points);
++        EXPECT_TRUE(points.empty());
++    }
++
+     TEST_CASE_F(InitialMediaQuery_SkipsOutsideProceduralBounds, SphereFixture)
+     {
+         const ShadingRay ray(Vector3d(0.0, 0.0, 4.0), Vector3d(0.0, 0.0, -1.0),
+diff --git a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+index 90dcd33d6..8c7206db6 100644
+--- a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
++++ b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+@@ -154,10 +154,21 @@ TEST_SUITE(Renderer_Modeling_BSDF_OSL)
+         Arena inputs;
+         CompositeSurfaceClosure empty(basis, nullptr, inputs);
+         EXPECT_FALSE(bsdf->has_interior(&empty));
++        EXPECT_FALSE(bsdf->has_transmission(&empty));
+         add_diffuse(0.5f, basis.get_normal());
+         add_mirror(0.5f, basis.get_normal());
+         CompositeSurfaceClosure reflective(basis, tree, inputs);
+         EXPECT_FALSE(bsdf->has_interior(&reflective));
++        EXPECT_FALSE(bsdf->has_transmission(&reflective));
++    }
++
++    TEST_CASE_F(DiffuseTransmissionDoesNotDefineAnOpticalInterior, Fixture)
++    {
++        add_closure(TranslucentID, 1.0f, basis.get_normal());
++        Arena inputs;
++        CompositeSurfaceClosure closure(basis, tree, inputs);
++        EXPECT_TRUE(bsdf->has_transmission(&closure));
++        EXPECT_FALSE(bsdf->has_interior(&closure));
+     }
+ 
+     TEST_CASE_F(IdealReflectionHasNoContinuousDensity, Fixture)
+diff --git a/src/appleseed/renderer/modeling/bsdf/bsdf.cpp b/src/appleseed/renderer/modeling/bsdf/bsdf.cpp
+index dd1940e0c..86eff78ed 100644
+--- a/src/appleseed/renderer/modeling/bsdf/bsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/bsdf.cpp
+@@ -108,6 +108,11 @@ bool BSDF::has_interior(const void*) const
+     return false;
+ }
+ 
++bool BSDF::has_transmission(const void*) const
++{
++    return (m_type & Transmissive) != 0;
++}
++
+ float BSDF::sample_ior(
+     SamplingContext&            sampling_context,
+     const void*                 data) const
+diff --git a/src/appleseed/renderer/modeling/bsdf/bsdf.h b/src/appleseed/renderer/modeling/bsdf/bsdf.h
+index 1332af98b..d22b4b884 100644
+--- a/src/appleseed/renderer/modeling/bsdf/bsdf.h
++++ b/src/appleseed/renderer/modeling/bsdf/bsdf.h
+@@ -190,6 +190,9 @@ class APPLESEED_DLLSYMBOL BSDF
+     // Whether these evaluated inputs define an optical interior of a closed object.
+     virtual bool has_interior(const void* data) const;
+ 
++    // Return whether the evaluated BSDF can transmit through the surface.
++    virtual bool has_transmission(const void* data) const;
++
+     // Compute the index of refraction of the interior medium.
+     virtual float sample_ior(
+         SamplingContext&            sampling_context,
+diff --git a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+index 329f6695b..d6eace3a7 100644
+--- a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+@@ -221,16 +221,8 @@ namespace
+ 
+             values->m_roughness = std::max(values->m_roughness, shading_point.get_ray().m_min_roughness);
+ 
+-            if (shading_point.is_entering())
+-            {
+-                values->m_precomputed.m_backfacing = false;
+-                values->m_precomputed.m_outside_ior = shading_point.get_ray().get_current_ior();
+-            }
+-            else
+-            {
+-                values->m_precomputed.m_backfacing = true;
+-                values->m_precomputed.m_outside_ior = shading_point.get_ray().get_previous_ior();
+-            }
++            values->m_precomputed.m_backfacing = !shading_point.is_entering();
++            values->m_precomputed.m_outside_ior = shading_point.get_outside_ior();
+ 
+             values->m_precomputed.m_reflection_color  = values->m_surface_transmittance;
+             values->m_precomputed.m_reflection_color *= values->m_reflection_tint;
+diff --git a/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+index ed3e7ee84..16622a87f 100644
+--- a/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+@@ -393,6 +393,17 @@ namespace
+             return false;
+         }
+ 
++        bool has_transmission(const void* data) const override
++        {
++            const CompositeSurfaceClosure* c = static_cast<const CompositeSurfaceClosure*>(data);
++            for (size_t i = 0; i < c->get_closure_count(); ++i)
++            {
++                if ((bsdf_from_closure_id(c->get_closure_type(i)).get_type() & Transmissive) != 0)
++                    return true;
++            }
++            return false;
++        }
++
+         float sample_ior(
+             SamplingContext&            sampling_context,
+             const void*                 data) const override
+diff --git a/src/appleseed/renderer/modeling/bsdf/specularbtdf.cpp b/src/appleseed/renderer/modeling/bsdf/specularbtdf.cpp
+index e35e91e28..de954a59d 100644
+--- a/src/appleseed/renderer/modeling/bsdf/specularbtdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/specularbtdf.cpp
+@@ -106,8 +106,8 @@ namespace
+             new (&values->m_precomputed) InputValues::Precomputed();
+             values->m_precomputed.m_eta =
+                 shading_point.is_entering()
+-                    ? shading_point.get_ray().get_current_ior() / values->m_ior
+-                    : values->m_ior / shading_point.get_ray().get_previous_ior();
++                    ? shading_point.get_outside_ior() / values->m_ior
++                    : values->m_ior / shading_point.get_outside_ior();
+         }
+ 
+         void sample(
