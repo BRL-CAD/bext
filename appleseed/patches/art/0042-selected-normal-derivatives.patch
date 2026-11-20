@@ -1,0 +1,1496 @@
+Subject: [PATCH 42/50] Propagate selected normals through specular closures
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 52e9d7fd7846ab83cf6711f091596564172f2c7e
+Original-Commit: 86e86c81178decea97f52f4c8b2611c029b70d5d
+Original-Commit: 261254a009907d4e2edc735eb7d082de6fde6fb4
+Original-Commit: 0d3d04681948e73774a653296404f18d31961b33
+Original-Commit: 3a8d82ddfc312808880c253fdd45b8cb8f3e1226
+
+diff --git a/src/appleseed.shaders/as_osl_extensions.h.in b/src/appleseed.shaders/as_osl_extensions.h.in
+index 971e5f3ce..11ad477f2 100644
+--- a/src/appleseed.shaders/as_osl_extensions.h.in
++++ b/src/appleseed.shaders/as_osl_extensions.h.in
+@@ -42,6 +42,15 @@
+ #define M_1_PI      0.3183098861837907      // 1 / Pi
+ #endif
+ 
++// OSL's global N has no derivatives. Query the renderer when a shader
++// needs the surface normal's contribution to a mapped ray footprint.
++normal as_shading_normal()
++{
++    normal result = N;
++    getattribute("geom:normal", result);
++    return result;
++}
++
+ matrix inverse(matrix m) { return 1 / m; }
+ 
+ float min(color C)  { return min(C[0], min(C[1], C[2])); }
+@@ -61,6 +70,19 @@ float max(vector V) { return max(V[0], max(V[1], V[2])); }
+ // BSDF closures.
+ //
+ 
++// Supply mapped normal derivatives explicitly: standard OSL closure
++// arguments do not transport them automatically.
++closure color as_reflection(normal n, float ior)
++{
++    return reflection(n, ior, "normal_derivatives", 1,
++        "dNdx", vector(Dx(n)), "dNdy", vector(Dy(n)));
++}
++
++closure color as_reflection(normal n)
++{
++    return as_reflection(n, 0);
++}
++
+ closure color as_oren_nayar(
+     color       reflectance,
+     normal      N,
+@@ -79,6 +101,9 @@ closure color as_glossy(
+     // keyword arguments:
+     //   float "energy_compensation" = 0
+     //   float "microfacet_normal_mapping" = 0
++    //   int "normal_derivatives" = 0
++    //   vector "dNdx" = vector(0)
++    //   vector "dNdy" = vector(0)
+     ) BUILTIN;
+ 
+ closure color as_microfacet_glossy(
+@@ -112,6 +137,9 @@ closure color as_metal(
+     float       anisotropic
+     // keyword arguments:
+     //   float "energy_compensation" = 0
++    //   int "normal_derivatives" = 0
++    //   vector "dNdx" = vector(0)
++    //   vector "dNdy" = vector(0)
+     ) BUILTIN;
+ 
+ closure color as_microfacet_metal(
+@@ -139,6 +167,9 @@ closure color as_glass(
+     float       volume_transmittance_distance
+     // keyword arguments:
+     //   float "energy_compensation" = 0
++    //   int "normal_derivatives" = 0
++    //   vector "dNdx" = vector(0)
++    //   vector "dNdy" = vector(0)
+     ) BUILTIN;
+ 
+ closure color as_ashikhmin_shirley(
+@@ -182,7 +213,12 @@ closure color as_plastic(
+     float       ior,
+     color       diffuse_color,
+     float       diffuse_weight,
+-    float       scattering) BUILTIN;
++    float       scattering
++    // keyword arguments:
++    //   int "normal_derivatives" = 0
++    //   vector "dNdx" = vector(0)
++    //   vector "dNdy" = vector(0)
++    ) BUILTIN;
+ 
+ closure color as_microfacet_plastic(
+     normal      N,
+@@ -234,7 +270,12 @@ closure color as_glossy_layer(
+     float           anisotropy,
+     float           ior,
+     color           transmittance,
+-    float           thickness) BUILTIN;
++    float           thickness
++    // keyword arguments:
++    //   int "normal_derivatives" = 0
++    //   vector "dNdx" = vector(0)
++    //   vector "dNdy" = vector(0)
++    ) BUILTIN;
+ 
+ 
+ //
+diff --git a/src/appleseed.shaders/src/appleseed/as_blackbody.osl b/src/appleseed.shaders/src/appleseed/as_blackbody.osl
+index 4be4da815..8a4f15338 100644
+--- a/src/appleseed.shaders/src/appleseed/as_blackbody.osl
++++ b/src/appleseed.shaders/src/appleseed/as_blackbody.osl
+@@ -168,7 +168,7 @@ shader as_blackbody
+         int as_blender_input_socket = 0,
+         int gafferNoduleLayoutVisible = 0
+     ]],
+-    normal in_bump_normal = N
++    normal in_bump_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string as_maya_attribute_short_name = "n",
+@@ -299,7 +299,10 @@ shader as_blackbody
+                 in_specular_roughness,
+                 0.0,        // anisotropy amount
+                 in_ior,
+-                "energy_compensation", 1.0);
++                "energy_compensation", 1.0,
++                "normal_derivatives", 1,
++                "dNdx", vector(Dx(Nn)),
++                "dNdy", vector(Dy(Nn)));
+     }
+ 
+     if (transmittance <= EPS)
+diff --git a/src/appleseed.shaders/src/appleseed/as_bump.osl b/src/appleseed.shaders/src/appleseed/as_bump.osl
+index 6b5ef5b1f..21e25680c 100644
+--- a/src/appleseed.shaders/src/appleseed/as_bump.osl
++++ b/src/appleseed.shaders/src/appleseed/as_bump.osl
+@@ -192,7 +192,7 @@ shader as_bump
+         string page = "Surface",
+         string widget = "null"
+     ]],
+-    normal in_surface_normal = N
++    normal in_surface_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "surfaceNormal",
+         string as_maya_attribute_short_name = "n",
+diff --git a/src/appleseed.shaders/src/appleseed/as_glass.osl b/src/appleseed.shaders/src/appleseed/as_glass.osl
+index f7c0337cb..3bea07e84 100644
+--- a/src/appleseed.shaders/src/appleseed/as_glass.osl
++++ b/src/appleseed.shaders/src/appleseed/as_glass.osl
+@@ -203,7 +203,7 @@ shader as_glass
+         int gafferNoduleLayoutVisible = 0,
+         int as_max_param_id = 25
+     ]],
+-    normal in_bump_normal = N
++    normal in_bump_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string as_maya_attribute_short_name = "n",
+@@ -380,5 +380,8 @@ shader as_glass
+         in_anisotropy_amount,
+         in_ior,
+         in_volume_transmittance,
+-        in_volume_transmittance_distance);
++        in_volume_transmittance_distance,
++        "normal_derivatives", 1,
++        "dNdx", vector(Dx(Nn)),
++        "dNdy", vector(Dy(Nn)));
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl b/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl
+index f3ae627b1..cba5eeafa 100644
+--- a/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl
++++ b/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl
+@@ -42,7 +42,7 @@ shader as_glossy_layer
+     float in_ior = 1.5 [[ string label = "IOR", float min = 0.001 ]],
+     color in_transmittance = color(1) [[ string label = "Transmittance per Thickness Unit" ]],
+     float in_thickness = 0 [[ string label = "Optical Thickness", float min = 0 ]],
+-    normal in_normal = N [[ string label = "Coat Normal" ]],
++    normal in_normal = as_shading_normal() [[ string label = "Coat Normal" ]],
+     vector in_tangent = dPdu [[ string label = "Coat Tangent" ]],
+     int in_enable = 1 [[ string label = "Enable", string widget = "checkBox" ]],
+     output closure color out_color = 0 [[ string label = "Output" ]]
+@@ -51,6 +51,9 @@ shader as_glossy_layer
+     if (in_enable)
+         out_color = as_glossy_layer(in_substrate, in_normal, in_tangent,
+             in_reflectance, in_roughness, in_anisotropy, in_ior, in_transmittance,
+-            in_thickness);
++            in_thickness,
++            "normal_derivatives", 1,
++            "dNdx", vector(Dx(in_normal)),
++            "dNdy", vector(Dy(in_normal)));
+     else out_color = in_substrate;
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_metal.osl b/src/appleseed.shaders/src/appleseed/as_metal.osl
+index 5cb7d735f..25ccd65bb 100644
+--- a/src/appleseed.shaders/src/appleseed/as_metal.osl
++++ b/src/appleseed.shaders/src/appleseed/as_metal.osl
+@@ -229,7 +229,7 @@ shader as_metal
+         string help = "Thin film thickness upper bound, in nanometers."
+     ]],
+ #endif
+-    normal in_bump_normal = N
++    normal in_bump_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string as_maya_attribute_short_name = "n",
+@@ -413,5 +413,8 @@ shader as_metal
+         in_edge_reflectance_weight,
+         in_roughness,
+         in_anisotropy_amount,
+-        "energy_compensation", in_energy_compensation);
++        "energy_compensation", in_energy_compensation,
++        "normal_derivatives", 1,
++        "dNdx", vector(Dx(Nn)),
++        "dNdy", vector(Dy(Nn)));
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_plastic.osl b/src/appleseed.shaders/src/appleseed/as_plastic.osl
+index f5f31194a..404d875d5 100644
+--- a/src/appleseed.shaders/src/appleseed/as_plastic.osl
++++ b/src/appleseed.shaders/src/appleseed/as_plastic.osl
+@@ -134,7 +134,7 @@ shader as_plastic
+         int as_deprecated = 1,
+         int as_max_param_id = 15
+     ]],
+-    normal in_bump_normal = N
++    normal in_bump_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string as_maya_attribute_short_name = "n",
+@@ -277,5 +277,8 @@ shader as_plastic
+         in_ior,
+         in_color,
+         in_diffuse_weight,
+-        in_scattering);
++        in_scattering,
++        "normal_derivatives", 1,
++        "dNdx", vector(Dx(in_bump_normal)),
++        "dNdy", vector(Dy(in_bump_normal)));
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl b/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
+index 6aede9540..0bc99c165 100644
+--- a/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
++++ b/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
+@@ -121,7 +121,7 @@ shader as_sbs_pbrmaterial
+         string help = "Metallicness channel."
+         // linear encoded
+     ]],
+-    normal in_normal = N
++    normal in_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string as_maya_attribute_short_name = "n",
+@@ -405,7 +405,10 @@ shader as_sbs_pbrmaterial
+             in_refractionIOR,
+             in_absorptionColor,
+             in_absorption * 10.0, // original range [0,0.1], find match
+-            "energy_compensation", 0.0);
++            "energy_compensation", 0.0,
++            "normal_derivatives", 1,
++            "dNdx", vector(Dx(Nn)),
++            "dNdy", vector(Dy(Nn)));
+ 
+         bsdf += (1.0 - in_refraction) * in_opacity *
+             diffuse_color * diffuse(Nn);
+@@ -452,7 +455,10 @@ shader as_sbs_pbrmaterial
+                 in_anisotropyLevel,
+                 eta,
+                 // disable fresnel weight to scale by F above
+-                "energy_compensation", 0.0);
++                "energy_compensation", 0.0,
++                "normal_derivatives", 1,
++                "dNdx", vector(Dx(Nn)),
++                "dNdy", vector(Dy(Nn)));
+         }
+ 
+         float metallicness = clamp(in_metallic, 0.0, 1.0);
+@@ -468,7 +474,10 @@ shader as_sbs_pbrmaterial
+                 0.0, // edge tint weight
+                 max(0.01, in_roughness),
+                 in_anisotropyLevel,
+-                "energy_compensation", 0.0);
++                "energy_compensation", 0.0,
++                "normal_derivatives", 1,
++                "dNdx", vector(Dx(Nn)),
++                "dNdy", vector(Dy(Nn)));
+         }
+         out_outColor += bsdf;
+     }
+diff --git a/src/appleseed.shaders/src/appleseed/as_standard_surface.osl b/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
+index a836dd3c2..91e600591 100644
+--- a/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
++++ b/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
+@@ -506,7 +506,7 @@ shader as_standard_surface
+         string page = "Transparency",
+         int as_max_param_id = 58
+     ]],
+-    normal in_bump_normal_coating = N
++    normal in_bump_normal_coating = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "coatingNormal",
+         string as_maya_attribute_short_name = "ncn",
+@@ -515,7 +515,7 @@ shader as_standard_surface
+         string help = "The coating normal. If not set, the substrate normal is used for both layers.",
+         int as_max_param_id = 60
+     ]],
+-    normal in_bump_normal_substrate = N
++    normal in_bump_normal_substrate = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string as_maya_attribute_short_name = "n",
+@@ -782,7 +782,10 @@ shader as_standard_surface
+                     in_anisotropy_amount,
+                     in_ior,
+                     in_absorption_color,
+-                    in_absorption_depth);
++                    in_absorption_depth,
++                    "normal_derivatives", 1,
++                    "dNdx", vector(Dx(Nn)),
++                    "dNdy", vector(Dy(Nn)));
+             }
+             else if (max(in_specular_color) > 0.0)
+             {
+@@ -792,7 +795,10 @@ shader as_standard_surface
+                         tangent,
+                         in_specular_roughness,
+                         in_anisotropy_amount,
+-                        in_ior);
++                        in_ior,
++                        "normal_derivatives", 1,
++                        "dNdx", vector(Dx(Nn)),
++                        "dNdy", vector(Dy(Nn)));
+             }
+         }
+         else if (max(in_specular_color) > 0.0)
+@@ -805,7 +811,10 @@ shader as_standard_surface
+                     in_edge_tint,
+                     in_edge_tint_weight,
+                     in_specular_roughness,
+-                    in_anisotropy_amount);
++                    in_anisotropy_amount,
++                    "normal_derivatives", 1,
++                    "dNdx", vector(Dx(Nn)),
++                    "dNdy", vector(Dy(Nn)));
+         }
+ 
+         // In order to layer substrate BxDFs, we need the microfacet Fresnel
+diff --git a/src/appleseed.shaders/src/appleseed/as_subsurface.osl b/src/appleseed.shaders/src/appleseed/as_subsurface.osl
+index 94e0277c3..ddb315e0e 100644
+--- a/src/appleseed.shaders/src/appleseed/as_subsurface.osl
++++ b/src/appleseed.shaders/src/appleseed/as_subsurface.osl
+@@ -232,7 +232,7 @@ shader as_subsurface
+         string help = "Explicit anisotropy vector, such as the vector output by a tangent field node.",
+         int as_max_param_id = 25
+     ]],
+-    normal in_bump_normal = N
++    normal in_bump_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string as_maya_attribute_short_name = "n",
+@@ -433,6 +433,9 @@ shader as_subsurface
+             in_specular_roughness,
+             in_anisotropy_amount,
+             in_ior,
+-            "energy_compensation", 1.0);
++            "energy_compensation", 1.0,
++            "normal_derivatives", 1,
++            "dNdx", vector(Dx(Nn)),
++            "dNdy", vector(Dy(Nn)));
+     }
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_toon.osl b/src/appleseed.shaders/src/appleseed/as_toon.osl
+index 8ba1d49cd..b57371efe 100644
+--- a/src/appleseed.shaders/src/appleseed/as_toon.osl
++++ b/src/appleseed.shaders/src/appleseed/as_toon.osl
+@@ -531,7 +531,7 @@ shader as_toon
+     //
+     // Bump control
+     //
+-    normal in_bump_normal = N
++    normal in_bump_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string as_maya_attribute_short_name = "n",
+@@ -539,7 +539,7 @@ shader as_toon
+         string widget = "maya_bump",
+         string page = "Bump"
+     ]],
+-    normal in_specular_normal = N
++    normal in_specular_normal = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "specularNormal",
+         string as_maya_attribute_short_name = "nsp",
+@@ -861,7 +861,10 @@ shader as_toon
+                 tangent,
+                 in_specular_roughness,
+                 in_anisotropy_amount,
+-                in_ior);
++                in_ior,
++                "normal_derivatives", 1,
++                "dNdx", vector(Dx(specularN)),
++                "dNdy", vector(Dy(specularN)));
+         }
+     }
+     else // NPR ray
+diff --git a/src/appleseed.shaders/src/max/as_max_glass_material.osl b/src/appleseed.shaders/src/max/as_max_glass_material.osl
+index 97df92eac..21aea625f 100644
+--- a/src/appleseed.shaders/src/max/as_max_glass_material.osl
++++ b/src/appleseed.shaders/src/max/as_max_glass_material.osl
+@@ -30,7 +30,7 @@
+ 
+ shader as_max_glass_material
+ (
+-    vector               Normal = N,
++    vector               Normal = as_shading_normal(),
+     vector               Tn = 0,
+     color                SurfaceTransmittance = 1.0,
+     color                ReflectionTint = 1.0,
+@@ -58,5 +58,8 @@ shader as_max_glass_material
+         Anisotropic,
+         Ior,
+         VolumeTransmittance,
+-        VolumeTransmittanceDistance);
++        VolumeTransmittanceDistance,
++        "normal_derivatives", 1,
++        "dNdx", vector(Dx(Normal)),
++        "dNdy", vector(Dy(Normal)));
+ }
+diff --git a/src/appleseed.shaders/src/max/as_max_metal_material.osl b/src/appleseed.shaders/src/max/as_max_metal_material.osl
+index 83447906b..3e50cbe66 100644
+--- a/src/appleseed.shaders/src/max/as_max_metal_material.osl
++++ b/src/appleseed.shaders/src/max/as_max_metal_material.osl
+@@ -34,7 +34,7 @@ shader as_max_metal_material
+     string help = "Metal surface shader"
+ ]]
+ (
+-    vector               Normal = N,
++    vector               Normal = as_shading_normal(),
+     vector               Tn = 0
+     [[
+         int    lockgeom = 0,
+@@ -84,5 +84,8 @@ shader as_max_metal_material
+         1.0, // edge tint weight
+         microfacet_roughness(Roughness, RoughnessDepthScale),
+         Anisotropic,
+-        "energy_compensation", 1.0);
++        "energy_compensation", 1.0,
++        "normal_derivatives", 1,
++        "dNdx", vector(Dx(Normal)),
++        "dNdy", vector(Dy(Normal)));
+ }
+diff --git a/src/appleseed.shaders/src/max/as_max_plastic_material.osl b/src/appleseed.shaders/src/max/as_max_plastic_material.osl
+index 6da3369d5..c1b858879 100644
+--- a/src/appleseed.shaders/src/max/as_max_plastic_material.osl
++++ b/src/appleseed.shaders/src/max/as_max_plastic_material.osl
+@@ -33,7 +33,7 @@ shader as_max_plastic_material
+     string help = "Plastic surface shader"
+ ]]
+ (
+-    vector Normal = N,
++    vector Normal = as_shading_normal(),
+     string Distribution = "ggx"
+     [[
+         string widget = "null",
+@@ -84,5 +84,8 @@ shader as_max_plastic_material
+         IOR,
+         DiffuseColor,
+         DiffuseWeight,
+-        Scattering);
++        Scattering,
++        "normal_derivatives", 1,
++        "dNdx", vector(Dx(Normal)),
++        "dNdy", vector(Dy(Normal)));
+ }
+diff --git a/src/appleseed.shaders/src/max/as_max_sss_material.osl b/src/appleseed.shaders/src/max/as_max_sss_material.osl
+index 3913f2d56..a82f8b306 100644
+--- a/src/appleseed.shaders/src/max/as_max_sss_material.osl
++++ b/src/appleseed.shaders/src/max/as_max_sss_material.osl
+@@ -52,7 +52,7 @@ shader as_max_sss_material
+     float                RoughnessDepthScale = 1.0,
+     float                Anisotropic = 0.0,
+ 
+-    vector               Normal = N,
++    vector               Normal = as_shading_normal(),
+     vector               Tn = 0,
+ 
+     output closure color ClosureOut = 0
+@@ -80,7 +80,10 @@ shader as_max_sss_material
+         Tn,
+         microfacet_roughness(Roughness, RoughnessDepthScale),
+         Anisotropic,
+-        Ior);
++        Ior,
++        "normal_derivatives", 1,
++        "dNdx", vector(Dx(Normal)),
++        "dNdy", vector(Dy(Normal)));
+ 
+     ClosureOut = BSSRDF + BRDF;
+ }
+diff --git a/src/appleseed.shaders/src/maya/as_maya_phongE.osl b/src/appleseed.shaders/src/maya/as_maya_phongE.osl
+index b5e9361a6..d30dedd20 100644
+--- a/src/appleseed.shaders/src/maya/as_maya_phongE.osl
++++ b/src/appleseed.shaders/src/maya/as_maya_phongE.osl
+@@ -59,7 +59,7 @@ shader as_maya_phongE
+         string label = "Incandescence Color",
+         string page = "Common Material Attributes"
+     ]],
+-    normal in_normalCamera = N
++    normal in_normalCamera = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string label = "Bump Mapping Normal",
+@@ -291,6 +291,9 @@ shader as_maya_phongE
+                 vector(0),
+                 in_roughness,
+                 0.0,
+-                0.0);
++                0.0,
++                "normal_derivatives", 1,
++                "dNdx", vector(Dx(Nn)),
++                "dNdy", vector(Dy(Nn)));
+     }
+ }
+diff --git a/src/appleseed/renderer/kernel/rendering/rendererservices.cpp b/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+index 94f7f4b4e..6cbf9212e 100644
+--- a/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
++++ b/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+@@ -149,6 +149,8 @@ RendererServices::RendererServices(
+     m_global_attr_getters[OIIO::ustringhash("appleseed:version_patch")] = {&RendererServices::get_attr_appleseed_version_patch, false};
+     m_global_attr_getters[OIIO::ustringhash("appleseed:version")] = {&RendererServices::get_attr_appleseed_version, false};
+ 
++    m_global_attr_getters[OIIO::ustringhash("geom:normal")] = {&RendererServices::get_attr_shading_normal, true};
++
+     // Set up user data getters.
+     m_global_user_data_getters[OIIO::ustringhash("Tn")] = &RendererServices::get_user_data_tn;
+     m_global_user_data_getters[OIIO::ustringhash("Bn")] = &RendererServices::get_user_data_bn;
+@@ -988,6 +990,24 @@ IMPLEMENT_ATTR_GETTER(camera_screen_window)
+     return false;
+ }
+ 
++IMPLEMENT_ATTR_GETTER(shading_normal)
++{
++    if (type != OIIO::TypeNormal)
++        return false;
++
++    const auto* shading_point = reinterpret_cast<const ShadingPoint*>(sg->renderstate);
++    auto* result = reinterpret_cast<OSL::Vec3*>(val);
++    result[0] = sg->N;
++    if (derivs)
++    {
++        Vector3f dndx, dndy;
++        shading_point->compute_screen_space_normal_derivatives(dndx, dndy);
++        result[1] = dndx;
++        result[2] = dndy;
++    }
++    return true;
++}
++
+ IMPLEMENT_ATTR_GETTER(ray_depth)
+ {
+     if (type == OIIO::TypeInt)
+diff --git a/src/appleseed/renderer/kernel/rendering/rendererservices.h b/src/appleseed/renderer/kernel/rendering/rendererservices.h
+index 480b02b26..1877f06ba 100644
+--- a/src/appleseed/renderer/kernel/rendering/rendererservices.h
++++ b/src/appleseed/renderer/kernel/rendering/rendererservices.h
+@@ -369,6 +369,8 @@ class RendererServices
+     DECLARE_ATTR_GETTER(camera_shutter_close);
+     DECLARE_ATTR_GETTER(camera_screen_window);
+ 
++    DECLARE_ATTR_GETTER(shading_normal);
++
+     // Ray attributes.
+     DECLARE_ATTR_GETTER(ray_depth);
+     DECLARE_ATTR_GETTER(ray_length);
+diff --git a/src/appleseed/renderer/kernel/shading/closures.cpp b/src/appleseed/renderer/kernel/shading/closures.cpp
+index d2568bc6c..f33e6ccee 100644
+--- a/src/appleseed/renderer/kernel/shading/closures.cpp
++++ b/src/appleseed/renderer/kernel/shading/closures.cpp
+@@ -72,6 +72,8 @@
+ // Standard headers.
+ #include <algorithm>
+ #include <cmath>
++#include <iterator>
++#include <vector>
+ 
+ using namespace foundation;
+ using namespace renderer;
+@@ -130,6 +132,47 @@ namespace
+     // Closures.
+     //
+ 
++    struct NormalDerivativeParams
++    {
++        int         enabled = 0;
++        OSL::Vec3   dx = OSL::Vec3(0.0f);
++        OSL::Vec3   dy = OSL::Vec3(0.0f);
++
++        void apply(CompositeClosure& closure, const OSL::Vec3& normal, Arena& arena) const
++        {
++            if (enabled)
++                closure.set_closure_normal_derivatives(normal, dx, dy, arena);
++        }
++    };
++
++    template <typename Params>
++    void prepare_closure_params(OSL::RendererServices*, int, void* data)
++    {
++        new (data) Params();
++    }
++
++    template <typename Params, std::size_t ParamCount>
++    void register_closure_with_normal_derivatives(
++        OSL::ShadingSystem&          shading_system,
++        const char*                 name,
++        const int                   id,
++        const OSL::ClosureParam      (&params)[ParamCount],
++        OSL::PrepareClosureFunc      prepare = &prepare_closure_params<Params>)
++    {
++        // Preserve formal parameters and defaults while appending the shared
++        // optional derivative contract before the layout terminator.
++        std::vector<OSL::ClosureParam> extended(params, params + ParamCount - 1);
++        const OSL::ClosureParam derivatives[] =
++        {
++            CLOSURE_INT_KEYPARAM(Params, normal_derivatives.enabled, "normal_derivatives"),
++            CLOSURE_VECTOR_KEYPARAM(Params, normal_derivatives.dx, "dNdx"),
++            CLOSURE_VECTOR_KEYPARAM(Params, normal_derivatives.dy, "dNdy"),
++            CLOSURE_FINISH_PARAM(Params)
++        };
++        extended.insert(extended.end(), std::begin(derivatives), std::end(derivatives));
++        shading_system.register_closure(name, id, extended.data(), prepare, nullptr);
++    }
++
+     struct AshikhminShirleyClosure
+     {
+         struct Params
+@@ -598,6 +641,7 @@ namespace
+             OSL::Color3     volume_transmittance;
+             float           volume_transmittance_distance;
+             float           energy_compensation;
++            NormalDerivativeParams normal_derivatives;
+         };
+ 
+         static const char* name()
+@@ -643,7 +687,8 @@ namespace
+                 CLOSURE_FINISH_PARAM(Params)
+             };
+ 
+-            shading_system.register_closure(name(), id(), params, &prepare_closure, nullptr);
++            register_closure_with_normal_derivatives<Params>(
++                shading_system, name(), id(), params, &prepare_closure);
+             g_closure_convert_funs[id()] = &convert_closure;
+             g_closure_get_modes_funs[id()] = &modes;
+         }
+@@ -666,6 +711,8 @@ namespace
+                     p->T,
+                     arena);
+ 
++            p->normal_derivatives.apply(composite_closure, p->N, arena);
++
+             values->m_surface_transmittance.set(Color3f(p->surface_transmittance), g_std_lighting_conditions, Spectrum::Reflectance);
+             values->m_surface_transmittance_multiplier = 1.0f;
+             values->m_reflection_tint.set(Color3f(p->reflection_tint), g_std_lighting_conditions, Spectrum::Reflectance);
+@@ -692,6 +739,7 @@ namespace
+             float           energy_compensation;
+             float           fresnel_weight;
+             float           microfacet_normal_mapping;
++            NormalDerivativeParams normal_derivatives;
+         };
+ 
+         static const char* name()
+@@ -734,7 +782,8 @@ namespace
+                 CLOSURE_FINISH_PARAM(Params)
+             };
+ 
+-            shading_system.register_closure(name(), id(), params, &prepare_closure, nullptr);
++            register_closure_with_normal_derivatives<Params>(
++                shading_system, name(), id(), params, &prepare_closure);
+             g_closure_convert_funs[id()] = &convert_closure;
+             g_closure_get_modes_funs[id()] = &modes;
+         }
+@@ -762,6 +811,8 @@ namespace
+                     p->T,
+                     arena);
+ 
++            p->normal_derivatives.apply(composite_closure, p->N, arena);
++
+             composite_closure.override_closure_scalar_weight(
+                 luminance(weight) * sample_weight(roughness, ior, fresnel_weight));
+ 
+@@ -1051,6 +1102,7 @@ namespace
+             float           roughness;
+             float           anisotropy;
+             float           energy_compensation;
++            NormalDerivativeParams normal_derivatives;
+         };
+ 
+         static const char* name()
+@@ -1093,7 +1145,8 @@ namespace
+                 CLOSURE_FINISH_PARAM(Params)
+             };
+ 
+-            shading_system.register_closure(name(), id(), params, &prepare_closure, nullptr);
++            register_closure_with_normal_derivatives<Params>(
++                shading_system, name(), id(), params, &prepare_closure);
+             g_closure_convert_funs[id()] = &convert_closure;
+             g_closure_get_modes_funs[id()] = &modes;
+         }
+@@ -1116,6 +1169,8 @@ namespace
+                     p->T,
+                     arena);
+ 
++            p->normal_derivatives.apply(composite_closure, p->N, arena);
++
+             values->m_normal_reflectance.set(Color3f(p->normal_reflectance), g_std_lighting_conditions, Spectrum::Reflectance);
+             values->m_edge_tint.set(Color3f(p->edge_tint), g_std_lighting_conditions, Spectrum::Reflectance);
+             values->m_edge_tint_weight = saturate(p->edge_tint_weight);
+@@ -1357,6 +1412,7 @@ namespace
+             OSL::Color3     diffuse_reflectance;
+             float           diffuse_reflectance_multiplier;
+             float           internal_scattering;
++            NormalDerivativeParams normal_derivatives;
+         };
+ 
+         static const char* name()
+@@ -1389,7 +1445,8 @@ namespace
+                 CLOSURE_FINISH_PARAM(Params)
+             };
+ 
+-            shading_system.register_closure(name(), id(), params, nullptr, nullptr);
++            register_closure_with_normal_derivatives<Params>(
++                shading_system, name(), id(), params);
+             g_closure_convert_funs[id()] = &convert_closure;
+             g_closure_get_modes_funs[id()] = &modes;
+         }
+@@ -1411,6 +1468,8 @@ namespace
+                     p->N,
+                     arena);
+ 
++            p->normal_derivatives.apply(composite_closure, p->N, arena);
++
+             values->m_specular_reflectance.set(Color3f(p->specular_reflectance), g_std_lighting_conditions,
+             Spectrum::Reflectance);
+             values->m_specular_reflectance_multiplier = std::max(p->specular_reflectance_multiplier, 0.0f);
+@@ -1507,6 +1566,7 @@ namespace
+         {
+             OSL::Vec3       N;
+             float           ior;
++            NormalDerivativeParams normal_derivatives;
+         };
+ 
+         static const char* name()
+@@ -1533,7 +1593,8 @@ namespace
+                 CLOSURE_FINISH_PARAM(Params)
+             };
+ 
+-            shading_system.register_closure(name(), id(), params, nullptr, nullptr);
++            register_closure_with_normal_derivatives<Params>(
++                shading_system, name(), id(), params);
+ 
+             g_closure_convert_funs[id()] = &convert_closure;
+             g_closure_get_modes_funs[id()] = &modes;
+@@ -1556,11 +1617,15 @@ namespace
+                     p->N,
+                     arena);
+ 
++            p->normal_derivatives.apply(composite_closure, p->N, arena);
++
+             values->m_reflectance.set(1.0f);
+             values->m_reflectance_multiplier = 1.0f;
+             values->m_roughness = 0.0f;
+             values->m_anisotropy = 0.0f;
+             values->m_ior = std::max(p->ior, 0.001f);
++            // OSL's zero-IOR overload is an unweighted mirror.
++            values->m_fresnel_weight = p->ior > 0.0f ? 1.0f : 0.0f;
+             values->m_energy_compensation = 0.0f;
+         }
+     };
+@@ -2170,6 +2235,7 @@ namespace
+             float       ior;
+             OSL::Color3 transmittance;
+             float       thickness;
++            NormalDerivativeParams normal_derivatives;
+         };
+ 
+         static const char* name()
+@@ -2203,7 +2269,8 @@ namespace
+                 CLOSURE_FINISH_PARAM(Params)
+             };
+ 
+-            shading_system.register_closure(name(), id(), params, nullptr, nullptr);
++            register_closure_with_normal_derivatives<Params>(
++                shading_system, name(), id(), params);
+             g_closure_convert_funs[id()] = &convert_closure;
+             g_closure_get_modes_funs[id()] = &modes;
+         }
+@@ -2226,6 +2293,8 @@ namespace
+                     p->T,
+                     arena);
+ 
++            p->normal_derivatives.apply(composite_closure, p->N, arena);
++
+             const float roughness = clamp(p->roughness, 0.0f, 1.0f);
+             const float ior = max(p->ior, 0.001f);
+ 
+@@ -2264,6 +2333,7 @@ CompositeClosure::CompositeClosure()
+   , m_ior_count(0)
+ {
+     std::memset(m_layers, -1, MaxClosureEntries * MaxClosureLayers);
++    std::fill_n(m_normal_derivatives, MaxClosureEntries, nullptr);
+ }
+ 
+ void CompositeClosure::compute_closure_shading_basis(
+@@ -2389,6 +2459,25 @@ InputValues* CompositeClosure::do_add_closure(
+     return values;
+ }
+ 
++void CompositeClosure::set_closure_normal_derivatives(
++    const Vector3f&             normal,
++    const Vector3f&             dndx,
++    const Vector3f&             dndy,
++    Arena&                      arena)
++{
++    const float normal_length = norm(normal);
++    if (!(normal_length > 0.0f))
++        return;
++
++    const size_t index = get_last_closure_index();
++    const Vector3f& n = m_bases[index].get_normal();
++    auto* derivatives = arena.allocate<BSDF::NormalDerivatives>();
++    // Differentiate the normalization used to build the closure frame.
++    derivatives->m_dx = (dndx - n * dot(n, dndx)) / normal_length;
++    derivatives->m_dy = (dndy - n * dot(n, dndy)) / normal_length;
++    m_normal_derivatives[index] = derivatives;
++}
++
+ void CompositeClosure::add_ior(
+     const Color3f&              weight,
+     const float                 ior)
+diff --git a/src/appleseed/renderer/kernel/shading/closures.h b/src/appleseed/renderer/kernel/shading/closures.h
+index 1a7d0707b..8637abc17 100644
+--- a/src/appleseed/renderer/kernel/shading/closures.h
++++ b/src/appleseed/renderer/kernel/shading/closures.h
+@@ -30,6 +30,7 @@
+ 
+ // appleseed.renderer headers.
+ #include "renderer/global/globaltypes.h"
++#include "renderer/modeling/bsdf/bsdf.h"
+ 
+ // appleseed.foundation headers.
+ #include "foundation/core/concepts/noncopyable.h"
+@@ -52,7 +53,6 @@
+ 
+ // Forward declarations.
+ namespace foundation    { class Arena; }
+-namespace renderer      { class BSDF; }
+ namespace renderer      { class OSLShadingSystem; }
+ 
+ namespace renderer
+@@ -204,6 +204,13 @@ class APPLESEED_ALIGN(16) CompositeClosure
+     float get_closure_scalar_weight(const std::size_t index) const;
+ 
+     const foundation::Basis3f& get_closure_shading_basis(const std::size_t index) const;
++    const BSDF::NormalDerivatives* get_closure_normal_derivatives(const std::size_t index) const;
++
++    void set_closure_normal_derivatives(
++        const foundation::Vector3f& normal,
++        const foundation::Vector3f& dndx,
++        const foundation::Vector3f& dndy,
++        foundation::Arena&          arena);
+ 
+     const std::int8_t* get_closure_layers(const std::size_t index) const;
+ 
+@@ -250,6 +257,7 @@ class APPLESEED_ALIGN(16) CompositeClosure
+     Spectrum                        m_weights[MaxClosureEntries];
+     float                           m_scalar_weights[MaxClosureEntries];
+     foundation::Basis3f             m_bases[MaxClosureEntries];
++    const BSDF::NormalDerivatives*   m_normal_derivatives[MaxClosureEntries];
+     std::size_t                     m_ior_count;
+     float                           m_iors[MaxClosureEntries];
+     float                           m_ior_cdf[MaxClosureEntries];
+@@ -456,6 +464,12 @@ inline const foundation::Basis3f& CompositeClosure::get_closure_shading_basis(co
+     return m_bases[index];
+ }
+ 
++inline const BSDF::NormalDerivatives* CompositeClosure::get_closure_normal_derivatives(const std::size_t index) const
++{
++    assert(index < get_closure_count());
++    return m_normal_derivatives[index];
++}
++
+ inline const std::int8_t* CompositeClosure::get_closure_layers(const std::size_t index) const
+ {
+     assert(index < get_closure_count());
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+index 830bb7de8..592367d11 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+@@ -667,6 +667,18 @@ void ShadingPoint::compute_screen_space_partial_derivatives() const
+     m_duvdy[1] = static_cast<float>(det(plane_dpdu, plane_dpdy) * rcp_d);
+ }
+ 
++void ShadingPoint::compute_screen_space_normal_derivatives(
++    Vector3f& dndx,
++    Vector3f& dndy) const
++{
++    const Vector3f dndu(get_dndu(0));
++    const Vector3f dndv(get_dndv(0));
++    const Vector2f& duvdx = get_duvdx(0);
++    const Vector2f& duvdy = get_duvdy(0);
++    dndx = dndu * duvdx.x + dndv * duvdx.y;
++    dndy = dndu * duvdy.x + dndv * duvdy.y;
++}
++
+ void ShadingPoint::compute_normals() const
+ {
+     cache_source_geometry();
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.h b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+index 955c86ceb..2071a975e 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.h
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+@@ -188,6 +188,11 @@ class ShadingPoint
+     const foundation::Vector3d& get_dndu(const size_t uvset) const;
+     const foundation::Vector3d& get_dndv(const size_t uvset) const;
+ 
++    // Derivatives of the original surface normal across the ray footprint.
++    void compute_screen_space_normal_derivatives(
++        foundation::Vector3f& dndx,
++        foundation::Vector3f& dndy) const;
++
+     // Return the screen space partial derivatives of the intersection point.
+     const foundation::Vector3d& get_dpdx() const;
+     const foundation::Vector3d& get_dpdy() const;
+diff --git a/src/appleseed/renderer/meta/tests/test_glassbsdf.cpp b/src/appleseed/renderer/meta/tests/test_glassbsdf.cpp
+index bac9f6e69..7ab018467 100644
+--- a/src/appleseed/renderer/meta/tests/test_glassbsdf.cpp
++++ b/src/appleseed/renderer/meta/tests/test_glassbsdf.cpp
+@@ -170,6 +170,136 @@ TEST_SUITE(Renderer_Modeling_BSDF_Glass)
+     // Direction and throughput checks cover its near-ideal limit, not a delta.
+     const float SmoothDirectionTolerance = 0.005f;
+ 
++    struct MappedGlassFixture : RefractionFixture
++    {
++        void set_tilt(const bool backfacing, const float slope)
++        {
++            set_backfacing(backfacing);
++            geometry.m_shading_basis = Basis3f(normalize(Vector3f(slope, backfacing ? -1.0f : 1.0f, 0.0f)));
++        }
++
++        void select_reflection(const bool reflection)
++        {
++            values.m_precomputed.m_reflection_color.set(reflection ? 1.0f : 0.0f);
++            values.m_precomputed.m_reflection_weight = reflection ? 1.0f : 0.0f;
++            values.m_precomputed.m_refraction_color.set(reflection ? 0.0f : 1.0f);
++            values.m_precomputed.m_refraction_weight = reflection ? 0.0f : 1.0f;
++        }
++    };
++
++    TEST_CASE_F(MappedGlass_SmoothReflectionCannotCrossTheGeometricSurface, MappedGlassFixture)
++    {
++        values.m_roughness = 0.0f;
++        select_reflection(true);
++        for (const bool backfacing : {false, true})
++        {
++            const Vector3f outgoing(0.0f, backfacing ? -1.0f : 1.0f, 0.0f);
++            for (const bool adjoint : {false, true})
++            {
++                set_tilt(backfacing, 2.0f);
++                BSDFSample invalid;
++                bsdf->sample(sampling_context, &values, adjoint, false, geometry,
++                    Dual3f(outgoing), ScatteringMode::Specular, invalid);
++                EXPECT_EQ(ScatteringMode::None, invalid.get_mode());
++                set_tilt(backfacing, 0.25f);
++                BSDFSample valid;
++                bsdf->sample(sampling_context, &values, adjoint, false, geometry,
++                    Dual3f(outgoing), ScatteringMode::Specular, valid);
++                ASSERT_EQ(ScatteringMode::Specular, valid.get_mode());
++                EXPECT_TRUE(dot(valid.m_incoming.get_value(), geometry.m_geometric_normal) > 0.0f);
++            }
++        }
++    }
++
++    TEST_CASE_F(MappedGlass_RoughReflectionStaysOnItsGeometricSide, MappedGlassFixture)
++    {
++        const size_t SampleCount = 4096;
++        select_reflection(true);
++        for (const bool backfacing : {false, true})
++        {
++            set_tilt(backfacing, 2.0f);
++            const Vector3f outgoing(0.0f, backfacing ? -1.0f : 1.0f, 0.0f);
++            for (const float roughness : {0.3f, 0.8f})
++            {
++                values.m_roughness = roughness;
++                for (const bool adjoint : {false, true})
++                {
++                    size_t accepted = 0;
++                    for (size_t i = 0; i < SampleCount; ++i)
++                    {
++                        BSDFSample sample;
++                        bsdf->sample(sampling_context, &values, adjoint, false, geometry,
++                            Dual3f(outgoing), ScatteringMode::Glossy, sample);
++                        if (sample.get_mode() == ScatteringMode::None)
++                            continue;
++                        ++accepted;
++                        EXPECT_TRUE(dot(sample.m_incoming.get_value(), geometry.m_geometric_normal) > 0.0f);
++                        EXPECT_TRUE(bsdf->evaluate_pdf(&values, adjoint, geometry, outgoing,
++                            sample.m_incoming.get_value(), ScatteringMode::Glossy) > 0.0f);
++                    }
++                    EXPECT_TRUE(accepted > 0);
++                }
++            }
++        }
++    }
++
++    TEST_CASE_F(MappedGlass_RoughTransmissionCrossesTheGeometricSurface, MappedGlassFixture)
++    {
++        const size_t SampleCount = 4096;
++        select_reflection(false);
++        for (const bool backfacing : {false, true})
++        {
++            set_tilt(backfacing, 2.0f);
++            const Vector3f outgoing = normalize(Vector3f(1.0f, backfacing ? -0.1f : 0.1f, 0.0f));
++            for (const float roughness : {0.3f, 0.8f})
++            {
++                values.m_roughness = roughness;
++                for (const bool adjoint : {false, true})
++                {
++                    size_t accepted = 0;
++                    for (size_t i = 0; i < SampleCount; ++i)
++                    {
++                        BSDFSample sample;
++                        bsdf->sample(sampling_context, &values, adjoint, false, geometry,
++                            Dual3f(outgoing), ScatteringMode::Glossy, sample);
++                        // Total internal reflection can select the disabled,
++                        // zero-valued reflection lobe. It carries no transport.
++                        if (sample.get_mode() == ScatteringMode::None || sample.m_value.m_beauty[0] == 0.0f)
++                            continue;
++                        ++accepted;
++                        EXPECT_TRUE(dot(sample.m_incoming.get_value(), geometry.m_geometric_normal) < 0.0f);
++                    }
++                    EXPECT_TRUE(accepted > 0);
++                }
++            }
++        }
++    }
++
++    TEST_CASE_F(MappedGlass_EvaluationAndPdfRejectIncompatibleGeometricSides, MappedGlassFixture)
++    {
++        values.m_roughness = 0.5f;
++        for (const bool backfacing : {false, true})
++        {
++            set_tilt(backfacing, 2.0f);
++            const float sign = backfacing ? -1.0f : 1.0f;
++            for (const bool reflection : {false, true})
++            {
++                select_reflection(reflection);
++                const Vector3f outgoing = reflection ? Vector3f(0.0f, sign, 0.0f) : normalize(Vector3f(1.0f, sign * 0.1f, 0.0f));
++                const Vector3f incoming = reflection ? Vector3f(0.8f, sign * -0.6f, 0.0f) : normalize(Vector3f(-1.0f, sign * 0.1f, 0.0f));
++                for (const bool adjoint : {false, true})
++                {
++                    DirectShadingComponents value;
++                    EXPECT_EQ(0.0f, bsdf->evaluate(&values, adjoint, false, geometry,
++                        outgoing, incoming, ScatteringMode::Glossy, value));
++                    EXPECT_EQ(0.0f, value.m_beauty[0]);
++                    EXPECT_EQ(0.0f, bsdf->evaluate_pdf(&values, adjoint, geometry,
++                        outgoing, incoming, ScatteringMode::Glossy));
++                }
++            }
++        }
++    }
++
+     TEST_CASE_F(EqualIndexGlassDefinesAnInterior, Fixture)
+     {
+         values.m_ior = 1.0f;
+@@ -448,6 +578,66 @@ TEST_SUITE(Renderer_Modeling_BSDF_Glass)
+             reflected.m_incoming.get_dy(), 1.0e-6f);
+     }
+ 
++    TEST_CASE_F(MappedNormalDifferentials_TrackReflectedAndTransmittedNeighbors, RefractionFixture)
++    {
++        const float Step = 1.0e-4f;
++        const BSDF::NormalDerivatives derivatives = {
++            Vector3f(Step, 0.0f, 0.0f), Vector3f(0.0f, 0.0f, Step * 0.5f)};
++        values.m_roughness = 0.0f;
++        for (const bool backfacing : {false, true})
++        {
++            set_backfacing(backfacing);
++            geometry.m_normal_derivatives = &derivatives;
++            const Vector3f n = geometry.m_shading_basis.get_normal();
++            const Vector3f outgoing = normalize(n + Vector3f(0.3f, 0.0f, 0.0f));
++            for (const bool reflection : {false, true})
++            {
++                values.m_precomputed.m_reflection_color.set(reflection ? 1.0f : 0.0f);
++                values.m_precomputed.m_reflection_weight = reflection ? 1.0f : 0.0f;
++                values.m_precomputed.m_refraction_color.set(reflection ? 0.0f : 1.0f);
++                values.m_precomputed.m_refraction_weight = reflection ? 0.0f : 1.0f;
++                for (const bool adjoint : {false, true})
++                {
++                    BSDFSample sample;
++                    bsdf->sample(sampling_context, &values, adjoint, false, geometry,
++                        Dual3f(outgoing, outgoing, outgoing), ScatteringMode::All, sample);
++                    ASSERT_EQ(ScatteringMode::Specular, sample.get_mode());
++                    ASSERT_TRUE(sample.m_incoming.has_derivatives());
++                    const float ratio = backfacing ? values.m_ior : 1.0f / values.m_ior;
++                    const auto neighbor = [&](const Vector3f& dn)
++                    {
++                        const Vector3f normal = normalize(n + dn);
++                        return reflection ? 2.0f * dot(outgoing, normal) * normal - outgoing :
++                            snell(outgoing, normal, ratio);
++                    };
++                    EXPECT_FEQ_EPS(neighbor(derivatives.m_dx), sample.m_incoming.get_dx(), 1.0e-6f);
++                    EXPECT_FEQ_EPS(neighbor(derivatives.m_dy), sample.m_incoming.get_dy(), 1.0e-6f);
++                }
++            }
++        }
++    }
++
++    TEST_CASE_F(ConstantMappedNormal_OverridesCurvedSurfaceDifferentials, CurvedRefractionFixture)
++    {
++        const double Step = 1.0e-4;
++        const Vector3d n(0.0, 0.8, 0.6);
++        ShadingRay ray(2.0 * n, -n, ShadingRay::Time(), VisibilityFlags::CameraRay, 0);
++        ray.m_has_differentials = true;
++        ray.m_rx_org = ray.m_org + Vector3d(Step, 0.0, 0.0);
++        ray.m_ry_org = ray.m_org + Step * Vector3d(0.0, 0.6, -0.8);
++        ray.m_rx_dir = ray.m_ry_dir = ray.m_dir;
++        set_ray(ray);
++        const BSDF::NormalDerivatives derivatives = {Vector3f(0.0f), Vector3f(0.0f)};
++        geometry.m_normal_derivatives = &derivatives;
++        const Vector3f outgoing(n);
++        BSDFSample sample;
++        sample.m_incoming = Dual3f(-outgoing);
++        sample.compute_specular_transmitted_differentials(geometry, 1.0f / values.m_ior,
++            true, Dual3f(outgoing, outgoing, outgoing));
++        EXPECT_FEQ_EPS(sample.m_incoming.get_value(), sample.m_incoming.get_dx(), 1.0e-7f);
++        EXPECT_FEQ_EPS(sample.m_incoming.get_value(), sample.m_incoming.get_dy(), 1.0e-7f);
++    }
++
+     TEST_CASE_F(ZeroRoughness_TransmitsExactSnellAndFresnelOnBothSides, RefractionFixture)
+     {
+         values.m_roughness = 0.0f;
+diff --git a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+index 8c7206db6..6e62d900b 100644
+--- a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
++++ b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+@@ -37,6 +37,7 @@
+ #include "renderer/modeling/bsdf/bsdfsample.h"
+ #include "renderer/modeling/bsdf/oslbsdf.h"
+ #include "renderer/modeling/bsdf/metalbrdf.h"
++#include "renderer/modeling/bsdf/glossybrdf.h"
+ #include "renderer/utility/paramarray.h"
+ #include "renderer/modeling/project/project.h"
+ 
+@@ -47,16 +48,19 @@
+ #include "foundation/math/vector.h"
+ #include "foundation/memory/arena.h"
+ #include "foundation/memory/autoreleaseptr.h"
++#include "foundation/utility/iostreamop.h"
+ #include "foundation/utility/test.h"
+ 
+ // OSL headers.
+ #include "foundation/platform/_beginoslheaders.h"
+ #include "OSL/oslclosure.h"
++#include "OSL/genclosure.h"
+ #include "foundation/platform/_endoslheaders.h"
+ 
+ // Standard headers.
+ #include <algorithm>
+ #include <cmath>
++#include <cstring>
+ #include <memory>
+ 
+ using namespace foundation;
+@@ -101,30 +105,60 @@ TEST_SUITE(Renderer_Modeling_BSDF_OSL)
+             geometry.m_shading_basis = basis;
+         }
+ 
+-        void add_closure(const ClosureID id, const float weight, const Vector3f& normal)
++        OSL::ClosureComponent* add_closure(
++            const ClosureID     id,
++            const float         weight,
++            const Vector3f&     normal,
++            const float         ior = 0.0f)
+         {
+-            // These standard OSL closures take a normal, followed by an IOR
+-            // for reflection.  Component parameters follow its aligned header.
+-            struct NormalClosure
+-            {
+-                OSL::ClosureComponent component;
+-                OSL::Vec3 normal;
+-                float ior;
+-            };
+-            auto* node = arena.allocate<NormalClosure>();
+-            node->component.id = id;
+-            node->component.w = OSL::Vec3(weight);
+-            node->normal = OSL::Vec3(normal.x, normal.y, normal.z);
+-            node->ior = 1.5f;
++            const OSL::ClosureParam* params = nullptr;
++            int closure_id = id;
++            if (!system->query_closure(nullptr, &closure_id, &params))
++                throw Exception("test closure is not registered");
++            const OSL::ClosureParam* finish = params;
++            while (finish->type != OSL::TypeDesc())
++                ++finish;
++            // Keyword additions can grow a registered closure's parameter
++            // layout. Allocate the actual layout instead of guessing its size.
++            auto* node = static_cast<OSL::ClosureComponent*>(
++                arena.allocate(sizeof(OSL::ClosureComponent) + finish->offset));
++            new (node) OSL::ClosureComponent();
++            node->id = id;
++            node->w = OSL::Vec3(weight);
++            std::memset(node->data(), 0, finish->offset);
++            const OSL::Vec3 n(normal.x, normal.y, normal.z);
++            std::memcpy(static_cast<char*>(node->data()) + params[0].offset, &n, sizeof(n));
++            if (id == ReflectionID)
++                std::memcpy(static_cast<char*>(node->data()) + params[1].offset, &ior, sizeof(ior));
+             if (tree)
+             {
+                 auto* sum = arena.allocate<OSL::ClosureAdd>();
+                 sum->id = OSL::ClosureColor::ADD;
+                 sum->closureA = tree;
+-                sum->closureB = &node->component;
++                sum->closureB = node;
+                 tree = sum;
+             }
+-            else tree = &node->component;
++            else tree = node;
++            return node;
++        }
++
++        template <typename T>
++        void set_keyword(OSL::ClosureComponent* node, const char* key, const T& value)
++        {
++            const OSL::ClosureParam* params = nullptr;
++            if (!system->query_closure(nullptr, &node->id, &params))
++                throw Exception("test closure is not registered");
++            for (; params->type != OSL::TypeDesc(); ++params)
++            {
++                if (params->key && std::strcmp(params->key, key) == 0)
++                {
++                    if (params->field_size != sizeof(T))
++                        throw Exception("test closure keyword has an unexpected size");
++                    std::memcpy(static_cast<char*>(node->data()) + params->offset, &value, sizeof(T));
++                    return;
++                }
++            }
++            throw Exception("test closure keyword is not registered");
+         }
+ 
+         void add_diffuse(const float weight, const Vector3f& normal)
+@@ -149,6 +183,108 @@ TEST_SUITE(Renderer_Modeling_BSDF_OSL)
+         }
+     };
+ 
++    TEST_CASE_F(StandardReflection_UsesFresnelForExplicitIorAndPreservesTheMirrorDefault, Fixture)
++    {
++        const float EnergyTolerance = 1.0e-6f;
++        auto mirror = GlossyBRDFFactory().create("mirror_energy", ParamArray());
++        for (const float ior : {0.0f, 0.5f, 1.0f, 1.5f, 2.0f})
++        {
++            tree = nullptr;
++            add_closure(ReflectionID, 1.0f, basis.get_normal(), ior);
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            // OSLBSDF::evaluate_inputs prepares each converted native leaf.
++            mirror->prepare_inputs(inputs, point, closure.get_closure_input_values(0));
++            for (const float cosine : {1.0f, 0.6f})
++            {
++                float expected = 1.0f;
++                if (ior > 0.0f)
++                {
++                    const float sine_transmitted_squared = (1.0f - cosine * cosine) / (ior * ior);
++                    if (sine_transmitted_squared < 1.0f)
++                    {
++                        const float transmitted_cosine = std::sqrt(1.0f - sine_transmitted_squared);
++                        const float perpendicular = (cosine - ior * transmitted_cosine) /
++                            (cosine + ior * transmitted_cosine);
++                        const float parallel = (ior * cosine - transmitted_cosine) /
++                            (ior * cosine + transmitted_cosine);
++                        expected = 0.5f * (perpendicular * perpendicular + parallel * parallel);
++                    }
++                }
++                const Vector3f outgoing(std::sqrt(1.0f - cosine * cosine), cosine, 0.0f);
++                for (const bool adjoint : {false, true})
++                {
++                    BSDFSample result;
++                    bsdf->sample(sampling, &closure, adjoint, false, geometry,
++                        Dual3f(outgoing), ScatteringMode::All, result);
++                    ASSERT_EQ(ScatteringMode::Specular, result.get_mode());
++                    EXPECT_FEQ_EPS(Vector3f(-outgoing.x, outgoing.y, 0.0f),
++                        result.m_incoming.get_value(), EnergyTolerance);
++                    EXPECT_FEQ_EPS(expected, result.m_value.m_beauty[0] * cosine, EnergyTolerance);
++                }
++            }
++        }
++    }
++
++    TEST_CASE_F(StandardReflection_PropagatesTheSelectedNormalFootprint, Fixture)
++    {
++        const float DirectionTolerance = 2.0e-6f;
++        const Vector3f raw_normal(0.3f, 1.0f, -0.1f);
++        const Vector3f dx(0.0004f, 0.0001f, -0.0002f);
++        const Vector3f dy(-0.0003f, 0.0002f, 0.0005f);
++        const Vector3f outgoing = normalize(Vector3f(0.1f, 1.0f, 0.2f));
++        const Vector3f outgoing_dx(0.0001f, -0.00002f, -0.0001f);
++        const Vector3f outgoing_dy(-0.0001f, 0.00003f, 0.0002f);
++        auto mirror = GlossyBRDFFactory().create("mirror_footprint", ParamArray());
++        const auto reflected = [](const Vector3f& n, const Vector3f& wo)
++        {
++            const Vector3f unit_normal = normalize(n);
++            return 2.0f * dot(wo, unit_normal) * unit_normal - wo;
++        };
++        const Vector3f center = reflected(raw_normal, outgoing);
++        const Vector3f expected_dx = center + 0.5f *
++            (reflected(raw_normal + dx, outgoing + outgoing_dx) -
++             reflected(raw_normal - dx, outgoing - outgoing_dx));
++        const Vector3f expected_dy = center + 0.5f *
++            (reflected(raw_normal + dy, outgoing + outgoing_dy) -
++             reflected(raw_normal - dy, outgoing - outgoing_dy));
++        for (const float scale : {1.0f, 3.0f})
++        {
++            for (const float ior : {0.0f, 1.5f})
++            {
++                tree = nullptr;
++                auto* node = add_closure(ReflectionID, 1.0f, scale * raw_normal, ior);
++                set_keyword(node, "normal_derivatives", 1);
++                set_keyword(node, "dNdx", OSL::Vec3(scale * dx.x, scale * dx.y, scale * dx.z));
++                set_keyword(node, "dNdy", OSL::Vec3(scale * dy.x, scale * dy.y, scale * dy.z));
++                Arena inputs;
++                CompositeSurfaceClosure closure(basis, tree, inputs);
++                ASSERT_TRUE(closure.get_closure_normal_derivatives(0) != nullptr);
++                mirror->prepare_inputs(inputs, point, closure.get_closure_input_values(0));
++                for (const bool adjoint : {false, true})
++                {
++                    BSDFSample result;
++                    bsdf->sample(sampling, &closure, adjoint, false, geometry,
++                        Dual3f(outgoing, outgoing + outgoing_dx, outgoing + outgoing_dy),
++                        ScatteringMode::All, result);
++                    ASSERT_EQ(ScatteringMode::Specular, result.get_mode());
++                    ASSERT_TRUE(result.m_incoming.has_derivatives());
++                    EXPECT_FEQ_EPS(center, result.m_incoming.get_value(), DirectionTolerance);
++                    EXPECT_FEQ_EPS(expected_dx, result.m_incoming.get_dx(), DirectionTolerance);
++                    EXPECT_FEQ_EPS(expected_dy, result.m_incoming.get_dy(), DirectionTolerance);
++                }
++            }
++        }
++    }
++
++    TEST_CASE_F(StandardReflection_LeavesUnspecifiedNormalDerivativesOnTheLegacyPath, Fixture)
++    {
++        add_mirror(1.0f, basis.get_normal());
++        Arena inputs;
++        CompositeSurfaceClosure closure(basis, tree, inputs);
++        EXPECT_TRUE(closure.get_closure_normal_derivatives(0) == nullptr);
++    }
++
+     TEST_CASE_F(ReflectiveAndEmptyClosuresHaveNoInterior, Fixture)
+     {
+         Arena inputs;
+diff --git a/src/appleseed/renderer/modeling/bsdf/bsdf.h b/src/appleseed/renderer/modeling/bsdf/bsdf.h
+index d22b4b884..1fb6244d0 100644
+--- a/src/appleseed/renderer/modeling/bsdf/bsdf.h
++++ b/src/appleseed/renderer/modeling/bsdf/bsdf.h
+@@ -99,11 +99,18 @@ class APPLESEED_DLLSYMBOL BSDF
+     // of the Dirac Delta in order to detect incorrect usages.
+     static const float DiracDelta;
+ 
++    struct NormalDerivatives
++    {
++        foundation::Vector3f        m_dx;
++        foundation::Vector3f        m_dy;
++    };
++
+     struct LocalGeometry
+     {
+         const ShadingPoint*         m_shading_point;
+         foundation::Vector3f        m_geometric_normal;         // world space geometric normal at the shading point, unit-length
+         foundation::Basis3f         m_shading_basis;            // world space shading basis at the shading point
++        const NormalDerivatives*    m_normal_derivatives = nullptr; // optional derivatives of the selected closure normal
+     };
+ 
+     // Constructor.
+diff --git a/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp b/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
+index 47493d8ca..78c79879f 100644
+--- a/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
+@@ -58,13 +58,12 @@ namespace
+         //   Physically Based Rendering, first edition, page 513.
+         //
+ 
+-        const Vector3f dndu(local_geometry.m_shading_point->get_dndu(0));
+-        const Vector3f dndv(local_geometry.m_shading_point->get_dndv(0));
+-        const Vector2f duvdx(local_geometry.m_shading_point->get_duvdx(0));
+-        const Vector2f duvdy(local_geometry.m_shading_point->get_duvdy(0));
+-
+-        dndx = dndu * duvdx[0] + dndv * duvdx[1];
+-        dndy = dndu * duvdy[0] + dndv * duvdy[1];
++        if (local_geometry.m_normal_derivatives)
++        {
++            dndx = local_geometry.m_normal_derivatives->m_dx;
++            dndy = local_geometry.m_normal_derivatives->m_dy;
++        }
++        else local_geometry.m_shading_point->compute_screen_space_normal_derivatives(dndx, dndy);
+ 
+         const Vector3f& n = local_geometry.m_shading_basis.get_normal();
+ 
+diff --git a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+index 4373b6bcf..f4f8c0871 100644
+--- a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+@@ -85,6 +85,21 @@ namespace
+     //       http://blog.selfshadow.com/publications/s2015-shading-course/burley/s2015_pbs_disney_bsdf_notes.pdf
+     //
+ 
++    bool matches_geometric_side(
++        const Vector3f&     geometric_normal,
++        const Vector3f&     outgoing,
++        const Vector3f&     incoming,
++        const bool          reflection)
++    {
++        const float cos_outgoing = dot(outgoing, geometric_normal);
++        const float cos_incoming = dot(incoming, geometric_normal);
++        if (cos_outgoing == 0.0f || cos_incoming == 0.0f)
++            return false;
++        // The geometric surface separates reflected and transmitted media.
++        // Compare signs separately to avoid underflow at grazing angles.
++        return ((cos_outgoing > 0.0f) == (cos_incoming > 0.0f)) == reflection;
++    }
++
+     float fresnel_reflectance(
+         const float         cos_theta_i,
+         const float         eta,
+@@ -418,11 +433,15 @@ namespace
+ 
+             if (smooth || probability > 1.0e-6f)
+             {
++                const Vector3f incoming = basis.transform_to_parent(wi);
++                if (!matches_geometric_side(local_geometry.m_geometric_normal,
++                        outgoing.get_value(), incoming, !is_refraction))
++                    return;
+                 if (smooth && !cosine_mult)
+                     sample.m_value.m_glossy /= std::abs(wi.y);
+                 sample.set_to_scattering(mode, probability);
+                 sample.m_value.m_beauty = sample.m_value.m_glossy;
+-                sample.m_incoming = Dual3f(basis.transform_to_parent(wi));
++                sample.m_incoming = Dual3f(incoming);
+                 sample.m_min_roughness = values->m_roughness;
+ 
+                 if (is_refraction)
+@@ -490,9 +509,16 @@ namespace
+                 alpha_y);
+ 
+             const Vector3f wi = basis.transform_to_local(incoming);
++            const bool reflection = wi.y * wo.y >= 0.0f;
++            if (!matches_geometric_side(local_geometry.m_geometric_normal,
++                    outgoing, incoming, reflection))
++            {
++                value.set(0.0f);
++                return 0.0f;
++            }
+             float pdf;
+ 
+-            if (wi.y * wo.y >= 0.0f)
++            if (reflection)
+             {
+                 // Reflection.
+                 const Vector3f m = half_reflection_vector(wo, wi);
+@@ -602,9 +628,15 @@ namespace
+                 alpha_y);
+ 
+             const Vector3f wi = basis.transform_to_local(incoming);
++            const bool reflection = wi.y * wo.y >= 0.0f;
++            if (!matches_geometric_side(local_geometry.m_geometric_normal,
++                    outgoing, incoming, reflection))
++            {
++                return 0.0f;
++            }
+             float pdf;
+ 
+-            if (wi.y * wo.y >= 0.0f)
++            if (reflection)
+             {
+                 // Reflection.
+                 const Vector3f m = half_reflection_vector(wo, wi);
+diff --git a/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+index 16622a87f..b81411590 100644
+--- a/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+@@ -212,6 +212,7 @@ namespace
+ 
+             LocalGeometry closure_geometry = local_geometry;
+             closure_geometry.m_shading_basis = modified_basis;
++            closure_geometry.m_normal_derivatives = c->get_closure_normal_derivatives(closure_index);
+             closure_geometry.m_shading_point->set_shading_basis(Basis3d(modified_basis));
+ 
+             bsdf_from_closure_id(c->get_closure_type(closure_index))

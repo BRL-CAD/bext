@@ -1,0 +1,1516 @@
+Subject: [PATCH 32/50] Preserve sampled emitter attributes, transforms and sides
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: f318cc58ee883f334cb755cf4d0f9f9dc30a7235
+Original-Commit: d464699648332d64310377b22b5fa4c72c6f2ca9
+Original-Commit: 78473985a14f48aeb2ec31a9ce8287fb9b106ba1
+
+diff --git a/src/appleseed/foundation/math/intersection/raydisk.h b/src/appleseed/foundation/math/intersection/raydisk.h
+index fb6daab77..5d5d7782e 100644
+--- a/src/appleseed/foundation/math/intersection/raydisk.h
++++ b/src/appleseed/foundation/math/intersection/raydisk.h
+@@ -34,9 +34,7 @@
+ #include "foundation/math/vector.h"
+ 
+ // Standard headers.
+-#include <cassert>
+ #include <cmath>
+-#include <cstddef>
+ 
+ namespace foundation
+ {
+@@ -45,14 +43,14 @@ namespace foundation
+ // 3D ray-disk intersection functions.
+ //
+ 
+-// Test the intersection between a unit-length ray segment and the surface of a disk.
++// Test the intersection between a ray segment and the surface of a disk.
+ // The disk is assumed to be centered at the origin and pointing to the Y direction.
+ template <typename T>
+ bool intersect_disk(
+     const Ray<T, 3>&        ray,
+     const T                 radius);
+ 
+-// Test the intersection between a unit-length ray segment and the surface of a disk.
++// Test the intersection between a ray segment and the surface of a disk.
+ // The disk is assumed to be centered at the origin and pointing to the Y direction.
+ // If the ray segment and the disk intersect, the distance to the closest
+ // intersection is returned in `tmin` and the parametric representation of the surface
+@@ -70,25 +68,41 @@ bool intersect_disk(
+ // 3D ray-disk intersection functions implementation.
+ //
+ 
++// Polar coordinates shared by traced and sampled disk surfaces.
+ template <typename T>
+-inline bool intersect_disk(
+-    const Ray<T, 3>&        ray,
+-    const T                 radius)
++inline Vector<T, 2> disk_surface_uv(const Vector<T, 3>& point, const T radius)
+ {
+-    assert(is_normalized(ray.m_dir));
++    T phi = std::atan2(point.x, point.z);
++    if (phi < T(0.0))
++        phi += TwoPi<T>();
++    return Vector<T, 2>(phi * RcpTwoPi<T>(),
++        T(1.0) - std::sqrt(square(point.x) + square(point.z)) / radius);
++}
+ 
+-    const T dist_to_plane = -ray.m_org.y / ray.m_dir.y;
+-    if (dist_to_plane < ray.m_tmin || dist_to_plane >= ray.m_tmax)
++// Return only the distance; leave it unchanged on a miss. Affine transforms
++// need not preserve the length of the ray direction.
++template <typename T>
++inline bool intersect_disk(const Ray<T, 3>& ray, const T radius, T& t)
++{
++    if (ray.m_dir.y == T(0.0))
+         return false;
+-
+-    const Vector<T, 3> hit = ray.point_at(dist_to_plane);
+-    const T dist_sqr = square(hit.x) + square(hit.z);
+-    if (dist_sqr > square(radius))
++    const T distance = -ray.m_org.y / ray.m_dir.y;
++    if (distance < ray.m_tmin || distance >= ray.m_tmax)
+         return false;
+-
++    const Vector<T, 3> point = ray.point_at(distance);
++    if (square(point.x) + square(point.z) > square(radius))
++        return false;
++    t = distance;
+     return true;
+ }
+ 
++template <typename T>
++inline bool intersect_disk(const Ray<T, 3>& ray, const T radius)
++{
++    T distance;
++    return intersect_disk(ray, radius, distance);
++}
++
+ template <typename T>
+ inline bool intersect_disk(
+     const Ray<T, 3>&        ray,
+@@ -97,24 +111,11 @@ inline bool intersect_disk(
+     T&                      u,
+     T&                      v)
+ {
+-    assert(is_normalized(ray.m_dir));
+-
+-    const T dist_to_plane = -ray.m_org.y / ray.m_dir.y;
+-    if (dist_to_plane < ray.m_tmin || dist_to_plane >= ray.m_tmax)
+-        return false;
+-
+-    const Vector<T, 3> hit = ray.point_at(dist_to_plane);
+-    const T dist_sqr = square(hit.x) + square(hit.z);
+-    if (dist_sqr > square(radius))
++    if (!intersect_disk(ray, radius, t))
+         return false;
+-
+-    t = dist_to_plane;
+-    T phi = std::atan2(hit.x, hit.z);
+-    if (phi < T(0.0))
+-        phi += TwoPi<T>();
+-    u = phi * RcpTwoPi<T>();
+-    v = T(1.0) - std::sqrt(dist_sqr) / radius;
+-
++    const Vector<T, 2> uv = disk_surface_uv(ray.point_at(t), radius);
++    u = uv[0];
++    v = uv[1];
+     return true;
+ }
+ 
+diff --git a/src/appleseed/foundation/math/intersection/rayparallelogram.h b/src/appleseed/foundation/math/intersection/rayparallelogram.h
+index 88ecc365f..2b5dcd50f 100644
+--- a/src/appleseed/foundation/math/intersection/rayparallelogram.h
++++ b/src/appleseed/foundation/math/intersection/rayparallelogram.h
+@@ -70,6 +70,18 @@ bool intersect_parallelogram(
+ // 3D ray-parallelogram intersection functions implementation.
+ //
+ 
++// The axes are orthogonal, as required by the intersection routine below.
++template <typename T>
++inline Vector<T, 2> parallelogram_surface_uv(
++    const Vector<T, 3>& point,
++    const Vector<T, 3>& corner,
++    const Vector<T, 3>& x,
++    const Vector<T, 3>& y)
++{
++    const Vector<T, 3> offset = point - corner;
++    return Vector<T, 2>(dot(x, offset) / dot(x, x), dot(y, offset) / dot(y, y));
++}
++
+ template <typename T>
+ inline bool intersect_parallelogram(
+     const Ray<T, 3>&        ray,
+@@ -87,13 +99,13 @@ inline bool intersect_parallelogram(
+     if (t < ray.m_tmin || t >= ray.m_tmax)
+         return false;
+ 
+-    const Vector<T, 3> vi = ray.point_at(t) - corner;
++    const Vector<T, 2> uv = parallelogram_surface_uv(ray.point_at(t), corner, x, y);
+ 
+-    u = dot(x, vi) / dot(x, x);
++    u = uv[0];
+     if (u < T(0.0) || u > T(1.0))
+         return false;
+ 
+-    v = dot(y, vi) / dot(y, y);
++    v = uv[1];
+     if (v < T(0.0) || v > T(1.0))
+         return false;
+ 
+diff --git a/src/appleseed/renderer/kernel/intersection/intersector.cpp b/src/appleseed/renderer/kernel/intersection/intersector.cpp
+index be5dcbbfb..30c4b8a3c 100644
+--- a/src/appleseed/renderer/kernel/intersection/intersector.cpp
++++ b/src/appleseed/renderer/kernel/intersection/intersector.cpp
+@@ -435,6 +435,34 @@ void Intersector::make_procedural_surface_shading_point(
+     const Vector3d&                     normal,
+     const Vector3d&                     dpdu,
+     const Vector3d&                     dpdv) const
++{
++    const ObjectInstance* object_instance =
++        assembly_instance->get_assembly().object_instances().get_by_index(object_instance_index);
++    const Transformd& object_transform = object_instance->get_transform();
++    ProceduralObject::IntersectionResult attributes = {};
++    attributes.m_uv = uv;
++    attributes.m_geometric_normal = normalize(object_transform.normal_to_local(
++        assembly_instance_transform.normal_to_local(normal)));
++    attributes.m_shading_normal = attributes.m_geometric_normal;
++    attributes.m_derivatives.m_valid = true;
++    attributes.m_derivatives.m_dpdu = object_transform.vector_to_local(
++        assembly_instance_transform.vector_to_local(dpdu));
++    attributes.m_derivatives.m_dpdv = object_transform.vector_to_local(
++        assembly_instance_transform.vector_to_local(dpdv));
++    make_procedural_surface_shading_point(shading_point, shading_ray,
++        assembly_instance, assembly_instance_transform, object_instance_index,
++        primitive_index, point, attributes);
++}
++
++void Intersector::make_procedural_surface_shading_point(
++    ShadingPoint&                       shading_point,
++    const ShadingRay&                   shading_ray,
++    const AssemblyInstance*             assembly_instance,
++    const Transformd&                   assembly_instance_transform,
++    const size_t                        object_instance_index,
++    const size_t                        primitive_index,
++    const Vector3d&                     point,
++    const ProceduralObject::IntersectionResult& attributes) const
+ {
+     // This method can reuse a previously initialized shading point.
+     debug_poison(shading_point);
+@@ -447,36 +475,24 @@ void Intersector::make_procedural_surface_shading_point(
+     shading_point.m_ray = shading_ray;
+     shading_point.m_ray.m_tmax = dot(point - shading_ray.m_org, shading_ray.m_dir);
+     shading_point.m_primitive_type = ShadingPoint::PrimitiveProceduralSurface;
+-    shading_point.m_bary = uv;
++    shading_point.m_bary = attributes.m_uv;
+     shading_point.m_assembly_instance = assembly_instance;
+     shading_point.m_assembly_instance_transform = assembly_instance_transform;
+     shading_point.m_assembly_instance_transform_seq = &assembly_instance->transform_sequence();
+     shading_point.m_object_instance_index = object_instance_index;
+     shading_point.m_primitive_index = primitive_index;
+ 
+-    // Keep primary normals in object space so copies can rebuild their caches.
+     const ObjectInstance* object_instance =
+         assembly_instance->get_assembly().object_instances().get_by_index(object_instance_index);
+-    const Vector3d object_normal = normalize(
+-        object_instance->get_transform().normal_to_local(
+-            assembly_instance_transform.normal_to_local(normal)));
+     shading_point.m_procedural_point = object_instance->get_transform().point_to_local(
+         assembly_instance_transform.point_to_local(point));
+-    shading_point.m_procedural_geometric_normal = object_normal;
+-    shading_point.m_procedural_shading_normal = object_normal;
+-    shading_point.m_procedural_material_slot = 0;
+-    shading_point.m_procedural_derivatives.m_valid = true;
+-    shading_point.m_procedural_derivatives.m_dndu =
+-        shading_point.m_procedural_derivatives.m_dndv = Vector3d(0.0);
+-    shading_point.m_procedural_derivatives.m_dpdu =
+-        object_instance->get_transform().vector_to_local(
+-            assembly_instance_transform.vector_to_local(dpdu));
+-    shading_point.m_procedural_derivatives.m_dpdv =
+-        object_instance->get_transform().vector_to_local(
+-            assembly_instance_transform.vector_to_local(dpdv));
++    shading_point.m_procedural_geometric_normal = attributes.m_geometric_normal;
++    shading_point.m_procedural_shading_normal = attributes.m_shading_normal;
++    shading_point.m_procedural_material_slot = attributes.m_material_slot;
++    shading_point.m_procedural_derivatives = attributes.m_derivatives;
+ 
+     shading_point.m_point = point;
+-    shading_point.m_uv = uv;
++    shading_point.m_uv = attributes.m_uv;
+     shading_point.m_members |= ShadingPoint::HasPoint | ShadingPoint::HasUV0;
+ 
+     shading_point.m_dpdx = Vector3d(0.0);
+diff --git a/src/appleseed/renderer/kernel/intersection/intersector.h b/src/appleseed/renderer/kernel/intersection/intersector.h
+index a91a7f5c1..70cbba994 100644
+--- a/src/appleseed/renderer/kernel/intersection/intersector.h
++++ b/src/appleseed/renderer/kernel/intersection/intersector.h
+@@ -38,6 +38,7 @@
+ #include "renderer/kernel/intersection/intersectionsettings.h"
+ #include "renderer/kernel/intersection/triangletree.h"
+ #include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/modeling/object/proceduralobject.h"
+ #include "renderer/kernel/tessellation/statictessellation.h"
+ 
+ // appleseed.foundation headers.
+@@ -143,6 +144,17 @@ class Intersector
+         const foundation::Vector3d&         dpdu,
+         const foundation::Vector3d&         dpdv) const;
+ 
++    // Manufacture a procedural hit from native object-space surface attributes.
++    void make_procedural_surface_shading_point(
++        ShadingPoint&                       shading_point,
++        const ShadingRay&                   shading_ray,
++        const AssemblyInstance*             assembly_instance,
++        const foundation::Transformd&       assembly_instance_transform,
++        const size_t                        object_instance_index,
++        const size_t                        primitive_index,
++        const foundation::Vector3d&         point,
++        const ProceduralObject::IntersectionResult& attributes) const;
++
+     // Manufacture a volume shading point "by hand".
+     // There is no restriction placed on the shading point passed to this method.
+     // For instance it may have been previously initialized and used.
+diff --git a/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp b/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
+index 7859b1509..44a9b9954 100644
+--- a/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
++++ b/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
+@@ -229,7 +229,8 @@ float BackwardLightSampler::evaluate_pdf(
+     const EmittingShapeKey shape_key(
+         light_shading_point.get_assembly_instance().get_uid(),
+         light_shading_point.get_object_instance_index(),
+-        light_shading_point.get_primitive_index());
++        light_shading_point.get_primitive_index(),
++        light_shading_point.is_leaving());
+ 
+     const auto* shape_ptr = m_emitting_shape_hash_table.get(shape_key);
+ 
+diff --git a/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp b/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp
+index 23a486935..71e7836e6 100644
+--- a/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp
++++ b/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp
+@@ -428,7 +428,7 @@ void DirectLightingIntegrator::add_emitting_shape_sample_contribution(
+     ShadingPoint light_shading_point;
+     sample.make_shading_point(
+         light_shading_point,
+-        sample.m_shading_normal,
++        -incoming,
+         m_shading_context.get_intersector());
+ 
+     if (material_data.m_shader_group)
+diff --git a/src/appleseed/renderer/kernel/lighting/forwardlightsampler.cpp b/src/appleseed/renderer/kernel/lighting/forwardlightsampler.cpp
+index e9fbb0bc5..c76d0e58a 100644
+--- a/src/appleseed/renderer/kernel/lighting/forwardlightsampler.cpp
++++ b/src/appleseed/renderer/kernel/lighting/forwardlightsampler.cpp
+@@ -157,11 +157,11 @@ void ForwardLightSampler::sample(
+ 
+ float ForwardLightSampler::evaluate_pdf(const ShadingPoint& light_shading_point) const
+ {
+-    assert(light_shading_point.is_triangle_primitive());
+     const EmittingShapeKey shape_key(
+         light_shading_point.get_assembly_instance().get_uid(),
+         light_shading_point.get_object_instance_index(),
+-        light_shading_point.get_primitive_index());
++        light_shading_point.get_primitive_index(),
++        light_shading_point.is_leaving());
+ 
+     const auto* shape_ptr = m_emitting_shape_hash_table.get(shape_key);
+ 
+@@ -169,7 +169,9 @@ float ForwardLightSampler::evaluate_pdf(const ShadingPoint& light_shading_point)
+         return 0.0f;
+ 
+     const EmittingShape* shape = *shape_ptr;
+-    return shape->evaluate_pdf_uniform();
++    // sample() chooses the two emitter classes with equal probability.
++    const float shape_set_probability = m_non_physical_lights_cdf.valid() ? 0.5f : 1.0f;
++    return shape_set_probability * shape->evaluate_pdf_uniform();
+ }
+ 
+ void ForwardLightSampler::sample_non_physical_lights(
+diff --git a/src/appleseed/renderer/kernel/lighting/lightsample.h b/src/appleseed/renderer/kernel/lighting/lightsample.h
+index c774a563a..c726b962e 100644
+--- a/src/appleseed/renderer/kernel/lighting/lightsample.h
++++ b/src/appleseed/renderer/kernel/lighting/lightsample.h
+@@ -31,6 +31,7 @@
+ 
+ // appleseed.renderer headers.
+ #include "renderer/kernel/lighting/lighttypes.h"
++#include "renderer/kernel/shading/shadingray.h"
+ 
+ // appleseed.foundation headers.
+ #include "foundation/containers/hashtable.h"
+@@ -59,12 +60,14 @@ class EmittingShapeKey
+     foundation::UniqueID            m_assembly_instance_uid;
+     std::uint32_t                   m_object_instance_index;
+     std::uint32_t                   m_primitive_index;
++    bool                            m_back_side;
+ 
+     EmittingShapeKey();
+     EmittingShapeKey(
+         const foundation::UniqueID  assembly_instance_uid,
+         const size_t                object_instance_index,
+-        const size_t                primitive_index);
++        const size_t                primitive_index,
++        const bool                  back_side);
+ 
+     bool operator==(const EmittingShapeKey& rhs) const;
+ };
+@@ -108,12 +111,13 @@ class LightSample
+     foundation::Transformd      m_light_transform;              // light space to world space transform
+ 
+     // Data common to all sample types.
++    ShadingRay::Time             m_time;
+     float                       m_probability;                  // probability density of this sample
+ 
+-    // Construct a shading point out of this light sample and a given direction.
++    // Construct the incoming hit for an outgoing direction from the emitter.
+     void make_shading_point(
+         ShadingPoint&                   shading_point,
+-        const foundation::Vector3d&     direction,
++        const foundation::Vector3d&     outgoing,
+         const Intersector&              intersector) const;
+ };
+ 
+@@ -129,16 +133,19 @@ inline EmittingShapeKey::EmittingShapeKey()
+ inline EmittingShapeKey::EmittingShapeKey(
+     const foundation::UniqueID              assembly_instance_uid,
+     const size_t                            object_instance_index,
+-    const size_t                            primitive_index)
+-  : m_assembly_instance_uid(static_cast<std::uint32_t>(assembly_instance_uid))
++    const size_t                            primitive_index,
++    const bool                              back_side)
++  : m_assembly_instance_uid(assembly_instance_uid)
+   , m_object_instance_index(static_cast<std::uint32_t>(object_instance_index))
+   , m_primitive_index(static_cast<std::uint32_t>(primitive_index))
++  , m_back_side(back_side)
+ {
+ }
+ 
+ inline bool EmittingShapeKey::operator==(const EmittingShapeKey& rhs) const
+ {
+     return
++        m_back_side == rhs.m_back_side &&
+         m_primitive_index == rhs.m_primitive_index &&
+         m_object_instance_index == rhs.m_object_instance_index &&
+         m_assembly_instance_uid == rhs.m_assembly_instance_uid;
+@@ -152,10 +159,11 @@ inline bool EmittingShapeKey::operator==(const EmittingShapeKey& rhs) const
+ inline size_t EmittingShapeKeyHasher::operator()(const EmittingShapeKey& key) const
+ {
+     return
+-        foundation::mix_uint32(
+-            static_cast<std::uint32_t>(key.m_assembly_instance_uid),
++        foundation::mix_uint64(
++            key.m_assembly_instance_uid,
+             key.m_object_instance_index,
+-            key.m_primitive_index);
++            key.m_primitive_index,
++            key.m_back_side);
+ }
+ 
+ 
+@@ -166,20 +174,21 @@ inline size_t EmittingShapeKeyHasher::operator()(const EmittingShapeKey& key) co
+ inline LightSample::LightSample()
+   : m_shape(nullptr)
+   , m_light(nullptr)
++  , m_time(ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f))
+ {
+ }
+ 
+ inline void LightSample::make_shading_point(
+     ShadingPoint&               shading_point,
+-    const foundation::Vector3d& direction,
++    const foundation::Vector3d& outgoing,
+     const Intersector&          intersector) const
+ {
+     assert(m_shape && !m_light);
+ 
+     m_shape->make_shading_point(
+         shading_point,
+-        m_point,
+-        direction,
++        ShadingRay(m_point, -foundation::normalize(outgoing), 0.0, 0.0,
++            m_time, VisibilityFlags::CameraRay, 0),
+         m_param_coords,
+         intersector);
+ }
+diff --git a/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp b/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp
+index 4418da80c..f7efcba75 100644
+--- a/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp
++++ b/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp
+@@ -110,7 +110,8 @@ void LightSamplerBase::build_emitting_shape_hash_table()
+         const EmittingShapeKey emitting_shape_key(
+             emitting_shape.get_assembly_instance()->get_uid(),
+             emitting_shape.get_object_instance_index(),
+-            emitting_shape.get_primitive_index());
++            emitting_shape.get_primitive_index(),
++            emitting_shape.is_back_side());
+ 
+         m_emitting_shape_hash_table.insert(emitting_shape_key, &emitting_shape);
+     }
+@@ -171,7 +172,7 @@ void LightSamplerBase::collect_emitting_shapes(
+         // todo: add support for moving light-emitters.
+         const Transformd& object_instance_transform = object_instance->get_transform();
+         const Transformd& assembly_instance_transform = transform_sequence.get_earliest_transform();
+-        const Transformd global_transform = assembly_instance_transform * object_instance_transform;
++        const Transformd global_transform = object_instance_transform * assembly_instance_transform;
+ 
+         // Retrieve the object.
+         Object& object = object_instance->get_object();
+@@ -188,12 +189,6 @@ void LightSamplerBase::collect_emitting_shapes(
+             if (!has_emitting_materials(front_materials) && !has_emitting_materials(back_materials))
+                 continue;
+ 
+-            // Compute the object space to world space transformation.
+-            // todo: add support for moving light-emitters.
+-            const Transformd& object_instance_transform = object_instance->get_transform();
+-            const Transformd& assembly_instance_transform = transform_sequence.get_earliest_transform();
+-            const Transformd global_transform = assembly_instance_transform * object_instance_transform;
+-
+             // Loop over the triangles of the mesh.
+             for (size_t triangle_index = 0, triangle_count = tess.m_primitives.size();
+                 triangle_index < triangle_count; ++triangle_index)
+@@ -311,6 +306,7 @@ void LightSamplerBase::collect_emitting_shapes(
+                             side == 0 ? n1 : -n1,
+                             side == 0 ? n2 : -n2,
+                             side == 0 ? geometric_normal : -geometric_normal);
++                        emitting_shape.m_back_side = side != 0;
+                         emitting_shape.m_shape_support_plane = triangle_support_plane;
+                         emitting_shape.m_area = static_cast<float>(area);
+                         emitting_shape.m_rcp_area = static_cast<float>(rcp_area);
+@@ -357,7 +353,7 @@ void LightSamplerBase::collect_emitting_shapes(
+             y = global_transform.vector_to_parent(y);
+             n = normalize(global_transform.normal_to_parent(n));
+ 
+-            const double area = norm(x) * norm(y);
++            const double area = norm(cross(x, y));
+ 
+             if (area <= 0.0)
+             {
+@@ -393,6 +389,7 @@ void LightSamplerBase::collect_emitting_shapes(
+                         x,
+                         y,
+                         side == 0 ? n : -n);
++                    emitting_shape.m_back_side = side != 0;
+ 
+                     // Estimate radiant flux emitted by this shape.
+                     emitting_shape.estimate_flux();
+@@ -484,42 +481,24 @@ void LightSamplerBase::collect_emitting_shapes(
+             const DiskObject& disk = static_cast<const DiskObject&>(object);
+ 
+             // Retrieve object instance space geometry of the disk.
+-            double r = disk.get_uncached_radius();
++            const double radius = disk.get_uncached_radius();
+             Vector3d x, y, n;
+             disk.get_axes(x, y, n);
+-
+             if (object_instance->must_flip_normals())
+                 n = -n;
+-
+-            // Transform disk to world space.
+             x = global_transform.vector_to_parent(x);
+             y = global_transform.vector_to_parent(y);
+             n = normalize(global_transform.normal_to_parent(n));
+-
+-            const Matrix4d& xform = global_transform.get_local_to_parent();
+-            Vector3d center, scale;
+-            Quaterniond rot;
+-            xform.decompose(scale, rot, center);
+-
+-            if (feq(scale.x, scale.y) && feq(scale.x, scale.z))
+-                r *= scale.x;
+-            else
+-            {
+-                RENDERER_LOG_WARNING(
+-                    "transform of disk object \"%s\" has a non-uniform scale factor; scale will be ignored.",
+-                    disk.get_name());
+-            }
+-
+-            if (r <= 0.0)
++            const Vector3d center = global_transform.point_to_parent(disk.get_uncached_center());
++            const double area = Pi<double>() * norm(cross(x, y));
++            if (radius <= 0.0 || area <= 0.0)
+             {
+                 RENDERER_LOG_WARNING(
+-                    "disk object \"%s\" has zero or negative radius; it will be ignored.",
++                    "disk object \"%s\" has zero or negative area; it will be ignored.",
+                     disk.get_name());
+                 continue;
+             }
+ 
+-            const double area = Pi<double>() * square(r);
+-
+             // Invoke the shape handling function.
+             const bool accept_shape =
+                 shape_handling(
+@@ -536,7 +515,6 @@ void LightSamplerBase::collect_emitting_shapes(
+                     material,
+                     area,
+                     center,
+-                    r,
+                     n,
+                     x,
+                     y);
+@@ -645,6 +623,7 @@ void LightSamplerBase::sample_emitting_shape(
+ 
+     // Uniformly sample the surface of the shape.
+     light_sample.m_light = nullptr;
++    light_sample.m_time = time;
+     emitting_shape.sample_uniform(s, shape_prob, light_sample);
+ 
+     assert(light_sample.m_shape);
+@@ -666,6 +645,7 @@ void LightSamplerBase::sample_emitting_shapes(
+ 
+     // Uniformly sample the surface of the shape.
+     light_sample.m_light = nullptr;
++    light_sample.m_time = time;
+     emitting_shape.sample_uniform(Vector2f(s[1], s[2]), emitter_prob, light_sample);
+ 
+     assert(light_sample.m_shape);
+diff --git a/src/appleseed/renderer/kernel/lighting/lighttypes.cpp b/src/appleseed/renderer/kernel/lighting/lighttypes.cpp
+index 51538c556..8129c17fc 100644
+--- a/src/appleseed/renderer/kernel/lighting/lighttypes.cpp
++++ b/src/appleseed/renderer/kernel/lighting/lighttypes.cpp
+@@ -32,6 +32,11 @@
+ // appleseed.renderer headers.
+ #include "renderer/kernel/intersection/intersector.h"
+ #include "renderer/kernel/lighting/lightsample.h"
++#include "renderer/modeling/object/diskobject.h"
++#include "renderer/modeling/object/rectangleobject.h"
++#include "renderer/modeling/object/sphereobject.h"
++#include "renderer/modeling/scene/assembly.h"
++#include "renderer/modeling/scene/objectinstance.h"
+ 
+ // appleseed.foundation headers.
+ #include "foundation/math/basis.h"
+@@ -132,6 +137,13 @@ EmittingShape EmittingShape::create_rectangle_shape(
+     shape.m_geom.m_rectangle.m_geometric_normal = n;
+     shape.m_geom.m_rectangle.m_plane_dist = -dot(o, n);
+ 
++    shape.m_bbox.invalidate();
++    shape.m_bbox.insert(o);
++    shape.m_bbox.insert(o + x);
++    shape.m_bbox.insert(o + y);
++    shape.m_bbox.insert(o + x + y);
++    shape.m_centroid = o + 0.5 * (x + y);
++
+     shape.m_area = static_cast<float>(area);
+     shape.m_rcp_area = shape.m_area != 0.0f ? 1.0f / shape.m_area : FP<float>().snan();
+ 
+@@ -156,6 +168,9 @@ EmittingShape EmittingShape::create_sphere_shape(
+     shape.m_geom.m_sphere.m_center = center;
+     shape.m_geom.m_sphere.m_radius = radius;
+ 
++    shape.m_bbox = AABB3d(center - Vector3d(radius), center + Vector3d(radius));
++    shape.m_centroid = center;
++
+     shape.m_area = static_cast<float>(area);
+     shape.m_rcp_area = shape.m_area != 0.0f ? 1.0f / shape.m_area : FP<float>().snan();
+ 
+@@ -168,7 +183,6 @@ EmittingShape EmittingShape::create_disk_shape(
+     const Material*             material,
+     const double                area,
+     const Vector3d&             c,
+-    const double                r,
+     const Vector3d&             n,
+     const Vector3d&             x,
+     const Vector3d&             y)
+@@ -181,11 +195,17 @@ EmittingShape EmittingShape::create_disk_shape(
+         material);
+ 
+     shape.m_geom.m_disk.m_center = c;
+-    shape.m_geom.m_disk.m_radius = r;
+     shape.m_geom.m_disk.m_geometric_normal = n;
+     shape.m_geom.m_disk.m_x = x;
+     shape.m_geom.m_disk.m_y = y;
+ 
++    // Each coordinate of an affine disk has this exact sinusoidal extent.
++    Vector3d extent;
++    for (size_t axis = 0; axis < 3; ++axis)
++        extent[axis] = std::hypot(x[axis], y[axis]);
++    shape.m_bbox = AABB3d(c - extent, c + extent);
++    shape.m_centroid = c;
++
+     shape.m_area = static_cast<float>(area);
+     shape.m_rcp_area = shape.m_area != 0.0f ? 1.0f / shape.m_area : FP<float>().snan();
+ 
+@@ -205,6 +225,7 @@ EmittingShape::EmittingShape(
+ 
+     m_object_instance_index = object_instance_index;
+     m_primitive_index = primitive_index;
++    m_back_side = false;
+     m_material = material;
+     m_shape_prob = 0.0f;
+     m_average_flux = 1.0f;
+@@ -270,7 +291,7 @@ void EmittingShape::sample_uniform(
+             light_sample.m_param_coords = s;
+ 
+             // Uniformly sample the surface of the shape.
+-            const Vector3d n(sample_sphere_uniform(s));
++            const Vector3d n = sample_sphere_uniform(Vector2d(s));
+ 
+             // Compute the world space position of the sample.
+             light_sample.m_point = m_geom.m_sphere.m_center + n * m_geom.m_sphere.m_radius;
+@@ -312,109 +333,44 @@ void EmittingShape::sample_uniform(
+ 
+ void EmittingShape::make_shading_point(
+     ShadingPoint&               shading_point,
+-    const Vector3d&             point,
+-    const Vector3d&             direction,
++    const ShadingRay&           ray,
+     const Vector2f&             param_coords,
+     const Intersector&          intersector) const
+ {
+-    const ShadingRay ray(
+-        point,
+-        direction,
+-        0.0,
+-        0.0,
+-        ShadingRay::Time(),
+-        VisibilityFlags::CameraRay, 0);
++    const AssemblyInstance* instance = get_assembly_instance();
++    const Transformd& transform = instance->transform_sequence().get_earliest_transform();
++    if (get_shape_type() == TriangleShape)
++    {
++        intersector.make_triangle_shading_point(shading_point, ray, param_coords,
++            instance, transform, get_object_instance_index(), get_primitive_index(),
++            m_shape_support_plane);
++        return;
++    }
+ 
++    const ObjectInstance* object_instance = instance->get_assembly().object_instances()
++        .get_by_index(get_object_instance_index());
++    const Object& object = object_instance->get_object();
++    const Vector3d point = object_instance->get_transform().point_to_local(
++        transform.point_to_local(ray.m_org));
++    ProceduralObject::IntersectionResult attributes = {};
+     switch (get_shape_type())
+     {
+-      case TriangleShape:
+-        {
+-            intersector.make_triangle_shading_point(
+-                shading_point,
+-                ray,
+-                param_coords,
+-                get_assembly_instance(),
+-                get_assembly_instance()->transform_sequence().get_earliest_transform(),
+-                get_object_instance_index(),
+-                get_primitive_index(),
+-                m_shape_support_plane);
+-        }
+-        break;
+-
+       case RectangleShape:
+-        {
+-            const Vector3d p =
+-                m_geom.m_rectangle.m_origin +
+-                static_cast<double>(param_coords[0]) * m_geom.m_rectangle.m_x +
+-                static_cast<double>(param_coords[1]) * m_geom.m_rectangle.m_y;
+-
+-            intersector.make_procedural_surface_shading_point(
+-                shading_point,
+-                ray,
+-                param_coords,
+-                get_assembly_instance(),
+-                get_assembly_instance()->transform_sequence().get_earliest_transform(),
+-                get_object_instance_index(),
+-                get_primitive_index(),
+-                p,
+-                m_geom.m_rectangle.m_geometric_normal,
+-                m_geom.m_rectangle.m_x,
+-                cross(m_geom.m_rectangle.m_x, m_geom.m_rectangle.m_geometric_normal));
+-        }
++        static_cast<const RectangleObject&>(object).get_surface_attributes(point, attributes);
+         break;
+-
+       case SphereShape:
+-        {
+-            const double theta = static_cast<double>(param_coords[0]);
+-            const double phi = static_cast<double>(param_coords[1]);
+-
+-            const Vector3d n = Vector3d::make_unit_vector(theta, phi);
+-            const Vector3d p = m_geom.m_sphere.m_center + m_geom.m_sphere.m_radius * n;
+-
+-            const Vector3d dpdu(-TwoPi<double>() * n.y, TwoPi<double>() + n.x, 0.0);
+-            const Vector3d dpdv = cross(dpdu, n);
+-
+-            intersector.make_procedural_surface_shading_point(
+-                shading_point,
+-                ray,
+-                param_coords,
+-                get_assembly_instance(),
+-                get_assembly_instance()->transform_sequence().get_earliest_transform(),
+-                get_object_instance_index(),
+-                get_primitive_index(),
+-                p,
+-                n,
+-                dpdu,
+-                dpdv);
+-        }
++        static_cast<const SphereObject&>(object).get_surface_attributes(point, attributes);
+         break;
+-
+       case DiskShape:
+-        {
+-            const Vector3d p =
+-                m_geom.m_disk.m_center +
+-                static_cast<double>(param_coords[0]) * m_geom.m_disk.m_x +
+-                static_cast<double>(param_coords[1]) * m_geom.m_disk.m_y;
+-
+-            intersector.make_procedural_surface_shading_point(
+-                shading_point,
+-                ray,
+-                param_coords,
+-                get_assembly_instance(),
+-                get_assembly_instance()->transform_sequence().get_earliest_transform(),
+-                get_object_instance_index(),
+-                get_primitive_index(),
+-                p,
+-                m_geom.m_disk.m_geometric_normal,
+-                m_geom.m_disk.m_x,
+-                cross(m_geom.m_disk.m_x, m_geom.m_disk.m_geometric_normal));
+-        }
++        static_cast<const DiskObject&>(object).get_surface_attributes(point, attributes);
+         break;
+-
+       default:
+         assert(!"Unknown emitter shape type");
+-        break;
++        return;
+     }
++    intersector.make_procedural_surface_shading_point(shading_point, ray,
++        instance, transform, get_object_instance_index(), get_primitive_index(),
++        ray.m_org, attributes);
+ }
+ 
+ void EmittingShape::estimate_flux()
+diff --git a/src/appleseed/renderer/kernel/lighting/lighttypes.h b/src/appleseed/renderer/kernel/lighting/lighttypes.h
+index b2d5b9961..3548e1fc3 100644
+--- a/src/appleseed/renderer/kernel/lighting/lighttypes.h
++++ b/src/appleseed/renderer/kernel/lighting/lighttypes.h
+@@ -48,6 +48,7 @@ namespace renderer  { class Light; }
+ namespace renderer  { class LightSample; }
+ namespace renderer  { class Material; }
+ namespace renderer  { class ShadingPoint; }
++namespace renderer  { class ShadingRay; }
+ 
+ namespace renderer
+ {
+@@ -124,7 +125,6 @@ class EmittingShape
+         const Material*             material,
+         const double                area,
+         const foundation::Vector3d& c,
+-        const double                r,
+         const foundation::Vector3d& n,
+         const foundation::Vector3d& x,
+         const foundation::Vector3d& y);
+@@ -137,6 +137,8 @@ class EmittingShape
+ 
+     size_t get_primitive_index() const;
+ 
++    bool is_back_side() const;
++
+     float get_area() const;
+     float get_rcp_area() const;
+ 
+@@ -158,8 +160,7 @@ class EmittingShape
+ 
+     void make_shading_point(
+         ShadingPoint&               shading_point,
+-        const foundation::Vector3d& point,
+-        const foundation::Vector3d& direction,
++        const ShadingRay&           ray,
+         const foundation::Vector2f& bary,
+         const Intersector&          intersector) const;
+ 
+@@ -202,7 +203,6 @@ class EmittingShape
+     {
+         foundation::Vector3d    m_center;               // world space center of the disk
+         foundation::Vector3d    m_geometric_normal;     // world space geometric normal, unit-length
+-        double                  m_radius;               // world space disk radius
+         foundation::Vector3d    m_x, m_y;               // world space x and y axes
+     };
+ 
+@@ -220,6 +220,7 @@ class EmittingShape
+     size_t                      m_object_instance_index;
+     size_t                      m_light_tree_node_index;
+     size_t                      m_primitive_index;
++    bool                        m_back_side;
+     Geom                        m_geom;
+     TriangleSupportPlaneType    m_shape_support_plane;          // support plane of the shape in assembly space
+     float                       m_area;                         // world space shape area
+@@ -260,6 +261,11 @@ inline size_t EmittingShape::get_primitive_index() const
+     return m_primitive_index;
+ }
+ 
++inline bool EmittingShape::is_back_side() const
++{
++    return m_back_side;
++}
++
+ inline size_t EmittingShape::get_object_instance_index() const
+ {
+     return m_object_instance_index;
+diff --git a/src/appleseed/renderer/meta/tests/test_intersector.cpp b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+index cda788732..1cb863a68 100644
+--- a/src/appleseed/renderer/meta/tests/test_intersector.cpp
++++ b/src/appleseed/renderer/meta/tests/test_intersector.cpp
+@@ -42,12 +42,19 @@
+ #include "renderer/modeling/project/project.h"
+ #include "renderer/global/globaltypes.h"
+ #include "renderer/kernel/intersection/intersector.h"
++#include "renderer/kernel/lighting/forwardlightsampler.h"
++#include "renderer/kernel/lighting/backwardlightsampler.h"
++#include "renderer/kernel/lighting/lighttypes.h"
++#include "renderer/kernel/lighting/lightsample.h"
+ #include "renderer/kernel/intersection/tracecontext.h"
+ #include "renderer/kernel/shading/shadingpoint.h"
+ #include "renderer/kernel/shading/shadingray.h"
+ #include "renderer/kernel/texturing/texturecache.h"
+ #include "renderer/kernel/texturing/texturestore.h"
+ #include "renderer/modeling/object/object.h"
++#include "renderer/modeling/edf/diffuseedf.h"
++#include "renderer/modeling/light/pointlight.h"
++#include "renderer/modeling/material/genericmaterial.h"
+ #include "renderer/modeling/object/diskobject.h"
+ #include "renderer/modeling/object/rectangleobject.h"
+ #include "renderer/modeling/object/sphereobject.h"
+@@ -66,6 +73,7 @@
+ #include "foundation/image/image.h"
+ #include "foundation/containers/dictionary.h"
+ #include "foundation/math/matrix.h"
++#include "foundation/math/intersection/raydisk.h"
+ #include "foundation/math/scalar.h"
+ #include "foundation/math/transform.h"
+ #include "foundation/math/vector.h"
+@@ -341,7 +349,7 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+     struct AnalyticScene : TestSceneBase
+     {
+         ProceduralObject* m_analytic;
+-        AnalyticScene()
++        AnalyticScene(const Transformd& object_transform = Transformd::identity())
+         {
+             auto_release_ptr<Assembly> assembly(AssemblyFactory().create("assembly", ParamArray()));
+             auto_release_ptr<Object> object = Factory().create("object",
+@@ -349,7 +357,7 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+             m_analytic = static_cast<ProceduralObject*>(object.get());
+             assembly->objects().insert(object);
+             assembly->object_instances().insert(ObjectInstanceFactory::create(
+-                "object_instance", ParamArray(), "object", Transformd::identity(), StringDictionary()));
++                "object_instance", ParamArray(), "object", object_transform, StringDictionary()));
+             m_scene.assembly_instances().insert(AssemblyInstanceFactory::create(
+                 "assembly_instance", ParamArray(), "assembly"));
+             m_scene.assemblies().insert(assembly);
+@@ -359,6 +367,370 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+     using RectangleFixture = Fixture<false, AnalyticScene<RectangleObjectFactory>>;
+     using DiskFixture = Fixture<false, AnalyticScene<DiskObjectFactory>>;
+ 
++    template <typename Factory>
++    struct EmitterScene : AnalyticScene<Factory>
++    {
++        Transformd m_assembly_transform;
++
++        explicit EmitterScene(const Matrix4d& scale = Matrix4d::make_scaling(Vector3d(2.0)))
++          : AnalyticScene<Factory>(Transformd::from_local_to_parent(
++                Matrix4d::make_translation(Vector3d(2.0, -1.0, 3.0)) *
++                Matrix4d::make_rotation_y(-0.37) * scale))
++          , m_assembly_transform(Transformd::from_local_to_parent(
++                Matrix4d::make_translation(Vector3d(-4.0, 5.0, 6.0)) *
++                Matrix4d::make_rotation_x(0.4) * Matrix4d::make_scaling(Vector3d(1.5))))
++        {
++            this->m_scene.assembly_instances().get_by_name("assembly_instance")
++                ->transform_sequence().set_transform(0.0f, m_assembly_transform);
++            auto* assembly = this->m_scene.assemblies().get_by_name("assembly");
++            assembly->edfs().insert(DiffuseEDFFactory().create("emission",
++                ParamArray().insert("radiance", "1.0")));
++            assembly->materials().insert(GenericMaterialFactory().create("emitter",
++                ParamArray().insert("edf", "emission")));
++            assembly->object_instances().get_by_index(0)->assign_material(
++                "default", ObjectInstance::FrontSide, "emitter");
++        }
++
++        EmittingShape emitting_shape(const bool back = false) const
++        {
++            const auto* instance = this->m_scene.assembly_instances().get_by_name("assembly_instance");
++            const auto* object_instance = this->m_scene.assemblies().get_by_name("assembly")
++                ->object_instances().get_by_index(0);
++            const Transformd global = object_instance->get_transform() * m_assembly_transform;
++            if constexpr (std::is_same<Factory, SphereObjectFactory>::value)
++            {
++                const double radius = static_cast<const SphereObject*>(this->m_analytic)->get_radius() * 3.0;
++                return EmittingShape::create_sphere_shape(instance, 0, nullptr,
++                    FourPi<double>() * radius * radius, global.point_to_parent(Vector3d(0.0)), radius);
++            }
++            else if constexpr (std::is_same<Factory, RectangleObjectFactory>::value)
++            {
++                Vector3d origin, x, y, n;
++                static_cast<const RectangleObject*>(this->m_analytic)->get_origin_and_axes(origin, x, y, n);
++                x = global.vector_to_parent(x);
++                y = global.vector_to_parent(y);
++                n = normalize(global.normal_to_parent(back ? -n : n));
++                return EmittingShape::create_rectangle_shape(instance, 0, nullptr,
++                    norm(cross(x, y)), global.point_to_parent(origin), x, y, n);
++            }
++            else
++            {
++                Vector3d x, y, n;
++                const auto* disk = static_cast<const DiskObject*>(this->m_analytic);
++                disk->get_axes(x, y, n);
++                x = global.vector_to_parent(x);
++                y = global.vector_to_parent(y);
++                n = normalize(global.normal_to_parent(back ? -n : n));
++                return EmittingShape::create_disk_shape(instance, 0, nullptr,
++                    Pi<double>() * norm(cross(x, y)), global.point_to_parent(Vector3d(0.0)),
++                    n, x, y);
++            }
++        }
++    };
++
++    using SphereEmitterFixture = Fixture<false, EmitterScene<SphereObjectFactory>>;
++    using RectangleEmitterFixture = Fixture<false, EmitterScene<RectangleObjectFactory>>;
++    using DiskEmitterFixture = Fixture<false, EmitterScene<DiskObjectFactory>>;
++
++    // The in-plane shear distinguishes cross-product area from axis lengths.
++    Matrix4d affine_emitter_scale()
++    {
++        Matrix4d transform = Matrix4d::make_scaling(Vector3d(2.0, 3.0, 4.0));
++        transform[2] = 0.7;
++        return transform;
++    }
++
++    template <typename Factory>
++    struct AffineEmitterScene : EmitterScene<Factory>
++    {
++        AffineEmitterScene() : EmitterScene<Factory>(affine_emitter_scale()) {}
++    };
++    using AffineDiskEmitterFixture = Fixture<false, AffineEmitterScene<DiskObjectFactory>>;
++    using AffineRectangleEmitterFixture = Fixture<false, AffineEmitterScene<RectangleObjectFactory>>;
++
++
++    TEST_CASE(SampledEmitters_MatchTracedSurfaceAttributes)
++    {
++        const double PointTolerance = 1.0e-11;
++        const float UVTolerance = 1.0e-6f;
++        const double ProbeDistance = 0.5;
++        const Vector2f samples[] = {Vector2f(0.17f, 0.33f), Vector2f(0.71f, 0.87f), Vector2f(0.43f, 0.62f)};
++        const auto check = [&](auto& fixture)
++        {
++            for (const bool back : {false, true})
++            {
++                const EmittingShape shape = fixture.emitting_shape(back);
++                for (const Vector2f& s : samples)
++                {
++                    LightSample sample;
++                    shape.sample_uniform(s, 1.0f, sample);
++                    sample.m_time = ShadingRay::Time::create_with_normalized_time(0.37f, -0.2f, 0.8f);
++                    if (back && shape.get_shape_type() == EmittingShape::SphereShape)
++                    {
++                        sample.m_geometric_normal = -sample.m_geometric_normal;
++                        sample.m_shading_normal = -sample.m_shading_normal;
++                    }
++                    const ShadingRay ray(sample.m_point + ProbeDistance * sample.m_geometric_normal,
++                        -normalize(sample.m_geometric_normal),
++                        sample.m_time, VisibilityFlags::CameraRay, 0);
++                    ShadingPoint traced, sampled;
++                    ASSERT_TRUE(fixture.m_intersector.trace(ray, traced));
++                    sample.make_shading_point(sampled, sample.m_geometric_normal, fixture.m_intersector);
++                    ShadingPoint copied(sampled);
++                    for (const ShadingPoint* actual : {&sampled, &copied})
++                    {
++                        EXPECT_FEQ_EPS(sample.m_point, actual->get_point(), PointTolerance);
++                        EXPECT_FEQ_EPS(traced.get_point(), actual->get_point(), PointTolerance);
++                        EXPECT_FEQ_EPS(traced.get_uv(0), actual->get_uv(0), UVTolerance);
++                        EXPECT_FEQ_EPS(traced.get_geometric_normal(), actual->get_geometric_normal(), PointTolerance);
++                        EXPECT_FEQ_EPS(traced.get_shading_normal(), actual->get_shading_normal(), PointTolerance);
++                        EXPECT_EQ(traced.get_side(), actual->get_side());
++                        EXPECT_FEQ_EPS(ray.m_dir, actual->get_ray().m_dir, PointTolerance);
++                        EXPECT_FEQ(sample.m_time.m_absolute, actual->get_ray().m_time.m_absolute);
++                        EXPECT_FEQ(sample.m_time.m_normalized, actual->get_ray().m_time.m_normalized);
++                        EXPECT_FEQ_EPS(traced.get_dpdu(0), actual->get_dpdu(0), PointTolerance);
++                        EXPECT_FEQ_EPS(traced.get_dpdv(0), actual->get_dpdv(0), PointTolerance);
++                        EXPECT_FEQ_EPS(traced.get_dndu(0), actual->get_dndu(0), PointTolerance);
++                        EXPECT_FEQ_EPS(traced.get_dndv(0), actual->get_dndv(0), PointTolerance);
++                    }
++                }
++            }
++        };
++        SphereEmitterFixture sphere;
++        check(sphere);
++        RectangleEmitterFixture rectangle;
++        check(rectangle);
++        DiskEmitterFixture disk;
++        check(disk);
++        AffineDiskEmitterFixture affine_disk;
++        check(affine_disk);
++        AffineRectangleEmitterFixture affine_rectangle;
++        check(affine_rectangle);
++    }
++
++    TEST_CASE(SampledEmitters_HaveFiniteWorldBoundsAndCentroids)
++    {
++        const auto check = [&](auto& fixture)
++        {
++            const EmittingShape shape = fixture.emitting_shape();
++            ASSERT_TRUE(shape.get_bbox().is_valid());
++            EXPECT_TRUE(shape.get_bbox().contains(shape.get_centroid()));
++            for (const Vector2f s : {Vector2f(0.17f, 0.33f), Vector2f(0.71f, 0.87f)})
++            {
++                LightSample sample;
++                shape.sample_uniform(s, 1.0f, sample);
++                EXPECT_TRUE(shape.get_bbox().contains(sample.m_point));
++            }
++        };
++        SphereEmitterFixture sphere;
++        check(sphere);
++        RectangleEmitterFixture rectangle;
++        check(rectangle);
++        DiskEmitterFixture disk;
++        check(disk);
++        AffineDiskEmitterFixture affine_disk;
++        check(affine_disk);
++        AffineRectangleEmitterFixture affine_rectangle;
++        check(affine_rectangle);
++    }
++
++    TEST_CASE(SampledEmitters_CollectorMatchesWorldGeometryAndArea)
++    {
++        const double PointTolerance = 1.0e-11;
++        const auto check = [&](auto& fixture, const double area)
++        {
++            ForwardLightSampler sampler(fixture.m_scene);
++            ASSERT_TRUE(sampler.has_lights());
++            const ShadingRay::Time time = ShadingRay::Time::create_with_normalized_time(0.37f, -0.2f, 0.8f);
++            LightSample sample;
++            sampler.sample(time, Vector3f(0.31f, 0.17f, 0.33f), sample);
++            ASSERT_TRUE(sample.m_shape != nullptr);
++            EXPECT_FEQ_EPS(static_cast<float>(area), sample.m_shape->get_area(), 1.0e-4f);
++            EXPECT_FEQ_EPS(static_cast<float>(1.0 / area), sample.m_probability, 1.0e-7f);
++            const Vector3d normal = normalize(sample.m_geometric_normal);
++            const ShadingRay ray(sample.m_point + 0.5 * normal, -normal,
++                time, VisibilityFlags::CameraRay, 0);
++            ShadingPoint traced, sampled;
++            ASSERT_TRUE(fixture.m_intersector.trace(ray, traced));
++            sample.make_shading_point(sampled, normal, fixture.m_intersector);
++            EXPECT_FEQ_EPS(sample.m_point, traced.get_point(), PointTolerance);
++            EXPECT_FEQ_EPS(sample.m_point, sampled.get_point(), PointTolerance);
++            EXPECT_FEQ_EPS(traced.get_uv(0), sampled.get_uv(0), 1.0e-6f);
++            EXPECT_FEQ_EPS(traced.get_geometric_normal(), sampled.get_geometric_normal(), PointTolerance);
++            EXPECT_EQ(traced.get_side(), sampled.get_side());
++            EXPECT_FEQ(time.m_absolute, sampled.get_ray().m_time.m_absolute);
++            EXPECT_FEQ(time.m_normalized, sampled.get_ray().m_time.m_normalized);
++        };
++        SphereEmitterFixture sphere;
++        check(sphere, FourPi<double>() * 9.0);
++        RectangleEmitterFixture rectangle;
++        check(rectangle, 24.0 * 9.0);
++        DiskEmitterFixture disk;
++        check(disk, Pi<double>() * 4.0 * 9.0);
++        // Axis scales 2 and 4, assembly scale 1.5: plane-area scale is 18.
++        AffineDiskEmitterFixture affine_disk;
++        check(affine_disk, Pi<double>() * 4.0 * 18.0);
++        AffineRectangleEmitterFixture affine_rectangle;
++        check(affine_rectangle, 24.0 * 18.0);
++    }
++
++    template <bool Front, bool Back, bool Flip = false>
++    struct SidedEmitterScene : EmitterScene<RectangleObjectFactory>
++    {
++        SidedEmitterScene()
++        {
++            auto* assembly = m_scene.assemblies().get_by_name("assembly");
++            auto* object_instance = assembly->object_instances().get_by_index(0);
++            if (!Front)
++                object_instance->unassign_material("default", ObjectInstance::FrontSide);
++            if (Back)
++            {
++                assembly->edfs().insert(DiffuseEDFFactory().create("back_emission",
++                    ParamArray().insert("radiance", "1.0").insert("importance_multiplier", 3.0f)));
++                assembly->materials().insert(GenericMaterialFactory().create("back_emitter",
++                    ParamArray().insert("edf", "back_emission")));
++                object_instance->assign_material("default", ObjectInstance::BackSide, "back_emitter");
++            }
++            object_instance->get_parameters().insert("flip_normals", Flip);
++        }
++    };
++
++    struct MixedEmitterScene : SidedEmitterScene<true, true>
++    {
++        MixedEmitterScene()
++        {
++            m_scene.assemblies().get_by_name("assembly")->lights().insert(
++                PointLightFactory().create("fill", ParamArray().insert("intensity", "1.0")));
++        }
++    };
++
++    TEST_CASE(ForwardEmitterPDFs_IncludeLightClassSelectionProbability)
++    {
++        Fixture<false, MixedEmitterScene> fixture;
++        ForwardLightSampler sampler(fixture.m_scene);
++        ASSERT_TRUE(sampler.has_lights());
++        EXPECT_EQ(size_t(1), sampler.get_non_physical_light_count());
++        const ShadingRay::Time time = ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f);
++        LightSample point_light;
++        sampler.sample(time, Vector3f(0.1f, 0.37f, 0.61f), point_light);
++        ASSERT_TRUE(point_light.m_light != nullptr);
++        EXPECT_FEQ(0.5f, point_light.m_probability);
++        for (const float selection : {0.55f, 0.95f})
++        {
++            LightSample sample;
++            sampler.sample(time, Vector3f(selection, 0.37f, 0.61f), sample);
++            ASSERT_TRUE(sample.m_shape != nullptr);
++            ShadingPoint sampled;
++            sample.make_shading_point(sampled, sample.m_geometric_normal, fixture.m_intersector);
++            const float side_probability = sample.m_shape->is_back_side() ? 0.75f : 0.25f;
++            EXPECT_FEQ_EPS(0.5f * side_probability / sample.m_shape->get_area(), sample.m_probability, 1.0e-8f);
++            EXPECT_FEQ_EPS(sample.m_probability, sampler.evaluate_pdf(sampled), 1.0e-8f);
++        }
++    }
++
++    TEST_CASE(EmitterKeys_DistinguishSurfaceSidesAndFullInstanceIdentity)
++    {
++        const UniqueID Instance = 19;
++        const EmittingShapeKey front(Instance, 2, 3, false);
++        const EmittingShapeKey back(Instance, 2, 3, true);
++        const EmittingShapeKey high(Instance + (UniqueID(1) << 32), 2, 3, false);
++        EXPECT_FALSE(front == back);
++        EXPECT_FALSE(front == high);
++        EmittingShapeKeyHasher hasher;
++        HashTable<EmittingShapeKey, EmittingShapeKeyHasher, int> table(hasher);
++        table.resize(4);
++        table.insert(front, 1);
++        table.insert(back, 2);
++        table.insert(high, 3);
++        ASSERT_TRUE(table.get(front) != nullptr);
++        ASSERT_TRUE(table.get(back) != nullptr);
++        ASSERT_TRUE(table.get(high) != nullptr);
++        EXPECT_EQ(1, *table.get(front));
++        EXPECT_EQ(2, *table.get(back));
++        EXPECT_EQ(3, *table.get(high));
++    }
++
++    TEST_CASE(EmitterPDFs_MatchSelectedSideAndRejectNonemittingSide)
++    {
++        const float PDFTolerance = 1.0e-8f;
++        const auto check = [&](auto& fixture, const bool front_emits, const bool back_emits)
++        {
++            ForwardLightSampler forward(fixture.m_scene);
++            BackwardLightSampler backward(fixture.m_scene);
++            ASSERT_TRUE(forward.has_lights());
++            ASSERT_TRUE(backward.has_lightset());
++            const ShadingRay::Time time = ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f);
++            const auto* assembly = fixture.m_scene.assemblies().get_by_name("assembly");
++            const auto* object_instance = assembly->object_instances().get_by_index(0);
++            const bool flip = object_instance->must_flip_normals();
++            const EmittingShape reference = fixture.emitting_shape();
++            LightSample location;
++            reference.sample_uniform(Vector2f(0.37f, 0.61f), 1.0f, location);
++            const double ProbeDistance = 0.5;
++            const float total_importance = (front_emits ? 1.0f : 0.0f) + (back_emits ? 3.0f : 0.0f);
++            for (const bool back : {false, true})
++            {
++                const Vector3d normal = (back != flip ? -1.0 : 1.0) * location.m_geometric_normal;
++                const ShadingRay ray(location.m_point + ProbeDistance * normal, -normal,
++                    time, VisibilityFlags::CameraRay, 0);
++                ShadingPoint traced;
++                ASSERT_TRUE(fixture.m_intersector.trace(ray, traced));
++                EXPECT_EQ(back, traced.is_leaving());
++                const bool emits = back ? back_emits : front_emits;
++                const float expected = emits ? (back ? 3.0f : 1.0f) / total_importance / reference.get_area() : 0.0f;
++                EXPECT_FEQ_EPS(expected, forward.evaluate_pdf(traced), PDFTolerance);
++                EXPECT_FEQ_EPS(expected, backward.evaluate_pdf(traced, traced), PDFTolerance);
++            }
++            // Different importance multipliers force unequal selection weights.
++            for (const float selection : {0.13f, 0.87f})
++            {
++                LightSample sample;
++                forward.sample(time, Vector3f(selection, 0.37f, 0.61f), sample);
++                ASSERT_TRUE(sample.m_shape != nullptr);
++                ShadingPoint sampled;
++                sample.make_shading_point(sampled, sample.m_geometric_normal, fixture.m_intersector);
++                EXPECT_EQ(sample.m_shape->is_back_side(), sampled.is_leaving());
++                EXPECT_EQ(sample.m_shape->get_material(), sampled.get_material());
++                EXPECT_FEQ_EPS(sample.m_probability, forward.evaluate_pdf(sampled), PDFTolerance);
++                EXPECT_FEQ_EPS(sample.m_probability, backward.evaluate_pdf(sampled, sampled), PDFTolerance);
++                LightSample backward_sample;
++                backward.sample_lightset(time, Vector3f(selection, 0.37f, 0.61f), sampled, backward_sample);
++                ASSERT_TRUE(backward_sample.m_shape != nullptr);
++                ShadingPoint backward_point;
++                backward_sample.make_shading_point(backward_point, backward_sample.m_geometric_normal, fixture.m_intersector);
++                EXPECT_FEQ_EPS(backward_sample.m_probability, backward.evaluate_pdf(backward_point, sampled), PDFTolerance);
++                EXPECT_EQ(backward_sample.m_shape->get_material(), backward_point.get_material());
++            }
++        };
++        Fixture<false, SidedEmitterScene<true, true>> both;
++        check(both, true, true);
++        Fixture<false, SidedEmitterScene<true, false>> front;
++        check(front, true, false);
++        Fixture<false, SidedEmitterScene<false, true>> back;
++        check(back, false, true);
++        Fixture<false, SidedEmitterScene<true, true, true>> flipped;
++        check(flipped, true, true);
++    }
++
++    TEST_CASE(DiskIntersection_ParallelMissPreservesOutputsAndAcceptsNonunitRays)
++    {
++        double distance = -1.0, u = -1.0, v = -1.0;
++        for (const double height : {0.0, 1.0})
++        {
++            const Ray3d parallel(Vector3d(0.0, height, 0.0), Vector3d(1.0, 0.0, 0.0));
++            EXPECT_FALSE(intersect_disk(parallel, 2.0));
++            EXPECT_FALSE(intersect_disk(parallel, 2.0, distance, u, v));
++            EXPECT_FEQ(-1.0, distance);
++            EXPECT_FEQ(-1.0, u);
++            EXPECT_FEQ(-1.0, v);
++        }
++        const Ray3d scaled(Vector3d(1.0, 2.0, 0.0), Vector3d(0.0, -2.0, 0.0));
++        ASSERT_TRUE(intersect_disk(scaled, 2.0, distance, u, v));
++        EXPECT_FEQ(1.0, distance);
++        EXPECT_FEQ(0.25, u);
++        EXPECT_FEQ(0.5, v);
++    }
++
+     struct CoincidentSphereScene : TestSceneBase
+     {
+         static constexpr double NearSurfaceSeparation = 0.01;
+@@ -770,6 +1142,34 @@ TEST_SUITE(Renderer_Kernel_Intersection_Intersector)
+         EXPECT_FALSE(result.m_derivatives.m_valid);
+     }
+ 
++    TEST_CASE_F(SampledProceduralPoint_NativeAttributesPreserveMaterialAndCurvature, ProceduralFixture)
++    {
++        const Vector3d n = NormalProbeObject::normal();
++        const ShadingRay object_ray(2.0 * n, -n,
++            ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f),
++            VisibilityFlags::CameraRay, 0);
++        ProceduralObject::IntersectionResult attributes = {};
++        m_probe->intersect(object_ray, attributes);
++        ASSERT_TRUE(attributes.m_hit);
++        const ShadingRay ray = ray_to_plane(false);
++        ShadingPoint traced, sampled;
++        ASSERT_TRUE(m_intersector.trace(ray, traced));
++        m_intersector.make_procedural_surface_shading_point(sampled, ray,
++            m_scene.assembly_instances().get_by_name("assembly_instance"),
++            m_assembly_transform, 0, 0, traced.get_point(), attributes);
++        ShadingPoint copied(sampled);
++        for (const ShadingPoint* actual : {&sampled, &copied})
++        {
++            EXPECT_EQ(size_t(2), actual->get_primitive_attribute_index());
++            EXPECT_FEQ(traced.get_uv(0), actual->get_uv(0));
++            EXPECT_FEQ_EPS(traced.get_shading_normal(), actual->get_shading_normal(), NormalDerivativeTolerance);
++            EXPECT_FEQ_EPS(traced.get_dpdu(0), actual->get_dpdu(0), NormalDerivativeTolerance);
++            EXPECT_FEQ_EPS(traced.get_dpdv(0), actual->get_dpdv(0), NormalDerivativeTolerance);
++            EXPECT_FEQ_EPS(traced.get_dndu(0), actual->get_dndu(0), NormalDerivativeTolerance);
++            EXPECT_FEQ_EPS(traced.get_dndv(0), actual->get_dndv(0), NormalDerivativeTolerance);
++        }
++    }
++
+     TEST_CASE_F(SampledProceduralPoint_PreservesSuppliedPointUVAndTangents, ProceduralFixture)
+     {
+         const ShadingRay ray = ray_to_plane(false);
+diff --git a/src/appleseed/renderer/modeling/object/diskobject.cpp b/src/appleseed/renderer/modeling/object/diskobject.cpp
+index 074462238..d14e7e6b7 100644
+--- a/src/appleseed/renderer/modeling/object/diskobject.cpp
++++ b/src/appleseed/renderer/modeling/object/diskobject.cpp
+@@ -144,35 +144,30 @@ void DiskObject::intersect(
+     const ShadingRay&      ray,
+     IntersectionResult&    result) const
+ {
+-    double u, v;
++    result.m_hit = intersect_disk(ray, impl->m_radius, result.m_distance);
++    if (result.m_hit)
++        get_surface_attributes(ray.point_at(result.m_distance), result);
++}
+ 
+-    result.m_hit = intersect_disk(
+-        ray,
+-        impl->m_radius,
+-        result.m_distance,
+-        u,
+-        v);
++void DiskObject::get_surface_attributes(
++    const Vector3d&         point,
++    IntersectionResult&     result) const
++{
++    const Vector3d n(0.0, 1.0, 0.0);
++    result.m_geometric_normal = n;
++    result.m_shading_normal = n;
+ 
+-    if (result.m_hit)
++    result.m_uv = Vector2f(disk_surface_uv(point, impl->m_radius));
++
++    result.m_material_slot = 0;
++
++    const double radial = std::sqrt(point.x * point.x + point.z * point.z);
++    result.m_derivatives.m_valid = radial > 0.0;
++    if (result.m_derivatives.m_valid)
+     {
+-        const Vector3d n(0.0, 1.0, 0.0);
+-        result.m_geometric_normal = n;
+-        result.m_shading_normal = n;
+-
+-        result.m_uv[0] = static_cast<float>(u);
+-        result.m_uv[1] = static_cast<float>(v);
+-
+-        result.m_material_slot = 0;
+-
+-        const Vector3d point = ray.point_at(result.m_distance);
+-        const double radial = std::sqrt(point.x * point.x + point.z * point.z);
+-        result.m_derivatives.m_valid = radial > 0.0;
+-        if (result.m_derivatives.m_valid)
+-        {
+-            result.m_derivatives.m_dpdu = TwoPi<double>() * Vector3d(point.z, 0.0, -point.x);
+-            result.m_derivatives.m_dpdv = -impl->m_radius / radial * Vector3d(point.x, 0.0, point.z);
+-            result.m_derivatives.m_dndu = result.m_derivatives.m_dndv = Vector3d(0.0);
+-        }
++        result.m_derivatives.m_dpdu = TwoPi<double>() * Vector3d(point.z, 0.0, -point.x);
++        result.m_derivatives.m_dpdv = -impl->m_radius / radial * Vector3d(point.x, 0.0, point.z);
++        result.m_derivatives.m_dndu = result.m_derivatives.m_dndv = Vector3d(0.0);
+     }
+ }
+ 
+diff --git a/src/appleseed/renderer/modeling/object/diskobject.h b/src/appleseed/renderer/modeling/object/diskobject.h
+index c7288233d..7256c7cec 100644
+--- a/src/appleseed/renderer/modeling/object/diskobject.h
++++ b/src/appleseed/renderer/modeling/object/diskobject.h
+@@ -95,6 +95,11 @@ class APPLESEED_DLLSYMBOL DiskObject
+ 
+     bool intersect(const ShadingRay& ray) const override;
+ 
++    // Evaluate attributes at an object-space surface point using active frame data.
++    void get_surface_attributes(
++        const foundation::Vector3d& point,
++        IntersectionResult&         result) const;
++
+     void refine_and_offset(
+         const foundation::Ray3d&    obj_inst_ray,
+         const foundation::Vector3d& obj_inst_geometric_normal,
+diff --git a/src/appleseed/renderer/modeling/object/rectangleobject.cpp b/src/appleseed/renderer/modeling/object/rectangleobject.cpp
+index dbf6985e8..f56ada4f4 100644
+--- a/src/appleseed/renderer/modeling/object/rectangleobject.cpp
++++ b/src/appleseed/renderer/modeling/object/rectangleobject.cpp
+@@ -188,18 +188,23 @@ void RectangleObject::intersect(
+         v);
+ 
+     if (result.m_hit)
+-    {
+-        result.m_geometric_normal = impl->m_normal;
+-        result.m_shading_normal = impl->m_normal;
+-
+-        result.m_uv[0] = static_cast<float>(u);
+-        result.m_uv[1] = static_cast<float>(v);
+-        result.m_material_slot = 0;
+-        result.m_derivatives.m_valid = true;
+-        result.m_derivatives.m_dpdu = impl->m_x;
+-        result.m_derivatives.m_dpdv = impl->m_y;
+-        result.m_derivatives.m_dndu = result.m_derivatives.m_dndv = Vector3d(0.0);
+-    }
++        get_surface_attributes(ray.point_at(result.m_distance), result);
++}
++
++void RectangleObject::get_surface_attributes(
++    const Vector3d&         point,
++    IntersectionResult&     result) const
++{
++    result.m_geometric_normal = impl->m_normal;
++    result.m_shading_normal = impl->m_normal;
++
++    result.m_uv = Vector2f(parallelogram_surface_uv(point,
++        impl->m_corner, impl->m_x, impl->m_y));
++    result.m_material_slot = 0;
++    result.m_derivatives.m_valid = true;
++    result.m_derivatives.m_dpdu = impl->m_x;
++    result.m_derivatives.m_dpdv = impl->m_y;
++    result.m_derivatives.m_dndu = result.m_derivatives.m_dndv = Vector3d(0.0);
+ }
+ 
+ bool RectangleObject::intersect(const ShadingRay& ray) const
+diff --git a/src/appleseed/renderer/modeling/object/rectangleobject.h b/src/appleseed/renderer/modeling/object/rectangleobject.h
+index d42f4dfb4..535968ea2 100644
+--- a/src/appleseed/renderer/modeling/object/rectangleobject.h
++++ b/src/appleseed/renderer/modeling/object/rectangleobject.h
+@@ -91,6 +91,11 @@ class APPLESEED_DLLSYMBOL RectangleObject
+ 
+     bool intersect(const ShadingRay& ray) const override;
+ 
++    // Evaluate attributes at an object-space surface point using active frame data.
++    void get_surface_attributes(
++        const foundation::Vector3d& point,
++        IntersectionResult&         result) const;
++
+     void refine_and_offset(
+         const foundation::Ray3d&    obj_inst_ray,
+         const foundation::Vector3d& obj_inst_geometric_normal,
+diff --git a/src/appleseed/renderer/modeling/object/sphereobject.cpp b/src/appleseed/renderer/modeling/object/sphereobject.cpp
+index bd402b701..bff8937e1 100644
+--- a/src/appleseed/renderer/modeling/object/sphereobject.cpp
++++ b/src/appleseed/renderer/modeling/object/sphereobject.cpp
+@@ -112,27 +112,32 @@ void SphereObject::intersect(
+         result.m_distance);
+ 
+     if (result.m_hit)
++        get_surface_attributes(ray.point_at(result.m_distance), result);
++}
++
++void SphereObject::get_surface_attributes(
++    const Vector3d&         point,
++    IntersectionResult&     result) const
++{
++    const Vector3d n = normalize(point);
++    result.m_geometric_normal = n;
++    result.m_shading_normal = n;
++
++    const Vector3f p(n);
++    result.m_uv[0] = std::atan2(-p.z, p.x) * RcpTwoPi<float>();
++    result.m_uv[1] = 1.0f - (std::acos(p.y) * RcpPi<float>());
++
++    result.m_material_slot = 0;
++
++    const double radial = std::sqrt(n.x * n.x + n.z * n.z);
++    result.m_derivatives.m_valid = radial > 0.0;
++    if (result.m_derivatives.m_valid)
+     {
+-        const Vector3d n = ray.point_at(result.m_distance);
+-        result.m_geometric_normal = n;
+-        result.m_shading_normal = n;
+-
+-        const Vector3f p(n);
+-        result.m_uv[0] = std::atan2(-p.z, p.x) * RcpTwoPi<float>();
+-        result.m_uv[1] = 1.0f - (std::acos(p.y) * RcpPi<float>());
+-
+-        result.m_material_slot = 0;
+-
+-        const double radial = std::sqrt(n.x * n.x + n.z * n.z);
+-        result.m_derivatives.m_valid = radial > 0.0;
+-        if (result.m_derivatives.m_valid)
+-        {
+-            result.m_derivatives.m_dpdu = TwoPi<double>() * Vector3d(n.z, 0.0, -n.x);
+-            result.m_derivatives.m_dpdv = Pi<double>() * Vector3d(
+-                -n.y * n.x / radial, radial, -n.y * n.z / radial);
+-            result.m_derivatives.m_dndu = result.m_derivatives.m_dpdu;
+-            result.m_derivatives.m_dndv = result.m_derivatives.m_dpdv;
+-        }
++        result.m_derivatives.m_dpdu = TwoPi<double>() * Vector3d(n.z, 0.0, -n.x);
++        result.m_derivatives.m_dpdv = Pi<double>() * Vector3d(
++            -n.y * n.x / radial, radial, -n.y * n.z / radial);
++        result.m_derivatives.m_dndu = result.m_derivatives.m_dpdu;
++        result.m_derivatives.m_dndv = result.m_derivatives.m_dpdv;
+     }
+ }
+ 
+diff --git a/src/appleseed/renderer/modeling/object/sphereobject.h b/src/appleseed/renderer/modeling/object/sphereobject.h
+index bdb1ee1c9..a4dce03cf 100644
+--- a/src/appleseed/renderer/modeling/object/sphereobject.h
++++ b/src/appleseed/renderer/modeling/object/sphereobject.h
+@@ -77,6 +77,11 @@ class APPLESEED_DLLSYMBOL SphereObject
+ 
+     bool intersect(const ShadingRay& ray) const override;
+ 
++    // Evaluate attributes at an object-space surface point using active frame data.
++    void get_surface_attributes(
++        const foundation::Vector3d& point,
++        IntersectionResult&         result) const;
++
+     void refine_and_offset(
+         const foundation::Ray3d&    obj_inst_ray,
+         const foundation::Vector3d& obj_inst_geometric_normal,

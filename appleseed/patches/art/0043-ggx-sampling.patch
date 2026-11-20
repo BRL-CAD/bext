@@ -1,0 +1,1459 @@
+Subject: [PATCH 43/50] Differentiate GGX visible-normal sampled paths
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 5a025f9b4d24500b11550ddc3b6baa3b37523da8
+Original-Commit: 53e3ce7cecab6acabf5fdb8be68ebf46c3d6c3d2
+
+diff --git a/src/appleseed.shaders/as_osl_extensions.h.in b/src/appleseed.shaders/as_osl_extensions.h.in
+index 11ad477f2..e8b3b9755 100644
+--- a/src/appleseed.shaders/as_osl_extensions.h.in
++++ b/src/appleseed.shaders/as_osl_extensions.h.in
+@@ -104,6 +104,8 @@ closure color as_glossy(
+     //   int "normal_derivatives" = 0
+     //   vector "dNdx" = vector(0)
+     //   vector "dNdy" = vector(0)
++    //   vector "dTdx" = vector(0)
++    //   vector "dTdy" = vector(0)
+     ) BUILTIN;
+ 
+ closure color as_microfacet_glossy(
+@@ -140,6 +142,8 @@ closure color as_metal(
+     //   int "normal_derivatives" = 0
+     //   vector "dNdx" = vector(0)
+     //   vector "dNdy" = vector(0)
++    //   vector "dTdx" = vector(0)
++    //   vector "dTdy" = vector(0)
+     ) BUILTIN;
+ 
+ closure color as_microfacet_metal(
+@@ -170,6 +174,8 @@ closure color as_glass(
+     //   int "normal_derivatives" = 0
+     //   vector "dNdx" = vector(0)
+     //   vector "dNdy" = vector(0)
++    //   vector "dTdx" = vector(0)
++    //   vector "dTdy" = vector(0)
+     ) BUILTIN;
+ 
+ closure color as_ashikhmin_shirley(
+@@ -275,6 +281,8 @@ closure color as_glossy_layer(
+     //   int "normal_derivatives" = 0
+     //   vector "dNdx" = vector(0)
+     //   vector "dNdy" = vector(0)
++    //   vector "dTdx" = vector(0)
++    //   vector "dTdy" = vector(0)
+     ) BUILTIN;
+ 
+ 
+diff --git a/src/appleseed.shaders/src/appleseed/as_blackbody.osl b/src/appleseed.shaders/src/appleseed/as_blackbody.osl
+index 8a4f15338..625436fb0 100644
+--- a/src/appleseed.shaders/src/appleseed/as_blackbody.osl
++++ b/src/appleseed.shaders/src/appleseed/as_blackbody.osl
+@@ -302,7 +302,9 @@ shader as_blackbody
+                 "energy_compensation", 1.0,
+                 "normal_derivatives", 1,
+                 "dNdx", vector(Dx(Nn)),
+-                "dNdy", vector(Dy(Nn)));
++                "dNdy", vector(Dy(Nn)),
++                "dTdx", vector(Dx(vector(0))),
++                "dTdy", vector(Dy(vector(0))));
+     }
+ 
+     if (transmittance <= EPS)
+diff --git a/src/appleseed.shaders/src/appleseed/as_glass.osl b/src/appleseed.shaders/src/appleseed/as_glass.osl
+index 3bea07e84..e554959e0 100644
+--- a/src/appleseed.shaders/src/appleseed/as_glass.osl
++++ b/src/appleseed.shaders/src/appleseed/as_glass.osl
+@@ -383,5 +383,7 @@ shader as_glass
+         in_volume_transmittance_distance,
+         "normal_derivatives", 1,
+         "dNdx", vector(Dx(Nn)),
+-        "dNdy", vector(Dy(Nn)));
++        "dNdy", vector(Dy(Nn)),
++        "dTdx", vector(Dx(tangent)),
++        "dTdy", vector(Dy(tangent)));
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl b/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl
+index cba5eeafa..eef1d2d2f 100644
+--- a/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl
++++ b/src/appleseed.shaders/src/appleseed/as_glossy_layer.osl
+@@ -54,6 +54,8 @@ shader as_glossy_layer
+             in_thickness,
+             "normal_derivatives", 1,
+             "dNdx", vector(Dx(in_normal)),
+-            "dNdy", vector(Dy(in_normal)));
++            "dNdy", vector(Dy(in_normal)),
++            "dTdx", vector(Dx(in_tangent)),
++            "dTdy", vector(Dy(in_tangent)));
+     else out_color = in_substrate;
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_metal.osl b/src/appleseed.shaders/src/appleseed/as_metal.osl
+index 25ccd65bb..fa53c1dd7 100644
+--- a/src/appleseed.shaders/src/appleseed/as_metal.osl
++++ b/src/appleseed.shaders/src/appleseed/as_metal.osl
+@@ -416,5 +416,7 @@ shader as_metal
+         "energy_compensation", in_energy_compensation,
+         "normal_derivatives", 1,
+         "dNdx", vector(Dx(Nn)),
+-        "dNdy", vector(Dy(Nn)));
++        "dNdy", vector(Dy(Nn)),
++        "dTdx", vector(Dx(tangent)),
++        "dTdy", vector(Dy(tangent)));
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl b/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
+index 0bc99c165..0e02f8251 100644
+--- a/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
++++ b/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
+@@ -408,7 +408,9 @@ shader as_sbs_pbrmaterial
+             "energy_compensation", 0.0,
+             "normal_derivatives", 1,
+             "dNdx", vector(Dx(Nn)),
+-            "dNdy", vector(Dy(Nn)));
++            "dNdy", vector(Dy(Nn)),
++            "dTdx", vector(Dx(vector(0))),
++            "dTdy", vector(Dy(vector(0))));
+ 
+         bsdf += (1.0 - in_refraction) * in_opacity *
+             diffuse_color * diffuse(Nn);
+@@ -458,7 +460,9 @@ shader as_sbs_pbrmaterial
+                 "energy_compensation", 0.0,
+                 "normal_derivatives", 1,
+                 "dNdx", vector(Dx(Nn)),
+-                "dNdy", vector(Dy(Nn)));
++                "dNdy", vector(Dy(Nn)),
++                "dTdx", vector(Dx(tangent)),
++                "dTdy", vector(Dy(tangent)));
+         }
+ 
+         float metallicness = clamp(in_metallic, 0.0, 1.0);
+@@ -477,7 +481,9 @@ shader as_sbs_pbrmaterial
+                 "energy_compensation", 0.0,
+                 "normal_derivatives", 1,
+                 "dNdx", vector(Dx(Nn)),
+-                "dNdy", vector(Dy(Nn)));
++                "dNdy", vector(Dy(Nn)),
++                "dTdx", vector(Dx(tangent)),
++                "dTdy", vector(Dy(tangent)));
+         }
+         out_outColor += bsdf;
+     }
+diff --git a/src/appleseed.shaders/src/appleseed/as_standard_surface.osl b/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
+index 91e600591..efadb93a2 100644
+--- a/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
++++ b/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
+@@ -785,7 +785,9 @@ shader as_standard_surface
+                     in_absorption_depth,
+                     "normal_derivatives", 1,
+                     "dNdx", vector(Dx(Nn)),
+-                    "dNdy", vector(Dy(Nn)));
++                    "dNdy", vector(Dy(Nn)),
++                    "dTdx", vector(Dx(tangent)),
++                    "dTdy", vector(Dy(tangent)));
+             }
+             else if (max(in_specular_color) > 0.0)
+             {
+@@ -798,7 +800,9 @@ shader as_standard_surface
+                         in_ior,
+                         "normal_derivatives", 1,
+                         "dNdx", vector(Dx(Nn)),
+-                        "dNdy", vector(Dy(Nn)));
++                        "dNdy", vector(Dy(Nn)),
++                        "dTdx", vector(Dx(tangent)),
++                        "dTdy", vector(Dy(tangent)));
+             }
+         }
+         else if (max(in_specular_color) > 0.0)
+@@ -814,7 +818,9 @@ shader as_standard_surface
+                     in_anisotropy_amount,
+                     "normal_derivatives", 1,
+                     "dNdx", vector(Dx(Nn)),
+-                    "dNdy", vector(Dy(Nn)));
++                    "dNdy", vector(Dy(Nn)),
++                    "dTdx", vector(Dx(tangent)),
++                    "dTdy", vector(Dy(tangent)));
+         }
+ 
+         // In order to layer substrate BxDFs, we need the microfacet Fresnel
+diff --git a/src/appleseed.shaders/src/appleseed/as_subsurface.osl b/src/appleseed.shaders/src/appleseed/as_subsurface.osl
+index ddb315e0e..450f6799b 100644
+--- a/src/appleseed.shaders/src/appleseed/as_subsurface.osl
++++ b/src/appleseed.shaders/src/appleseed/as_subsurface.osl
+@@ -436,6 +436,8 @@ shader as_subsurface
+             "energy_compensation", 1.0,
+             "normal_derivatives", 1,
+             "dNdx", vector(Dx(Nn)),
+-            "dNdy", vector(Dy(Nn)));
++            "dNdy", vector(Dy(Nn)),
++            "dTdx", vector(Dx(vector(0))),
++            "dTdy", vector(Dy(vector(0))));
+     }
+ }
+diff --git a/src/appleseed.shaders/src/appleseed/as_toon.osl b/src/appleseed.shaders/src/appleseed/as_toon.osl
+index b57371efe..0de566e3b 100644
+--- a/src/appleseed.shaders/src/appleseed/as_toon.osl
++++ b/src/appleseed.shaders/src/appleseed/as_toon.osl
+@@ -864,7 +864,9 @@ shader as_toon
+                 in_ior,
+                 "normal_derivatives", 1,
+                 "dNdx", vector(Dx(specularN)),
+-                "dNdy", vector(Dy(specularN)));
++                "dNdy", vector(Dy(specularN)),
++                "dTdx", vector(Dx(tangent)),
++                "dTdy", vector(Dy(tangent)));
+         }
+     }
+     else // NPR ray
+diff --git a/src/appleseed.shaders/src/max/as_max_glass_material.osl b/src/appleseed.shaders/src/max/as_max_glass_material.osl
+index 21aea625f..78c10952a 100644
+--- a/src/appleseed.shaders/src/max/as_max_glass_material.osl
++++ b/src/appleseed.shaders/src/max/as_max_glass_material.osl
+@@ -61,5 +61,7 @@ shader as_max_glass_material
+         VolumeTransmittanceDistance,
+         "normal_derivatives", 1,
+         "dNdx", vector(Dx(Normal)),
+-        "dNdy", vector(Dy(Normal)));
++        "dNdy", vector(Dy(Normal)),
++        "dTdx", vector(Dx(Tn)),
++        "dTdy", vector(Dy(Tn)));
+ }
+diff --git a/src/appleseed.shaders/src/max/as_max_metal_material.osl b/src/appleseed.shaders/src/max/as_max_metal_material.osl
+index 3e50cbe66..600254e3b 100644
+--- a/src/appleseed.shaders/src/max/as_max_metal_material.osl
++++ b/src/appleseed.shaders/src/max/as_max_metal_material.osl
+@@ -87,5 +87,7 @@ shader as_max_metal_material
+         "energy_compensation", 1.0,
+         "normal_derivatives", 1,
+         "dNdx", vector(Dx(Normal)),
+-        "dNdy", vector(Dy(Normal)));
++        "dNdy", vector(Dy(Normal)),
++        "dTdx", vector(Dx(Tn)),
++        "dTdy", vector(Dy(Tn)));
+ }
+diff --git a/src/appleseed.shaders/src/max/as_max_sss_material.osl b/src/appleseed.shaders/src/max/as_max_sss_material.osl
+index a82f8b306..f7a5dcaff 100644
+--- a/src/appleseed.shaders/src/max/as_max_sss_material.osl
++++ b/src/appleseed.shaders/src/max/as_max_sss_material.osl
+@@ -83,7 +83,9 @@ shader as_max_sss_material
+         Ior,
+         "normal_derivatives", 1,
+         "dNdx", vector(Dx(Normal)),
+-        "dNdy", vector(Dy(Normal)));
++        "dNdy", vector(Dy(Normal)),
++        "dTdx", vector(Dx(Tn)),
++        "dTdy", vector(Dy(Tn)));
+ 
+     ClosureOut = BSSRDF + BRDF;
+ }
+diff --git a/src/appleseed.shaders/src/maya/as_maya_phongE.osl b/src/appleseed.shaders/src/maya/as_maya_phongE.osl
+index d30dedd20..3141df2d3 100644
+--- a/src/appleseed.shaders/src/maya/as_maya_phongE.osl
++++ b/src/appleseed.shaders/src/maya/as_maya_phongE.osl
+@@ -294,6 +294,8 @@ shader as_maya_phongE
+                 0.0,
+                 "normal_derivatives", 1,
+                 "dNdx", vector(Dx(Nn)),
+-                "dNdy", vector(Dy(Nn)));
++                "dNdy", vector(Dy(Nn)),
++                "dTdx", vector(Dx(vector(0))),
++                "dTdy", vector(Dy(vector(0))));
+     }
+ }
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index e04b26d08..1a821a2d7 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -1517,6 +1517,7 @@ set (renderer_meta_tests_sources
+     renderer/meta/tests/test_frame.cpp
+     renderer/meta/tests/test_samplingabort.cpp
+     renderer/meta/tests/test_glassbsdf.cpp
++    renderer/meta/tests/test_microfacet_differentials.cpp
+     renderer/meta/tests/test_glossylayerbsdf.cpp
+     renderer/meta/tests/test_imagetools.cpp
+     renderer/meta/tests/test_inputarray.cpp
+diff --git a/src/appleseed/foundation/math/microfacet.cpp b/src/appleseed/foundation/math/microfacet.cpp
+index 6f5219883..8faed908d 100644
+--- a/src/appleseed/foundation/math/microfacet.cpp
++++ b/src/appleseed/foundation/math/microfacet.cpp
+@@ -442,52 +442,114 @@ float GGXMDF::lambda(
+     return (-1.0f + std::sqrt(1.0f + a2_rcp)) * 0.5f;
+ }
+ 
++namespace
++{
++    Vector3f sample_ggx_visible_normal(
++        const Vector3f&     v,
++        const Vector2f&     s,
++        const float         alpha_x,
++        const float         alpha_y,
++        Matrix3f*           jacobian)
++    {
++        constexpr float FramePoleThreshold = 0.9999f;
++
++        // Preconditions.
++        assert(is_normalized(v));
++
++        // Stretch incident.
++        const float sign_cos_vn = v.y < 0.0f ? -1.0f : 1.0f;
++        Vector3f stretched(
++            sign_cos_vn * v[0] * alpha_x,
++            sign_cos_vn * v[1],
++            sign_cos_vn * v[2] * alpha_y);
++        const Vector3f raw_stretched = stretched;
++        stretched = normalize(stretched);
++
++        // Build the basis around the hemisphere-oriented, stretched direction.
++        // The original direction can point straight down on a back-face hit.
++        const Vector3f t1 =
++            stretched.y < FramePoleThreshold
++                ? normalize(cross(stretched, Vector3f(0.0f, 1.0f, 0.0f)))
++                : Vector3f(1.0f, 0.0f, 0.0f);
++        const Vector3f t2 = cross(t1, stretched);
++
++        // Sample point with polar coordinates (r, phi).
++        const float a = 1.0f / (1.0f + stretched.y);
++        const float r = std::sqrt(s[0]);
++        const float phi =
++            s[1] < a
++                ? s[1] / a * Pi<float>()
++                : Pi<float>() + (s[1] - a) / (1.0f - a) * Pi<float>();
++
++        const float p1 = r * std::cos(phi);
++        const float p2 = r * std::sin(phi) * (s[1] < a ? 1.0f : stretched.y);
++
++        // Compute normal.
++        const Vector3f h =
++            p1 * t1 + p2 * t2 + std::sqrt(std::max(0.0f, 1.0f - p1 * p1 - p2 * p2)) * stretched;
++
++        // Unstretch and normalize.
++        const Vector3f m(
++            h.x * alpha_x,
++            std::max(0.0f, h.y),
++            h.z * alpha_y);
++        const Vector3f normal = normalize(m);
++        if (jacobian)
++        {
++            const auto normalized_derivative = [](
++                const Vector3f& raw, const Vector3f& unit, const Vector3f& derivative)
++            {
++                return (derivative - unit * dot(unit, derivative)) / norm(raw);
++            };
++            const bool polar_frame = stretched.y >= FramePoleThreshold;
++            const bool lower_disk = s[1] < a;
++            const float disk_height = std::sqrt(std::max(0.0f, 1.0f - p1 * p1 - p2 * p2));
++            for (std::size_t column = 0; column < 3; ++column)
++            {
++                Vector3f dv(0.0f);
++                dv[column] = 1.0f;
++                const Vector3f ds = normalized_derivative(raw_stretched, stretched,
++                    sign_cos_vn * Vector3f(alpha_x * dv.x, dv.y, alpha_y * dv.z));
++                const Vector3f dt1 = polar_frame ? Vector3f(0.0f) :
++                    normalized_derivative(cross(stretched, Vector3f(0.0f, 1.0f, 0.0f)), t1,
++                        cross(ds, Vector3f(0.0f, 1.0f, 0.0f)));
++                const Vector3f dt2 = cross(dt1, stretched) + cross(t1, ds);
++                const float da = -a * a * ds.y;
++                const float dphi = lower_disk ? s[1] * Pi<float>() * ds.y :
++                    Pi<float>() * (s[1] - 1.0f) * da / square(1.0f - a);
++                const float dp1 = -r * std::sin(phi) * dphi;
++                const float dp2 = r * std::cos(phi) * dphi * (lower_disk ? 1.0f : stretched.y)
++                    + (lower_disk ? 0.0f : r * std::sin(phi) * ds.y);
++                const float dp3 = disk_height > 0.0f ? -(p1 * dp1 + p2 * dp2) / disk_height : 0.0f;
++                const Vector3f dh = dp1 * t1 + p1 * dt1 + dp2 * t2 + p2 * dt2
++                    + dp3 * stretched + disk_height * ds;
++                const Vector3f dm = normalized_derivative(m, normal,
++                    Vector3f(alpha_x * dh.x, h.y > 0.0f ? dh.y : 0.0f, alpha_y * dh.z));
++                for (std::size_t row = 0; row < 3; ++row)
++                    (*jacobian)(row, column) = dm[row];
++            }
++        }
++        return normal;
++    }
++}
++
+ Vector3f GGXMDF::sample(
+     const Vector3f&     v,
+     const Vector2f&     s,
+     const float         alpha_x,
+     const float         alpha_y)
+ {
+-    // Preconditions.
+-    assert(is_normalized(v));
+-
+-    // Stretch incident.
+-    const float sign_cos_vn = v.y < 0.0f ? -1.0f : 1.0f;
+-    Vector3f stretched(
+-        sign_cos_vn * v[0] * alpha_x,
+-        sign_cos_vn * v[1],
+-        sign_cos_vn * v[2] * alpha_y);
+-    stretched = normalize(stretched);
+-
+-    // Build the basis around the hemisphere-oriented, stretched direction.
+-    // The original direction can point straight down on a back-face hit.
+-    const Vector3f t1 =
+-        stretched.y < 0.9999f
+-            ? normalize(cross(stretched, Vector3f(0.0f, 1.0f, 0.0f)))
+-            : Vector3f(1.0f, 0.0f, 0.0f);
+-    const Vector3f t2 = cross(t1, stretched);
+-
+-    // Sample point with polar coordinates (r, phi).
+-    const float a = 1.0f / (1.0f + stretched.y);
+-    const float r = std::sqrt(s[0]);
+-    const float phi =
+-        s[1] < a
+-            ? s[1] / a * Pi<float>()
+-            : Pi<float>() + (s[1] - a) / (1.0f - a) * Pi<float>();
+-
+-    const float p1 = r * std::cos(phi);
+-    const float p2 = r * std::sin(phi) * (s[1] < a ? 1.0f : stretched.y);
+-
+-    // Compute normal.
+-    const Vector3f h =
+-        p1 * t1 + p2 * t2 + std::sqrt(std::max(0.0f, 1.0f - p1 * p1 - p2 * p2)) * stretched;
++    return sample_ggx_visible_normal(v, s, alpha_x, alpha_y, nullptr);
++}
+ 
+-    // Unstretch and normalize.
+-    const Vector3f m(
+-        h.x * alpha_x,
+-        std::max(0.0f, h.y),
+-        h.z * alpha_y);
+-    return normalize(m);
++Vector3f GGXMDF::sample(
++    const Vector3f&     v,
++    const Vector2f&     s,
++    const float         alpha_x,
++    const float         alpha_y,
++    Matrix3f&           jacobian)
++{
++    return sample_ggx_visible_normal(v, s, alpha_x, alpha_y, &jacobian);
+ }
+ 
+ float GGXMDF::pdf(
+diff --git a/src/appleseed/foundation/math/microfacet.h b/src/appleseed/foundation/math/microfacet.h
+index f5d4eac16..eaa815312 100644
+--- a/src/appleseed/foundation/math/microfacet.h
++++ b/src/appleseed/foundation/math/microfacet.h
+@@ -29,6 +29,7 @@
+ #pragma once
+ 
+ // appleseed.foundation headers.
++#include "foundation/math/matrix.h"
+ #include "foundation/math/vector.h"
+ #include "foundation/platform/compiler.h"
+ 
+@@ -204,6 +205,16 @@ class GGXMDF
+         const float         alpha_x,
+         const float         alpha_y);
+ 
++    // The Jacobian differentiates the sampled normal with respect to v,
++    // keeping the random sample and roughness fixed. It is piecewise valid
++    // within the sampler's hemisphere, frame and clamping branches.
++    static Vector3f sample(
++        const Vector3f&     v,
++        const Vector2f&     s,
++        const float         alpha_x,
++        const float         alpha_y,
++        Matrix3f&           jacobian);
++
+     static float pdf(
+         const Vector3f&     v,
+         const Vector3f&     m,
+diff --git a/src/appleseed/foundation/meta/tests/test_microfacet.cpp b/src/appleseed/foundation/meta/tests/test_microfacet.cpp
+index 899bdece6..6d809ed38 100644
+--- a/src/appleseed/foundation/meta/tests/test_microfacet.cpp
++++ b/src/appleseed/foundation/meta/tests/test_microfacet.cpp
+@@ -28,6 +28,7 @@
+ //
+ 
+ // appleseed.foundation headers.
++#include "foundation/math/basis.h"
+ #include "foundation/math/fp.h"
+ #include "foundation/math/microfacet.h"
+ #include "foundation/math/qmc.h"
+@@ -47,6 +48,49 @@ using namespace foundation;
+ 
+ TEST_SUITE(Foundation_Math_Microfacet)
+ {
++    TEST_CASE(GGX_SamplingJacobianMatchesFixedSampleFiniteDifferences)
++    {
++        const float Step = 0.0005f;
++        const float DerivativeTolerance = 0.003f;
++        const Vector3f directions[] = {
++            Vector3f(0.0f, 1.0f, 0.0f), Vector3f(0.0f, -1.0f, 0.0f),
++            normalize(Vector3f(0.3f, 1.0f, 0.2f)),
++            normalize(Vector3f(0.3f, -1.0f, 0.2f)),
++            normalize(Vector3f(1.0f, 0.05f, 0.3f))};
++        const Vector2f roughness[] = {
++            Vector2f(0.01f), Vector2f(0.1f), Vector2f(0.36f),
++            Vector2f(0.8f), Vector2f(0.1f, 0.6f), Vector2f(0.7f, 0.2f)};
++        const Vector2f samples[] = {
++            Vector2f(0.0f, 0.2f), Vector2f(0.2f, 0.1f),
++            Vector2f(0.6f, 0.4f), Vector2f(0.8f, 0.7f), Vector2f(0.97f, 0.9f)};
++        for (const Vector3f& v : directions)
++        {
++            const Basis3f frame(v);
++            for (const Vector2f& alpha : roughness)
++            {
++                for (const Vector2f& random : samples)
++                {
++                    Matrix3f jacobian;
++                    const Vector3f normal = GGXMDF::sample(v, random, alpha.x, alpha.y, jacobian);
++                    EXPECT_EQ(GGXMDF::sample(v, random, alpha.x, alpha.y), normal);
++                    for (const Vector3f& dv : {frame.get_tangent_u(), frame.get_tangent_v()})
++                    {
++                        const Vector3f left = GGXMDF::sample(normalize(v - Step * dv), random, alpha.x, alpha.y);
++                        const Vector3f right = GGXMDF::sample(normalize(v + Step * dv), random, alpha.x, alpha.y);
++                        const Vector3f finite = (right - left) / (2.0f * Step);
++                        const Vector3f predicted = jacobian * dv;
++                        EXPECT_LT(DerivativeTolerance * std::max(1.0f, norm(finite)), norm(predicted - finite));
++                        EXPECT_LT(DerivativeTolerance, std::abs(dot(normal, predicted)));
++                    }
++                    // Scaling the input direction does not change the sampled
++                    // normal, because hemisphere stretching normalizes it.
++                    EXPECT_LT(DerivativeTolerance, norm(jacobian * v));
++                }
++            }
++        }
++    }
++
++
+     class StdMDFAdapter
+     {
+       public:
+diff --git a/src/appleseed/renderer/kernel/shading/closures.cpp b/src/appleseed/renderer/kernel/shading/closures.cpp
+index f33e6ccee..bbea9e02f 100644
+--- a/src/appleseed/renderer/kernel/shading/closures.cpp
++++ b/src/appleseed/renderer/kernel/shading/closures.cpp
+@@ -137,12 +137,25 @@ namespace
+         int         enabled = 0;
+         OSL::Vec3   dx = OSL::Vec3(0.0f);
+         OSL::Vec3   dy = OSL::Vec3(0.0f);
++        OSL::Vec3   tangent_dx = OSL::Vec3(0.0f);
++        OSL::Vec3   tangent_dy = OSL::Vec3(0.0f);
+ 
+         void apply(CompositeClosure& closure, const OSL::Vec3& normal, Arena& arena) const
+         {
+             if (enabled)
+                 closure.set_closure_normal_derivatives(normal, dx, dy, arena);
+         }
++
++        void apply(CompositeClosure& closure, const OSL::Vec3& normal,
++            const OSL::Vec3& tangent, Arena& arena) const
++        {
++            apply(closure, normal, arena);
++            // A zero input uses the original frame. Its selected tangent
++            // derivatives must not come from the discarded shader tangent.
++            if (enabled && square_norm(Vector3f(tangent)) != 0.0f &&
++                closure.get_closure_normal_derivatives(closure.get_last_closure_index()))
++                closure.set_closure_tangent_derivatives(tangent_dx, tangent_dy);
++        }
+     };
+ 
+     template <typename Params>
+@@ -167,6 +180,8 @@ namespace
+             CLOSURE_INT_KEYPARAM(Params, normal_derivatives.enabled, "normal_derivatives"),
+             CLOSURE_VECTOR_KEYPARAM(Params, normal_derivatives.dx, "dNdx"),
+             CLOSURE_VECTOR_KEYPARAM(Params, normal_derivatives.dy, "dNdy"),
++            CLOSURE_VECTOR_KEYPARAM(Params, normal_derivatives.tangent_dx, "dTdx"),
++            CLOSURE_VECTOR_KEYPARAM(Params, normal_derivatives.tangent_dy, "dTdy"),
+             CLOSURE_FINISH_PARAM(Params)
+         };
+         extended.insert(extended.end(), std::begin(derivatives), std::end(derivatives));
+@@ -711,7 +726,7 @@ namespace
+                     p->T,
+                     arena);
+ 
+-            p->normal_derivatives.apply(composite_closure, p->N, arena);
++            p->normal_derivatives.apply(composite_closure, p->N, p->T, arena);
+ 
+             values->m_surface_transmittance.set(Color3f(p->surface_transmittance), g_std_lighting_conditions, Spectrum::Reflectance);
+             values->m_surface_transmittance_multiplier = 1.0f;
+@@ -811,7 +826,7 @@ namespace
+                     p->T,
+                     arena);
+ 
+-            p->normal_derivatives.apply(composite_closure, p->N, arena);
++            p->normal_derivatives.apply(composite_closure, p->N, p->T, arena);
+ 
+             composite_closure.override_closure_scalar_weight(
+                 luminance(weight) * sample_weight(roughness, ior, fresnel_weight));
+@@ -1169,7 +1184,7 @@ namespace
+                     p->T,
+                     arena);
+ 
+-            p->normal_derivatives.apply(composite_closure, p->N, arena);
++            p->normal_derivatives.apply(composite_closure, p->N, p->T, arena);
+ 
+             values->m_normal_reflectance.set(Color3f(p->normal_reflectance), g_std_lighting_conditions, Spectrum::Reflectance);
+             values->m_edge_tint.set(Color3f(p->edge_tint), g_std_lighting_conditions, Spectrum::Reflectance);
+@@ -2293,7 +2308,7 @@ namespace
+                     p->T,
+                     arena);
+ 
+-            p->normal_derivatives.apply(composite_closure, p->N, arena);
++            p->normal_derivatives.apply(composite_closure, p->N, p->T, arena);
+ 
+             const float roughness = clamp(p->roughness, 0.0f, 1.0f);
+             const float ior = max(p->ior, 0.001f);
+@@ -2340,6 +2355,7 @@ void CompositeClosure::compute_closure_shading_basis(
+     const Vector3f& normal,
+     const Basis3f&  original_shading_basis)
+ {
++    m_basis_references[m_closure_count].m_tangent = original_shading_basis.get_tangent_u();
+     const float normal_square_norm = square_norm(normal);
+     if APPLESEED_LIKELY(normal_square_norm != 0.0f)
+     {
+@@ -2366,6 +2382,7 @@ void CompositeClosure::compute_closure_shading_basis(
+         const float normal_square_norm = square_norm(normal);
+         if APPLESEED_LIKELY(normal_square_norm != 0.0f)
+         {
++            m_basis_references[m_closure_count].m_tangent = tangent;
+             m_bases[m_closure_count] =
+                 Basis3f(
+                     normal / std::sqrt(normal_square_norm),
+@@ -2374,6 +2391,7 @@ void CompositeClosure::compute_closure_shading_basis(
+         else
+         {
+             // Fallback to the original shading basis if the normal is zero.
++            m_basis_references[m_closure_count].m_tangent = original_shading_basis.get_tangent_u();
+             m_bases[m_closure_count] = original_shading_basis;
+         }
+     }
+@@ -2478,6 +2496,15 @@ void CompositeClosure::set_closure_normal_derivatives(
+     m_normal_derivatives[index] = derivatives;
+ }
+ 
++void CompositeClosure::set_closure_tangent_derivatives(
++    const Vector3f& dtdx,
++    const Vector3f& dtdy)
++{
++    auto& reference = m_basis_references[get_last_closure_index()];
++    reference.m_dx = dtdx;
++    reference.m_dy = dtdy;
++}
++
+ void CompositeClosure::add_ior(
+     const Color3f&              weight,
+     const float                 ior)
+diff --git a/src/appleseed/renderer/kernel/shading/closures.h b/src/appleseed/renderer/kernel/shading/closures.h
+index 8637abc17..8ce1958d2 100644
+--- a/src/appleseed/renderer/kernel/shading/closures.h
++++ b/src/appleseed/renderer/kernel/shading/closures.h
+@@ -205,6 +205,11 @@ class APPLESEED_ALIGN(16) CompositeClosure
+ 
+     const foundation::Basis3f& get_closure_shading_basis(const std::size_t index) const;
+     const BSDF::NormalDerivatives* get_closure_normal_derivatives(const std::size_t index) const;
++    const BSDF::BasisReference& get_closure_basis_reference(const std::size_t index) const;
++
++    void set_closure_tangent_derivatives(
++        const foundation::Vector3f& dtdx,
++        const foundation::Vector3f& dtdy);
+ 
+     void set_closure_normal_derivatives(
+         const foundation::Vector3f& normal,
+@@ -258,6 +263,7 @@ class APPLESEED_ALIGN(16) CompositeClosure
+     float                           m_scalar_weights[MaxClosureEntries];
+     foundation::Basis3f             m_bases[MaxClosureEntries];
+     const BSDF::NormalDerivatives*   m_normal_derivatives[MaxClosureEntries];
++    BSDF::BasisReference            m_basis_references[MaxClosureEntries];
+     std::size_t                     m_ior_count;
+     float                           m_iors[MaxClosureEntries];
+     float                           m_ior_cdf[MaxClosureEntries];
+@@ -470,6 +476,12 @@ inline const BSDF::NormalDerivatives* CompositeClosure::get_closure_normal_deriv
+     return m_normal_derivatives[index];
+ }
+ 
++inline const BSDF::BasisReference& CompositeClosure::get_closure_basis_reference(const std::size_t index) const
++{
++    assert(index < get_closure_count());
++    return m_basis_references[index];
++}
++
+ inline const std::int8_t* CompositeClosure::get_closure_layers(const std::size_t index) const
+ {
+     assert(index < get_closure_count());
+diff --git a/src/appleseed/renderer/meta/tests/test_microfacet_differentials.cpp b/src/appleseed/renderer/meta/tests/test_microfacet_differentials.cpp
+new file mode 100644
+index 000000000..8d6b882a7
+--- /dev/null
++++ b/src/appleseed/renderer/meta/tests/test_microfacet_differentials.cpp
+@@ -0,0 +1,314 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2017-2018 Esteban Tovagliari, The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/kernel/shading/shadingpointbuilder.h"
++#include "renderer/modeling/bsdf/bsdf.h"
++#include "renderer/modeling/bsdf/bsdfsample.h"
++#include "renderer/modeling/bsdf/glassbsdf.h"
++#include "renderer/modeling/bsdf/glossybrdf.h"
++#include "renderer/modeling/bsdf/glossylayerbsdf.h"
++#include "renderer/modeling/bsdf/metalbrdf.h"
++#include "renderer/modeling/bsdf/plasticbrdf.h"
++#include "renderer/utility/paramarray.h"
++#include "foundation/math/basis.h"
++#include "foundation/math/rng/xoroshiro128plus.h"
++#include "foundation/math/vector.h"
++#include "foundation/memory/arena.h"
++#include "foundation/utility/iostreamop.h"
++#include "foundation/utility/test.h"
++#include <algorithm>
++#include <cmath>
++#include <cstdint>
++#include <limits>
++
++using namespace renderer;
++using namespace foundation;
++
++TEST_SUITE(Renderer_Modeling_BSDF_MicrofacetDifferentials)
++{
++    enum class Material { Glossy, Metal, Plastic, Coat, GlassReflection, GlassTransmission };
++    // Opposite, unequal screen directions expose accidental axis reuse.
++    constexpr float SecondaryAxisScale = -0.7f;
++
++    struct State
++    {
++        Vector3f normal = Vector3f(0.2f, 1.0f, 0.1f);
++        Vector3f tangent = Vector3f(1.0f, 0.3f, 0.2f);
++        Vector3f outgoing = Vector3f(0.3f, 1.0f, -0.1f);
++        Vector3f geometric = Vector3f(0.0f, 1.0f, 0.0f);
++    };
++
++    Vector3f normalization_derivative(const Vector3f& raw, const Vector3f& slope)
++    {
++        const Vector3f n = normalize(raw);
++        return (slope - n * dot(n, slope)) / norm(raw);
++    }
++
++    State shifted(const State& center, const State& slope, const float step)
++    {
++        State result;
++        result.normal = center.normal + step * slope.normal;
++        result.tangent = center.tangent + step * slope.tangent;
++        result.outgoing = center.outgoing + step * slope.outgoing;
++        result.geometric = center.geometric + step * slope.geometric;
++        return result;
++    }
++
++    BSDFSample sample_direction(const Material material, const State& state,
++        const State& slope, const float step, const float roughness, const float anisotropy,
++        const std::uint64_t seed, const bool backfacing, const bool adjoint, const bool derivatives)
++    {
++        const float side = backfacing ? -1.0f : 1.0f;
++        const Vector3f n = side * normalize(state.normal);
++        const Vector3f wo = side * normalize(state.outgoing);
++        const Basis3f basis(n, state.tangent);
++        ShadingPoint point;
++        ShadingPointBuilder builder(point);
++        builder.set_ray(ShadingRay(Vector3d(0.0, side, 0.0), -Vector3d(wo),
++            ShadingRay::Time(), VisibilityFlags::CameraRay, 0));
++        builder.set_primitive_type(ShadingPoint::PrimitiveTriangle);
++        builder.set_geometric_normal(Vector3d(normalize(state.geometric)));
++        builder.set_shading_basis(Basis3d(basis));
++        builder.set_side(backfacing ? ObjectInstance::BackSide : ObjectInstance::FrontSide);
++        BSDF::NormalDerivatives dn, dg;
++        dn.m_dx = side * step * normalization_derivative(state.normal, slope.normal);
++        dn.m_dy = SecondaryAxisScale * dn.m_dx;
++        dg.m_dx = step * normalization_derivative(state.geometric, slope.geometric);
++        dg.m_dy = SecondaryAxisScale * dg.m_dx;
++        BSDF::BasisReference reference;
++        reference.m_tangent = state.tangent;
++        reference.m_dx = step * slope.tangent;
++        reference.m_dy = SecondaryAxisScale * reference.m_dx;
++        BSDF::LocalGeometry geometry;
++        geometry.m_shading_point = &point;
++        geometry.m_shading_basis = basis;
++        geometry.m_geometric_normal = normalize(state.geometric);
++        geometry.m_normal_derivatives = &dn;
++        geometry.m_basis_reference = &reference;
++        geometry.m_geometric_normal_derivatives = &dg;
++
++        auto_release_ptr<BSDF> bsdf;
++        GlossyBRDFInputValues glossy{};
++        MetalBRDFInputValues metal{};
++        PlasticBRDFInputValues plastic{};
++        GlossyLayerBSDFInputValues coat{};
++        GlassBSDFInputValues glass{};
++        void* inputs = nullptr;
++        switch (material)
++        {
++          case Material::Glossy:
++            bsdf = GlossyBRDFFactory().create("rough_direction", ParamArray());
++            glossy.m_reflectance.set(1.0f);
++            glossy.m_reflectance_multiplier = 1.0f;
++            glossy.m_ior = 1.5f;
++            glossy.m_fresnel_weight = 1.0f;
++            glossy.m_roughness = roughness;
++            glossy.m_anisotropy = anisotropy;
++            inputs = &glossy;
++            break;
++          case Material::Metal:
++            bsdf = MetalBRDFFactory().create("rough_direction", ParamArray());
++            metal.m_normal_reflectance.set(1.0f);
++            metal.m_edge_tint.set(1.0f);
++            metal.m_reflectance_multiplier = 1.0f;
++            metal.m_roughness = roughness;
++            metal.m_anisotropy = anisotropy;
++            inputs = &metal;
++            break;
++          case Material::Plastic:
++            bsdf = PlasticBRDFFactory().create("rough_direction", ParamArray());
++            plastic.m_diffuse_reflectance.set(0.0f);
++            plastic.m_specular_reflectance.set(1.0f);
++            plastic.m_specular_reflectance_multiplier = 1.0f;
++            plastic.m_roughness = roughness;
++            plastic.m_ior = 1.5f;
++            inputs = &plastic;
++            break;
++          case Material::Coat:
++            bsdf = GlossyLayerBSDFFactory::create("rough_direction", ParamArray());
++            coat.m_reflectance.set(1.0f);
++            coat.m_transmittance.set(1.0f);
++            coat.m_roughness = roughness;
++            coat.m_anisotropy = anisotropy;
++            coat.m_ior = 1.5f;
++            inputs = &coat;
++            break;
++          case Material::GlassReflection:
++          case Material::GlassTransmission:
++            bsdf = GlassBSDFFactory().create("rough_direction", ParamArray());
++            glass.m_precomputed.m_reflection_color.set(0.0f);
++            glass.m_precomputed.m_refraction_color.set(0.0f);
++            glass.m_roughness = roughness;
++            glass.m_anisotropy = anisotropy;
++            glass.m_ior = 1.5f;
++            // These direction-only fixtures specify their optical media
++            // directly, avoiding material or scene state in the reference.
++            glass.m_precomputed.m_outside_ior = 1.0f;
++            glass.m_precomputed.m_backfacing = backfacing;
++            if (material == Material::GlassReflection)
++            {
++                glass.m_precomputed.m_reflection_weight = 1.0f;
++                glass.m_precomputed.m_reflection_color.set(1.0f);
++            }
++            else
++            {
++                glass.m_precomputed.m_refraction_weight = 1.0f;
++                glass.m_precomputed.m_refraction_color.set(1.0f);
++            }
++            inputs = &glass;
++            break;
++        }
++        Arena arena;
++        if (material != Material::GlassReflection && material != Material::GlassTransmission)
++            bsdf->prepare_inputs(arena, point, inputs);
++        constexpr std::uint64_t SeedA = 0x3141592653589793ULL;
++        constexpr std::uint64_t SeedB = 0x2718281828459045ULL;
++        constexpr std::uint64_t SeedStride = 0x9e3779b97f4a7c15ULL;
++        Xoroshiro128plus rng(SeedA ^ ((seed + 1) * SeedStride), SeedB);
++        SamplingContext sampling(rng, SamplingContext::RNGMode);
++        const Vector3f dwo = side * step * normalization_derivative(state.outgoing, slope.outgoing);
++        const Dual3f outgoing = derivatives ? Dual3f(wo, wo + dwo, wo + SecondaryAxisScale * dwo) : Dual3f(wo);
++        BSDFSample result;
++        bsdf->sample(sampling, inputs, adjoint, false, geometry, outgoing, ScatteringMode::All, result);
++        return result;
++    }
++
++    struct Fixture
++    {
++        void check(const Material material, ITestListener& test_listener,
++            TestResult& case_result, const char* test_name)
++        {
++            const auto get_name = [test_name]() { return test_name; };
++            // A doubled step resolves the float-valued scalar reference's
++            // cancellation near invariant isotropic tangent rotations.
++            const float Step = 0.002f;
++            // Float-valued directions quantize finite differences by roughly
++            // one output ULP divided by Step, including at small gradients.
++            const float AbsoluteTolerance = 0.0003f;
++            const float RelativeTolerance = 0.004f;
++            std::size_t comparisons = 0;
++            std::size_t corrected = 0;
++            const bool glass = material == Material::GlassReflection || material == Material::GlassTransmission;
++            for (const float roughness : {0.1f, 0.3f, 0.6f})
++            for (const float anisotropy : {-0.5f, 0.0f, 0.5f})
++            for (const bool adjoint : {false, true})
++            for (const bool backfacing : {false, true})
++            {
++                if ((backfacing && !glass) || (anisotropy != 0.0f && material == Material::Plastic))
++                    continue;
++                for (unsigned experiment = 0; experiment < 4; ++experiment)
++                {
++                    std::size_t group_comparisons = 0;
++                    for (std::uint64_t seed = 0; seed < 8; ++seed)
++                    {
++                        State center, slope;
++                        slope.normal = experiment == 1 || experiment == 3 ? Vector3f(0.3f, 0.1f, -0.2f) : Vector3f(0.0f);
++                        slope.tangent = experiment >= 2 ? Vector3f(0.2f, 0.1f, -0.3f) : Vector3f(0.0f);
++                        slope.outgoing = experiment == 0 || experiment == 3 ? Vector3f(-0.2f, 0.1f, 0.3f) : Vector3f(0.0f);
++                        slope.geometric = experiment == 3 ? Vector3f(0.1f, -0.2f, 0.1f) : Vector3f(0.0f);
++                        if (experiment == 3 && !glass && material != Material::Plastic)
++                            center.geometric = Vector3f(0.9f, 0.3f, -0.1f);
++                        const auto value = sample_direction(material, center, slope, Step, roughness,
++                            anisotropy, seed, backfacing, adjoint, true);
++                        const auto left = sample_direction(material, shifted(center, slope, -Step), slope,
++                            Step, roughness, anisotropy, seed, backfacing, adjoint, false);
++                        const auto right = sample_direction(material, shifted(center, slope, Step), slope,
++                            Step, roughness, anisotropy, seed, backfacing, adjoint, false);
++                        if (value.get_mode() == ScatteringMode::None || left.get_mode() == ScatteringMode::None ||
++                            right.get_mode() == ScatteringMode::None)
++                            continue;
++                        ASSERT_TRUE(value.m_incoming.has_derivatives());
++                        const Vector3f finite = (right.m_incoming.get_value() - left.m_incoming.get_value()) / (2.0f * Step);
++                        const Vector3f predicted = (value.m_incoming.get_dx() - value.m_incoming.get_value()) / Step;
++                        const Vector3f finite_y = SecondaryAxisScale * finite;
++                        const Vector3f predicted_y = (value.m_incoming.get_dy() - value.m_incoming.get_value()) / Step;
++                        const float error = norm(predicted - finite);
++                        const float error_y = norm(predicted_y - finite_y);
++                        const float bound = AbsoluteTolerance + RelativeTolerance * norm(finite);
++                        const float bound_y = AbsoluteTolerance + RelativeTolerance * norm(finite_y);
++                        if (error >= bound || error_y >= bound_y)
++                        {
++                            TestListenerHelper::write(test_listener, current_test_suite__(), get_name(),
++                                __FILE__, __LINE__, TestMessage::AssertionFailure,
++                                "roughness=%g anisotropy=%g adjoint=%d backfacing=%d field=%u seed=%llu error=%g/%g bound=%g/%g",
++                                roughness, anisotropy, adjoint, backfacing, experiment,
++                                static_cast<unsigned long long>(seed), error, error_y, bound, bound_y);
++                        }
++                        EXPECT_LT(bound, error);
++                        EXPECT_LT(bound_y, error_y);
++                        const auto scalar = sample_direction(material, center, slope, Step, roughness,
++                            anisotropy, seed, backfacing, adjoint, false);
++                        ASSERT_EQ(value.get_mode(), scalar.get_mode());
++                        EXPECT_FEQ_EPS(scalar.m_incoming.get_value(), value.m_incoming.get_value(), 1.0e-6f);
++                        EXPECT_FEQ_EPS(scalar.get_probability(), value.get_probability(), 1.0e-6f * std::max(1.0f, scalar.get_probability()));
++                        EXPECT_FEQ_EPS(scalar.m_value.m_beauty[0], value.m_value.m_beauty[0],
++                            1.0e-6f * std::max(1.0f, scalar.m_value.m_beauty[0]));
++                        ++comparisons;
++                        ++group_comparisons;
++                        if (experiment == 3 && dot(normalize(center.geometric), value.m_incoming.get_value()) < 0.001f)
++                            ++corrected;
++                    }
++                    EXPECT_TRUE(group_comparisons > 0);
++                }
++            }
++            EXPECT_TRUE(comparisons > 100);
++            if (material == Material::Glossy || material == Material::Metal || material == Material::Coat)
++                EXPECT_TRUE(corrected > 0);
++        }
++    };
++
++    TEST_CASE(IsotropicViewAlignedSamplingIsInvariantUnderTangentChanges)
++    {
++        State center, slope;
++        slope.normal = slope.outgoing = slope.geometric = Vector3f(0.0f);
++        slope.tangent = Vector3f(0.2f, 0.1f, -0.3f);
++        const float DirectionTolerance = 4.0f * std::numeric_limits<float>::epsilon();
++        for (const float step : {0.002f, 0.004f})
++        {
++            const auto value = sample_direction(Material::Glossy, center, slope, step,
++                0.6f, 0.0f, 4, false, false, true);
++            const auto left = sample_direction(Material::Glossy, shifted(center, slope, -step), slope,
++                step, 0.6f, 0.0f, 4, false, false, false);
++            const auto right = sample_direction(Material::Glossy, shifted(center, slope, step), slope,
++                step, 0.6f, 0.0f, 4, false, false, false);
++            ASSERT_EQ(ScatteringMode::Glossy, value.get_mode());
++            ASSERT_EQ(ScatteringMode::Glossy, left.get_mode());
++            ASSERT_EQ(ScatteringMode::Glossy, right.get_mode());
++            EXPECT_LT(DirectionTolerance, norm(right.m_incoming.get_value() - left.m_incoming.get_value()));
++            EXPECT_LT(DirectionTolerance, norm(value.m_incoming.get_dx() - value.m_incoming.get_value()));
++        }
++    }
++
++    TEST_CASE_F(GlossyReflection, Fixture) { check(Material::Glossy, test_listener, case_result, get_name()); }
++    TEST_CASE_F(MetalReflection, Fixture) { check(Material::Metal, test_listener, case_result, get_name()); }
++    TEST_CASE_F(PlasticReflection, Fixture) { check(Material::Plastic, test_listener, case_result, get_name()); }
++    TEST_CASE_F(CoatReflection, Fixture) { check(Material::Coat, test_listener, case_result, get_name()); }
++    TEST_CASE_F(GlassReflection, Fixture) { check(Material::GlassReflection, test_listener, case_result, get_name()); }
++    TEST_CASE_F(GlassTransmission, Fixture) { check(Material::GlassTransmission, test_listener, case_result, get_name()); }
++}
+diff --git a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+index 6e62d900b..fb34c22ea 100644
+--- a/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
++++ b/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+@@ -277,6 +277,35 @@ TEST_SUITE(Renderer_Modeling_BSDF_OSL)
+         }
+     }
+ 
++    TEST_CASE_F(SelectedTangentDerivativesFollowTheFrameFallback, Fixture)
++    {
++        const Vector3f tangent_dx(0.2f, 0.1f, -0.3f);
++        const Vector3f tangent_dy(-0.1f, 0.4f, 0.2f);
++        for (const Vector3f normal : {Vector3f(0.0f), Vector3f(0.2f, 1.0f, 0.1f)})
++        for (const Vector3f tangent : {Vector3f(0.0f), Vector3f(1.0f, 0.3f, 0.2f)})
++        {
++            tree = nullptr;
++            auto* node = add_closure(GlossyID, 1.0f, normal);
++            const OSL::ClosureParam* params = nullptr;
++            ASSERT_TRUE(system->query_closure(nullptr, &node->id, &params));
++            // The glossy closure's second formal parameter is its tangent.
++            ASSERT_EQ(sizeof(OSL::Vec3), params[1].field_size);
++            const OSL::Vec3 raw_tangent(tangent.x, tangent.y, tangent.z);
++            std::memcpy(static_cast<char*>(node->data()) + params[1].offset,
++                &raw_tangent, sizeof(raw_tangent));
++            set_keyword(node, "normal_derivatives", 1);
++            set_keyword(node, "dTdx", OSL::Vec3(tangent_dx.x, tangent_dx.y, tangent_dx.z));
++            set_keyword(node, "dTdy", OSL::Vec3(tangent_dy.x, tangent_dy.y, tangent_dy.z));
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            const auto& reference = closure.get_closure_basis_reference(0);
++            const bool selected = square_norm(normal) != 0.0f && square_norm(tangent) != 0.0f;
++            EXPECT_EQ(selected ? tangent : basis.get_tangent_u(), reference.m_tangent);
++            EXPECT_EQ(selected ? tangent_dx : Vector3f(0.0f), reference.m_dx);
++            EXPECT_EQ(selected ? tangent_dy : Vector3f(0.0f), reference.m_dy);
++        }
++    }
++
+     TEST_CASE_F(StandardReflection_LeavesUnspecifiedNormalDerivativesOnTheLegacyPath, Fixture)
+     {
+         add_mirror(1.0f, basis.get_normal());
+diff --git a/src/appleseed/renderer/modeling/bsdf/bsdf.h b/src/appleseed/renderer/modeling/bsdf/bsdf.h
+index 1fb6244d0..3bb3059eb 100644
+--- a/src/appleseed/renderer/modeling/bsdf/bsdf.h
++++ b/src/appleseed/renderer/modeling/bsdf/bsdf.h
+@@ -99,18 +99,30 @@ class APPLESEED_DLLSYMBOL BSDF
+     // of the Dirac Delta in order to detect incorrect usages.
+     static const float DiracDelta;
+ 
++    // Keep sampled reflected rays away from a grazing geometric boundary.
++    static constexpr float MinGeometricCosine = 1.0e-4f;
++
+     struct NormalDerivatives
+     {
+         foundation::Vector3f        m_dx;
+         foundation::Vector3f        m_dy;
+     };
+ 
++    struct BasisReference
++    {
++        foundation::Vector3f        m_tangent;
++        foundation::Vector3f        m_dx = foundation::Vector3f(0.0f);
++        foundation::Vector3f        m_dy = foundation::Vector3f(0.0f);
++    };
++
+     struct LocalGeometry
+     {
+         const ShadingPoint*         m_shading_point;
+         foundation::Vector3f        m_geometric_normal;         // world space geometric normal at the shading point, unit-length
+         foundation::Basis3f         m_shading_basis;            // world space shading basis at the shading point
+         const NormalDerivatives*    m_normal_derivatives = nullptr; // optional derivatives of the selected closure normal
++        const BasisReference*       m_basis_reference = nullptr;
++        const NormalDerivatives*    m_geometric_normal_derivatives = nullptr;
+     };
+ 
+     // Constructor.
+@@ -287,10 +299,8 @@ inline bool BSDF::force_above_surface(
+     foundation::Vector3f&           direction,
+     const foundation::Vector3f&     normal)
+ {
+-    const float Eps = 1.0e-4f;
+-
+     const float cos_theta = foundation::dot(direction, normal);
+-    const float correction = Eps - cos_theta;
++    const float correction = MinGeometricCosine - cos_theta;
+ 
+     if (correction > 0.0f)
+     {
+diff --git a/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp b/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
+index 78c79879f..02343adce 100644
+--- a/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/bsdfsample.cpp
+@@ -42,6 +42,85 @@ namespace renderer
+ 
+ namespace
+ {
++    void get_normal_derivatives(
++        const BSDF::LocalGeometry& geometry, Vector3f& dx, Vector3f& dy)
++    {
++        if (geometry.m_normal_derivatives)
++        {
++            dx = geometry.m_normal_derivatives->m_dx;
++            dy = geometry.m_normal_derivatives->m_dy;
++        }
++        else geometry.m_shading_point->compute_screen_space_normal_derivatives(dx, dy);
++    }
++
++    Vector3f normalized_derivative(
++        const Vector3f& raw, const Vector3f& unit, const Vector3f& derivative)
++    {
++        return (derivative - unit * dot(unit, derivative)) / norm(raw);
++    }
++
++    Matrix3f basis_derivative(
++        const BSDF::LocalGeometry& geometry, const Vector3f& dn, const Vector3f& dt)
++    {
++        const Basis3f& basis = geometry.m_shading_basis;
++        const Vector3f& n = basis.get_normal();
++        const Vector3f& tangent = geometry.m_basis_reference ?
++            geometry.m_basis_reference->m_tangent : basis.get_tangent_u();
++        const Vector3f& v = basis.get_tangent_v();
++        const Vector3f dv = normalized_derivative(cross(tangent, n), v,
++            cross(dt, n) + cross(tangent, dn));
++        const Vector3f du = cross(dn, v) + cross(n, dv);
++        Matrix3f derivative;
++        for (std::size_t row = 0; row < 3; ++row)
++        {
++            derivative(row, 0) = du[row];
++            derivative(row, 1) = dn[row];
++            derivative(row, 2) = dv[row];
++        }
++        return derivative;
++    }
++
++    Vector3f local_direction_derivative(
++        const Basis3f& basis, const Matrix3f& derivative,
++        const Vector3f& world_direction, const Vector3f& world_derivative)
++    {
++        return basis.transform_to_local(world_derivative) + transpose(derivative) * world_direction;
++    }
++
++    struct DirectionDerivative
++    {
++        Vector3f value;
++        Vector3f derivative;
++    };
++
++    template <typename DirectionFunction>
++    void propagate_microfacet_differentials(
++        const BSDF::LocalGeometry& geometry,
++        const Dual3f& outgoing,
++        const Matrix3f& normal_jacobian,
++        Dual3f& incoming,
++        const DirectionFunction& direction)
++    {
++        const Basis3f& basis = geometry.m_shading_basis;
++        Vector3f dn[2];
++        get_normal_derivatives(geometry, dn[0], dn[1]);
++        const Vector3f outgoing_neighbors[] = {outgoing.get_dx(), outgoing.get_dy()};
++        Vector3f incoming_neighbors[2];
++        for (std::size_t axis = 0; axis < 2; ++axis)
++        {
++            const Vector3f dt = geometry.m_basis_reference ?
++                (axis == 0 ? geometry.m_basis_reference->m_dx : geometry.m_basis_reference->m_dy) : Vector3f(0.0f);
++            const Matrix3f db = basis_derivative(geometry, dn[axis], dt);
++            const Vector3f dwo = local_direction_derivative(basis, db, outgoing.get_value(),
++                outgoing_neighbors[axis] - outgoing.get_value());
++            const Vector3f dm = normal_jacobian * dwo;
++            const DirectionDerivative local = direction(db, dwo, dm, axis);
++            incoming_neighbors[axis] = incoming.get_value()
++                + basis.transform_to_parent(local.derivative) + db * local.value;
++        }
++        incoming.set_derivatives(incoming_neighbors[0], incoming_neighbors[1]);
++    }
++
+     void compute_normal_derivatives(
+         const BSDF::LocalGeometry&  local_geometry,
+         const Vector3f&             o,
+@@ -58,12 +137,7 @@ namespace
+         //   Physically Based Rendering, first edition, page 513.
+         //
+ 
+-        if (local_geometry.m_normal_derivatives)
+-        {
+-            dndx = local_geometry.m_normal_derivatives->m_dx;
+-            dndy = local_geometry.m_normal_derivatives->m_dy;
+-        }
+-        else local_geometry.m_shading_point->compute_screen_space_normal_derivatives(dndx, dndy);
++        get_normal_derivatives(local_geometry, dndx, dndy);
+ 
+         const Vector3f& n = local_geometry.m_shading_basis.get_normal();
+ 
+@@ -177,6 +251,83 @@ void BSDFSample::compute_glossy_transmitted_differentials(
+         outgoing);
+ }
+ 
++void BSDFSample::compute_microfacet_reflected_differentials(
++    const BSDF::LocalGeometry& geometry,
++    const Dual3f& outgoing,
++    const Vector3f& m,
++    const Matrix3f& normal_jacobian,
++    const MicrofacetReflectionMode mode)
++{
++    if (!outgoing.has_derivatives())
++        return;
++
++    const Basis3f& basis = geometry.m_shading_basis;
++    const Vector3f wo = basis.transform_to_local(outgoing.get_value());
++    const Vector3f raw_wi = reflect(wo, m);
++    const Vector3f ng = basis.transform_to_local(geometry.m_geometric_normal);
++    const float correction = BSDF::MinGeometricCosine - dot(raw_wi, ng);
++    propagate_microfacet_differentials(geometry, outgoing, normal_jacobian, m_incoming,
++        [&](const Matrix3f& db, const Vector3f& dwo, const Vector3f& dm, const std::size_t axis)
++        {
++            const float cosine = dot(wo, m);
++            const float dc = dot(dwo, m) + dot(wo, dm);
++            Vector3f wi = raw_wi;
++            Vector3f dwi = 2.0f * dc * m + 2.0f * cosine * dm - dwo;
++            if (mode == MicrofacetReflectionMode::Renormalized)
++            {
++                const float factor = 1.5f - 0.5f * square_norm(raw_wi);
++                dwi = factor * dwi - raw_wi * dot(raw_wi, dwi);
++                wi = improve_normalization(raw_wi);
++            }
++            else if (mode == MicrofacetReflectionMode::GeometricCorrection && correction > 0.0f)
++            {
++                const Vector3f dng_world = geometry.m_geometric_normal_derivatives ?
++                    (axis == 0 ? geometry.m_geometric_normal_derivatives->m_dx :
++                                 geometry.m_geometric_normal_derivatives->m_dy) : Vector3f(0.0f);
++                const Vector3f dng = local_direction_derivative(basis, db, geometry.m_geometric_normal, dng_world);
++                const float dcorr = -dot(dwi, ng) - dot(raw_wi, dng);
++                const Vector3f corrected = raw_wi + correction * ng;
++                wi = normalize(corrected);
++                dwi = normalized_derivative(corrected, wi, dwi + dcorr * ng + correction * dng);
++            }
++            return DirectionDerivative{wi, dwi};
++        });
++}
++
++void BSDFSample::compute_microfacet_transmitted_differentials(
++    const BSDF::LocalGeometry& geometry,
++    const Dual3f& outgoing,
++    const Vector3f& m,
++    const Matrix3f& normal_jacobian,
++    const float eta)
++{
++    if (!outgoing.has_derivatives())
++        return;
++
++    const Basis3f& basis = geometry.m_shading_basis;
++    const Vector3f wo = basis.transform_to_local(outgoing.get_value());
++    const float cosine = dot(wo, m);
++    const float transmitted_squared = 1.0f - eta * eta * (1.0f - cosine * cosine);
++    // At the critical angle the direction derivative is singular. Keep
++    // the sampled direction without manufacturing a finite footprint.
++    if (transmitted_squared <= 0.0f)
++        return;
++    const float transmitted_cosine = std::sqrt(transmitted_squared);
++    const float mu = eta * cosine - std::copysign(transmitted_cosine, cosine);
++    const Vector3f raw_wi = mu * m - eta * wo;
++    const Vector3f wi = improve_normalization(raw_wi);
++    propagate_microfacet_differentials(geometry, outgoing, normal_jacobian, m_incoming,
++        [&](const Matrix3f&, const Vector3f& dwo, const Vector3f& dm, std::size_t)
++        {
++            const float dc = dot(dwo, m) + dot(wo, dm);
++            const float dmu = (eta - eta * eta * std::abs(cosine) / transmitted_cosine) * dc;
++            const Vector3f raw_derivative = dmu * m + mu * dm - eta * dwo;
++            const Vector3f dwi = (1.5f - 0.5f * square_norm(raw_wi)) * raw_derivative
++                - raw_wi * dot(raw_wi, raw_derivative);
++            return DirectionDerivative{wi, dwi};
++        });
++}
++
+ void BSDFSample::compute_diffuse_differentials(const Dual3f& outgoing)
+ {
+     if (outgoing.has_derivatives())
+diff --git a/src/appleseed/renderer/modeling/bsdf/bsdfsample.h b/src/appleseed/renderer/modeling/bsdf/bsdfsample.h
+index 10e79dfe9..14316ce64 100644
+--- a/src/appleseed/renderer/modeling/bsdf/bsdfsample.h
++++ b/src/appleseed/renderer/modeling/bsdf/bsdfsample.h
+@@ -37,6 +37,7 @@
+ 
+ // appleseed.foundation headers.
+ #include "foundation/math/dual.h"
++#include "foundation/math/matrix.h"
+ 
+ // Standard headers.
+ #include <cassert>
+@@ -89,6 +90,26 @@ class BSDFSample
+         const bool                  is_entering,
+         const foundation::Dual3f&   outgoing);
+ 
++    enum class MicrofacetReflectionMode
++    {
++        Renormalized,
++        GeometricCorrection
++    };
++
++    void compute_microfacet_reflected_differentials(
++        const BSDF::LocalGeometry&  local_geometry,
++        const foundation::Dual3f&   outgoing,
++        const foundation::Vector3f& sampled_normal,
++        const foundation::Matrix3f& normal_jacobian,
++        const MicrofacetReflectionMode mode);
++
++    void compute_microfacet_transmitted_differentials(
++        const BSDF::LocalGeometry&  local_geometry,
++        const foundation::Dual3f&   outgoing,
++        const foundation::Vector3f& sampled_normal,
++        const foundation::Matrix3f& normal_jacobian,
++        const float                 eta);
++
+     void compute_diffuse_differentials(
+         const foundation::Dual3f&   outgoing);
+ 
+diff --git a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+index f4f8c0871..f1fc28163 100644
+--- a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+@@ -313,6 +313,7 @@ namespace
+ 
+             float alpha_x = 0.0f, alpha_y = 0.0f;
+             Vector3f m(0.0f, 1.0f, 0.0f);
++            Matrix3f normal_jacobian;
+             float selector;
+             if (smooth)
+             {
+@@ -330,7 +331,9 @@ namespace
+                     alpha_y);
+                 sampling_context.split_in_place(3, 1);
+                 const Vector3f s = sampling_context.next2<Vector3f>();
+-                m = GGXMDF::sample(wo, Vector2f(s[0], s[1]), alpha_x, alpha_y);
++                m = outgoing.has_derivatives() ?
++                    GGXMDF::sample(wo, Vector2f(s[0], s[1]), alpha_x, alpha_y, normal_jacobian) :
++                    GGXMDF::sample(wo, Vector2f(s[0], s[1]), alpha_x, alpha_y);
+                 selector = s[2];
+             }
+             assert(m.y > 0.0f);
+@@ -444,7 +447,29 @@ namespace
+                 sample.m_incoming = Dual3f(incoming);
+                 sample.m_min_roughness = values->m_roughness;
+ 
+-                if (is_refraction)
++                if (!smooth)
++                {
++                    LocalGeometry sampling_geometry = local_geometry;
++                    sampling_geometry.m_shading_basis = basis;
++                    NormalDerivatives normal_derivatives;
++                    if (outgoing.has_derivatives() && values->m_precomputed.m_backfacing)
++                    {
++                        if (local_geometry.m_normal_derivatives)
++                            normal_derivatives = *local_geometry.m_normal_derivatives;
++                        else local_geometry.m_shading_point->compute_screen_space_normal_derivatives(
++                            normal_derivatives.m_dx, normal_derivatives.m_dy);
++                        normal_derivatives.m_dx = -normal_derivatives.m_dx;
++                        normal_derivatives.m_dy = -normal_derivatives.m_dy;
++                        sampling_geometry.m_normal_derivatives = &normal_derivatives;
++                    }
++                    if (is_refraction)
++                        sample.compute_microfacet_transmitted_differentials(
++                            sampling_geometry, outgoing, m, normal_jacobian, rcp_eta);
++                    else sample.compute_microfacet_reflected_differentials(
++                        sampling_geometry, outgoing, m, normal_jacobian,
++                        BSDFSample::MicrofacetReflectionMode::Renormalized);
++                }
++                else if (is_refraction)
+                 {
+                     sample.compute_glossy_transmitted_differentials(
+                         local_geometry,
+diff --git a/src/appleseed/renderer/modeling/bsdf/microfacethelper.h b/src/appleseed/renderer/modeling/bsdf/microfacethelper.h
+index 64273175b..b196df404 100644
+--- a/src/appleseed/renderer/modeling/bsdf/microfacethelper.h
++++ b/src/appleseed/renderer/modeling/bsdf/microfacethelper.h
+@@ -40,12 +40,14 @@
+ // appleseed.foundation headers.
+ #include "foundation/math/basis.h"
+ #include "foundation/math/dual.h"
++#include "foundation/math/microfacet.h"
+ #include "foundation/math/scalar.h"
+ #include "foundation/math/vector.h"
+ 
+ // Standard headers.
+ #include <algorithm>
+ #include <cmath>
++#include <type_traits>
+ 
+ namespace renderer
+ {
+@@ -109,7 +111,16 @@ class MicrofacetBRDFHelper
+         // Compute the incoming direction by sampling the MDF.
+         sampling_context.split_in_place(2, 1);
+         const foundation::Vector2f s = sampling_context.next2<foundation::Vector2f>();
+-        foundation::Vector3f m = MDF::sample(wo, s, alpha_x, alpha_y);
++        foundation::Matrix3f normal_jacobian;
++        foundation::Vector3f m;
++        if constexpr (std::is_same<MDF, foundation::GGXMDF>::value)
++        {
++            m = outgoing.has_derivatives() ?
++                MDF::sample(wo, s, alpha_x, alpha_y, normal_jacobian) :
++                MDF::sample(wo, s, alpha_x, alpha_y);
++        }
++        else m = MDF::sample(wo, s, alpha_x, alpha_y);
++        const foundation::Vector3f sampled_normal = m;
+         foundation::Vector3f wi = foundation::reflect(wo, m);
+ 
+         // Force the outgoing direction to lie above the geometric surface.
+@@ -167,7 +178,10 @@ class MicrofacetBRDFHelper
+                 local_geometry.m_shading_basis.transform_to_parent(wi);
+             sample.m_incoming = foundation::Dual<foundation::Vector3f>(incoming);
+ 
+-            sample.compute_glossy_reflected_differentials(local_geometry, roughness, outgoing);
++            if constexpr (std::is_same<MDF, foundation::GGXMDF>::value)
++                sample.compute_microfacet_reflected_differentials(local_geometry, outgoing,
++                    sampled_normal, normal_jacobian, BSDFSample::MicrofacetReflectionMode::GeometricCorrection);
++            else sample.compute_glossy_reflected_differentials(local_geometry, roughness, outgoing);
+         }
+     }
+ 
+diff --git a/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+index b81411590..b9995729c 100644
+--- a/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+@@ -213,6 +213,7 @@ namespace
+             LocalGeometry closure_geometry = local_geometry;
+             closure_geometry.m_shading_basis = modified_basis;
+             closure_geometry.m_normal_derivatives = c->get_closure_normal_derivatives(closure_index);
++            closure_geometry.m_basis_reference = &c->get_closure_basis_reference(closure_index);
+             closure_geometry.m_shading_point->set_shading_basis(Basis3d(modified_basis));
+ 
+             bsdf_from_closure_id(c->get_closure_type(closure_index))
+diff --git a/src/appleseed/renderer/modeling/bsdf/plasticbrdf.cpp b/src/appleseed/renderer/modeling/bsdf/plasticbrdf.cpp
+index 2a6455cf6..d77d0b978 100644
+--- a/src/appleseed/renderer/modeling/bsdf/plasticbrdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/plasticbrdf.cpp
+@@ -161,12 +161,17 @@ namespace
+             sampling_context.split_in_place(3, 1);
+             const Vector3f s = sampling_context.next2<Vector3f>();
+             const bool sample_specular = s[2] < specular_probability;
+-            Vector3f wi;
++            Vector3f wi, sampled_normal;
++            Matrix3f normal_jacobian;
+ 
+             if (sample_specular)
+             {
+-                const Vector3f m = alpha == 0.0f ? Vector3f(0.0f, 1.0f, 0.0f) :
+-                    GGXMDF::sample(wo, Vector2f(s[0], s[1]), alpha);
++                Vector3f m(0.0f, 1.0f, 0.0f);
++                if (alpha != 0.0f)
++                    m = outgoing.has_derivatives() ?
++                        GGXMDF::sample(wo, Vector2f(s[0], s[1]), alpha, alpha, normal_jacobian) :
++                        GGXMDF::sample(wo, Vector2f(s[0], s[1]), alpha);
++                sampled_normal = m;
+                 wi = improve_normalization(reflect(wo, m));
+                 if (wi.y <= 0.0f)
+                     return;
+@@ -201,7 +206,8 @@ namespace
+                 probability);
+             sample.m_min_roughness = values->m_roughness;
+             if (sample_specular)
+-                sample.compute_glossy_reflected_differentials(local_geometry, values->m_roughness, outgoing);
++                sample.compute_microfacet_reflected_differentials(local_geometry, outgoing,
++                    sampled_normal, normal_jacobian, BSDFSample::MicrofacetReflectionMode::Renormalized);
+             else
+             {
+                 sample.m_aov_components.m_albedo = values->m_diffuse_reflectance;

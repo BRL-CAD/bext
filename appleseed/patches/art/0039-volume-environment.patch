@@ -1,0 +1,656 @@
+Subject: [PATCH 39/50] Integrate environment light through hidden boundaries
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 94993ffe1f5d9651a5f9fa8622236bbddb477e65
+Original-Commit: dfdcaa09cfa03f876148e929f89eab7f8d83857b
+Original-Commit: cb7c10e531ccefbdfeaf42620e40b8b6f7248d89
+
+diff --git a/src/appleseed/renderer/kernel/lighting/pathtracer.h b/src/appleseed/renderer/kernel/lighting/pathtracer.h
+index aa9d9bf46..2f4fb4ea1 100644
+--- a/src/appleseed/renderer/kernel/lighting/pathtracer.h
++++ b/src/appleseed/renderer/kernel/lighting/pathtracer.h
+@@ -348,8 +348,22 @@ size_t PathTracer<PathVisitor, VolumeVisitor, Adjoint>::trace(
+             next_ray.m_tmax = std::numeric_limits<double>::max();
+             next_ray.m_medium_count = 0;
+             vertex.m_shading_point->copy_transmitted_media(next_ray);
+-            shading_context.get_intersector().advance_past_hit(next_ray, *vertex.m_shading_point);
++            const ShadingRay::Medium* medium = next_ray.get_current_medium();
++            const bool participating = medium != nullptr && medium->get_volume() != nullptr;
++            if (participating)
++            {
++                // The preceding march already integrated up to this hidden
++                // boundary. Start a new segment without losing the remainder.
++                next_ray.m_org = vertex.get_point();
++                next_ray.m_tmin = 0.0;
++                shading_context.get_intersector().offset_secondary_ray(next_ray, *vertex.m_shading_point);
++                medium_start = next_ray.m_org;
++            }
++            else shading_context.get_intersector().advance_past_hit(next_ray, *vertex.m_shading_point);
+             shading_context.get_intersector().trace(next_ray, *next_shading_point);
++            if (participating &&
++                !march(sampling_context, shading_context, vertex, *next_shading_point, clear_arena))
++                break;
+             vertex.m_shading_point = next_shading_point;
+             continue;
+         }
+diff --git a/src/appleseed/renderer/kernel/lighting/pt/ptlightingengine.cpp b/src/appleseed/renderer/kernel/lighting/pt/ptlightingengine.cpp
+index bb217ec5d..8b8f8f53b 100644
+--- a/src/appleseed/renderer/kernel/lighting/pt/ptlightingengine.cpp
++++ b/src/appleseed/renderer/kernel/lighting/pt/ptlightingengine.cpp
+@@ -565,11 +565,8 @@ namespace
+                     env_radiance,
+                     env_prob);
+ 
+-                // This may happen for points of the environment map with infinite components,
+-                // which are then excluded from importance sampling and thus have zero weight.
+-                if (env_prob == 0.0f)
+-                    return;
+-
++                // Filtering can produce radiance inside a zero-density map cell.
++                // The path proposal then carries the entire contribution.
+                 // Multiple importance sampling.
+                 if (vertex.m_prev_mode != ScatteringMode::Specular)
+                 {
+@@ -1043,6 +1040,18 @@ namespace
+                         radiance);
+                 }
+ 
++                if (m_params.m_enable_ibl && m_env_edf != nullptr)
++                {
++                    const size_t env_sample_count =
++                        stochastic_cast<size_t>(m_sampling_context, m_params.m_ibl_env_sample_count);
++                    DirectShadingComponents environment_radiance;
++                    integrator.compute_environment_radiance(
++                        m_sampling_context, *m_env_edf, env_sample_count, environment_radiance);
++                    if (m_params.m_rcp_ibl_env_sample_count > 0.0f)
++                        environment_radiance *= m_params.m_rcp_ibl_env_sample_count;
++                    radiance += environment_radiance;
++                }
++
+                 radiance *= vertex.m_throughput;
+                 m_path_radiance.add(vertex.m_path_length, vertex.m_aov_mode, radiance);
+             }
+diff --git a/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp b/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp
+index 31256b01e..3b1c01067 100644
+--- a/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp
++++ b/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp
+@@ -32,6 +32,7 @@
+ // appleseed.renderer headers.
+ #include "renderer/kernel/lighting/backwardlightsampler.h"
+ #include "renderer/kernel/lighting/directlightingintegrator.h"
++#include "renderer/kernel/lighting/imagebasedlighting.h"
+ #include "renderer/kernel/lighting/scatteringmode.h"
+ #include "renderer/kernel/shading/directshadingcomponents.h"
+ #include "renderer/kernel/shading/shadingcontext.h"
+@@ -539,6 +540,61 @@ void VolumeLightingIntegrator::compute_radiance_exponential_sampling(
+     }
+ }
+ 
++void VolumeLightingIntegrator::compute_environment_radiance(
++    SamplingContext&            sampling_context,
++    const EnvironmentEDF&       environment_edf,
++    const size_t                env_sample_count,
++    DirectShadingComponents&    radiance) const
++{
++    radiance.set(0.0f);
++    if (env_sample_count == 0)
++        return;
++
++    const Spectrum& extinction = m_volume.extinction_coefficient(m_volume_data, m_volume_ray);
++    for (size_t sample = 0; sample < m_distance_sample_count; ++sample)
++    {
++        sampling_context.split_in_place(1, 1);
++        const size_t channel = truncate<size_t>(sampling_context.next2<float>() * Spectrum::size());
++        if (extinction[channel] == 0.0f)
++            continue;
++
++        const float distance = draw_exponential_sample(sampling_context, m_volume_ray, extinction[channel]);
++        // The spectral mixture includes a null draw for zero-extinction channels.
++        double probability = 0.0;
++        for (size_t c = 0; c < Spectrum::size(); ++c)
++        {
++            if (extinction[c] > 0.0f)
++                probability += evaluate_exponential_sample(distance, m_volume_ray, extinction[c]);
++        }
++        probability /= Spectrum::size();
++        if (!(probability > 0.0) || !std::isfinite(probability))
++            throw std::runtime_error("Invalid volume environment distance density");
++
++        const VolumeSampler sampler(m_volume_ray, m_volume, m_volume_data, distance, m_shading_point);
++        const Dual3d outgoing(-m_volume_ray.m_dir);
++        DirectShadingComponents inscattered;
++        compute_ibl_environment_sampling(
++            sampling_context, m_shading_context, environment_edf, outgoing,
++            sampler, ScatteringMode::Volume, 1, env_sample_count, inscattered, nullptr);
++        // Continued paths supply the competing phase-function proposal. At the
++        // bounce limit that proposal must instead be evaluated on this segment.
++        if (!ScatteringMode::has_volume(m_scattering_modes))
++        {
++            DirectShadingComponents phase_radiance;
++            compute_ibl_material_sampling(
++                sampling_context, m_shading_context, environment_edf, outgoing,
++                sampler, 1, env_sample_count, phase_radiance);
++            inscattered += phase_radiance;
++        }
++
++        Spectrum transmission;
++        m_volume.evaluate_transmission(m_volume_data, m_volume_ray, distance, transmission);
++        inscattered *= transmission;
++        inscattered *= static_cast<float>(m_rcp_distance_sample_count / probability);
++        radiance += inscattered;
++    }
++}
++
+ void VolumeLightingIntegrator::take_single_direction_sample(
+     const bool                  sample_phase_function,
+     SamplingContext&            sampling_context,
+diff --git a/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.h b/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.h
+index 426a9f615..c29e0db99 100644
+--- a/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.h
++++ b/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.h
+@@ -42,6 +42,7 @@
+ // Forward declarations.
+ namespace renderer  { class BackwardLightSampler; }
+ namespace renderer  { class DirectShadingComponents; }
++namespace renderer  { class EnvironmentEDF; }
+ namespace renderer  { class LightSample; }
+ namespace renderer  { class ShadingContext; }
+ namespace renderer  { class ShadingPoint; }
+@@ -96,6 +97,13 @@ class VolumeLightingIntegrator
+         const foundation::MISHeuristic  mis_heuristic,
+         DirectShadingComponents&        radiance) const;
+ 
++    // Integrate environment lighting, with a phase proposal when continuation stops.
++    void compute_environment_radiance(
++        SamplingContext&                sampling_context,
++        const EnvironmentEDF&           environment_edf,
++        const size_t                    env_sample_count,
++        DirectShadingComponents&        radiance) const;
++
+   private:
+     const ShadingContext&               m_shading_context;
+     const BackwardLightSampler&         m_light_sampler;
+diff --git a/src/appleseed/renderer/kernel/shading/shadingcontext.cpp b/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
+index 054517c72..a930ce3c4 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingcontext.cpp
+@@ -105,13 +105,17 @@ namespace
+         bool m_optical = false;
+         bool m_transmissive = false;
+         bool m_volume = false;
++        bool m_medium = false;
+     };
+ 
+-    InterfaceBoundary classify_boundary(const ShadingContext& context, const ShadingPoint& point)
++    InterfaceBoundary classify_boundary(
++        const ShadingContext&    context,
++        const ShadingPoint&      point,
++        const Material*          material)
+     {
+         InterfaceBoundary boundary;
+         boundary.m_alpha = point.get_alpha()[0];
+-        boundary.m_material = point.get_material();
++        boundary.m_material = material;
+         if (boundary.m_material == nullptr)
+             return boundary;
+         const Material::RenderData& data = boundary.m_material->get_render_data();
+@@ -131,6 +135,8 @@ namespace
+             boundary.m_optical = boundary.m_bsdf->has_interior(boundary.m_inputs);
+             boundary.m_transmissive = boundary.m_bsdf->has_transmission(boundary.m_inputs);
+         }
++        boundary.m_medium = (boundary.m_optical && !boundary.m_volume) ||
++            (boundary.m_volume && data.m_bsdf == nullptr && data.m_bssrdf == nullptr);
+         return boundary;
+     }
+ 
+@@ -157,29 +163,44 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+     const bool lower_priority = current &&
+         current->m_object_instance->get_medium_priority() > point.get_object_instance().get_medium_priority();
+     const bool procedural = point.get_primitive_type() == ShadingPoint::PrimitiveProceduralSurface;
+-    // Native meshes retain their existing single-boundary displacement
+-    // behavior; only procedural objects supply coincident groups.
+-    if (!procedural && !lower_priority)
++    const Material* hit_material = point.get_material();
++    bool adjacent_surface = false;
++    if (hit_material && hit_material->get_render_data().m_volume)
++    {
++        const ShadingRay& ray = point.get_ray();
++        for (std::uint8_t i = 0; i < ray.m_medium_count; ++i)
++        {
++            const Material* material = ray.m_media[i].m_material;
++            if (material && material->get_render_data().m_bsdf)
++            {
++                adjacent_surface = true;
++                break;
++            }
++        }
++    }
++    // Native meshes need no coincident group, but their volume boundaries
++    // can still exchange the active glass and fog interiors.
++    if (!procedural && !lower_priority && !adjacent_surface)
+         return;
+ 
+-    const InterfaceBoundary first = classify_boundary(*this, point);
++    const InterfaceBoundary first = classify_boundary(*this, point, hit_material);
+     // Ordinary opaque hits already own their surface. Transmissive alpha
+     // layers still need classification when they coincide with glass.
+-    if ((!first.m_optical && !first.m_transmissive) || first.m_volume)
++    if (!first.m_medium && !first.m_transmissive)
+         return;
+ 
+-    const bool hidden_boundary = first.m_optical && lower_priority;
++    const bool hidden_boundary = first.m_medium && lower_priority;
+     std::vector<ShadingPoint> points;
+     m_intersector.collect_coincident_surfaces(point, points);
+-    if (points.size() < 2 && !hidden_boundary)
++    if (points.size() < 2 && !hidden_boundary && !adjacent_surface)
+         return;
+     std::vector<InterfaceBoundary> boundaries;
+     boundaries.reserve(points.size());
+     boundaries.push_back(first);
+     for (size_t i = 1; i < points.size(); ++i)
+-        boundaries.push_back(classify_boundary(*this, points[i]));
++        boundaries.push_back(classify_boundary(*this, points[i], points[i].get_material()));
+ 
+-    std::vector<size_t> optical;
++    std::vector<size_t> media;
+     std::vector<size_t> opaque;
+     bool unsupported = false;
+     for (size_t i = 0; i < points.size(); ++i)
+@@ -187,32 +208,33 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+         const InterfaceBoundary& boundary = boundaries[i];
+         if (boundary.m_alpha <= 0.0f)
+             continue;
+-        if (boundary.m_optical)
+-            optical.push_back(i);
+-        if (boundary.m_alpha < 1.0f || boundary.m_volume ||
+-            (boundary.m_transmissive && !boundary.m_optical))
++        if (boundary.m_medium)
++            media.push_back(i);
++        if (boundary.m_alpha < 1.0f || (boundary.m_volume && !boundary.m_medium) ||
++            (boundary.m_transmissive && !boundary.m_medium))
+             unsupported = true;
+-        else if (!boundary.m_optical)
++        else if (!boundary.m_medium)
+             opaque.push_back(i);
+     }
+-    if (optical.empty() || (optical.size() == 1 && opaque.empty() && !hidden_boundary && !unsupported))
++    if (media.empty() || (media.size() == 1 && opaque.empty() &&
++        !hidden_boundary && !adjacent_surface && !unsupported))
+         return;
+     if (unsupported)
+-        throw std::runtime_error("shared optical interfaces require opaque coverage and glass interiors");
++        throw std::runtime_error("shared optical interfaces require opaque coverage and supported glass or volume interiors");
+     if (opaque.size() > 1)
+         throw std::runtime_error("shared optical interface has multiple opaque surface owners");
+ 
+     const ShadingRay before = point.get_ray();
+     ShadingRay after;
+     after.copy_media_from(before);
+-    size_t owner = opaque.empty() ? optical.front() : opaque.front();
++    size_t owner = opaque.empty() ? media.front() : opaque.front();
+     // An opaque contact cannot transmit. Its reflection retains the incoming
+     // state and need not establish media hidden beyond that surface.
+     if (opaque.empty())
+     {
+         // Remove every exit before adding entries so a simultaneous exchange
+         // does not temporarily exceed the fixed native medium capacity.
+-        for (size_t i : optical)
++        for (size_t i : media)
+         {
+             if (points[i].is_leaving())
+             {
+@@ -222,14 +244,15 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+                 after.copy_media_from(next);
+             }
+         }
+-        for (size_t i : optical)
++        for (size_t i : media)
+         {
+             const ObjectInstance* object = &points[i].get_object_instance();
+             if (points[i].is_entering() && !contains_medium(after, object))
+             {
+                 if (after.m_medium_count == ShadingRay::MaxMediumCount)
+                     throw std::runtime_error("too many optical media at a shared interface");
+-                const float ior = boundaries[i].m_bsdf->sample_ior(sampling_context, boundaries[i].m_inputs);
++                const float ior = boundaries[i].m_optical
++                    ? boundaries[i].m_bsdf->sample_ior(sampling_context, boundaries[i].m_inputs) : 1.0f;
+                 ShadingRay next;
+                 next.add_medium(after, object, boundaries[i].m_material, ior);
+                 after.m_medium_count = 0;
+@@ -237,7 +260,7 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+             }
+         }
+ 
+-        for (size_t i : optical)
++        for (size_t i : media)
+         {
+             if (points[i].get_object_instance().get_medium_priority() >
+                 points[owner].get_object_instance().get_medium_priority())
+@@ -251,6 +274,45 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+         ? incoming->m_object_instance == outgoing->m_object_instance
+         : incoming == outgoing;
+     const bool displaced = opaque.empty() && same_medium;
++    const size_t dominant_boundary = owner;
++    const Material* surface_material = nullptr;
++    if (!displaced && opaque.empty())
++    {
++        // Medium priority selects the occupied interior. A glass boundary
++        // of either active medium supplies the shared surface scattering.
++        bool glass_owner = false;
++        for (size_t i : media)
++        {
++            const ObjectInstance* object = &points[i].get_object_instance();
++            const bool active = (incoming && incoming->m_object_instance == object) ||
++                (outgoing && outgoing->m_object_instance == object);
++            if (boundaries[i].m_optical && active &&
++                (!glass_owner || object->get_medium_priority() >
++                    points[owner].get_object_instance().get_medium_priority()))
++            {
++                owner = i;
++                glass_owner = true;
++            }
++        }
++        if (!glass_owner)
++        {
++            // In overlapping geometry the fog boundary has no coincident
++            // glass hit. Use the active glass material at this same point.
++            const ShadingRay::Medium* selected = nullptr;
++            for (const ShadingRay::Medium* medium : {incoming, outgoing})
++            {
++                if (medium == nullptr || medium->m_material == nullptr)
++                    continue;
++                const InterfaceBoundary boundary = classify_boundary(*this, point, medium->m_material);
++                if (boundary.m_optical &&
++                    (selected == nullptr || medium->m_object_instance->get_medium_priority() >
++                        selected->m_object_instance->get_medium_priority()))
++                    selected = medium;
++            }
++            if (selected)
++                surface_material = selected->m_material;
++        }
++    }
+     if (!displaced)
+     {
+         // A shared interface has one tangent plane. Intersecting boundary
+@@ -268,10 +330,10 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+     }
+     if (!displaced && opaque.empty())
+     {
+-        for (size_t i : optical)
++        for (size_t i : media)
+         {
+-            if (i != owner && points[i].get_object_instance().get_medium_priority() ==
+-                points[owner].get_object_instance().get_medium_priority())
++            if (i != dominant_boundary && points[i].get_object_instance().get_medium_priority() ==
++                points[dominant_boundary].get_object_instance().get_medium_priority())
+                 throw std::runtime_error("shared optical interfaces require distinct medium priorities");
+         }
+     }
+@@ -280,7 +342,8 @@ void ShadingContext::resolve_optical_interface(SamplingContext& sampling_context
+     point = points[owner];
+     point.set_ray(owner_ray);
+     const float outside_ior = point.is_entering() ? before.get_current_ior() : after.get_current_ior();
+-    point.set_optical_interface(displaced ? Interface::Displaced : Interface::Surface, after, outside_ior);
++    point.set_optical_interface(displaced ? Interface::Displaced : Interface::Surface,
++        after, outside_ior, surface_material);
+ }
+ 
+ void ShadingContext::execute_osl_shading(
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.h b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+index 8efb4decb..955c86ceb 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.h
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.h
+@@ -136,9 +136,11 @@ class ShadingPoint
+     void set_optical_interface(
+         const OpticalInterface  type,
+         const ShadingRay&       transmitted,
+-        const float             outside_ior);
++        const float             outside_ior,
++        const Material*         surface_material = nullptr);
+     void copy_transmitted_media(ShadingRay& ray) const;
+     float get_outside_ior() const;
++    float get_inside_ior(const float material_ior) const;
+ 
+     // Return the time stored in the ray.
+     const ShadingRay::Time& get_time() const;
+@@ -522,6 +524,8 @@ inline void ShadingPoint::set_ray(const ShadingRay& ray)
+ {
+     assert(foundation::is_normalized(ray.m_dir));
+     m_ray = ray;
++    if (get_optical_interface() == OpticalInterface::Surface)
++        m_members &= ~HasMaterials;
+     m_members &= ~HasOpticalInterface;
+ }
+ 
+@@ -544,7 +548,8 @@ inline void ShadingPoint::set_no_optical_interface()
+ inline void ShadingPoint::set_optical_interface(
+     const OpticalInterface  type,
+     const ShadingRay&       transmitted,
+-    const float             outside_ior)
++    const float             outside_ior,
++    const Material*         surface_material)
+ {
+     assert(type == OpticalInterface::Surface || type == OpticalInterface::Displaced);
+     m_optical_interface = type;
+@@ -552,6 +557,14 @@ inline void ShadingPoint::set_optical_interface(
+     m_transmitted_medium_count = transmitted.m_medium_count;
+     std::copy_n(transmitted.m_media, m_transmitted_medium_count, m_transmitted_media);
+     m_members |= HasOpticalInterface;
++    if (surface_material)
++    {
++        // A volume boundary can borrow the adjacent glass surface without
++        // changing its geometric owner or its transmitted medium list.
++        m_material = surface_material;
++        m_opposite_material = surface_material;
++        m_members |= HasMaterials;
++    }
+ }
+ 
+ inline void ShadingPoint::copy_optical_interface(const ShadingPoint& rhs)
+@@ -561,6 +574,12 @@ inline void ShadingPoint::copy_optical_interface(const ShadingPoint& rhs)
+         return;
+     m_optical_interface = type;
+     m_members |= HasOpticalInterface;
++    if (type == OpticalInterface::Surface)
++    {
++        m_material = rhs.get_material();
++        m_opposite_material = rhs.get_opposite_material();
++        m_members |= HasMaterials;
++    }
+     if (type != OpticalInterface::None)
+     {
+         m_interface_outside_ior = rhs.m_interface_outside_ior;
+@@ -585,6 +604,15 @@ inline float ShadingPoint::get_outside_ior() const
+     return is_entering() ? m_ray.get_current_ior() : m_ray.get_previous_ior();
+ }
+ 
++inline float ShadingPoint::get_inside_ior(const float material_ior) const
++{
++    if (get_optical_interface() != OpticalInterface::Surface)
++        return material_ior;
++    if (is_leaving())
++        return m_ray.get_current_ior();
++    return m_transmitted_medium_count > 0 ? m_transmitted_media[0].m_ior : 1.0f;
++}
++
+ inline const ShadingRay::Time& ShadingPoint::get_time() const
+ {
+     return m_ray.m_time;
+diff --git a/src/appleseed/renderer/meta/tests/test_tracer.cpp b/src/appleseed/renderer/meta/tests/test_tracer.cpp
+index 3704905d0..dd9d87d80 100644
+--- a/src/appleseed/renderer/meta/tests/test_tracer.cpp
++++ b/src/appleseed/renderer/meta/tests/test_tracer.cpp
+@@ -538,8 +538,9 @@ TEST_SUITE(Renderer_Kernel_Lighting_Tracer)
+         }
+     };
+ 
+-    struct InitialVolumeFixture
+-      : public Fixture<FixtureParams<InitialVolumeScene, false>>
++    template <typename Scene>
++    struct InitialVolumeFixtureBase
++      : public Fixture<FixtureParams<Scene, false>>
+     {
+         template <bool Adjoint>
+         AbsorptionPathVisitor trace_from_origin(
+@@ -558,16 +559,18 @@ TEST_SUITE(Renderer_Kernel_Lighting_Tracer)
+                 visitor, volume_visitor, 100, 0, 0, 0, 0, 0, false);
+             if (pretraced)
+             {
+-                m_intersector.initialize_media(sampling_context, m_shading_context, ray);
++                this->m_intersector.initialize_media(sampling_context, this->m_shading_context, ray);
+                 ShadingPoint point;
+-                m_intersector.trace(ray, point);
+-                tracer.trace(sampling_context, m_shading_context, point, clear_arena);
++                this->m_intersector.trace(ray, point);
++                tracer.trace(sampling_context, this->m_shading_context, point, clear_arena);
+             }
+-            else tracer.trace(sampling_context, m_shading_context, ray, nullptr, clear_arena);
++            else tracer.trace(sampling_context, this->m_shading_context, ray, nullptr, clear_arena);
+             return visitor;
+         }
+     };
+ 
++    using InitialVolumeFixture = InitialVolumeFixtureBase<InitialVolumeScene>;
++
+     TEST_CASE_F(InitialVolume_RegistersStandaloneMediumWithoutBSDF, InitialVolumeFixture)
+     {
+         Xoroshiro128plus rng;
+@@ -616,6 +619,122 @@ TEST_SUITE(Renderer_Kernel_Lighting_Tracer)
+         }
+     }
+ 
++    struct DisplacedVolumeScene : InitialVolumeScene
++    {
++        DisplacedVolumeScene()
++        {
++            m_assembly->bsdfs().insert(GlassBSDFFactory().create(
++                "subordinate_glass", ParamArray().insert("surface_transmittance", "1.0").insert("ior", "1.0")
++                    .insert("volume_parameterization", "transmittance")
++                    .insert("volume_transmittance", "0.25")
++                    .insert("volume_transmittance_distance", "20.0")));
++            m_assembly->materials().insert(GenericMaterialFactory().create(
++                "subordinate_material", ParamArray().insert("bsdf", "subordinate_glass")));
++            create_plane_object_instance("hidden", Vector3d(0.5, 0.0, 0.0),
++                "subordinate_material", ParamArray().insert("medium_priority", -1));
++        }
++    };
++
++    using DisplacedVolumeFixture = InitialVolumeFixtureBase<DisplacedVolumeScene>;
++
++    TEST_CASE_F(InitialVolume_AttenuatesBeyondDisplacedOpticalBoundary, DisplacedVolumeFixture)
++    {
++        Xoroshiro128plus rng;
++        SamplingContext sampling_context(rng, SamplingContext::RNGMode);
++        ShadingRay ray = InitialMediaScene::origin_ray();
++        m_intersector.initialize_media(sampling_context, m_shading_context, ray);
++        ShadingPoint hidden;
++        m_intersector.trace(ray, hidden);
++        ASSERT_TRUE(hidden.hit_surface());
++        EXPECT_FEQ(0.5, hidden.get_distance());
++        m_shading_context.resolve_optical_interface(sampling_context, hidden);
++        ASSERT_TRUE(hidden.get_optical_interface() == ShadingPoint::OpticalInterface::Displaced);
++
++        for (const bool pretraced : {false, true})
++        {
++            const AbsorptionPathVisitor visitor = trace_from_origin<false>(pretraced);
++            EXPECT_EQ(1, visitor.m_hits);
++            EXPECT_FEQ(Spectrum(std::exp(-Absorption * TerminalDistance)), visitor.m_throughput);
++            const AbsorptionPathVisitor adjoint = trace_from_origin<true>(pretraced);
++            EXPECT_EQ(1, adjoint.m_hits);
++            EXPECT_FEQ(Spectrum(std::exp(-Absorption * TerminalDistance)), adjoint.m_throughput);
++        }
++    }
++
++    struct MixedVolumeScene : InitialVolumeScene
++    {
++        static constexpr float GlassIor = 1.5f;
++
++        MixedVolumeScene()
++        {
++            m_assembly->bsdfs().insert(GlassBSDFFactory().create(
++                "adjacent_glass", ParamArray().insert("surface_transmittance", "1.0")
++                    .insert("volume_parameterization", "transmittance")
++                    .insert("ior", GlassIor)));
++            m_assembly->materials().insert(GenericMaterialFactory().create(
++                "glass_material", ParamArray().insert("bsdf", "adjacent_glass")));
++            create_plane_object_instance("glass", Vector3d(2.0 * Radius, 0.0, 0.0),
++                "glass_material", ParamArray().insert("medium_priority", -1));
++        }
++    };
++
++    using MixedVolumeFixture = Fixture<FixtureParams<MixedVolumeScene, false>>;
++
++    TEST_CASE_F(OpticalInterface_VolumeUsesAdjacentGlassWithoutChangingGeometricOwner, MixedVolumeFixture)
++    {
++        const ObjectInstance* glass = m_assembly->object_instances().get_by_name("glass");
++        const Material* glass_material = m_assembly->materials().get_by_name("glass_material");
++        const ObjectInstance* fog = m_assembly->object_instances().get_by_name("sphere_instance");
++        const Material* fog_material = m_assembly->materials().get_by_name("medium");
++        ASSERT_TRUE(fog->get_medium_priority() > glass->get_medium_priority());
++        Xoroshiro128plus rng;
++        SamplingContext sampling_context(rng, SamplingContext::RNGMode);
++        for (const bool entering : {false, true})
++        {
++            ShadingRay ray = InitialMediaScene::origin_ray();
++            ray.m_org = Vector3d((entering ? 1.5 : -0.75) * Radius, 0.0, 0.0);
++            ray.m_dir = Vector3d(-1.0, 0.0, 0.0);
++            ShadingRay source(ray);
++            ray.add_medium(source, glass, glass_material, GlassIor);
++            if (!entering)
++            {
++                source = ray;
++                ray.m_medium_count = 0;
++                ray.add_medium(source, fog, fog_material, 1.0f);
++            }
++            ShadingPoint point;
++            m_intersector.trace(ray, point);
++            ASSERT_TRUE(point.hit_surface());
++            ASSERT_EQ(fog, &point.get_object_instance());
++            ASSERT_EQ(entering, point.is_entering());
++            ASSERT_EQ(fog_material, point.get_material());
++            m_shading_context.resolve_optical_interface(sampling_context, point);
++            ASSERT_TRUE(point.get_optical_interface() == ShadingPoint::OpticalInterface::Surface);
++            EXPECT_EQ(fog, &point.get_object_instance());
++            EXPECT_EQ(glass_material, point.get_material());
++            EXPECT_FEQ(GlassIor, point.get_outside_ior());
++            EXPECT_FEQ(1.0f, point.get_inside_ior(GlassIor));
++            ShadingRay transmitted;
++            point.copy_transmitted_media(transmitted);
++            ASSERT_TRUE(transmitted.get_current_medium() != nullptr);
++            EXPECT_EQ(entering ? fog : glass, transmitted.get_current_medium()->m_object_instance);
++
++            // Path vertices copy resolved points. Preserve the borrowed
++            // surface through both copy operations and invalidate it on retrace.
++            ShadingPoint copied(point);
++            ShadingPoint assigned;
++            assigned = point;
++            for (ShadingPoint* duplicate : {&copied, &assigned})
++            {
++                EXPECT_EQ(glass_material, duplicate->get_material());
++                EXPECT_FEQ(1.0f, duplicate->get_inside_ior(GlassIor));
++                duplicate->set_ray(ray);
++                EXPECT_EQ(fog_material, duplicate->get_material());
++                EXPECT_FEQ(GlassIor, duplicate->get_inside_ior(GlassIor));
++            }
++        }
++    }
++
+     struct InitialScatteringScene
+       : public InitialVolumeScene
+     {
+diff --git a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+index db1e9c10f..4373b6bcf 100644
+--- a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+@@ -223,6 +223,7 @@ namespace
+ 
+             values->m_precomputed.m_backfacing = !shading_point.is_entering();
+             values->m_precomputed.m_outside_ior = shading_point.get_outside_ior();
++            values->m_ior = shading_point.get_inside_ior(values->m_ior);
+ 
+             values->m_precomputed.m_reflection_color  = values->m_surface_transmittance;
+             values->m_precomputed.m_reflection_color *= values->m_reflection_tint;
