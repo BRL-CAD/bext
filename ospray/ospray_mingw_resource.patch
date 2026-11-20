@@ -1,0 +1,25 @@
+diff --git a/ospray/CMakeLists.txt b/ospray/CMakeLists.txt
+index 34f90d13d..6c2aa4e62 100644
+--- a/ospray/CMakeLists.txt
++++ b/ospray/CMakeLists.txt
+@@ -6,6 +6,20 @@
+ # -------------------------------------------------------
+ 
+ set(OSPRAY_RESOURCE ${CMAKE_CURRENT_SOURCE_DIR}/ospray.rc)
++if(MINGW)
++  # windres uses a C preprocessor that cannot consume the UTF-16 resource.
++  find_package(Python3 REQUIRED COMPONENTS Interpreter)
++  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${OSPRAY_RESOURCE}")
++  execute_process(
++    COMMAND "${Python3_EXECUTABLE}" -c
++      "import pathlib, sys; sys.stdout.buffer.write(pathlib.Path(sys.argv[1]).read_text(encoding='utf-16').encode('utf-8'))"
++      "${OSPRAY_RESOURCE}"
++    OUTPUT_VARIABLE ospray_resource_text
++    COMMAND_ERROR_IS_FATAL ANY)
++  set(OSPRAY_RESOURCE "${CMAKE_CURRENT_BINARY_DIR}/ospray.rc")
++  file(CONFIGURE OUTPUT "${OSPRAY_RESOURCE}"
++    CONTENT "#pragma code_page(65001)\n@ospray_resource_text@" @ONLY)
++endif()
+ set(OSPRAY_RESOURCE ${OSPRAY_RESOURCE} PARENT_SCOPE)
+ 
+ option(OSPRAY_ENABLE_PROFILING

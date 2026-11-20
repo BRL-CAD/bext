@@ -1,0 +1,30 @@
+diff --git a/opennurbs_dimension.h b/opennurbs_dimension.h
+--- a/opennurbs_dimension.h
++++ b/opennurbs_dimension.h
+@@ -14,10 +14,6 @@
+ #if !defined(OPENNURBS_DIMENSION_INC_)
+ #define OPENNURBS_DIMENSION_INC_
+ 
+-#if defined(ON_DLL_TEMPLATE)
+-ON_DLL_TEMPLATE template ON_ClassArray< class ON_DimStyle >;
+-#endif
+-
+ class ON_CLASS ON_Dimension : public ON_Annotation
+ {
+   ON_OBJECT_DECLARE(ON_Dimension);
+diff --git a/opennurbs_text.h b/opennurbs_text.h
+--- a/opennurbs_text.h
++++ b/opennurbs_text.h
+@@ -14,12 +14,6 @@
+ #ifndef OPENNURBS_TEXT_H_INCLUDED
+ #define OPENNURBS_TEXT_H_INCLUDED
+ 
+-#if defined(ON_DLL_TEMPLATE)
+-ON_DLL_TEMPLATE template ON_ClassArray< class ON_Font >;
+-ON_DLL_TEMPLATE template ON_SimpleArray< class ON_TextRun* >;
+-ON_DLL_TEMPLATE template ON_SimpleArray< class ON_FontGlyph* >;
+-#endif
+-
+ #define ON_TEXT_BRACKET_FRACTION
+ class ON_CLASS ON_TextContent  : public ON_Geometry
+ {

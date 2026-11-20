@@ -4,6 +4,11 @@ bext_enable(OSPRAY)
 if (ENABLE_OSPRAY)
 
   set(OSPRAY_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/ospray.patch")
+  if (MINGW)
+    list(APPEND OSPRAY_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/ospray_mingw_resource.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/ospray_mingw_link.patch")
+  endif ()
   git_submodule_init(ospray CMakeLists.txt
     PATCH_FILES ${OSPRAY_PATCH_FILES}
     PATCH_COMMAND_VAR OSPRAY_PATCH_COMMAND)

@@ -37,6 +37,7 @@ if (ENABLE_OPENNURBS)
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_post_effects.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_3dm_attributes.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_precise_math.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_templates.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/opennurbs_mingw.patch")
   git_submodule_init(opennurbs opennurbs.h
     PATCH_FILES ${OPENNURBS_PATCH_FILES}

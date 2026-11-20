@@ -1,0 +1,52 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 5fafecf1a..6472c2fe1 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -30,6 +30,11 @@ include(cmake/ospray_version.cmake)
+ 
+ project(OSPRay VERSION ${OSPRAY_VERSION} LANGUAGES C CXX)
+ 
++if (MINGW)
++  # rkcommon resolves Windows modules as <module>.dll beside ospray.dll.
++  set(CMAKE_SHARED_LIBRARY_PREFIX "")
++endif()
++
+ ##############################################################
+ # CMake modules and macro files
+ ##############################################################
+diff --git a/cmake/ospray_macros.cmake b/cmake/ospray_macros.cmake
+index 767676cfb..5e4729319 100644
+--- a/cmake/ospray_macros.cmake
++++ b/cmake/ospray_macros.cmake
+@@ -334,8 +334,10 @@ macro(ospray_configure_compiler)
+ 
+   set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
+ 
+-  if (WIN32)
+-    # increase stack to 8MB (the default size of 1MB is too small for our apps)
++  # Increase the Windows executable stack to 8MB for our apps.
++  if (MINGW)
++    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,8388608")
++  elseif (WIN32)
+     if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Xlinker")
+     endif()
+diff --git a/modules/cpu/CMakeLists.txt b/modules/cpu/CMakeLists.txt
+index 66a3c2c33..814b3125a 100644
+--- a/modules/cpu/CMakeLists.txt
++++ b/modules/cpu/CMakeLists.txt
+@@ -356,6 +356,14 @@ if (OSPRAY_MODULE_CPU)
+     texture/MipMapGeneration.ispc
+   )
+ 
++  if (MINGW AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
++    # ISPC's Windows x64 objects use the MSVC name for the stack probe.
++    # MinGW provides the same calling convention as ___chkstk_ms.
++    target_link_options(ospray_module_cpu PUBLIC
++      "LINKER:-u,___chkstk_ms"
++      "LINKER:--defsym,__chkstk=___chkstk_ms")
++  endif()
++
+   ospray_install_library(ospray_module_cpu lib)
+ 
+   target_link_libraries(ospray_module_cpu
