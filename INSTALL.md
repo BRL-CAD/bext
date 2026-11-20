@@ -30,13 +30,14 @@ CMake and Ninja drive the native MinGW-w64 toolchain. Install the build tools
 from that shell.
 
 ```sh
-pacman -S --needed git make mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,python}
+pacman -S --needed git make mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,python,nasm}
 ```
 
 To use MSYS2's Qt libraries with the standard `auto` profile, also install
 `mingw-w64-ucrt-x86_64-qt6-base` and `mingw-w64-ucrt-x86_64-qt6-svg`.
 Pass `-DENABLE_QT=ON` when configuring to build bext's pinned Qt Base and Qt
-SVG sources.
+SVG sources. The `everything` preset enables all six `USE_*` groups and
+builds Qt from those sources.
 
 Keep the source and build paths free of spaces for the Tcl and Tk configure
 scripts. Run these commands from the bext source directory.
@@ -49,6 +50,25 @@ cmake --build build/auto/Release
 On Windows, bext tests a system patch tool with both LF and CRLF patches and
 source files. It builds its bundled patch tool if the system tool fails the
 test.
+
+# MSVC and Intel oneAPI on Windows
+
+Use an x64 Visual Studio developer command prompt with Git, CMake, Ninja,
+Python 3, and NASM available. For an Intel build, initialize the oneAPI
+compiler environment in the same prompt so that `icx-cl` and its runtimes
+are available alongside the Visual Studio tools. Keep this environment
+active for configure, build, and any downstream tests.
+
+From the bext source directory, use a separate build directory for each
+compiler.
+
+```cmd
+cmake --preset everything -B build/msvc -G Ninja -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+cmake --build build/msvc
+
+cmake --preset everything -B build/intel -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl
+cmake --build build/intel
+```
 
 # Intel oneAPI on Linux
 
