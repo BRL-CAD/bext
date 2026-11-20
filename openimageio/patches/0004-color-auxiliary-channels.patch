@@ -1,0 +1,79 @@
+From caf7b42d2fa886bdd3f370463f68c2e27043b613 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Sun, 15 Nov 2026 05:24:38 +0000
+Subject: [PATCH] fix(IBA): preserve auxiliary values during color conversion
+
+Copy channels beyond RGBA unchanged instead of applying an unrelated
+scale and offset. Verify RGB transformation, alpha and signed/HDR
+auxiliary values with and without unpremultiplication.
+
+diff --git a/src/libOpenImageIO/color_ocio.cpp b/src/libOpenImageIO/color_ocio.cpp
+index 2bfd5589468b577d36e3d29cb7859d6e03146642..1b2f84660ea68227c3f452aafe08e5b7f20b6030 100644
+--- a/src/libOpenImageIO/color_ocio.cpp
++++ b/src/libOpenImageIO/color_ocio.cpp
+@@ -3093,7 +3093,7 @@ colorconvert_impl(ImageBuf& R, const ImageBuf& A,
+                         r.rerange(roi.xbegin, roi.xend, j, j + 1, k, k + 1);
+                         for (; !r.done(); ++r, ++a)
+                             for (int c = channelsToCopy; c < roi.chend; ++c)
+-                                r[c] = 0.5 + 10 * a[c];
++                                r[c] = a[c];
+                     }
+                 }
+             }
+diff --git a/src/libOpenImageIO/color_test.cpp b/src/libOpenImageIO/color_test.cpp
+index 18de2cc0366d146c43ad214e0eaa91117ab41f5d..de7c3a71b12f66dab0443777198b7cd6f17dd2c2 100644
+--- a/src/libOpenImageIO/color_test.cpp
++++ b/src/libOpenImageIO/color_test.cpp
+@@ -12,6 +12,8 @@
+ #include <OpenImageIO/benchmark.h>
+ #include <OpenImageIO/color.h>
+ #include <OpenImageIO/filesystem.h>
++#include <OpenImageIO/imagebuf.h>
++#include <OpenImageIO/imagebufalgo.h>
+ #include <OpenImageIO/simd.h>
+ #include <OpenImageIO/strutil.h>
+ #include <OpenImageIO/timer.h>
+@@ -115,6 +117,35 @@ test_lazy_config_loading()
+ 
+ 
+ 
++static void
++test_colorconvert_preserves_auxiliary_channels()
++{
++    const float pixel[] = { 0.25f, 0.5f, 0.75f, 0.5f, -2.0f, 0.125f, 32.0f };
++    ImageBuf src(
++        ImageSpec(1, 1, static_cast<int>(std::size(pixel)), TypeFloat));
++    src.setpixel(0, 0, pixel);
++    for (bool unpremult : { false, true }) {
++        ImageBuf dst;
++        OIIO_CHECK_ASSERT(
++            ImageBufAlgo::colorconvert(dst, src, "lin_rec709_scene",
++                                       "srgb_rec709_scene", unpremult));
++        float actual[std::size(pixel)];
++        dst.getpixel(0, 0, actual);
++        // Apply the sRGB OETF to unassociated RGB before premultiplying.
++        for (size_t c = 0; c < 3; ++c) {
++            const float linear   = unpremult ? pixel[c] / pixel[3] : pixel[c];
++            const float encoded  = 1.055f * std::pow(linear, 1.0f / 2.4f)
++                                   - 0.055f;
++            const float expected = unpremult ? encoded * pixel[3] : encoded;
++            OIIO_CHECK_EQUAL_THRESH(actual[c], expected, 1e-5f);
++        }
++        for (size_t c = 3; c < std::size(pixel); ++c)
++            OIIO_CHECK_EQUAL(actual[c], pixel[c]);
++    }
++}
++
++
++
+ static void
+ test_colorspace_interop_metadata()
+ {
+@@ -538,6 +569,7 @@ main(int argc, char* argv[])
+     test_namespaced_ids();
+     test_Rec709_conversion();
+     test_linear_display_cicp();
++    test_colorconvert_preserves_auxiliary_channels();
+     test_colorspace_interop_metadata();
+     test_interop_identities_conversion();
+     test_gamma_pair_conversion();

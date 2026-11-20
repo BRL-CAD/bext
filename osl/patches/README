@@ -1,0 +1,11 @@
+This series applies to upstream v1.15.8.0
+(b64c29cc2540c398265942edc44650aea3a8c103).
+
+Each mail-format patch preserves the complete message, author, date, and
+original commit ID. Apply patches in the numbered order listed in the
+component CMakeLists.txt.
+
+The series reproduces the changes through former fork commit
+76e0634589006862fb0df8cf04aa994c5af711f3. The bext gitlink uses the
+upstream release; the original brlcad branch is retained as a historical
+reference.

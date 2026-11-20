@@ -1,0 +1,17 @@
+This series applies to upstream v3.2.2.0
+(96377f681cc9e6650c8534671f4fc36b3c8acbc1).
+
+Each mail-format patch preserves the complete message, author, date, and
+original commit ID. Apply patches in the numbered order listed in the
+component CMakeLists.txt.
+
+The series reproduces the changes through former fork commit
+6ebb3545168a3d07d61ee8f0f5e24dd8067dea10. The bext gitlink uses the
+upstream release; the original brlcad branch is retained as a historical
+reference.
+
+The final patch also changed binary test-reference images. Their exact
+contents are stored under reference-images, with paths listed once in
+ReferenceImages.cmake. CopyReferenceImages.cmake restores them after the
+text patches. No test thresholds or image contents change in this
+conversion.

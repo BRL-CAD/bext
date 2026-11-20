@@ -1,0 +1,60 @@
+From f0cc9c0835b0994af7dbbfa04c27161d4e3f68f8 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 00:31:36 +0000
+Subject: [PATCH] Handle absent environment direction derivatives
+
+The JIT passes null derivative pointers when the lookup direction has no
+derivative storage. Supply zero vectors before forwarding the lookup to
+renderer services instead of constructing references from null pointers.
+
+Compare implicit and explicit zero footprints in the environment
+fixture, including optimized and renderer-services-bitcode execution.
+
+diff --git a/src/liboslexec/optexture.cpp b/src/liboslexec/optexture.cpp
+index d74c45d2ae33211918fa026a18b6c9c4202ebc7a..25aa534fd0c5280d03ce31c5418ccde37070129a 100644
+--- a/src/liboslexec/optexture.cpp
++++ b/src/liboslexec/optexture.cpp
+@@ -442,8 +442,10 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
+     using float4 = Imath::Vec4<float>;
+ #endif
+     const Vec3& R(*(Vec3*)R_);
+-    const Vec3& dRdx(*(Vec3*)dRdx_);
+-    const Vec3& dRdy(*(Vec3*)dRdy_);
++    // The JIT passes null derivatives for directions without derivative storage.
++    const Vec3 zero(0.0f);
++    const Vec3& dRdx = dRdx_ ? *(Vec3*)dRdx_ : zero;
++    const Vec3& dRdy = dRdy_ ? *(Vec3*)dRdy_ : zero;
+     TextureOpt* opt               = (TextureOpt*)opt_;
+     float* result                 = (float*)result_;
+     float* dresultdx              = (float*)dresultdx_;
+diff --git a/testsuite/texture-environment/no_derivs.osl b/testsuite/texture-environment/no_derivs.osl
+new file mode 100644
+index 0000000000000000000000000000000000000000..f9d2bde78b194d949d37fac612d6616ec86d1f4e
+--- /dev/null
++++ b/testsuite/texture-environment/no_derivs.osl
+@@ -0,0 +1,12 @@
++// Copyright Contributors to the Open Shading Language project.
++// SPDX-License-Identifier: BSD-3-Clause
++// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
++
++shader no_derivs(string filename = "ramp.env", vector direction = vector(1, 1, 1),
++                 int explicit_derivs = 0, output color Cout = 0)
++{
++    if (explicit_derivs)
++        Cout = environment(filename, direction, vector(0), vector(0));
++    else
++        Cout = environment(filename, direction);
++}
+diff --git a/testsuite/texture-environment/run.py b/testsuite/texture-environment/run.py
+index ea4b9a95e6e8228eaff5da8968bc7f1116006f38..d9eb3ef6a3b5158542ed938f72c429403993059c 100755
+--- a/testsuite/texture-environment/run.py
++++ b/testsuite/texture-environment/run.py
+@@ -6,3 +6,8 @@
+ command += oiiotool("-pattern fill:topleft=0,0,0:topright=1,0,0:bottomleft=0,1,0:bottomright=1,1,1 256x128 3 -d uint8 -oenv ramp.env")
+ command += testshade("-g 256 128 -od uint8 -o Cout out.tif test")
+ outputs = [ "out.tif" ]
++
++# A uniform direction has no derivative storage and must behave like explicit zeros.
++command += testshade("-g 16 16 -o Cout implicit.tif no_derivs")
++command += testshade("-g 16 16 -param explicit_derivs 1 -o Cout explicit.tif no_derivs")
++command += oiiotool("implicit.tif explicit.tif --diff")

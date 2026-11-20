@@ -1,0 +1,69 @@
+From 0e6fd5df6ceacb274b654c454508ab76311c6ec6 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Sun, 15 Nov 2026 05:24:39 +0000
+Subject: [PATCH] fix(IBA): initialize the default config before resolving look
+ spaces
+
+Resolve current source and destination spaces only after the optional
+configuration pointer has been initialized. A default-config look call
+otherwise dereferences null. Exercise that API with an identity look.
+
+diff --git a/src/libOpenImageIO/color_ocio.cpp b/src/libOpenImageIO/color_ocio.cpp
+index 447c3fbac8f1188b6ff3b50109236137d7a51ff5..423bc7e13a94d42ec1ac4a7cd6be6b3f31a9a57b 100644
+--- a/src/libOpenImageIO/color_ocio.cpp
++++ b/src/libOpenImageIO/color_ocio.cpp
+@@ -3261,6 +3261,8 @@ ImageBufAlgo::ociolook(ImageBuf& dst, const ImageBuf& src, string_view looks,
+                        const ColorConfig* colorconfig, ROI roi, int nthreads)
+ {
+     OIIO::pvt::LoggedTimer logtime("IBA::ociolook");
++    if (!colorconfig)
++        colorconfig = &ColorConfig::default_colorconfig();
+     if (from.empty() || from == "current") {
+         auto linearspace = colorconfig->resolve("scene_linear");
+         from = src.spec().get_string_attribute("oiio:Colorspace", linearspace);
+@@ -3275,8 +3277,6 @@ ImageBufAlgo::ociolook(ImageBuf& dst, const ImageBuf& src, string_view looks,
+     }
+     ColorProcessorHandle processor;
+     {
+-        if (!colorconfig)
+-            colorconfig = &ColorConfig::default_colorconfig();
+         processor = colorconfig->createLookTransform(looks,
+                                                      colorconfig->resolve(from),
+                                                      colorconfig->resolve(to),
+diff --git a/src/libOpenImageIO/color_test.cpp b/src/libOpenImageIO/color_test.cpp
+index 3104a0f4ea85fac7bc54c01fc7ad34c6ab189ff6..7b9b558b4ccfcd0509dcd2ed0536e645af4194da 100644
+--- a/src/libOpenImageIO/color_test.cpp
++++ b/src/libOpenImageIO/color_test.cpp
+@@ -181,6 +181,24 @@ test_colorconvert_updates_gamut_metadata()
+ 
+ 
+ 
++static void
++test_ociolook_default_config()
++{
++    ImageBuf src(ImageSpec(1, 1, 3, TypeFloat));
++    src.specmod().set_colorspace("lin_rec709_scene");
++    const float pixel[] = { .25f, .5f, .75f };
++    src.setpixel(0, 0, pixel);
++    ImageBuf dst;
++    OIIO_CHECK_ASSERT(
++        ImageBufAlgo::ociolook(dst, src, "", "current", "current"));
++    float actual[3];
++    dst.getpixel(0, 0, actual);
++    for (size_t c = 0; c < std::size(pixel); ++c)
++        OIIO_CHECK_EQUAL_THRESH(actual[c], pixel[c], 1e-5f);
++}
++
++
++
+ static void
+ test_colorspace_interop_metadata()
+ {
+@@ -606,6 +624,7 @@ main(int argc, char* argv[])
+     test_linear_display_cicp();
+     test_colorconvert_preserves_auxiliary_channels();
+     test_colorconvert_updates_gamut_metadata();
++    test_ociolook_default_config();
+     test_colorspace_interop_metadata();
+     test_interop_identities_conversion();
+     test_gamma_pair_conversion();

@@ -1,0 +1,93 @@
+From 0da3ac381529bbadcacf27a7b7b4d38795d78288 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Sun, 15 Nov 2026 05:24:37 +0000
+Subject: [PATCH] fix(color): discard stale interop identities when changing
+ spaces
+
+EXR input prefers colorInteropID over the color-space label. Keeping the
+old identity after conversion mislabels the converted pixels on output.
+Preserve a matching identity supplied by input and remove stale values.
+
+Keep metadata-only changes independent of OCIO configuration loading.
+Test identity transitions and the existing lazy-loading guarantee.
+
+diff --git a/src/libOpenImageIO/color_ocio.cpp b/src/libOpenImageIO/color_ocio.cpp
+index 7ce81d487d17e2f34d1e8faf83b4cb521a7da75f..2bfd5589468b577d36e3d29cb7859d6e03146642 100644
+--- a/src/libOpenImageIO/color_ocio.cpp
++++ b/src/libOpenImageIO/color_ocio.cpp
+@@ -3540,6 +3540,12 @@ ColorConfig::set_colorspace(ImageSpec& spec, string_view colorspace) const
+         spec.attribute("oiio:ColorSpace", colorspace);
+     }
+ 
++    // EXR readers prefer an interop identity over the color-space label.
++    // Preserve a matching identity supplied by a reader; discard stale ones
++    // so output can derive the new identity without loading a config here.
++    if (spec.get_string_attribute("colorInteropID") != colorspace)
++        spec.erase_attribute("colorInteropID");
++
+     // Clear a bunch of other metadata that might contradict the colorspace,
+     // including some format-specific things that we don't want to propagate
+     // from input to output if we know that color space transformations have
+diff --git a/src/libOpenImageIO/color_test.cpp b/src/libOpenImageIO/color_test.cpp
+index 06d448dd91737129cd5198347b3c2bc66f32146f..18de2cc0366d146c43ad214e0eaa91117ab41f5d 100644
+--- a/src/libOpenImageIO/color_test.cpp
++++ b/src/libOpenImageIO/color_test.cpp
+@@ -88,6 +88,13 @@ test_lazy_config_loading()
+     set_colorspace(spec, "srgb_rec709_scene");
+     OIIO_CHECK_ASSERT(spec.find_attribute("Exif:ColorSpace"));
+ 
++    ImageSpec interop_spec;
++    interop_spec.attribute("oiio:ColorSpace", "srgb_rec709_scene");
++    interop_spec.attribute("colorInteropID", "srgb_rec709_scene");
++    interop_spec.set_colorspace("g22_rec709_scene");
++    OIIO_CHECK_ASSERT(!interop_spec.find_attribute("colorInteropID"));
++    OIIO_CHECK_ASSERT(!color_config_loaded());
++
+     // Constructing a config and mapping CICP to an interop ID load nothing.
+     const ColorConfig& config(ColorConfig::default_colorconfig());
+     const int cicp[4] = { 9, 16, 9, 1 };
+@@ -108,6 +115,36 @@ test_lazy_config_loading()
+ 
+ 
+ 
++static void
++test_colorspace_interop_metadata()
++{
++    ImageSpec spec;
++    spec.attribute("oiio:ColorSpace", "lin_rec709_scene");
++    spec.attribute("colorInteropID", "lin_rec709_scene");
++    spec.set_colorspace("srgb_rec709_scene");
++    OIIO_CHECK_EQUAL(spec.get_string_attribute("oiio:ColorSpace"),
++                     "srgb_rec709_scene");
++    OIIO_CHECK_ASSERT(!spec.find_attribute("colorInteropID"));
++
++    // EXR input supplies its authoritative identity as the new space name.
++    spec.attribute("colorInteropID", "lin_ap1_scene");
++    spec.set_colorspace("lin_ap1_scene");
++    OIIO_CHECK_EQUAL(spec.get_string_attribute("colorInteropID"),
++                     "lin_ap1_scene");
++    spec.set_colorspace("lin_ap1_scene");
++    OIIO_CHECK_EQUAL(spec.get_string_attribute("colorInteropID"),
++                     "lin_ap1_scene");
++
++    spec.set_colorspace("custom_space");
++    OIIO_CHECK_ASSERT(!spec.find_attribute("colorInteropID"));
++    spec.attribute("colorInteropID", "lin_ap1_scene");
++    spec.set_colorspace("");
++    OIIO_CHECK_ASSERT(!spec.find_attribute("oiio:ColorSpace"));
++    OIIO_CHECK_ASSERT(!spec.find_attribute("colorInteropID"));
++}
++
++
++
+ static void
+ test_sRGB_conversion()
+ {
+@@ -501,6 +538,7 @@ main(int argc, char* argv[])
+     test_namespaced_ids();
+     test_Rec709_conversion();
+     test_linear_display_cicp();
++    test_colorspace_interop_metadata();
+     test_interop_identities_conversion();
+     test_gamma_pair_conversion();
+     test_color_space_properties();
