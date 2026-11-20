@@ -8,6 +8,7 @@ function(bext_inventory_read_file out source_dir path)
   execute_process(
     COMMAND git show "${revision}:${path}"
     WORKING_DIRECTORY "${source_dir}"
+    ENCODING UTF-8
     RESULT_VARIABLE result OUTPUT_VARIABLE content ERROR_VARIABLE error
   )
   if (NOT result EQUAL 0)
