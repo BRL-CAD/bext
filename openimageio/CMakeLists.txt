@@ -6,16 +6,28 @@ if (ENABLE_OPENIMAGEIO)
   set(OPENIMAGEIO_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0001-terminal-dimensions.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0002-struetype-font-backend.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0003-color-interop-identities.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0004-color-auxiliary-channels.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0005-color-gamut-metadata.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0006-default-look-config.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0007-test-python-interpreter.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0008-anisotropic-sample-transitions.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0009-intel-windows-fp.patch"
     )
   if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "^(Clang|IntelLLVM)$")
     list(APPEND OPENIMAGEIO_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/patches/0010-windows-simd-flags.patch")
   endif ()
+  include("${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages.cmake")
+  list(TRANSFORM OPENIMAGEIO_REFERENCE_IMAGES
+    PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/reference-images/"
+    OUTPUT_VARIABLE OPENIMAGEIO_REFERENCE_INPUTS)
   git_submodule_init(oiio CMakeLists.txt
     PATCH_FILES ${OPENIMAGEIO_PATCH_FILES}
     INPUT_FILES
+      ${OPENIMAGEIO_REFERENCE_INPUTS}
+      "${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages.cmake"
+      "${CMAKE_CURRENT_SOURCE_DIR}/CopyReferenceImages.cmake"
       "${PROJECT_SOURCE_DIR}/CMake/FindPNG.cmake"
       "${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake"
     PATCH_COMMAND_VAR OPENIMAGEIO_PATCH_COMMAND)
@@ -29,6 +41,9 @@ if (ENABLE_OPENIMAGEIO)
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oiio"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${OPENIMAGEIO_PATCH_COMMAND}
+    COMMAND ${CMAKE_COMMAND}
+      "-DOPENIMAGEIO_SOURCE_DIR=<SOURCE_DIR>"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/CopyReferenceImages.cmake"
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/src/cmake/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindPNG.cmake;<SOURCE_DIR>/src/cmake/FindPNG.cmake
     CMAKE_ARGS

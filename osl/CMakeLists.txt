@@ -4,10 +4,12 @@ bext_enable(OSL)
 if (ENABLE_OSL)
 
   set(OSL_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0001-environment-derivatives.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0002-clang-diagnostic-lifetime.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0003-bsdl-macros.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0004-freebsd-obj-reader.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0005-native-closure-callbacks.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0006-atan2-derivatives.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/patches/0007-public-header-exports.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/osl.patch"
     )
