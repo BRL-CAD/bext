@@ -226,7 +226,7 @@ set(DISABLE_PROBE "${DISABLE_PROBE}" CACHE BOOL "Disable custom dependency")
             'set(QT_XMIN_ROOT "unused-sdk" CACHE PATH "Qt SDK")\n'
             'include("' + SOURCE.as_posix() + '/qt/CMakeLists.txt")\n'
             'if(TARGET Qt6_BLD OR ENABLE_QT)\nmessage(FATAL_ERROR "Qt was explicitly disabled")\nendif()\n')
-        self.configure('OFF', '-DENABLE_ALL=ON')
+        self.configure('OFF', '-DENABLE_ALL=ON', '-DCMAKE_DISABLE_FIND_PACKAGE_Qt6=ON')
 
     def test_netpbm_imported_target_supports_installed_header_layout(self):
         provider = self.root / 'provider'

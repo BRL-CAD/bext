@@ -14,6 +14,7 @@ from unittest import mock
 
 
 MODULE = Path(__file__).resolve().parents[1]
+WINDOWS_PRIVILEGE_NOT_HELD = 1314
 spec = importlib.util.spec_from_file_location('release_build', MODULE / 'release_build.py')
 driver = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(driver)
@@ -148,6 +149,14 @@ bext_configure_release_build()
 
     def plan(self):
         return json.loads((self.build / 'bext-release-Release.json').read_text())
+
+    def directory_symlink(self, link, target):
+        try:
+            link.symlink_to(target, target_is_directory=True)
+        except OSError as error:
+            if getattr(error, 'winerror', None) != WINDOWS_PRIVILEGE_NOT_HELD:
+                raise
+            self.skipTest('Windows user lacks permission to create symbolic links')
 
     def test_discard_preserves_installs_controls_logs_and_noop_reconfigure(self):
         self.fixture()
@@ -337,6 +346,7 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
                                   '--parallel', '1')
         self.assertIn('Building FIRST_BLD', output)
         self.assertIn('Building SECOND_BLD', output)
+        self.assertEqual(output.count("Performing build step for 'FIRST_BLD'"), 1, output)
         self.assertTrue((self.prefix / 'finalized').is_file())
         for project in plan['projects']:
             self.assertFalse(Path(project['source_dir']).exists())
@@ -356,9 +366,11 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
                       if item['name'].startswith('Visual Studio')]
         self.assertTrue(generators, 'CMake must support a Visual Studio generator')
         generator = max(generators, key=lambda name: int(name.split()[2]))
-        for config in ('Release', 'Debug'):
-            with self.subTest(config=config):
-                self.check_excluded_wrappers(generator, config)
+        # Exercise nested MSBuild invocations with their outputs under TEMP.
+        with mock.patch.dict(os.environ, {'TEMP': str(self.root), 'TMP': str(self.root)}):
+            for config in ('Release', 'Debug'):
+                with self.subTest(config=config):
+                    self.check_excluded_wrappers(generator, config)
 
     @unittest.skipUnless(shutil.which('gmake') or shutil.which('make'), 'make is required')
     def test_makefiles(self):
@@ -385,9 +397,13 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         plan['projects'][0]['binary_dir'] = plan['install_roots'][0]
         with self.assertRaisesRegex(ValueError, 'overlaps retained files'):
             driver.work_paths(plan, plan['projects'][0])
-        plan['projects'][0]['binary_dir'] = str(self.prefix / 'install')
+
+    def test_symlink_work_directory_is_rejected(self):
+        self.fixture()
+        self.configure()
+        plan = self.plan()
         plan['projects'][0]['source_dir'] = str(self.build / 'link')
-        (self.build / 'link').symlink_to(self.source, target_is_directory=True)
+        self.directory_symlink(self.build / 'link', self.source)
         with self.assertRaisesRegex(ValueError, 'Unsafe working directory'):
             driver.work_paths(plan, plan['projects'][0])
 
@@ -395,10 +411,10 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         self.fixture()
         self.configure()
         alias = self.root / 'build-alias'
-        alias.symlink_to(self.build, target_is_directory=True)
+        self.directory_symlink(alias, self.build)
         retained = self.build / 'retained'
         retained.mkdir()
-        (self.build / 'work-link').symlink_to(retained, target_is_directory=True)
+        self.directory_symlink(self.build / 'work-link', retained)
         plan = self.plan()
         plan['build_root'] = str(alias)
         plan['projects'][0]['binary_dir'] = str(alias / 'work-link')

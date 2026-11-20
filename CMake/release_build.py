@@ -168,6 +168,14 @@ def build(plan):
 
     environment = os.environ.copy()
     environment['CMAKE_BUILD_PARALLEL_LEVEL'] = str(plan['jobs'])
+    if plan.get('uses_msbuild') and any(
+            inside(root.resolve(), Path(environment[name]).resolve())
+            for name in ('TEMP', 'TMP') if environment.get(name)):
+        # MSBuild can rerun completed ExternalProject steps when its outputs
+        # are under TEMP or TMP. Keep its temporary files in a separate child.
+        scratch = root / 'CMakeFiles' / 'bext-msbuild-temp'
+        scratch.mkdir(exist_ok=True)
+        environment.update(TEMP=str(scratch), TMP=str(scratch))
     # Our own child builds must not inherit a parent make's jobserver or flags.
     environment.pop('MAKEFLAGS', None)
     environment.pop('MFLAGS', None)
