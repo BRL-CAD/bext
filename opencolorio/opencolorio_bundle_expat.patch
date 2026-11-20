@@ -1,0 +1,22 @@
+diff --git a/share/cmake/modules/Findexpat.cmake b/share/cmake/modules/Findexpat.cmake
+--- a/share/cmake/modules/Findexpat.cmake
++++ b/share/cmake/modules/Findexpat.cmake
+@@ -40,7 +40,17 @@
+     set(_expat_REQUIRED_VARS expat_LIBRARY)
+ 
+     # Search for expat-config.cmake
+-    find_package(expat ${expat_FIND_VERSION} CONFIG QUIET)
++    if(OCIO_EXPAT_BUNDLE_ROOT)
++        # The dependency handler tries the recommended version before the
++        # minimum. Keep both searches within the bundle when one is supplied.
++        find_package(expat ${expat_FIND_VERSION} CONFIG QUIET
++                     PATHS "${OCIO_EXPAT_BUNDLE_ROOT}" NO_DEFAULT_PATH)
++        if(NOT expat_FOUND)
++            return()
++        endif()
++    else()
++        find_package(expat ${expat_FIND_VERSION} CONFIG QUIET)
++    endif()
+ 
+     if(expat_FOUND)
+         if (TARGET expat::libexpat)

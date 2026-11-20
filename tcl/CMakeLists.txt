@@ -373,6 +373,9 @@ if (ENABLE_TCL)
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
       STEP_TARGETS install
       )
+    ExternalProject_Add_StepDependencies(TCL_BLD build
+      "${CMAKE_CURRENT_BINARY_DIR}/tcl_build.cmake"
+      "${CMAKE_CURRENT_BINARY_DIR}/tcl_install.cmake")
     set(TCL_APPINIT)
 
   endif (NOT MSVC)

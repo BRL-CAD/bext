@@ -1,0 +1,11 @@
+--- a/include/fmt/ostream.h
++++ b/include/fmt/ostream.h
+@@ -78,7 +78,7 @@
+     f = get_file(*buf);
+   else
+     return false;
+-#elif defined(_WIN32) && defined(__GLIBCXX__)
++#elif defined(_WIN32) && defined(__GLIBCXX__) && defined(__GXX_RTTI)
+   auto* rdbuf = os.rdbuf();
+   if (auto* sfbuf = dynamic_cast<__gnu_cxx::stdio_sync_filebuf<char>*>(rdbuf))
+     f = sfbuf->file();

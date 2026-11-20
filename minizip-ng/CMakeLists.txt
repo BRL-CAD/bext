@@ -3,7 +3,9 @@ bext_enable(MINIZIP_NG)
 
 if (ENABLE_MINIZIP_NG)
 
-  git_submodule_init(minizip-ng CMakeLists.txt)
+  git_submodule_init(minizip-ng CMakeLists.txt
+    PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/minizip_zstd_config.patch"
+    PATCH_COMMAND_VAR MINIZIP_NG_PATCH_COMMAND)
 
   RegisterDeps(MINIZIP_NG)
   if (TARGET ZLIB_BLD)
@@ -13,15 +15,19 @@ if (ENABLE_MINIZIP_NG)
   ExternalProject_Add(MINIZIP_NG_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/minizip-ng"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/minizip-ng.patch
-    PATCH_COMMAND ${CMAKE_COMMAND};-E;remove;<SOURCE_DIR>/cmake/FindZLIB.cmake
-    COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/cmake/FindZLIB.cmake
+    PATCH_COMMAND ${MINIZIP_NG_PATCH_COMMAND}
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake <SOURCE_DIR>/cmake/FindZLIB.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
+    # minizip prefers zlib-ng when both are installed. Use the bundle's
+    # zlib when we build it so consumers can resolve the same dependency.
+    $<$<BOOL:${ZLIB_TARGET}>:-DCMAKE_DISABLE_FIND_PACKAGE_ZLIBNG=ON>
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
-    -DZSTD_ROOT=$<$<BOOL:${ZSTD_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -Dzstd_ROOT=$<$<BOOL:${ZSTD_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DMZ_LIB_SUFFIX=-ng
+    -DMZ_FETCH_LIBS=OFF
     -DMZ_BZIP2=OFF
     -DMZ_ICONV=OFF
     -DMZ_LIBBSD=OFF

@@ -17,7 +17,9 @@ set(ENABLE_ONETBB "${ENABLE_ONETBB}" CACHE BOOL "Enable oneTBB build")
 
 if (ENABLE_ONETBB)
 
-  set(ONETBB_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/onetbb_windows_loader.patch")
+  set(ONETBB_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/onetbb_windows_loader.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/onetbb.patch")
   git_submodule_init(oneTBB CMakeLists.txt
     PATCH_FILES ${ONETBB_PATCH_FILES}
     PATCH_COMMAND_VAR ONETBB_PATCH_COMMAND)

@@ -1,7 +1,49 @@
-diff -Naur winflexbison-2.5.25/CMakeLists.txt winflexbison/CMakeLists.txt
---- winflexbison-2.5.25/CMakeLists.txt	2022-01-09 23:47:26.000000000 -0500
-+++ winflexbison/CMakeLists.txt	2023-09-14 13:19:51.353807462 -0400
-@@ -66,16 +66,16 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -2,8 +2,8 @@
+ 
+ project (winflexbison)
+ 
+-if(NOT MSVC)
+-   message( FATAL_ERROR "Visual Studio Build supported only" )
++if(NOT WIN32)
++   message( FATAL_ERROR "Windows build supported only" )
+ endif()
+ 
+ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+@@ -12,13 +12,12 @@
+   add_definitions(-D_DEBUG)
+ endif()
+ 
+-# next line needed for compile in C (nor CPP) mode (ucrt headers bug)
+-add_definitions(-Dinline=__inline)
+-# next line needed for VS2017 only
+-add_definitions(-Drestrict=__restrict)
+-
+-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W3 /MD /Od /Zi /EHsc")
+-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /W3 /GL /Od /Oi /Gy /Zi /EHsc")
++if(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
++  # These spellings are needed by older Visual C++ C runtimes.
++  add_definitions(-Dinline=__inline -Drestrict=__restrict)
++  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W3 /MD /Od /Zi /EHsc")
++  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /W3 /GL /Od /Oi /Gy /Zi /EHsc")
++endif()
+ 
+ # Define Release by default.
+ if(NOT CMAKE_BUILD_TYPE)
+@@ -37,7 +36,9 @@
+     #   applies to WIN32/MSVC.
+     #------------------------------------------------------------------------
+     if (MSVC)
+-        add_compile_definitions("__extension__")
++        if(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
++            add_compile_definitions("__extension__")
++        endif()
+         add_compile_options("/source-charset:utf-8")
+         option( USE_STATIC_RUNTIME "Set ON to change /MD(DLL) to /MT(static)" OFF )
+         if (USE_STATIC_RUNTIME)
+@@ -66,16 +67,16 @@
  if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
      # CPACK
      if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -25,7 +67,7 @@ diff -Naur winflexbison-2.5.25/CMakeLists.txt winflexbison/CMakeLists.txt
  
      set(PACKAGE_GENERATORS_DEFAULT ZIP)
  
-@@ -96,4 +96,5 @@
+@@ -96,4 +97,5 @@
      set(CPACK_PACKAGE_FILE_NAME "win_flex_bison-${CPACK_PACKAGE_VERSION}")
  
      include(CPack)
@@ -33,3 +75,222 @@ diff -Naur winflexbison-2.5.25/CMakeLists.txt winflexbison/CMakeLists.txt
 \ No newline at end of file
 +endif()
 +
+diff --git a/bison/CMakeLists.txt b/bison/CMakeLists.txt
+--- a/bison/CMakeLists.txt
++++ b/bison/CMakeLists.txt
+@@ -29,7 +29,7 @@
+ target_include_directories(${PROJECT_NAME} PRIVATE "src")
+ target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+ 
+-target_link_libraries(${PROJECT_NAME} winflexbison_common kernel32.lib user32.lib)
++target_link_libraries(${PROJECT_NAME} winflexbison_common kernel32 user32)
+ 
+ # liby
+ file(GLOB liby_src
+@@ -40,4 +40,4 @@
+ add_library(y STATIC ${liby_src})
+ 
+ target_include_directories(y
+-    PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/")
+\ No newline at end of file
++    PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/")
+diff --git a/bison/src/config.h b/bison/src/config.h
+--- a/bison/src/config.h
++++ b/bison/src/config.h
+@@ -7,7 +7,7 @@
+ #define PACKAGE ""
+ #define PACKAGE_VERSION "3.8.2"
+ #define PACKAGE_NAME "bison"
+-#define PKGDATADIR "data"
++#define PKGDATADIR "../share/data"
+ #define RENAME_OPEN_FILE_WORKS 1
+ 
+ #define ssize_t ptrdiff_t
+@@ -15,8 +15,10 @@
+ extern char* _stpcpy(char *yydest, const char *yysrc);
+ 
+ #include <stdio.h>
++#include <share.h>
+ #define fopen(n,m) _fsopen(n,m,_SH_DENYNO)
+ 
+ extern int strverscmp(const char* s1, const char* s2);
+ 
++struct obstack;
+ extern int obstack_printf(struct obstack* obs, const char* format, ...);
+\ No newline at end of file
+diff --git a/bison/src/output.c b/bison/src/output.c
+--- a/bison/src/output.c
++++ b/bison/src/output.c
+@@ -730,7 +730,7 @@
+   FILE *m4_out = NULL;
+   char m4_in_file_name[/*MAX_PATH*/260]; 
+   char m4_out_file_name[/*MAX_PATH*/260];
+-  char const *argv[11];
++  char *argv[11];
+ 
+   /* Compute the names of the package data dir and skeleton files.  */
+   char const *m4 = m4path ();
+@@ -754,7 +754,7 @@
+ //  pid_t pid;
+   int i = 0;
+   {
+-//    char const *argv[11];
++//    char *argv[11];
+     argv[i++] = m4;
+ 
+     /* When POSIXLY_CORRECT is set, GNU M4 1.6 and later disable GNU
+diff --git a/common/CMakeLists.txt b/common/CMakeLists.txt
+--- a/common/CMakeLists.txt
++++ b/common/CMakeLists.txt
+@@ -32,7 +32,11 @@
+    ${SOURCE_FILES}
+ )
+ 
+-set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 90)
++if(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
++    set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 90)
++else()
++    set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 11)
++endif()
+ 
+ target_include_directories(${PROJECT_NAME} PUBLIC "misc")
+ target_include_directories(${PROJECT_NAME} PUBLIC "m4")
+diff --git a/common/m4/lib/canonicalize.c b/common/m4/lib/canonicalize.c
+--- a/common/m4/lib/canonicalize.c
++++ b/common/m4/lib/canonicalize.c
+@@ -54,10 +54,12 @@
+ #endif
+ 
+ #ifdef _WIN32
++#ifndef __MINGW32__
+ static __inline void* mempcpy(void* dst, const void* src, size_t len)
+ {
+    return (char*)memcpy(dst, src, len) + len;
+ }
++#endif
+ #define rawmemchr(p, c) memchr(p, c, (size_t)-1)
+ #define readlink(r, b, s) -1 // TODO
+ #endif
+diff --git a/common/m4/lib/clean-temp.h b/common/m4/lib/clean-temp.h
+--- a/common/m4/lib/clean-temp.h
++++ b/common/m4/lib/clean-temp.h
+@@ -135,7 +135,11 @@
+    Return 0 upon success, or -1 if there was some problem.  */
+ extern int cleanup_temp_dir (struct temp_dir *dir);
+ 
++#ifdef __MINGW32__
++# include <sys/types.h>
++#else
+ typedef int mode_t;
++#endif
+ 
+ /* ================== Opening and closing temporary files ================== */
+ 
+diff --git a/common/m4/lib/malloc/scratch_buffer.h b/common/m4/lib/malloc/scratch_buffer.h
+--- a/common/m4/lib/malloc/scratch_buffer.h
++++ b/common/m4/lib/malloc/scratch_buffer.h
+@@ -20,7 +20,11 @@
+ #define _SCRATCH_BUFFER_H
+ 
+ #ifdef _WIN32
++#ifdef __MINGW32__
++#include <stddef.h>
++#else
+ typedef double max_align_t;
++#endif
+ #include <libc-config.h>
+ #endif
+ 
+diff --git a/common/m4/lib/regex.h b/common/m4/lib/regex.h
+--- a/common/m4/lib/regex.h
++++ b/common/m4/lib/regex.h
+@@ -20,7 +20,7 @@
+ #ifndef _REGEX_H
+ #define _REGEX_H 1
+ 
+-#if defined(_MSC_VER) && !defined(__USE_GNU)
++#if (defined(_MSC_VER) || defined(__MINGW32__)) && !defined(__USE_GNU)
+ # define __USE_GNU 1
+ #endif
+ 
+diff --git a/common/misc/bitset/base.h b/common/misc/bitset/base.h
+--- a/common/misc/bitset/base.h
++++ b/common/misc/bitset/base.h
+@@ -327,7 +327,9 @@
+ static inline
+ int bitset_ffs_ (bitset_word word)
+ {
+-#ifndef _MSC_VER
++#if defined(__MINGW32__)
++  return __builtin_ffsl ((long) word) - 1;
++#elif !defined(_MSC_VER)
+   return ffsl ((long) word) - 1;
+ #else
+   unsigned long bit, val = word;
+diff --git a/common/misc/config.h b/common/misc/config.h
+--- a/common/misc/config.h
++++ b/common/misc/config.h
+@@ -35,7 +35,7 @@
+ #define _Static_assert(a, b)
+ #define __PGI
+ 
+-#define MIN min
++#define MIN(a, b) ((a) < (b) ? (a) : (b))
+ #define _GL_CMP(a, b) (a) == (b)
+ 
+ #define __getopt_argv_const
+diff --git a/common/misc/error.c b/common/misc/error.c
+--- a/common/misc/error.c
++++ b/common/misc/error.c
+@@ -44,7 +44,7 @@
+ # define _GL_ARG_NONNULL(a)
+ #else
+ # include "getprogname.h"
+-# ifdef _MSC_VER
++# ifdef _WIN32
+ #   define _GL_ATTRIBUTE_FORMAT_PRINTF_STANDARD(a, b)
+ # endif
+ #endif
+diff --git a/flex/CMakeLists.txt b/flex/CMakeLists.txt
+--- a/flex/CMakeLists.txt
++++ b/flex/CMakeLists.txt
+@@ -22,7 +22,7 @@
+ 
+ target_include_directories(${PROJECT_NAME} PRIVATE "src")
+ 
+-target_link_libraries(${PROJECT_NAME} winflexbison_common kernel32.lib user32.lib)
++target_link_libraries(${PROJECT_NAME} winflexbison_common kernel32 user32 ws2_32)
+ 
+ # libfl
+ add_library(fl STATIC 
+@@ -30,4 +30,4 @@
+     "${CMAKE_CURRENT_SOURCE_DIR}/src/libyywrap.c")
+ 
+ target_include_directories(fl
+-    PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/")
+\ No newline at end of file
++    PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/")
+diff --git a/flex/src/filter.c b/flex/src/filter.c
+--- a/flex/src/filter.c
++++ b/flex/src/filter.c
+@@ -497,7 +497,7 @@
+ 
+ int filter_m4_p (struct filter *chain)
+ {
+-    char const *argv[10];
++    char *argv[10];
+     int i = 0;
+ 
+     argv[i++] = "M4";
+diff --git a/flex/src/tables.c b/flex/src/tables.c
+--- a/flex/src/tables.c
++++ b/flex/src/tables.c
+@@ -37,7 +37,7 @@
+ #include "flexdef.h"
+ #include "tables.h"
+ 
+-#ifdef _MSC_VER
++#ifdef _WIN32
+ #define htonl(n) _byteswap_ulong(n)
+ #define htons(n) _byteswap_ushort(n)
+ #endif

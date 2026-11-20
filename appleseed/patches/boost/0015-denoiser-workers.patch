@@ -1,0 +1,605 @@
+Subject: [PATCH 15/50] Remove Bind and synchronize denoiser workers
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: bcbe6e394a97c56430c75c18d5acc9c6f09af2b9
+Original-Commit: 3215046202bb27c5b75f38c7e50ea15db51f9ba9
+Original-Commit: 7dabe2a6201cd2a5e86c9db4ea2f1ea2efaa2736
+Original-Commit: a3940e7b72af0aff887079194176383e989b0a3b
+
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index 595846698..ad0522bfc 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -1508,6 +1508,7 @@ source_group ("renderer\\meta\\benchmarks" FILES
+ set (renderer_meta_tests_sources
+     renderer/meta/tests/test_assembly.cpp
+     renderer/meta/tests/test_backwardlightsampler.cpp
++    renderer/meta/tests/test_bcd.cpp
+     renderer/meta/tests/test_containers.cpp
+     renderer/meta/tests/test_dynamicspectrum.cpp
+     renderer/meta/tests/test_emissionclosure.cpp
+diff --git a/src/appleseed/foundation/meta/tests/test_iesparser.cpp b/src/appleseed/foundation/meta/tests/test_iesparser.cpp
+index 3be932984..c7c63df55 100644
+--- a/src/appleseed/foundation/meta/tests/test_iesparser.cpp
++++ b/src/appleseed/foundation/meta/tests/test_iesparser.cpp
+@@ -228,6 +228,14 @@ TEST_SUITE(Foundation_Utility_Iesparser)
+             ASSERT_EQ(1, result.size());
+             EXPECT_EQ(0, result[0]);
+         }
++        {
++            std::istringstream input_stream(" \t\v\f1 \t\v\f2\f\v \n");
++            parser.reset(input_stream);
++            const auto values = parser.parse_to_vector<int>(input_stream, 2);
++            ASSERT_EQ(2, values.size());
++            EXPECT_EQ(1, values[0]);
++            EXPECT_EQ(2, values[1]);
++        }
+     }
+ 
+     TEST_CASE(ParseToVector_Bad)
+diff --git a/src/appleseed/foundation/meta/tests/test_utility_filter.cpp b/src/appleseed/foundation/meta/tests/test_utility_filter.cpp
+index f7fef26c4..df6570929 100644
+--- a/src/appleseed/foundation/meta/tests/test_utility_filter.cpp
++++ b/src/appleseed/foundation/meta/tests/test_utility_filter.cpp
+@@ -28,9 +28,14 @@
+ //
+ 
+ // appleseed.foundation headers.
++#include "foundation/meta/tests/concurrenttest.hpp"
+ #include "foundation/utility/filter.h"
+ #include "foundation/utility/test.h"
+ 
++// Standard headers.
++#include <atomic>
++#include <cstddef>
++
+ using namespace foundation;
+ 
+ TEST_SUITE(Foundation_Utility_Filter_RegExFilter)
+@@ -106,4 +111,82 @@ TEST_SUITE(Foundation_Utility_Filter_RegExFilter)
+ 
+         EXPECT_FALSE(result);
+     }
++    TEST_CASE(DefaultPattern_IsInvalid)
++    {
++        const RegExFilter filter;
++        EXPECT_FALSE(filter.is_valid());
++    }
++
++    TEST_CASE(PatternChanges_ClearErrorsAndRetainSearchSemantics)
++    {
++        RegExFilter filter("steel");
++        EXPECT_TRUE(filter.accepts("part_steel_instance"));
++        EXPECT_FALSE(filter.accepts("part_glass_instance"));
++        filter.set_pattern("[");
++        EXPECT_FALSE(filter.is_valid());
++        filter.set_pattern("glass");
++        EXPECT_TRUE(filter.is_valid());
++        EXPECT_TRUE(filter.accepts("part_glass_instance"));
++    }
++
++    TEST_CASE(CaseSensitivity_CanBeChanged)
++    {
++        RegExFilter filter("steel");
++        EXPECT_FALSE(filter.accepts("STEEL"));
++        filter.set_pattern("steel", RegExFilter::CaseInsensitive);
++        EXPECT_TRUE(filter.accepts("STEEL"));
++        filter.set_pattern("steel", RegExFilter::CaseSensitive);
++        EXPECT_FALSE(filter.accepts("STEEL"));
++    }
++
++    TEST_CASE(PerlPatterns_PreserveAdvancedFilterSyntax)
++    {
++        struct PatternCase
++        {
++            const char* pattern;
++            const char* subject;
++        };
++        const PatternCase cases[] = {
++            {"(?<=part_)steel", "part_steel"},
++            {"(?i:steel)", "STEEL"},
++            {"(?<material>steel)\\k<material>", "steelsteel"},
++            {"\\Apart_steel\\z", "part_steel"},
++            {"(part_)?(?(1)steel|glass)", "part_steel"}
++        };
++        for (const auto& test : cases)
++        {
++            RegExFilter filter(test.pattern);
++            ASSERT_TRUE(filter.is_valid());
++            EXPECT_TRUE(filter.accepts(test.subject));
++        }
++        RegExFilter atomic("(?>a|ab)c");
++        EXPECT_FALSE(atomic.accepts("abc"));
++        RegExFilter possessive("a*+a");
++        EXPECT_FALSE(possessive.accepts("aaa"));
++    }
++
++    TEST_CASE(Newlines_PreserveDotAndAnchorDefaults)
++    {
++        RegExFilter dot("a.b");
++        EXPECT_TRUE(dot.accepts("a\nb"));
++        RegExFilter anchors("^b$");
++        EXPECT_TRUE(anchors.accepts("a\nb\nc"));
++        RegExFilter final_newline("a$");
++        EXPECT_TRUE(final_newline.accepts("a\n"));
++    }
++
++    TEST_CASE(ConcurrentSearches_UseIndependentMatchState)
++    {
++        const RegExFilter filter("(?<=part_)(steel|glass)");
++        std::atomic<bool> correct(true);
++        test_impl::run_concurrently(8, [&](const size_t)
++        {
++            for (size_t i = 0; i < 256; ++i)
++            {
++                if (!filter.accepts("part_steel") || filter.accepts("part_wood"))
++                    correct.store(false);
++            }
++        });
++        EXPECT_TRUE(correct.load());
++    }
+ }
+diff --git a/src/appleseed/renderer/meta/tests/test_bcd.cpp b/src/appleseed/renderer/meta/tests/test_bcd.cpp
+new file mode 100644
+index 000000000..21b8e3a4b
+--- /dev/null
++++ b/src/appleseed/renderer/meta/tests/test_bcd.cpp
+@@ -0,0 +1,173 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2010-2013 Francois Beaune, Jupiter Jazz Limited
++// Copyright (c) 2014-2018 Francois Beaune, The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.foundation headers.
++#include "foundation/utility/test.h"
++
++// BCD headers.
++#include "bcd/DeepImage.h"
++#include "bcd/Denoiser.h"
++
++// Standard headers.
++#include <atomic>
++#include <cstddef>
++
++TEST_SUITE(Renderer_Kernel_Denoising_BCD)
++{
++    struct Fixture
++    {
++        static const int Width = 7;
++        bcd::DeepImage<float> colors;
++        bcd::DeepImage<float> samples;
++        bcd::DeepImage<float> histograms;
++        bcd::DeepImage<float> covariance;
++        bcd::DeepImage<float> output;
++        bcd::Denoiser denoiser;
++
++        Fixture()
++        {
++            initialize(Width, 1);
++        }
++
++        void initialize(const int width, const int height)
++        {
++            colors.resize(width, height, 3);
++            samples.resize(width, height, 1);
++            histograms.resize(width, height, 3);
++            covariance.resize(width, height, 6);
++            colors.fill(0.25f);
++            samples.fill(8.0f);
++            histograms.fill(8.0f);
++            covariance.fill(0.0f);
++            bcd::DenoiserInputs inputs;
++            inputs.m_pColors = &colors;
++            inputs.m_pNbOfSamples = &samples;
++            inputs.m_pHistograms = &histograms;
++            inputs.m_pSampleCovariances = &covariance;
++            denoiser.setInputs(inputs);
++            bcd::DenoiserOutputs outputs;
++            outputs.m_pDenoisedColors = &output;
++            denoiser.setOutputs(outputs);
++            auto parameters = denoiser.getParameters();
++            parameters.m_patchRadius = 0;
++            parameters.m_searchWindowRadius = 1;
++            parameters.m_useRandomPixelOrder = true;
++            parameters.m_markedPixelsSkippingProbability = 0.0f;
++            parameters.m_nbOfCores = 1;
++            denoiser.setParameters(parameters);
++        }
++    };
++
++    TEST_CASE_F(SingleWorker_VisitsEveryPixelAndPreservesConstantColor, Fixture)
++    {
++        ASSERT_TRUE(denoiser.denoise());
++        for (int column = 0; column < Width; ++column)
++        {
++            EXPECT_EQ(1, denoiser.getEstimatesCountImage(0).get(0, column, 0));
++            for (int channel = 0; channel < 3; ++channel)
++                EXPECT_FEQ(0.25f, output.get(0, column, channel));
++        }
++    }
++    TEST_CASE_F(MultipleWorkers_VisitRemainderPixels, Fixture)
++    {
++        auto parameters = denoiser.getParameters();
++        parameters.m_nbOfCores = 3;
++        denoiser.setParameters(parameters);
++        ASSERT_TRUE(denoiser.denoise());
++        for (int column = 0; column < Width; ++column)
++            EXPECT_EQ(1, denoiser.getEstimatesCountImage(0).get(0, column, 0));
++    }
++
++    TEST_CASE_F(MoreWorkersThanPixels_StillVisitsEveryPixel, Fixture)
++    {
++        auto parameters = denoiser.getParameters();
++        parameters.m_nbOfCores = Width + 1;
++        denoiser.setParameters(parameters);
++        ASSERT_TRUE(denoiser.denoise());
++        for (int column = 0; column < Width; ++column)
++            EXPECT_EQ(1, denoiser.getEstimatesCountImage(0).get(0, column, 0));
++    }
++
++    TEST_CASE_F(InvalidPatchRadius_ReturnsFailure, Fixture)
++    {
++        auto parameters = denoiser.getParameters();
++        parameters.m_patchRadius = 1;
++        denoiser.setParameters(parameters);
++        EXPECT_FALSE(denoiser.denoise());
++    }
++
++    TEST_CASE_F(ShortImageWithStripOrdering_StillVisitsEveryPixel, Fixture)
++    {
++        auto parameters = denoiser.getParameters();
++        parameters.m_nbOfCores = 3;
++        parameters.m_useRandomPixelOrder = false;
++        denoiser.setParameters(parameters);
++        ASSERT_TRUE(denoiser.denoise());
++        for (int column = 0; column < Width; ++column)
++            EXPECT_EQ(1, denoiser.getEstimatesCountImage(0).get(0, column, 0));
++    }
++
++    TEST_CASE_F(ConcurrentMarkedPatches_PreserveConstantImage, Fixture)
++    {
++        initialize(17, 13);
++        auto parameters = denoiser.getParameters();
++        parameters.m_patchRadius = 1;
++        parameters.m_searchWindowRadius = 3;
++        parameters.m_nbOfCores = 8;
++        parameters.m_markedPixelsSkippingProbability = 1.0f;
++        denoiser.setParameters(parameters);
++        ASSERT_TRUE(denoiser.denoise());
++        for (int i = 0; i < output.getSize(); ++i)
++            EXPECT_FEQ(0.25f, output.get(i));
++    }
++
++    struct CancelDuringWork : bcd::ICallbacks
++    {
++        mutable std::atomic<size_t> checks{0};
++
++        void progress(const float) const override {}
++        bool isAborted() const override { return checks.fetch_add(1) != 0; }
++        void logInfo(const char*) const override {}
++        void logWarning(const char*) const override {}
++        void logError(const char*) const override {}
++        void logDebug(const char*) const override {}
++    };
++
++    TEST_CASE_F(CancellationDuringWork_IsReported, Fixture)
++    {
++        auto parameters = denoiser.getParameters();
++        parameters.m_nbOfCores = 3;
++        denoiser.setParameters(parameters);
++        CancelDuringWork callbacks;
++        denoiser.setCallbacks(&callbacks);
++        EXPECT_FALSE(denoiser.denoise());
++        EXPECT_TRUE(callbacks.checks.load() > 1);
++    }
++
++}
+diff --git a/src/thirdparty/bcd/bcd/Denoiser.cpp b/src/thirdparty/bcd/bcd/Denoiser.cpp
+index 82b774801..dec4f1b03 100644
+--- a/src/thirdparty/bcd/bcd/Denoiser.cpp
++++ b/src/thirdparty/bcd/bcd/Denoiser.cpp
+@@ -15,29 +15,45 @@
+ #include "DenoisingUnit.h"
+ #include "Utils.h"
+ 
+-// Boost headers.
+-#include "boost/bind.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <atomic>
+ #include <cassert>
+ #include <chrono>
++#include <cstdint>
+ #include <cmath>
+ #include <functional>
+ #include <random>
+ #include <thread>
+ 
+ using namespace std;
+-using namespace boost;
+ 
+ namespace bcd
+ {
+ 
+ bool Denoiser::denoise()
+ {
++    if (!inputsOutputsAreOk())
++        return false;
++    if (!m_outputs.m_pDenoisedColors)
++    {
++        if (m_callbacks)
++            m_callbacks->error() << "Aborting denoising: nullptr for output color image\n";
++        return false;
++    }
++
+     m_width = m_inputs.m_pColors->getWidth();
+     m_height = m_inputs.m_pColors->getHeight();
++    if (m_parameters.m_patchRadius < 0 ||
++        m_parameters.m_patchRadius > (m_width - 1) / 2 ||
++        m_parameters.m_patchRadius > (m_height - 1) / 2 ||
++        m_parameters.m_searchWindowRadius < 0 || m_parameters.m_nbOfCores < 0)
++    {
++        if (m_callbacks)
++            m_callbacks->error() << "Aborting denoising: invalid patch radius, search radius, or worker count\n";
++        return false;
++    }
++
+     m_nbOfPixels = m_width * m_height;
+     int widthWithoutBorder = m_width - 2 * m_parameters.m_patchRadius;
+     int heightWithoutBorder = m_height - 2 * m_parameters.m_patchRadius;
+@@ -50,7 +66,8 @@ bool Denoiser::denoise()
+     computePixelCovFromSampleCov();
+ 
+     if (m_parameters.m_nbOfCores == 0)
+-        m_parameters.m_nbOfCores = thread::hardware_concurrency();
++        m_parameters.m_nbOfCores = std::max(1u, thread::hardware_concurrency());
++    m_parameters.m_nbOfCores = std::min(m_parameters.m_nbOfCores, nbOfPixelsWithoutBorder);
+ 
+     vector<PixelPosition> pixelSet(nbOfPixelsWithoutBorder);
+     {
+@@ -87,53 +104,51 @@ bool Denoiser::denoise()
+         m_estimatesCountImages[i] = m_estimatesCountImages[0];
+     }
+ 
+-    m_isCenterOfAlreadyDenoisedPatchImage.resize(m_width, m_height, 1);
+-    m_isCenterOfAlreadyDenoisedPatchImage.fill(false);
++    m_markedPatchCenters.reset(new std::atomic<bool>[m_nbOfPixels]);
++    for (int i = 0; i < m_nbOfPixels; ++i)
++        m_markedPatchCenters[i].store(false, std::memory_order_relaxed);
+ 
+     std::atomic<int> nbOfPixelsComputed(0);
+ 
+-    bool abortRequested = false;
+-
+-    // Number of pixels a thread has to treat.
+-    size_t chunkSize = nbOfPixelsWithoutBorder / m_parameters.m_nbOfCores;
++    std::atomic<bool> abortRequested(false);
+ 
++    const size_t workerCount = static_cast<size_t>(m_parameters.m_nbOfCores);
++    const size_t chunkSize = pixelSet.size() / workerCount;
++    const size_t extraPixels = pixelSet.size() % workerCount;
+     vector<thread> denoiseThreads;
+-    denoiseThreads.reserve(m_parameters.m_nbOfCores);
+-
+-    vector<PixelPosition>::const_iterator startPixelIndexIt = pixelSet.begin();
+-    vector<PixelPosition>::const_iterator endPixelIndexIt;
++    denoiseThreads.reserve(workerCount);
+ 
+-    // Launch denoising threads.
+-    for (size_t i = 0, e = m_parameters.m_nbOfCores; i < e; ++i)
+     {
+-        if (i == m_parameters.m_nbOfCores)
+-            endPixelIndexIt = pixelSet.end();
+-        else
+-            endPixelIndexIt = startPixelIndexIt + chunkSize;
+-
+-        // Visual Studio 2012 does not support argument forwarding in thread's constructor.
+-        // In VS2012 std::bind is also limited to 5 arguments.
+-        thread t(
+-            boost::bind(
++        // Workers refer to local pixels, counters, and flags. Join them before
++        // that state is destroyed, including when launching a worker throws.
++        struct JoinThreads
++        {
++            vector<thread>& threads;
++            ~JoinThreads()
++            {
++                for (auto& worker : threads)
++                {
++                    if (worker.joinable())
++                        worker.join();
++                }
++            }
++        } joiner{denoiseThreads};
++
++        auto startPixelIndexIt = pixelSet.cbegin();
++        for (size_t i = 0; i < workerCount; ++i)
++        {
++            const auto endPixelIndexIt = startPixelIndexIt + chunkSize + (i < extraPixels ? 1 : 0);
++            denoiseThreads.emplace_back(
+                 &Denoiser::doDenoise,
+                 this,
+                 startPixelIndexIt,
+                 endPixelIndexIt,
+                 pixelSet.size(),
+-                boost::ref(nbOfPixelsComputed),
++                std::ref(nbOfPixelsComputed),
+                 i,
+-                boost::ref(abortRequested)));
+-
+-        denoiseThreads.push_back(move(t));
+-
+-        startPixelIndexIt = endPixelIndexIt;
+-    }
+-
+-    // Wait for the threads to complete.
+-    for (auto& t : denoiseThreads)
+-    {
+-         if (t.joinable())
+-            t.join();
++                std::ref(abortRequested));
++            startPixelIndexIt = endPixelIndexIt;
++        }
+     }
+ 
+     m_outputs.m_pDenoisedColors->resize(m_width, m_height, 3);
+@@ -161,7 +176,7 @@ void Denoiser::doDenoise(
+     const size_t                           i_totalNbOfPixels,
+     std::atomic<int>&                      i_nbOfPixelsComputed,
+     const size_t                           i_threadIndex,
+-    bool&                                  i_abortRequested)
++    std::atomic<bool>&                      i_abortRequested)
+ {
+     DenoisingUnit denoisingUnit(*this, static_cast<int>(i_threadIndex));
+ 
+@@ -179,7 +194,8 @@ void Denoiser::doDenoise(
+ 
+         if (i_threadIndex == 0)
+         {
+-            newPercentage = (i_nbOfPixelsComputed * 100) / static_cast<int>(i_totalNbOfPixels);
++            newPercentage = static_cast<int>(
++                (static_cast<std::uint64_t>(i_nbOfPixelsComputed.load()) * 100) / i_totalNbOfPixels);
+             if (newPercentage != currentPercentage)
+             {
+                 if (m_callbacks)
+@@ -248,8 +264,12 @@ void Denoiser::reorderPixelSetJumpNextChunk(
+     vector<PixelPosition>&  io_rPixelSet,
+     int                     i_chunkSize)
+ {
+-    int doubleChunkSize = 2 * i_chunkSize;
+-    int nbOfFullChunks = static_cast<int>(io_rPixelSet.size()) / i_chunkSize;
++    if (i_chunkSize <= 0)
++        return;
++    const int nbOfFullChunks = static_cast<int>(io_rPixelSet.size()) / i_chunkSize;
++    if (nbOfFullChunks < 2)
++        return;
++    const int doubleChunkSize = 2 * i_chunkSize;
+ 
+     vector<PixelPosition> pixelSetCopy(io_rPixelSet);
+     vector<PixelPosition>::iterator inputIt = pixelSetCopy.begin();
+diff --git a/src/thirdparty/bcd/bcd/Denoiser.h b/src/thirdparty/bcd/bcd/Denoiser.h
+index eca366669..1fe8d84ae 100644
+--- a/src/thirdparty/bcd/bcd/Denoiser.h
++++ b/src/thirdparty/bcd/bcd/Denoiser.h
+@@ -19,6 +19,7 @@
+ 
+ // Standard headers.
+ #include <atomic>
++#include <cstddef>
+ #include <memory>
+ #include <vector>
+ 
+@@ -56,9 +57,16 @@ class Denoiser
+         return m_estimatesCountImages[i_index];
+     }
+ 
+-    DeepImage<bool>& getIsCenterOfAlreadyDenoisedPatchImage()
++    bool isPatchCenterMarked(const PixelPosition& position) const
+     {
+-        return m_isCenterOfAlreadyDenoisedPatchImage;
++        return m_markedPatchCenters[patchCenterIndex(position)]
++            .load(std::memory_order_relaxed);
++    }
++
++    void markPatchCenter(const PixelPosition& position)
++    {
++        m_markedPatchCenters[patchCenterIndex(position)]
++            .store(true, std::memory_order_relaxed);
+     }
+ 
+     int getImagesWidth() const
+@@ -79,7 +87,13 @@ class Denoiser
+     Deepimf                     m_pixelCovarianceImage;
+     std::vector<Deepimf>        m_outputSummedColorImages;
+     std::vector<DeepImage<int>> m_estimatesCountImages;
+-    DeepImage<bool>             m_isCenterOfAlreadyDenoisedPatchImage; // For the "marking strategy"
++    // Marks are advisory skip hints; output pixel data is private to each worker.
++    std::unique_ptr<std::atomic<bool>[]> m_markedPatchCenters;
++
++    std::size_t patchCenterIndex(const PixelPosition& position) const
++    {
++        return static_cast<std::size_t>(position.m_line) * m_width + position.m_column;
++    }
+ 
+     void doDenoise(
+         std::vector<PixelPosition>::const_iterator  i_pixelBegin,
+@@ -87,7 +101,7 @@ class Denoiser
+         const std::size_t                           i_totalNbOfPixels,
+         std::atomic<int>&                           i_nbOfPixelsComputed,
+         const std::size_t                           i_threadIndex,
+-        bool&                                       i_abortRequested);
++        std::atomic<bool>&                          i_abortRequested);
+ 
+     void computeNbOfSamplesSqrt();
+     void computePixelCovFromSampleCov();
+diff --git a/src/thirdparty/bcd/bcd/DenoisingUnit.cpp b/src/thirdparty/bcd/bcd/DenoisingUnit.cpp
+index acb117bbf..b3a654c13 100644
+--- a/src/thirdparty/bcd/bcd/DenoisingUnit.cpp
++++ b/src/thirdparty/bcd/bcd/DenoisingUnit.cpp
+@@ -54,8 +54,6 @@ DenoisingUnit::DenoisingUnit(Denoiser& i_rDenoiser, const int i_threadIndex)
+         &(i_rDenoiser.getOutputSummedColorImage(i_threadIndex)))
+   , m_pEstimatesCountImage(
+         &(i_rDenoiser.getEstimatesCountImage(i_threadIndex)))
+-  , m_pIsCenterOfAlreadyDenoisedPatchImage(
+-        &(i_rDenoiser.getIsCenterOfAlreadyDenoisedPatchImage()))
+   , m_nbOfBins(i_rDenoiser.getInputs().m_pHistograms->getDepth())
+   , m_mainPatchCenter()
+   , m_similarPatchesCenters(m_maxNbOfSimilarPatches)
+@@ -95,7 +93,7 @@ void DenoisingUnit::denoisePatchAndSimilarPatches(
+         float skippingProbability = m_rDenoiser.getParameters().m_markedPixelsSkippingProbability;
+         if (skippingProbability != 0.0f)
+         {
+-            if (m_pIsCenterOfAlreadyDenoisedPatchImage->getValue(m_mainPatchCenter, 0))
++            if (m_rDenoiser.isPatchCenterMarked(m_mainPatchCenter))
+             {
+                 if (skippingProbability == 1.0f || rand() < static_cast<int>(skippingProbability * static_cast<float>(RAND_MAX)))
+                     return;
+@@ -568,7 +566,7 @@ void DenoisingUnit::aggregateOutputPatches()
+         for (int* pPixelEstimateCount : estimatesCountPatch)
+             ++(pPixelEstimateCount[0]);
+ 
+-        m_pIsCenterOfAlreadyDenoisedPatchImage->set(rSimilarPatchCenter, 0, true);
++        m_rDenoiser.markPatchCenter(rSimilarPatchCenter);
+     }
+ }
+ 
+diff --git a/src/thirdparty/bcd/bcd/DenoisingUnit.h b/src/thirdparty/bcd/bcd/DenoisingUnit.h
+index 67d5bf7cb..41875061a 100644
+--- a/src/thirdparty/bcd/bcd/DenoisingUnit.h
++++ b/src/thirdparty/bcd/bcd/DenoisingUnit.h
+@@ -132,7 +132,6 @@ class DenoisingUnit
+ 
+     Deepimf*                        m_pOutputSummedColorImage;
+     DeepImage<int>*                 m_pEstimatesCountImage;
+-    DeepImage<bool>*                m_pIsCenterOfAlreadyDenoisedPatchImage; // For the "marking strategy"
+ 
+     size_t                          m_nbOfBins;
+ 

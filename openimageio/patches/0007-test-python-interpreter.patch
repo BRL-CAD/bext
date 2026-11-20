@@ -1,0 +1,25 @@
+From 97b16c76f6d2284eec13ae1a37945ff718892a06 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Mon, 16 Nov 2026 03:59:38 +0000
+Subject: [PATCH] build: Discover Python for tests without Python bindings
+
+Find the interpreter when the tests are enabled, independently of the
+optional bindings. Otherwise the test driver can run its env-python
+shebang on systems that provide only a versioned Python executable.
+
+diff --git a/src/cmake/testing.cmake b/src/cmake/testing.cmake
+index a8da380691db053e1c372efffdf92fa9eca1d4f6..b0655b46ff66c911715c5466b47ccf9f3b6fd3e8 100644
+--- a/src/cmake/testing.cmake
++++ b/src/cmake/testing.cmake
+@@ -4,6 +4,11 @@
+ 
+ include (CTest)
+ 
++# Test scripts need an interpreter even when the Python bindings are disabled.
++if (OIIO_BUILD_TESTS AND BUILD_TESTING AND NOT Python3_Interpreter_FOUND)
++    find_package (Python3 REQUIRED COMPONENTS Interpreter)
++endif ()
++
+ # Make a build/platform/testsuite directory, and copy the master runtest.py
+ # there. The rest is up to the tests themselves.
+ file (MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/testsuite")

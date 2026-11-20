@@ -1,0 +1,31 @@
+Appleseed patch series
+======================
+
+Upstream: https://github.com/appleseedhq/appleseed
+Base: c4ba82893febd711befb194f905e955d3ee143a3
+The numbered bootstrap patches adapt Appleseed to the bundled
+dependencies and native toolchains. The Boost group uses the C++17
+standard library and PCRE2 for the core renderer and command-line tools.
+Series.cmake applies both groups in order. The optional Python bindings
+still require Boost.Python.
+
+Review topics
+-------------
+
+01. bootstrap: Dependency modules
+02. bootstrap: Native build targets
+03. bootstrap: Library api compatibility
+04. bootstrap: Shader api compatibility
+05. bootstrap: Support files
+06. bootstrap: Support bundled libraries and platform toolchains
+07. bootstrap: Harden core helpers and export image conversion
+08. boost: Use standard optional caches and drop unused Wave
+09. boost: Use standard containers for the LRU cache index
+10. boost: Use a read-only standard shader surface-area index
+11. boost: Use C++17 filesystem and native file timestamps
+12. boost: Use native atomics and standard renderer counters
+13. boost: Use standard locks, threads and condition variables
+14. boost: Use chrono timestamps and remove DateTime adapters
+15. boost: Remove Bind and synchronize denoiser workers
+16. boost: Use standard helpers and PCRE2 without core Boost
+17. boost: Stage complete shader resources and executable tools

@@ -1,0 +1,970 @@
+Subject: [PATCH 14/50] Use chrono timestamps and remove DateTime adapters
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: d6fe2722bf197116edaa09690cb48decdd50e2d7
+Original-Commit: 2408897fe9606cdfdba30d37e6975b851e6ace37
+Original-Commit: 969b58ee4790fc01fe524a99ae224d081236b509
+Original-Commit: cc8ae4844c29de5d8f21a6994c71b78312666ced
+Original-Commit: d9eb3f14d1cacfe898967a7364dfe36e82be3a7e
+Original-Commit: fbe7baba67a475fd8c8c660cb011394894d661cc
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c87e018a1..f1d1128f9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -248,7 +248,7 @@ set(Boost_MULTITHREADED TRUE)
+ if (USE_STATIC_BOOST)
+   set(Boost_USE_STATIC_LIBS TRUE)
+ endif ()
+-find_package(Boost 1.70 REQUIRED COMPONENTS date_time regex)
++find_package(Boost 1.70 REQUIRED COMPONENTS regex)
+ add_definitions(-DBOOST_ALL_DYN_LINK)
+ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+ link_directories(${Boost_LIBRARY_DIRS})
+diff --git a/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp b/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
+index 1aa392779..02dbd9716 100644
+--- a/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
++++ b/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
+@@ -38,13 +38,11 @@
+ 
+ // appleseed.foundation headers.
+ #include "foundation/containers/dictionary.h"
++#include "foundation/platform/datetime.h"
+ #include "foundation/string/string.h"
+ #include "foundation/utility/countof.h"
+ #include "foundation/utility/foreach.h"
+ 
+-// Boost headers.
+-#include "boost/date_time/posix_time/posix_time.hpp"
+-
+ // Qt headers.
+ #include <QKeySequence>
+ #include <QList>
+@@ -57,6 +55,7 @@
+ #include <QVariant>
+ 
+ // Standard headers.
++#include <chrono>
+ #include <cstdint>
+ #include <filesystem>
+ #include <string>
+@@ -64,7 +63,6 @@
+ 
+ using namespace appleseed::common;
+ using namespace appleseed::qtcommon;
+-using namespace boost;
+ using namespace foundation;
+ namespace bf = std::filesystem;
+ 
+@@ -207,12 +205,12 @@ std::unique_ptr<ChartBase> BenchmarkWindow::create_chart(
+     chart->set_tooltip_formatter(
+         [](const Vector2d& point, const QVariant& data) -> QString
+         {
+-            const std::uint64_t date_microseconds = data.toULongLong();
+-            const posix_time::ptime date = BenchmarkDataPoint::microseconds_to_ptime(date_microseconds);
++            const std::int64_t date_microseconds = data.toLongLong();
++            const Timestamp date{std::chrono::microseconds(date_microseconds)};
+ 
+             return
+                 QString("%1\n%2 tick%3")
+-                    .arg(QString::fromStdString(posix_time::to_simple_string(date)))
++                    .arg(QString::fromStdString(format_timestamp(date, TimestampFormat::Readable)))
+                     .arg(QString::fromStdString(pretty_scalar(point.y)))
+                     .arg(point.y > 1 ? "s" : "");
+         });
+@@ -223,13 +221,12 @@ std::unique_ptr<ChartBase> BenchmarkWindow::create_chart(
+     {
+         const BenchmarkDataPoint& point = series[i];
+ 
+-        const std::uint64_t date_microseconds =
+-            BenchmarkDataPoint::ptime_to_microseconds(point.get_date());
++        const std::int64_t date_microseconds = point.get_date().time_since_epoch().count();
+ 
+         chart->add_point(
+             static_cast<double>(i),
+             point.get_ticks(),
+-            static_cast<qulonglong>(date_microseconds));
++            static_cast<qlonglong>(date_microseconds));
+     }
+ 
+     return std::unique_ptr<ChartBase>(std::move(chart));
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index d83c8bffb..595846698 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -561,7 +561,6 @@ set (foundation_meta_tests_sources
+     foundation/meta/tests/test_benchmarkaggregator.cpp
+     foundation/meta/tests/test_beziercurve.cpp
+     foundation/meta/tests/test_bitmask.cpp
+-    foundation/meta/tests/test_boost_datetime.cpp
+     foundation/meta/tests/test_boost_regex.cpp
+     foundation/meta/tests/test_bsp.cpp
+     foundation/meta/tests/test_bufferedfile.cpp
+@@ -694,6 +693,7 @@ set (foundation_platform_sources
+     foundation/platform/compiler.h
+     foundation/platform/console.cpp
+     foundation/platform/console.h
++    foundation/platform/datetime.cpp
+     foundation/platform/datetime.h
+     foundation/platform/debugger.cpp
+     foundation/platform/debugger.h
+diff --git a/src/appleseed/foundation/log/logger.cpp b/src/appleseed/foundation/log/logger.cpp
+index eb4af143d..550d7564f 100644
+--- a/src/appleseed/foundation/log/logger.cpp
++++ b/src/appleseed/foundation/log/logger.cpp
+@@ -33,15 +33,13 @@
+ // appleseed.foundation headers.
+ #include "foundation/log/ilogtarget.h"
+ #include "foundation/platform/compiler.h"
++#include "foundation/platform/datetime.h"
+ #include "foundation/platform/snprintf.h"
+ #include "foundation/platform/system.h"
+ #include "foundation/platform/thread.h"
+ #include "foundation/string/string.h"
+ #include "foundation/utility/foreach.h"
+ 
+-// Boost headers.
+-#include "boost/date_time/posix_time/posix_time.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <cassert>
+@@ -54,8 +52,6 @@
+ #include <thread>
+ #include <vector>
+ 
+-using namespace boost::posix_time;
+-
+ namespace foundation
+ {
+ 
+@@ -71,12 +67,12 @@ namespace
+       public:
+         FormatEvaluator(
+             const LogMessage::Category  category,
+-            const ptime&                datetime,
++            const Timestamp&            datetime,
+             const size_t                thread,
+             const std::string&          message)
+           : m_category(LogMessage::get_category_name(category))
+           , m_padded_category(LogMessage::get_padded_category_name(category))
+-          , m_datetime(to_iso_extended_string(datetime) + 'Z')
++          , m_datetime(format_timestamp(datetime, TimestampFormat::Extended) + 'Z')
+           , m_thread(pad_left(to_string(thread), '0', 3))
+           , m_process_size(pad_left(to_string(System::get_process_virtual_memory_size() / (1024 * 1024)) + " MB", ' ', 8))
+           , m_message(message)
+@@ -386,7 +382,8 @@ void Logger::write(
+             effective_category = LogMessage::Error;
+ 
+         // Retrieve the current UTC time.
+-        const ptime datetime(microsec_clock::universal_time());
++        const Timestamp datetime = std::chrono::time_point_cast<std::chrono::microseconds>(
++            std::chrono::system_clock::now());
+ 
+         // Format the header and message.
+         const size_t thread = impl->m_thread_map.thread_id_to_int(std::this_thread::get_id());
+diff --git a/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp b/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp
+index d80b7badc..93fe12880 100644
+--- a/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp
++++ b/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp
+@@ -36,31 +36,61 @@
+ #include "foundation/utility/test.h"
+ #include "foundation/utility/uid.h"
+ 
+-// Boost headers.
+-#include "boost/date_time/gregorian/gregorian.hpp"
+-#include "boost/date_time/posix_time/posix_time.hpp"
++// Standard headers.
++#include <filesystem>
++#include <stdexcept>
+ 
+-using namespace boost;
+-using namespace boost::gregorian;
+-using namespace boost::posix_time;
+ using namespace foundation;
+ 
++namespace
++{
++    Timestamp benchmark_time(const char* text)
++    {
++        Timestamp value;
++        if (!parse_timestamp(text, value))
++            throw std::invalid_argument("invalid benchmark timestamp fixture");
++        return value;
++    }
++}
++
+ TEST_SUITE(Foundation_Utility_Benchmark_BenchmarkDataPoint)
+ {
++    TEST_CASE(DefaultConstructor_InitializesDateAndTicks)
++    {
++        const BenchmarkDataPoint point;
++        EXPECT_EQ(Timestamp{}, point.get_date());
++        EXPECT_EQ(0.0, point.get_ticks());
++    }
++
++    TEST_CASE(Ordering_PreservesDatesBeforeTheUnixEpoch)
++    {
++        const BenchmarkDataPoint before(benchmark_time("19691231T235959.999999"), 1.0);
++        const BenchmarkDataPoint after(benchmark_time("19700101T000000"), 1.0);
++        EXPECT_TRUE(before < after);
++        EXPECT_FALSE(after < before);
++    }
++
+     TEST_CASE(GetDate_ReturnsDatePassedToConstructor)
+     {
+-        const ptime ExpectedDate(date(2010, 6, 22), time_duration(17, 45, 31));
++        const Timestamp ExpectedDate = benchmark_time("20100622T174531");
+         const double ExpectedTicks = 1234.5678;
+         const BenchmarkDataPoint data_point(ExpectedDate, ExpectedTicks);
+ 
+-        const ptime date = data_point.get_date();
++        const Timestamp date = data_point.get_date();
+ 
+         EXPECT_EQ(ExpectedDate, date);
+     }
+ 
++    TEST_CASE(GetDate_PreservesSubsecondPrecision)
++    {
++        const Timestamp time = benchmark_time("20100622T174531.123456");
++        const BenchmarkDataPoint point(time, 1.0);
++        EXPECT_EQ(time, point.get_date());
++    }
++
+     TEST_CASE(GetTicks_ReturnsTicksPassedToConstructor)
+     {
+-        const ptime ExpectedDate(date(2010, 6, 22), time_duration(17, 45, 31));
++        const Timestamp ExpectedDate = benchmark_time("20100622T174531");
+         const double ExpectedTicks = 1234.5678;
+         const BenchmarkDataPoint data_point(ExpectedDate, ExpectedTicks);
+ 
+@@ -114,7 +144,7 @@ TEST_SUITE(Foundation_Utility_Benchmark_BenchmarkAggregator)
+         aggregator.scan_directory("unit tests/inputs/test_benchmarkaggregator/single benchmark file/");
+         aggregator.sort_series();
+ 
+-        const ptime Date(date(2010, 6, 22), time_duration(17, 45, 31));
++        const Timestamp Date = benchmark_time("20100622T174531");
+ 
+         const Dictionary& benchmarks = aggregator.get_benchmarks();
+ 
+@@ -158,13 +188,40 @@ TEST_SUITE(Foundation_Utility_Benchmark_BenchmarkAggregator)
+ 
+         ASSERT_EQ(2, series.size());
+ 
+-        EXPECT_EQ(ptime(date(2009, 5, 21), time_duration(16, 44, 30)), series[0].get_date());
++        EXPECT_EQ(benchmark_time("20090521T164430"), series[0].get_date());
+         EXPECT_EQ(779.34, series[0].get_ticks());
+ 
+-        EXPECT_EQ(ptime(date(2010, 6, 22), time_duration(17, 45, 31)), series[1].get_date());
++        EXPECT_EQ(benchmark_time("20100622T174531"), series[1].get_date());
+         EXPECT_EQ(877.22, series[1].get_ticks());
+     }
+ 
++    TEST_CASE(ScanDirectory_RejectsInvalidDatesAndKeepsValidHistory)
++    {
++        namespace fs = std::filesystem;
++        const fs::path directory("unit tests/outputs/test_benchmarkaggregator/invalid dates");
++        const fs::path source("unit tests/inputs/test_benchmarkaggregator/single benchmark file/benchmark.20100622.174531.123.xml");
++        fs::remove_all(directory);
++        fs::create_directories(directory);
++        const char* names[] = {
++            "benchmark.20190229.000000.000.xml",
++            "benchmark.19000229.000000.000.xml",
++            "benchmark.20101301.000000.000.xml",
++            "benchmark.20100622.174531.123.xml"
++        };
++        for (const char* name : names)
++            fs::copy_file(source, directory / name);
++
++        BenchmarkAggregator aggregator;
++        aggregator.scan_directory(directory.string().c_str());
++        aggregator.sort_series();
++        const Dictionary& benchmarks = aggregator.get_benchmarks();
++        const auto uid = benchmarks.dictionaries().get("Release").dictionaries()
++            .get("Suite").get<UniqueID>("Case1");
++        const BenchmarkSeries& series = aggregator.get_series(uid);
++        ASSERT_EQ(1, series.size());
++        EXPECT_EQ(benchmark_time("20100622T174531"), series[0].get_date());
++    }
++
+     TEST_CASE(Clear_GivenOneBenchmark_RemovesBenchmark)
+     {
+         BenchmarkAggregator aggregator;
+diff --git a/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp b/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp
+deleted file mode 100644
+index 4602e5bf7..000000000
+--- a/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp
++++ /dev/null
+@@ -1,62 +0,0 @@
+-
+-//
+-// This source file is part of appleseed.
+-// Visit https://appleseedhq.net/ for additional information and resources.
+-//
+-// This software is released under the MIT license.
+-//
+-// Copyright (c) 2010-2013 Francois Beaune, Jupiter Jazz Limited
+-// Copyright (c) 2014-2018 Francois Beaune, The appleseedhq Organization
+-//
+-// Permission is hereby granted, free of charge, to any person obtaining a copy
+-// of this software and associated documentation files (the "Software"), to deal
+-// in the Software without restriction, including without limitation the rights
+-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-// copies of the Software, and to permit persons to whom the Software is
+-// furnished to do so, subject to the following conditions:
+-//
+-// The above copyright notice and this permission notice shall be included in
+-// all copies or substantial portions of the Software.
+-//
+-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-// THE SOFTWARE.
+-//
+-
+-// appleseed.foundation headers.
+-#include "foundation/platform/datetime.h"
+-#include "foundation/string/string.h"
+-#include "foundation/utility/test.h"
+-
+-// Boost headers.
+-#include "boost/date_time/gregorian/gregorian.hpp"
+-#include "boost/date_time/posix_time/posix_time.hpp"
+-
+-// Standard headers.
+-#include <string>
+-
+-using namespace boost;
+-using namespace foundation;
+-
+-TEST_SUITE(Boost_DateTime)
+-{
+-    TEST_CASE(DateToString)
+-    {
+-        using namespace gregorian;
+-
+-        const std::string result = to_string(date(2010, Jun, 22));
+-
+-        EXPECT_EQ("2010-Jun-22", result);
+-    }
+-
+-    TEST_CASE(TimeDurationToString)
+-    {
+-        const std::string result = to_string(posix_time::time_duration(17, 45, 31));
+-
+-        EXPECT_EQ("17:45:31", result);
+-    }
+-}
+diff --git a/src/appleseed/foundation/meta/tests/test_datetime.cpp b/src/appleseed/foundation/meta/tests/test_datetime.cpp
+index 4e3717c2a..936af35b3 100644
+--- a/src/appleseed/foundation/meta/tests/test_datetime.cpp
++++ b/src/appleseed/foundation/meta/tests/test_datetime.cpp
+@@ -29,41 +29,101 @@
+ 
+ // appleseed.foundation headers.
+ #include "foundation/platform/datetime.h"
+-#include "foundation/string/string.h"
+ #include "foundation/utility/test.h"
+ 
+-// Boost headers.
+-#include "boost/date_time/gregorian/gregorian.hpp"
+-#include "boost/date_time/posix_time/posix_time.hpp"
+-
+ // Standard headers.
+-#include <string>
++#include <chrono>
++#include <cstdint>
++#include <stdexcept>
+ 
+-using namespace boost;
+ using namespace foundation;
+ 
+ TEST_SUITE(Foundation_Platform_DateTime)
+ {
+-    TEST_CASE(MicrosecondsToTimeDuration)
++    struct TimestampCase
+     {
+-        using namespace posix_time;
++        const char*     text;
++        std::int64_t    microseconds;
++    };
++
++    // Known Unix microseconds, independent of the parser and formatter.
++    const TimestampCase Cases[] = {
++        {"14000101T000000", -17987443200000000LL},
++        {"19691231T235959.999999", -1LL},
++        {"19700101T000000", 0LL},
++        {"20000229T000000", 951782400000000LL},
++        {"20100622T174531", 1277228731000000LL},
++        {"20100622T174531.001234", 1277228731001234LL},
++        {"99991231T235959.999999", 253402300799999999LL}
++    };
+ 
+-        const time_duration Expected(17, 29, 43, 1234);
++    TEST_CASE(CompactTimestamp_PreservesLegacyCalendarRangeAndMicroseconds)
++    {
++        for (const auto& test : Cases)
++        {
++            const Timestamp value{std::chrono::microseconds(test.microseconds)};
++            EXPECT_EQ(test.text, format_timestamp(value));
++        }
++    }
++
++    TEST_CASE(ParseTimestamp_PreservesLegacyCalendarRangeAndMicroseconds)
++    {
++        for (const auto& test : Cases)
++        {
++            Timestamp value;
++            ASSERT_TRUE(parse_timestamp(test.text, value));
++            EXPECT_EQ(test.microseconds, value.time_since_epoch().count());
++        }
++    }
+ 
+-        const time_duration result(
+-            microseconds_to_time_duration(Expected.total_microseconds()));
++    TEST_CASE(ExtendedTimestamp_PreservesUTCLogFormat)
++    {
++        const Timestamp value{std::chrono::microseconds(1277228731123456LL)};
++        EXPECT_EQ("2010-06-22T17:45:31.123456", format_timestamp(value, TimestampFormat::Extended));
++    }
+ 
+-        EXPECT_EQ(Expected, result);
++    TEST_CASE(ReadableTimestamp_PreservesBenchmarkTooltipFormat)
++    {
++        const Timestamp value{std::chrono::microseconds(1277228731123456LL)};
++        EXPECT_EQ("2010-Jun-22 17:45:31.123456", format_timestamp(value, TimestampFormat::Readable));
+     }
+ 
+-    TEST_CASE(PTimeToString)
++    TEST_CASE(ParseTimestamp_PadsShortFractionsToMicroseconds)
+     {
+-        using namespace gregorian;
+-        using namespace posix_time;
++        Timestamp value;
++        ASSERT_TRUE(parse_timestamp("19700101T000000.1", value));
++        EXPECT_EQ(100000, value.time_since_epoch().count());
++        ASSERT_TRUE(parse_timestamp("19700101T000000.000001", value));
++        EXPECT_EQ(1, value.time_since_epoch().count());
++    }
+ 
+-        const ptime time(date(2010, Jun, 22), time_duration(17, 45, 31));
+-        const std::string result = to_string(time);
++    TEST_CASE(ParseTimestamp_RejectsInvalidTextWithoutChangingOutput)
++    {
++        const char* Invalid[] = {
++            "", "19700101", "19700101t000000", "19700101T00000", "19700101T000000Z",
++            "19700101T000000.", "19700101T000000.1234567", "19700101T000000.x",
++            "13991231T235959", "00000101T000000", "19000229T000000", "20190229T000000",
++            "20000001T000000", "20001301T000000", "20000100T000000", "20000431T000000",
++            "20000101T240000", "20000101T006000", "20000101T000060", "20000x01T000000"
++        };
++        const Timestamp initial{std::chrono::microseconds(42)};
++        for (const char* text : Invalid)
++        {
++            Timestamp value = initial;
++            EXPECT_FALSE(parse_timestamp(text, value));
++            EXPECT_EQ(initial, value);
++        }
++    }
+ 
+-        EXPECT_EQ("20100622T174531", result);
++    TEST_CASE(FormatTimestamp_RejectsRepresentationLimitsOutsideCalendarRange)
++    {
++        EXPECT_EXCEPTION(std::out_of_range,
++        {
++            format_timestamp(Timestamp::min());
++        });
++        EXPECT_EXCEPTION(std::out_of_range,
++        {
++            format_timestamp(Timestamp::max());
++        });
+     }
+ }
+diff --git a/src/appleseed/foundation/platform/datetime.cpp b/src/appleseed/foundation/platform/datetime.cpp
+new file mode 100644
+index 000000000..96627cef7
+--- /dev/null
++++ b/src/appleseed/foundation/platform/datetime.cpp
+@@ -0,0 +1,205 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2010-2013 Francois Beaune, Jupiter Jazz Limited
++// Copyright (c) 2014-2018 Francois Beaune, The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// Interface header.
++#include "datetime.h"
++
++// Standard headers.
++#include <array>
++#include <cstddef>
++#include <cstdint>
++#include <iomanip>
++#include <locale>
++#include <ratio>
++#include <sstream>
++#include <stdexcept>
++
++namespace foundation
++{
++
++namespace
++{
++    using Days = std::chrono::duration<std::int64_t, std::ratio<86400>>;
++
++    constexpr int FirstYear = 1400;
++    constexpr int LastYear = 9999;
++    constexpr int EpochYear = 1970;
++    constexpr int DaysPerCommonYear = 365;
++    constexpr std::array<int, 12> MonthLengths = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
++    constexpr std::array<const char*, 12> MonthNames = {
++        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
++    };
++    constexpr size_t CompactLength = 15;       // YYYYMMDDTHHMMSS
++    constexpr size_t FractionDigits = 6;      // microseconds
++
++    constexpr bool is_leap_year(const int year)
++    {
++        return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
++    }
++
++    constexpr int leap_years_before(const int year)
++    {
++        const int previous = year - 1;
++        return previous / 4 - previous / 100 + previous / 400;
++    }
++
++    constexpr std::int64_t first_day_of_year(const int year)
++    {
++        return DaysPerCommonYear * (year - EpochYear)
++            + leap_years_before(year) - leap_years_before(EpochYear);
++    }
++
++    constexpr int days_in_month(const int year, const int month)
++    {
++        return MonthLengths[month - 1] + (month == 2 && is_leap_year(year) ? 1 : 0);
++    }
++
++    int read_digits(const std::string& text, const size_t start, const size_t count)
++    {
++        int value = 0;
++        for (size_t i = start; i < start + count; ++i)
++        {
++            if (text[i] < '0' || text[i] > '9')
++                return -1;
++            value = value * 10 + text[i] - '0';
++        }
++        return value;
++    }
++}
++
++bool parse_timestamp(const std::string& text, Timestamp& timestamp) noexcept
++{
++    if (text.size() < CompactLength || text[8] != 'T')
++        return false;
++
++    int fraction = 0;
++    if (text.size() > CompactLength)
++    {
++        if (text[CompactLength] != '.' ||
++            text.size() == CompactLength + 1 ||
++            text.size() > CompactLength + 1 + FractionDigits)
++            return false;
++
++        const size_t digits = text.size() - CompactLength - 1;
++        fraction = read_digits(text, CompactLength + 1, digits);
++        if (fraction < 0)
++            return false;
++        for (size_t i = digits; i < FractionDigits; ++i)
++            fraction *= 10;
++    }
++
++    const int year = read_digits(text, 0, 4);
++    const int month = read_digits(text, 4, 2);
++    const int day = read_digits(text, 6, 2);
++    const int hour = read_digits(text, 9, 2);
++    const int minute = read_digits(text, 11, 2);
++    const int second = read_digits(text, 13, 2);
++    if (year < FirstYear || year > LastYear || month < 1 || month > 12 ||
++        day < 1 || day > days_in_month(year, month) ||
++        hour < 0 || hour >= 24 || minute < 0 || minute >= 60 || second < 0 || second >= 60)
++        return false;
++
++    std::int64_t days = first_day_of_year(year) + day - 1;
++    for (int m = 1; m < month; ++m)
++        days += days_in_month(year, m);
++
++    timestamp = Timestamp(
++        std::chrono::duration_cast<Timestamp::duration>(Days(days))
++        + std::chrono::hours(hour) + std::chrono::minutes(minute)
++        + std::chrono::seconds(second) + std::chrono::microseconds(fraction));
++    return true;
++}
++
++std::string format_timestamp(const Timestamp timestamp, const TimestampFormat format)
++{
++    using namespace std::chrono;
++
++    const auto elapsed = timestamp.time_since_epoch();
++    // Bound the value before converting civil days back to microseconds.
++    // This also prevents overflow for arbitrary time_points near the limits
++    // of their representation, beyond the supported legacy calendar range.
++    if (elapsed < duration_cast<microseconds>(Days(first_day_of_year(FirstYear))) ||
++        elapsed >= duration_cast<microseconds>(Days(first_day_of_year(LastYear + 1))))
++        throw std::out_of_range("timestamp year outside 1400-9999");
++
++    const Days days = floor<Days>(elapsed);
++    auto remainder = elapsed - days;
++
++    int year = FirstYear;
++    int upper = LastYear + 1;
++    while (year + 1 < upper)
++    {
++        const int middle = year + (upper - year) / 2;
++        if (days.count() >= first_day_of_year(middle))
++            year = middle;
++        else
++            upper = middle;
++    }
++
++    int day = static_cast<int>(days.count() - first_day_of_year(year));
++    int month = 1;
++    while (day >= days_in_month(year, month))
++    {
++        day -= days_in_month(year, month);
++        ++month;
++    }
++
++    const auto hour = duration_cast<hours>(remainder);
++    remainder -= hour;
++    const auto minute = duration_cast<minutes>(remainder);
++    remainder -= minute;
++    const auto second = duration_cast<seconds>(remainder);
++    remainder -= second;
++
++    if (format != TimestampFormat::Compact && format != TimestampFormat::Extended &&
++        format != TimestampFormat::Readable)
++        throw std::invalid_argument("invalid timestamp format");
++
++    const char* date_separator = format == TimestampFormat::Compact ? "" : "-";
++    const char* time_separator = format == TimestampFormat::Compact ? "" : ":";
++    std::ostringstream stream;
++    stream.imbue(std::locale::classic());
++    stream << std::setfill('0') << std::setw(4) << year << date_separator;
++    if (format == TimestampFormat::Readable)
++        stream << MonthNames[month - 1];
++    else
++        stream << std::setw(2) << month;
++    stream << date_separator << std::setw(2) << day + 1
++        << (format == TimestampFormat::Readable ? ' ' : 'T')
++        << std::setw(2) << hour.count() << time_separator
++        << std::setw(2) << minute.count() << time_separator
++        << std::setw(2) << second.count();
++    if (remainder.count() != 0)
++        stream << '.' << std::setw(FractionDigits) << remainder.count();
++    if (!stream)
++        throw std::runtime_error("could not format timestamp");
++    return stream.str();
++}
++
++}   // namespace foundation
+diff --git a/src/appleseed/foundation/platform/datetime.h b/src/appleseed/foundation/platform/datetime.h
+index 20b944efc..05e202e58 100644
+--- a/src/appleseed/foundation/platform/datetime.h
++++ b/src/appleseed/foundation/platform/datetime.h
+@@ -32,79 +32,41 @@
+ // appleseed.foundation headers.
+ #include "foundation/string/string.h"
+ 
+-// Boost headers.
+-#include "boost/date_time/gregorian/gregorian.hpp"
+-#include "boost/date_time/posix_time/posix_time.hpp"
++// appleseed.main headers.
++#include "main/dllsymbol.h"
+ 
+ // Standard headers.
+-#include <cstdint>
+-#include <iterator>
+-#include <sstream>
++#include <chrono>
+ #include <string>
+ 
+ namespace foundation
+ {
+ 
+-boost::posix_time::time_duration microseconds_to_time_duration(std::uint64_t microseconds);
++// Microsecond storage retains the legacy calendar range independently of the
++// native system_clock duration, which can have a much narrower range.
++using Timestamp = std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds>;
+ 
+-template <> std::string to_string(const boost::posix_time::ptime& time);
+-template <> std::string to_string(const boost::posix_time::time_duration& td);
+-template <> std::string to_string(const boost::gregorian::date& date);
+-
+-
+-//
+-// Implementation.
+-//
+-
+-inline boost::posix_time::time_duration microseconds_to_time_duration(std::uint64_t microseconds)
+-{
+-    using namespace boost::posix_time;
+-
+-    std::uint64_t seconds = microseconds / 1000000;
+-    microseconds -= seconds * 1000000;
+-
+-    std::uint64_t minutes = seconds / 60;
+-    seconds -= minutes * 60;
+-
+-    std::uint64_t hours = minutes / 60;
+-    minutes -= hours * 60;
+-
+-    return
+-        time_duration(
+-            static_cast<time_duration::hour_type>(hours),
+-            static_cast<time_duration::min_type>(minutes),
+-            static_cast<time_duration::sec_type>(seconds),
+-            static_cast<time_duration::fractional_seconds_type>(microseconds));
+-}
+-
+-template <>
+-inline std::string to_string(const boost::posix_time::ptime& time)
+-{
+-    return boost::posix_time::to_iso_string(time);
+-}
+-
+-template <>
+-inline std::string to_string(const boost::posix_time::time_duration& td)
++enum class TimestampFormat
+ {
+-    std::stringstream sstr;
+-    std::ostreambuf_iterator<char> oitr(sstr);
++    Compact,    // YYYYMMDDTHHMMSS
++    Extended,   // YYYY-MM-DDTHH:MM:SS
++    Readable    // YYYY-Mon-DD HH:MM:SS, with English month abbreviations
++};
+ 
+-    boost::posix_time::time_facet facet;
+-    facet.put(oitr, sstr, sstr.fill(), td);
++// Format UTC in the legacy 1400-9999 calendar range, throwing std::out_of_range
++// outside it. Append six fractional digits only when microseconds are nonzero.
++APPLESEED_DLLSYMBOL std::string format_timestamp(
++    Timestamp           timestamp,
++    TimestampFormat     format = TimestampFormat::Compact);
+ 
+-    return sstr.str();
+-}
++// Parse YYYYMMDDTHHMMSS[.ffffff] in UTC, with one to six fractional digits.
++// Return false for invalid dates or text, leaving the output unchanged.
++APPLESEED_DLLSYMBOL bool parse_timestamp(const std::string& text, Timestamp& timestamp) noexcept;
+ 
+ template <>
+-inline std::string to_string(const boost::gregorian::date& date)
++inline std::string to_string(const Timestamp& timestamp)
+ {
+-    std::stringstream sstr;
+-    std::ostreambuf_iterator<char> oitr(sstr);
+-
+-    boost::gregorian::date_facet facet;
+-    facet.put(oitr, sstr, sstr.fill(), date);
+-
+-    return sstr.str();
++    return format_timestamp(timestamp);
+ }
+ 
+ }   // namespace foundation
+diff --git a/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp b/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
+index ce373ca61..db16416a6 100644
+--- a/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
++++ b/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
+@@ -39,7 +39,6 @@
+ #include "foundation/utility/xercesc.h"
+ 
+ // Boost headers.
+-#include "boost/date_time/posix_time/posix_time.hpp"
+ #include "boost/regex.hpp"
+ 
+ // Xerces-C++ headers.
+@@ -101,7 +100,7 @@ struct BenchmarkAggregator::Impl
+ 
+     bool scan_document(
+         const DOMDocument*          document,
+-        const posix_time::ptime&    date)
++        const Timestamp&            date)
+     {
+         assert(document);
+ 
+@@ -126,7 +125,7 @@ struct BenchmarkAggregator::Impl
+ 
+     void scan_suites(
+         const DOMNode*              node,
+-        const posix_time::ptime&    date,
++        const Timestamp&            date,
+         Dictionary&                 suites_dic)
+     {
+         assert(node);
+@@ -155,7 +154,7 @@ struct BenchmarkAggregator::Impl
+ 
+     void scan_cases(
+         const DOMNode*              node,
+-        const posix_time::ptime&    date,
++        const Timestamp&            date,
+         Dictionary&                 cases_dic)
+     {
+         assert(node);
+@@ -192,7 +191,7 @@ struct BenchmarkAggregator::Impl
+ 
+     void scan_results(
+         const DOMNode*              node,
+-        const posix_time::ptime&    date,
++        const Timestamp&            date,
+         BenchmarkSeries&            series)
+     {
+         assert(node);
+@@ -267,7 +266,11 @@ bool BenchmarkAggregator::scan_file(const char* path)
+     const std::string date_string = match[1].str();
+     const std::string time_string = match[2].str();
+     const std::string iso_string = date_string + "T" + time_string;
+-    const posix_time::ptime date = posix_time::from_iso_string(iso_string);
++    // Legacy filenames carry no timezone. Preserve their calendar fields
++    // when reading history so existing chart dates keep the same labels.
++    Timestamp date;
++    if (!parse_timestamp(iso_string, date))
++        return false;
+ 
+     try
+     {
+diff --git a/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h b/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h
+index 02dc7cd8a..b83191fb8 100644
+--- a/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h
++++ b/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h
+@@ -35,13 +35,6 @@
+ // appleseed.main headers.
+ #include "main/dllsymbol.h"
+ 
+-// Boost headers.
+-#include "boost/date_time/gregorian/gregorian.hpp"
+-#include "boost/date_time/posix_time/posix_time.hpp"
+-
+-// Standard headers.
+-#include <cstdint>
+-
+ namespace foundation
+ {
+ 
+@@ -51,14 +44,10 @@ class APPLESEED_DLLSYMBOL BenchmarkDataPoint
+     BenchmarkDataPoint();
+ 
+     BenchmarkDataPoint(
+-        const boost::posix_time::ptime& date,
++        const Timestamp&                date,
+         const double                    ticks);
+ 
+-    static std::uint64_t ptime_to_microseconds(const boost::posix_time::ptime& time);
+-
+-    static boost::posix_time::ptime microseconds_to_ptime(const std::uint64_t microseconds);
+-
+-    boost::posix_time::ptime get_date() const;
++    Timestamp get_date() const;
+ 
+     double get_ticks() const;
+ 
+@@ -67,7 +56,7 @@ class APPLESEED_DLLSYMBOL BenchmarkDataPoint
+     bool operator<(const BenchmarkDataPoint& rhs) const;
+ 
+   private:
+-    std::uint64_t   m_date_microseconds;
++    Timestamp       m_date;
+     double          m_ticks;
+ };
+ 
+@@ -76,36 +65,23 @@ class APPLESEED_DLLSYMBOL BenchmarkDataPoint
+ // Implementation.
+ //
+ 
+-namespace benchmark_impl
+-{
+-    const boost::posix_time::ptime Epoch(boost::gregorian::date(1970, 1, 1));
+-}
+-
+ inline BenchmarkDataPoint::BenchmarkDataPoint()
++  : m_date{}
++  , m_ticks(0.0)
+ {
+ }
+ 
+ inline BenchmarkDataPoint::BenchmarkDataPoint(
+-    const boost::posix_time::ptime&     date,
++    const Timestamp&                    date,
+     const double                        ticks)
+-  : m_date_microseconds(ptime_to_microseconds(date))
++  : m_date(date)
+   , m_ticks(ticks)
+ {
+ }
+ 
+-inline std::uint64_t BenchmarkDataPoint::ptime_to_microseconds(const boost::posix_time::ptime& time)
+-{
+-    return (time - benchmark_impl::Epoch).total_microseconds();
+-}
+-
+-inline boost::posix_time::ptime BenchmarkDataPoint::microseconds_to_ptime(const std::uint64_t microseconds)
+-{
+-    return benchmark_impl::Epoch + microseconds_to_time_duration(microseconds);
+-}
+-
+-inline boost::posix_time::ptime BenchmarkDataPoint::get_date() const
++inline Timestamp BenchmarkDataPoint::get_date() const
+ {
+-    return microseconds_to_ptime(m_date_microseconds);
++    return m_date;
+ }
+ 
+ inline double BenchmarkDataPoint::get_ticks() const
+@@ -115,7 +91,7 @@ inline double BenchmarkDataPoint::get_ticks() const
+ 
+ inline bool BenchmarkDataPoint::operator==(const BenchmarkDataPoint& rhs) const
+ {
+-    return m_date_microseconds == rhs.m_date_microseconds && m_ticks == rhs.m_ticks;
++    return m_date == rhs.m_date && m_ticks == rhs.m_ticks;
+ }
+ 
+ inline bool BenchmarkDataPoint::operator!=(const BenchmarkDataPoint& rhs) const
+@@ -125,7 +101,7 @@ inline bool BenchmarkDataPoint::operator!=(const BenchmarkDataPoint& rhs) const
+ 
+ inline bool BenchmarkDataPoint::operator<(const BenchmarkDataPoint& rhs) const
+ {
+-    return m_date_microseconds < rhs.m_date_microseconds;
++    return m_date < rhs.m_date;
+ }
+ 
+ }   // namespace foundation

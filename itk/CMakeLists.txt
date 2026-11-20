@@ -116,6 +116,9 @@ if (ENABLE_ITK)
       LOG_OUTPUT_ON_FAILURE ${EXT_BUILD_QUIET}
       STEP_TARGETS install
       )
+    ExternalProject_Add_StepDependencies(ITK_BLD build
+      "${CMAKE_CURRENT_BINARY_DIR}/itk_build.cmake"
+      "${CMAKE_CURRENT_BINARY_DIR}/itk_install.cmake")
   endif (NOT MSVC)
 
   TargetInstallDeps(ITK ITK_DEPENDS)

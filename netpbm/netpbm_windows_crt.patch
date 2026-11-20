@@ -1,0 +1,39 @@
+--- a/lib/libpm.c
++++ b/lib/libpm.c
+@@ -24,6 +24,10 @@
+ #ifdef HAVE_UNISTD_H
+ #include <unistd.h>
+ #endif
++#ifdef _WIN32
++#include <io.h>
++#include <process.h>
++#endif
+ #include <stdio.h>
+ #include <stdarg.h>
+ #include <string.h>
+@@ -516,8 +520,13 @@
+        thing.
+     */
++#ifdef _WIN32
++    if (!_isatty(0)) _setmode(0, O_BINARY);  /* Standard Input */
++    if (!_isatty(1)) _setmode(1, O_BINARY);  /* Standard Output */
++#else
+     if (!isatty(0)) setmode(0,O_BINARY);  /* Standard Input */
+     if (!isatty(1)) setmode(1,O_BINARY);  /* Standard Output */
++#endif
+ #endif /* HAVE_SETMODE */
+ #endif /* O_BINARY */
+ }
+ 
+@@ -839,7 +848,11 @@
+ unsigned int
+ pm_randseed(void) {
+ 
++#ifdef _WIN32
++    return time(NULL) ^ _getpid();
++#else
+     return time(NULL) ^ getpid();
++#endif
+ 
+ }
+ 

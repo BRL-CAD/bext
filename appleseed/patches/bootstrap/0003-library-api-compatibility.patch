@@ -1,0 +1,1216 @@
+Subject: [PATCH 03/50] Library api compatibility
+
+Carry the dependency-compatible baseline over the actual upstream
+source. This patch contains one reviewable part of the combined
+historical changes; full original messages are retained in HISTORY.
+
+Original-Commits: See the compatibility-baseline entries in HISTORY.
+
+diff --git a/src/appleseed.studio/mainwindow/mainwindow.cpp b/src/appleseed.studio/mainwindow/mainwindow.cpp
+index 9f311289d..abc4f5a0c 100644
+--- a/src/appleseed.studio/mainwindow/mainwindow.cpp
++++ b/src/appleseed.studio/mainwindow/mainwindow.cpp
+@@ -1918,6 +1918,8 @@ void MainWindow::slot_clear_render_region()
+     else clear_render_region_action->operator()(*m_project_manager.get_project());
+ 
+     m_rendering_manager.reinitialize_rendering();
++
++    slot_project_modified();
+ }
+ 
+ void MainWindow::slot_set_render_region(const QRect& rect)
+@@ -1937,6 +1939,8 @@ void MainWindow::slot_set_render_region(const QRect& rect)
+         m_rendering_manager.schedule(std::move(set_render_region_action));
+         m_rendering_manager.reinitialize_rendering();
+     }
++
++    slot_project_modified();
+ }
+ 
+ void MainWindow::slot_render_widget_context_menu(const QPoint& point)
+diff --git a/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp b/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp
+index 5a334bfe3..24730e23c 100644
+--- a/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp
++++ b/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp
+@@ -370,9 +370,7 @@ void GenericProgressiveImageFileReader::read_tile(
+             impl->open();
+         }
+ 
+-        // TODO: placeholder values for `chbegin` and `chend`
+-        if (!impl->m_input->read_image(
+-                impl->m_input->current_subimage(), impl->m_input->current_miplevel(), 0, -1,
++        if (!impl->m_input->read_image(impl->m_input->current_subimage(), impl->m_input->current_miplevel(), 0, -1,
+                 impl->m_input->spec().format,
+                 output_tile->get_storage()))
+             throw ExceptionIOError(impl->m_input->geterror().c_str());
+diff --git a/src/appleseed/foundation/image/image.h b/src/appleseed/foundation/image/image.h
+index e0f1ed348..ebe69346e 100644
+--- a/src/appleseed/foundation/image/image.h
++++ b/src/appleseed/foundation/image/image.h
+@@ -106,7 +106,7 @@ class APPLESEED_DLLSYMBOL Image
+         const size_t        tile_x,
+         const size_t        tile_y) const override;
+ 
+-    // Set a given tile. Ownership of the tile is transfered to the Image class.
++    // Set a given tile. Ownership of the tile is transferred to the Image class.
+     // If a tile already exists at the given coordinates, it gets replaced.
+     void set_tile(
+         const size_t        tile_x,
+diff --git a/src/appleseed/foundation/image/pixel.h b/src/appleseed/foundation/image/pixel.h
+index 6d615628e..b5df983f6 100644
+--- a/src/appleseed/foundation/image/pixel.h
++++ b/src/appleseed/foundation/image/pixel.h
+@@ -736,7 +736,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+             const std::uint16_t* it = reinterpret_cast<const std::uint16_t*>(src_begin);
+             for (; it < reinterpret_cast<const std::uint16_t*>(src_end); it += src_stride)
+             {
+-                *dest = static_cast<std::uint8_t>(*it >> 8);
++                if (dest && *dest) *dest = static_cast<std::uint8_t>(*it >> 8);
+                 dest += dest_stride;
+             }
+         }
+@@ -747,7 +747,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+             const std::uint32_t* it = reinterpret_cast<const std::uint32_t*>(src_begin);
+             for (; it < reinterpret_cast<const std::uint32_t*>(src_end); it += src_stride)
+             {
+-                *dest = static_cast<std::uint8_t>(*it >> 24);
++                if (dest && *dest) *dest = static_cast<std::uint8_t>(*it >> 24);
+                 dest += dest_stride;
+             }
+         }
+@@ -771,7 +771,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+             for (; it < reinterpret_cast<const float*>(src_end); it += src_stride)
+             {
+                 const float val = clamp(*it * 256.0f, 0.0f, 255.0f);
+-                *dest = truncate<std::uint8_t>(val);
++                if (dest && *dest) *dest = truncate<std::uint8_t>(val);
+                 dest += dest_stride;
+             }
+         }
+@@ -783,7 +783,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+             for (; it < reinterpret_cast<const double*>(src_end); it += src_stride)
+             {
+                 const double val = clamp(*it * 256.0, 0.0, 255.0);
+-                *dest = truncate<std::uint8_t>(val);
++                if (dest && *dest) *dest = truncate<std::uint8_t>(val);
+                 dest += dest_stride;
+             }
+         }
+diff --git a/src/appleseed/foundation/meshio/plymeshfilereader.cpp b/src/appleseed/foundation/meshio/plymeshfilereader.cpp
+index f1526ccc2..b6d6d0f68 100644
+--- a/src/appleseed/foundation/meshio/plymeshfilereader.cpp
++++ b/src/appleseed/foundation/meshio/plymeshfilereader.cpp
+@@ -36,7 +36,11 @@
+ #include "foundation/memory/memory.h"
+ #include "foundation/meshio/imeshbuilder.h"
+ 
++// Third-party headers.
++#include "happly.h"
++
+ // Standard headers.
++#include <array>
+ #include <cstring>
+ #include <map>
+ #include <utility>
+diff --git a/src/appleseed/foundation/meshio/plymeshfilereader.h b/src/appleseed/foundation/meshio/plymeshfilereader.h
+index 74bf7b0ec..47f2b3214 100644
+--- a/src/appleseed/foundation/meshio/plymeshfilereader.h
++++ b/src/appleseed/foundation/meshio/plymeshfilereader.h
+@@ -34,14 +34,13 @@
+ #include "foundation/meshio/imeshfilereader.h"
+ #include "foundation/platform/compiler.h"
+ 
+-// third-party headers.
+-#include "happly.h"
+-
+ // Standard headers.
+ #include <cstddef>
+ #include <string>
++#include <vector>
+ 
+ // Forward declarations.
++namespace happly        { class PLYData; }
+ namespace foundation    { class IMeshBuilder; }
+ 
+ namespace foundation
+diff --git a/src/appleseed/foundation/platform/_beginoiioheaders.h b/src/appleseed/foundation/platform/_beginoiioheaders.h
+index b4afff8e6..887cb4f62 100644
+--- a/src/appleseed/foundation/platform/_beginoiioheaders.h
++++ b/src/appleseed/foundation/platform/_beginoiioheaders.h
+@@ -37,3 +37,6 @@
+ #endif
+ 
+ #include "foundation/platform/_beginexrheaders.h"
++
++// OIIO selects its SIMD half overloads on first inclusion.
++#include <Imath/half.h>
+diff --git a/src/appleseed/foundation/platform/system.cpp b/src/appleseed/foundation/platform/system.cpp
+index 20c841d0b..0cbed320a 100644
+--- a/src/appleseed/foundation/platform/system.cpp
++++ b/src/appleseed/foundation/platform/system.cpp
+@@ -71,7 +71,9 @@
+     #include <sys/param.h>
+     #include <sys/sysctl.h>
+     #include <sys/types.h>
++#ifdef APPLESEED_X86
+     #include <cpuid.h>
++#endif
+ 
+ // Linux.
+ #elif defined __linux__
+@@ -285,6 +287,7 @@ std::uint64_t System::get_peak_process_virtual_memory_size()
+ 
+ namespace
+ {
++#ifdef APPLESEED_X86
+     // EAX is set to the value of `index`. Results are returned in `cpuinfo`:
+     //   cpuinfo[0] == EAX
+     //   cpuinfo[1] == EBX
+@@ -307,6 +310,7 @@ namespace
+         __asm__ __volatile__("xgetbv" : "=a"(eax), "=d"(edx) : "c"(index));
+         return (static_cast<std::uint64_t>(edx) << 32) | eax;
+     }
++#endif
+ 
+     std::size_t get_system_value(const char* name)
+     {
+diff --git a/src/appleseed/foundation/utility/job/jobqueue.h b/src/appleseed/foundation/utility/job/jobqueue.h
+index 7db9a8e3c..0321c9f71 100644
+--- a/src/appleseed/foundation/utility/job/jobqueue.h
++++ b/src/appleseed/foundation/utility/job/jobqueue.h
+@@ -98,7 +98,7 @@ class APPLESEED_DLLSYMBOL JobQueue
+     // Return the number of scheduled and running jobs in the job queue.
+     size_t get_total_job_count() const;
+ 
+-    // Schedule a job for execution. Ownership of the job is transfered
++    // Schedule a job for execution. Ownership of the job is transferred
+     // to the job queue if and only if transfer_ownership is true.
+     void schedule(IJob* job, const bool transfer_ownership = true);
+ 
+diff --git a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp b/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
+index 831093583..b93bb2fd8 100644
+--- a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
++++ b/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
+@@ -77,13 +77,13 @@ CPURenderDevice::CPURenderDevice(
+     m_renderer_services =
+         new RendererServices(
+             project,
+-            reinterpret_cast<OIIO::TextureSystem&>(*m_texture_system));
++            *m_texture_system);
+ 
+     RENDERER_LOG_DEBUG("creating osl shading system...");
+     m_shading_system =
+         OSLShadingSystemFactory::create(
+             m_renderer_services,
+-            m_texture_system,
++            m_texture_system.get(),
+             m_error_handler);
+     m_shading_system->attribute("lockgeom", 1);
+     m_shading_system->attribute("colorspace", "sRGB"); // TODO: is this really correct? Note: this attribute does not need to be set for Appleseed to render. (If not set, produces identical (looking) results.)
+@@ -119,7 +119,7 @@ CPURenderDevice::~CPURenderDevice()
+     RENDERER_LOG_DEBUG("%s", modified_stats.c_str());
+ 
+     RENDERER_LOG_DEBUG("destroying oiio texture system...");
+-    m_texture_system->release();
++    m_texture_system.reset();
+     delete m_error_handler;
+ 
+     // Print texture store performance statistics.
+diff --git a/src/appleseed/renderer/device/cpu/cpurenderdevice.h b/src/appleseed/renderer/device/cpu/cpurenderdevice.h
+index f295e9c4c..2610bd3bf 100644
+--- a/src/appleseed/renderer/device/cpu/cpurenderdevice.h
++++ b/src/appleseed/renderer/device/cpu/cpurenderdevice.h
+@@ -28,6 +28,8 @@
+ 
+ #pragma once
+ 
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++
+ // appleseed.renderer headers.
+ #include "renderer/device/cpu/cpurendercontext.h"
+ #include "renderer/device/renderdevicebase.h"
+@@ -43,7 +45,6 @@
+ // Forward declarations.
+ namespace foundation    { class Dictionary; }
+ namespace renderer      { class OIIOErrorHandler; }
+-namespace renderer      { class OIIOTextureSystem; }
+ namespace renderer      { class OSLShadingSystem; }
+ namespace renderer      { class RendererComponents; }
+ namespace renderer      { class RendererServices; }
+@@ -95,7 +96,7 @@ class CPURenderDevice
+   private:
+     CPURenderContext                                m_context;
+     OIIOErrorHandler*                               m_error_handler;
+-    OIIOTextureSystem*                              m_texture_system;
++    std::shared_ptr<OIIOTextureSystem>              m_texture_system;
+     RendererServices*                               m_renderer_services;
+     OSLShadingSystem*                               m_shading_system;
+     foundation::auto_release_ptr<ShaderCompiler>    m_osl_compiler;
+diff --git a/src/appleseed/renderer/device/renderdevicebase.cpp b/src/appleseed/renderer/device/renderdevicebase.cpp
+index 822b1f903..1f53809fc 100644
+--- a/src/appleseed/renderer/device/renderdevicebase.cpp
++++ b/src/appleseed/renderer/device/renderdevicebase.cpp
+@@ -113,7 +113,7 @@ IRendererController::Status RenderDeviceBase::wait_for_event(
+         }
+ 
+         renderer_controller.on_progress();
+-        foundation::sleep(1);   // namespace qualifer required
++        foundation::sleep(1);   // namespace qualifier required
+     }
+ }
+ 
+diff --git a/src/appleseed/renderer/kernel/intersection/embreescene.cpp b/src/appleseed/renderer/kernel/intersection/embreescene.cpp
+index fd14ca0af..6ba311666 100644
+--- a/src/appleseed/renderer/kernel/intersection/embreescene.cpp
++++ b/src/appleseed/renderer/kernel/intersection/embreescene.cpp
+@@ -194,7 +194,7 @@ namespace
+         // Calculate exponent-adaptive offset.
+         // Note: float is represented in memory
+         // as 1 sign bit, 8 exponent bits and 23 mantissa bits.
+-        // Higher 24th bit is always 1 in normalized form, hence it's ommited.
++        // Higher 24th bit is always 1 in normalized form, hence it's omitted.
+         // Mantissa of constructed float will overlap no more than 11 last bits of
+         // origin components due to exponent shift.
+         // Mantissa of constructed float is just a
+diff --git a/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp b/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
+index 06e8ce70f..7859b1509 100644
+--- a/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
++++ b/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
+@@ -63,7 +63,7 @@ Dictionary BackwardLightSampler::get_params_metadata()
+             .insert("values", "cdf|lighttree")
+             .insert("default", "cdf")
+             .insert("label", "Light Sampler")
+-            .insert("help", "Light sampling algoritm")
++            .insert("help", "Light sampling algorithm")
+             .insert(
+                 "options",
+                 Dictionary()
+@@ -178,7 +178,7 @@ BackwardLightSampler::BackwardLightSampler(
+     }
+     else
+     {
+-        // Prepare the light-emitting shapes CDF for smapling.
++        // Prepare the light-emitting shapes CDF for sampling.
+         if (m_emitting_shapes_cdf.valid())
+             m_emitting_shapes_cdf.prepare();
+ 
+diff --git a/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h b/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h
+index 0cc13e668..6ef951fe6 100644
+--- a/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h
++++ b/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h
+@@ -29,6 +29,8 @@
+ 
+ #pragma once
+ 
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++
+ // appleseed.renderer headers.
+ #include "renderer/kernel/rendering/isamplegenerator.h"
+ #include "renderer/utility/paramarray.h"
+@@ -42,7 +44,6 @@
+ // Forward declarations.
+ namespace renderer  { class ForwardLightSampler; }
+ namespace renderer  { class Frame; }
+-namespace renderer  { class OIIOTextureSystem; }
+ namespace renderer  { class OSLShadingSystem; }
+ namespace renderer  { class Project; }
+ namespace renderer  { class SampleAccumulationBuffer; }
+diff --git a/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h b/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h
+index 3743810c5..95529d21f 100644
+--- a/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h
++++ b/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h
+@@ -29,6 +29,8 @@
+ 
+ #pragma once
+ 
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++
+ // appleseed.renderer headers.
+ #include "renderer/kernel/lighting/sppm/sppmimporton.h"
+ #include "renderer/kernel/lighting/sppm/sppmimportonmap.h"
+@@ -55,7 +57,6 @@ namespace foundation    { class JobQueue; }
+ namespace renderer      { class Frame; }
+ namespace renderer      { class ForwardLightSampler; }
+ namespace renderer      { class IShadingResultFrameBufferFactory; }
+-namespace renderer      { class OIIOTextureSystem; }
+ namespace renderer      { class OSLShadingSystem; }
+ namespace renderer      { class Scene; }
+ namespace renderer      { class TextureStore; }
+diff --git a/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h b/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h
+index ebba749e8..5998010a7 100644
+--- a/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h
++++ b/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h
+@@ -29,6 +29,8 @@
+ 
+ #pragma once
+ 
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++
+ // appleseed.renderer headers.
+ #include "renderer/kernel/lighting/sppm/sppmparameters.h"
+ 
+@@ -44,7 +46,6 @@ namespace foundation    { class IAbortSwitch; }
+ namespace foundation    { class JobQueue; }
+ namespace renderer      { class ForwardLightSampler; }
+ namespace renderer      { class LightTargetArray; }
+-namespace renderer      { class OIIOTextureSystem; }
+ namespace renderer      { class OSLShadingSystem; }
+ namespace renderer      { class Scene; }
+ namespace renderer      { class SPPMImportonMap; }
+diff --git a/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h b/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h
+index 410ac1e5b..0e9ddbbfa 100644
+--- a/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h
++++ b/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h
+@@ -60,7 +60,7 @@ class PixelSampler
+     // Compute the position of a pixel sample and optionally the initial instance
+     // number of the corresponding sampling context, given the integer coordinates
+     // of the subpixel grid cell containing the sample. The coordinates of the
+-    // pixel sample are expressed in continous image space
++    // pixel sample are expressed in continuous image space
+     // (https://github.com/appleseedhq/appleseed/wiki/Terminology).
+     void sample(
+         const int               sx,
+diff --git a/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp b/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp
+index 389b3d909..384c16863 100644
+--- a/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp
++++ b/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp
+@@ -167,7 +167,7 @@ namespace
+                 1);
+ 
+             float pixel_red_channel;
+-            m_texture->get_pixels(roi, TypeDesc::TypeFloat, &pixel_red_channel);
++            m_texture->get_pixels(roi, OIIO::TypeFloat, &pixel_red_channel);
+ 
+             const size_t sample_count =
+                 round<size_t>(
+@@ -322,7 +322,7 @@ bool TextureControlledPixelRendererFactory::load_texture(const std::string& text
+ {
+     // Create a new dedicated ImageCache instead of using the global ImageCache.
+     // This is to prevent errors during ImageBuf access if the file behind tex_path was overwritten on disk.
+-    ImageCache* image_cache = ImageCache::create();
++    auto image_cache = ImageCache::create(false);
+     std::unique_ptr<ImageBuf> texture(new ImageBuf(texture_path, 0, 0, image_cache));
+ 
+     // Force the read to immediately do the entire disk I/O for the file.
+diff --git a/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h b/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h
+index 6be1322ce..932e2e37a 100644
+--- a/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h
++++ b/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h
+@@ -29,6 +29,8 @@
+ 
+ #pragma once
+ 
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++
+ // appleseed.renderer headers.
+ #include "renderer/kernel/rendering/isamplerenderer.h"
+ #include "renderer/utility/paramarray.h"
+@@ -39,7 +41,6 @@
+ // Forward declarations.
+ namespace renderer  { class Frame; }
+ namespace renderer  { class ILightingEngineFactory; }
+-namespace renderer  { class OIIOTextureSystem; }
+ namespace renderer  { class OSLShadingSystem; }
+ namespace renderer  { class Scene; }
+ namespace renderer  { class ShadingEngine; }
+diff --git a/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp b/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp
+index efa020eab..1ada61caf 100644
+--- a/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp
++++ b/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp
+@@ -96,7 +96,7 @@ void TileJob::execute(const size_t thread_index)
+     // case of 3ds Max and Maya, updating the UI (e.g. displaying rendered tiles) can only
+     // be done from a specific thread: the "main thread" or "UI thread".
+     //
+-    // To accomodate this constraint, plugins pass a single tile callback to the constructor
++    // To accommodate this constraint, plugins pass a single tile callback to the constructor
+     // of `MasterRenderer` instead of a tile callback _factory_. `MasterRenderer` then wraps
+     // this single tile callback into a `SerialTileCallback` whose sole purpose is to push
+     // updates to a `SerialRendererController`, which in turn stores them into a local queue.
+diff --git a/src/appleseed/renderer/kernel/rendering/renderercomponents.h b/src/appleseed/renderer/kernel/rendering/renderercomponents.h
+index c90e167c3..4b3ff65ad 100644
+--- a/src/appleseed/renderer/kernel/rendering/renderercomponents.h
++++ b/src/appleseed/renderer/kernel/rendering/renderercomponents.h
+@@ -28,6 +28,8 @@
+ 
+ #pragma once
+ 
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++
+ // appleseed.renderer headers.
+ #include "renderer/kernel/lighting/backwardlightsampler.h"
+ #include "renderer/kernel/lighting/forwardlightsampler.h"
+@@ -52,7 +54,6 @@ namespace foundation    { class IAbortSwitch; }
+ namespace renderer      { class Frame; }
+ namespace renderer      { class IFrameRenderer; }
+ namespace renderer      { class ITileCallbackFactory; }
+-namespace renderer      { class OIIOTextureSystem; }
+ namespace renderer      { class OnFrameBeginRecorder; }
+ namespace renderer      { class OnRenderBeginRecorder; }
+ namespace renderer      { class OSLShadingSystem; }
+diff --git a/src/appleseed/renderer/kernel/rendering/rendererservices.cpp b/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+index acd56a896..77ccf920f 100644
+--- a/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
++++ b/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+@@ -528,19 +528,19 @@ bool RendererServices::getmessage(
+     {
+         if (source == g_trace_ustr)
+         {
+-            if (name == g_hit_ustr && type == OIIO::TypeDesc::TypeInt)
++            if (name == g_hit_ustr && type == OIIO::TypeInt)
+                 reinterpret_cast<int*>(val)[0] = trace_data->m_hit ? 1 : 0;
+-            else if (name == g_hitdist_ustr && type == OIIO::TypeDesc::TypeFloat)
++            else if (name == g_hitdist_ustr && type == OIIO::TypeFloat)
+                 reinterpret_cast<float*>(val)[0] = trace_data->m_hit_distance;
+-            else if (name == g_N_ustr && type == OIIO::TypeDesc::TypeNormal)
++            else if (name == g_N_ustr && type == OIIO::TypeNormal)
+                 *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_N;
+-            else if (name == g_Ng_ustr && type == OIIO::TypeDesc::TypeNormal)
++            else if (name == g_Ng_ustr && type == OIIO::TypeNormal)
+                 *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_Ng;
+-            else if (name == g_P_ustr && type == OIIO::TypeDesc::TypePoint)
++            else if (name == g_P_ustr && type == OIIO::TypePoint)
+                 *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_P;
+-            else if (name == g_u_ustr && type == OIIO::TypeDesc::TypeFloat)
++            else if (name == g_u_ustr && type == OIIO::TypeFloat)
+                 reinterpret_cast<float*>(val)[0] = trace_data->m_u;
+-            else if (name == g_v_ustr && type == OIIO::TypeDesc::TypeFloat)
++            else if (name == g_v_ustr && type == OIIO::TypeFloat)
+                 reinterpret_cast<float*>(val)[0] = trace_data->m_v;
+             else
+                 return false;
+@@ -623,7 +623,7 @@ bool RendererServices::get_userdata(
+ 
+ IMPLEMENT_ATTR_GETTER(object_instance_id)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -641,7 +641,7 @@ IMPLEMENT_ATTR_GETTER(object_instance_id)
+ 
+ IMPLEMENT_ATTR_GETTER(object_instance_index)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -659,7 +659,7 @@ IMPLEMENT_ATTR_GETTER(object_instance_index)
+ 
+ IMPLEMENT_ATTR_GETTER(assembly_instance_id)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -677,7 +677,7 @@ IMPLEMENT_ATTR_GETTER(assembly_instance_id)
+ 
+ IMPLEMENT_ATTR_GETTER(assembly_instance_name)
+ {
+-    if (type == OIIO::TypeDesc::TypeString)
++    if (type == OIIO::TypeString)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -699,7 +699,7 @@ IMPLEMENT_ATTR_GETTER(assembly_instance_name)
+ 
+ IMPLEMENT_ATTR_GETTER(assembly_name)
+ {
+-    if (type == OIIO::TypeDesc::TypeString)
++    if (type == OIIO::TypeString)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -721,7 +721,7 @@ IMPLEMENT_ATTR_GETTER(assembly_name)
+ 
+ IMPLEMENT_ATTR_GETTER(object_instance_name)
+ {
+-    if (type == OIIO::TypeDesc::TypeString)
++    if (type == OIIO::TypeString)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -743,7 +743,7 @@ IMPLEMENT_ATTR_GETTER(object_instance_name)
+ 
+ IMPLEMENT_ATTR_GETTER(object_name)
+ {
+-    if (type == OIIO::TypeDesc::TypeString)
++    if (type == OIIO::TypeString)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -781,7 +781,7 @@ IMPLEMENT_ATTR_GETTER(camera_resolution)
+ 
+ IMPLEMENT_ATTR_GETTER(camera_projection)
+ {
+-    if (type == OIIO::TypeDesc::TypeString)
++    if (type == OIIO::TypeString)
+     {
+         reinterpret_cast<OIIO::ustring*>(val)[0] = m_cam_projection_str;
+         return true;
+@@ -797,7 +797,7 @@ IMPLEMENT_ATTR_GETTER(camera_fov)
+ 
+ IMPLEMENT_ATTR_GETTER(camera_pixelaspect)
+ {
+-    if (type == OIIO::TypeDesc::TypeFloat)
++    if (type == OIIO::TypeFloat)
+     {
+         reinterpret_cast<float*>(val)[0] = 1.0f;
+ 
+@@ -828,7 +828,7 @@ IMPLEMENT_ATTR_GETTER(camera_clip)
+ 
+ IMPLEMENT_ATTR_GETTER(camera_clip_near)
+ {
+-    if (type == OIIO::TypeDesc::TypeFloat)
++    if (type == OIIO::TypeFloat)
+     {
+         reinterpret_cast<float*>(val)[0] = 0.0f;
+ 
+@@ -843,7 +843,7 @@ IMPLEMENT_ATTR_GETTER(camera_clip_near)
+ 
+ IMPLEMENT_ATTR_GETTER(camera_clip_far)
+ {
+-    if (type == OIIO::TypeDesc::TypeFloat)
++    if (type == OIIO::TypeFloat)
+     {
+         reinterpret_cast<float*>(val)[0] = std::numeric_limits<float>::max();
+ 
+@@ -874,7 +874,7 @@ IMPLEMENT_ATTR_GETTER(camera_shutter)
+ 
+ IMPLEMENT_ATTR_GETTER(camera_shutter_open)
+ {
+-    if (type == OIIO::TypeDesc::TypeFloat)
++    if (type == OIIO::TypeFloat)
+     {
+         reinterpret_cast<float*>(val)[0] = m_shutter[0];
+ 
+@@ -889,7 +889,7 @@ IMPLEMENT_ATTR_GETTER(camera_shutter_open)
+ 
+ IMPLEMENT_ATTR_GETTER(camera_shutter_close)
+ {
+-    if (type == OIIO::TypeDesc::TypeFloat)
++    if (type == OIIO::TypeFloat)
+     {
+         reinterpret_cast<float*>(val)[0] = m_shutter[1];
+ 
+@@ -923,7 +923,7 @@ IMPLEMENT_ATTR_GETTER(camera_screen_window)
+ 
+ IMPLEMENT_ATTR_GETTER(ray_depth)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -940,7 +940,7 @@ IMPLEMENT_ATTR_GETTER(ray_depth)
+ 
+ IMPLEMENT_ATTR_GETTER(ray_length)
+ {
+-    if (type == OIIO::TypeDesc::TypeFloat)
++    if (type == OIIO::TypeFloat)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -957,7 +957,7 @@ IMPLEMENT_ATTR_GETTER(ray_length)
+ 
+ IMPLEMENT_ATTR_GETTER(ray_ior)
+ {
+-    if (type == OIIO::TypeDesc::TypeFloat)
++    if (type == OIIO::TypeFloat)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -974,7 +974,7 @@ IMPLEMENT_ATTR_GETTER(ray_ior)
+ 
+ IMPLEMENT_ATTR_GETTER(ray_has_differentials)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -991,7 +991,7 @@ IMPLEMENT_ATTR_GETTER(ray_has_differentials)
+ 
+ IMPLEMENT_ATTR_GETTER(surface_shader_diffuse)
+ {
+-    if (type == OIIO::TypeDesc::TypeColor)
++    if (type == OIIO::TypeColor)
+     {
+         const ShadingPoint* shading_point = reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+         reinterpret_cast<float*>(val)[0] = shading_point->m_surface_shader_diffuse[0];
+@@ -1009,7 +1009,7 @@ IMPLEMENT_ATTR_GETTER(surface_shader_diffuse)
+ 
+ IMPLEMENT_ATTR_GETTER(surface_shader_glossy)
+ {
+-    if (type == OIIO::TypeDesc::TypeColor)
++    if (type == OIIO::TypeColor)
+     {
+         const ShadingPoint* shading_point = reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+         reinterpret_cast<float*>(val)[0] = shading_point->m_surface_shader_glossy[0];
+@@ -1027,7 +1027,7 @@ IMPLEMENT_ATTR_GETTER(surface_shader_glossy)
+ 
+ IMPLEMENT_ATTR_GETTER(surface_shader_emission)
+ {
+-    if (type == OIIO::TypeDesc::TypeColor)
++    if (type == OIIO::TypeColor)
+     {
+         const ShadingPoint* shading_point = reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+         reinterpret_cast<float*>(val)[0] = shading_point->m_surface_shader_emission[0];
+@@ -1045,7 +1045,7 @@ IMPLEMENT_ATTR_GETTER(surface_shader_emission)
+ 
+ IMPLEMENT_ATTR_GETTER(appleseed_version_major)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         reinterpret_cast<int*>(val)[0] = APPLESEED_VERSION_MAJOR;
+ 
+@@ -1060,7 +1060,7 @@ IMPLEMENT_ATTR_GETTER(appleseed_version_major)
+ 
+ IMPLEMENT_ATTR_GETTER(appleseed_version_minor)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         reinterpret_cast<int*>(val)[0] = APPLESEED_VERSION_MINOR;
+ 
+@@ -1075,7 +1075,7 @@ IMPLEMENT_ATTR_GETTER(appleseed_version_minor)
+ 
+ IMPLEMENT_ATTR_GETTER(appleseed_version_patch)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         reinterpret_cast<int*>(val)[0] = APPLESEED_VERSION_PATCH;
+ 
+@@ -1090,7 +1090,7 @@ IMPLEMENT_ATTR_GETTER(appleseed_version_patch)
+ 
+ IMPLEMENT_ATTR_GETTER(appleseed_version)
+ {
+-    if (type == OIIO::TypeDesc::TypeInt)
++    if (type == OIIO::TypeInt)
+     {
+         reinterpret_cast<int*>(val)[0] = APPLESEED_VERSION;
+ 
+@@ -1115,7 +1115,7 @@ IMPLEMENT_ATTR_GETTER(appleseed_version)
+ 
+ IMPLEMENT_USER_DATA_GETTER(tn)
+ {
+-    if (type == OIIO::TypeDesc::TypeVector)
++    if (type == OIIO::TypeVector)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -1136,7 +1136,7 @@ IMPLEMENT_USER_DATA_GETTER(tn)
+ 
+ IMPLEMENT_USER_DATA_GETTER(bn)
+ {
+-    if (type == OIIO::TypeDesc::TypeVector)
++    if (type == OIIO::TypeVector)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -1166,7 +1166,7 @@ IMPLEMENT_USER_DATA_GETTER(bn)
+ 
+ IMPLEMENT_USER_DATA_GETTER(dndu)
+ {
+-    if (type == OIIO::TypeDesc::TypeVector)
++    if (type == OIIO::TypeVector)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -1187,7 +1187,7 @@ IMPLEMENT_USER_DATA_GETTER(dndu)
+ 
+ IMPLEMENT_USER_DATA_GETTER(dndv)
+ {
+-    if (type == OIIO::TypeDesc::TypeVector)
++    if (type == OIIO::TypeVector)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -1208,7 +1208,7 @@ IMPLEMENT_USER_DATA_GETTER(dndv)
+ 
+ IMPLEMENT_USER_DATA_GETTER(vertex_color)
+ {
+-    if (type == OIIO::TypeDesc::TypeColor)
++    if (type == OIIO::TypeColor)
+     {
+         const ShadingPoint* shading_point =
+             reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+@@ -1233,7 +1233,7 @@ void RendererServices::clear_derivatives(
+     const OIIO::TypeDesc&       type,
+     void*                       val)
+ {
+-    if (type != OIIO::TypeDesc::TypeString)
++    if (type != OIIO::TypeString)
+         memset(reinterpret_cast<char*>(val) + type.size(), 0, 2 * type.size());
+ }
+ 
+diff --git a/src/appleseed/renderer/kernel/shading/oslshadingsystem.h b/src/appleseed/renderer/kernel/shading/oslshadingsystem.h
+index 480a4bdc0..f4557a62d 100644
+--- a/src/appleseed/renderer/kernel/shading/oslshadingsystem.h
++++ b/src/appleseed/renderer/kernel/shading/oslshadingsystem.h
+@@ -28,6 +28,8 @@
+ 
+ #pragma once
+ 
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++
+ // OSL headers.
+ #include "foundation/platform/_beginoslheaders.h"
+ #include "OSL/oslexec.h"
+@@ -36,7 +38,6 @@
+ 
+ // Forward declarations.
+ namespace renderer { class OIIOErrorHandler; }
+-namespace renderer { class OIIOTextureSystem; }
+ namespace renderer { class RendererServices; }
+ 
+ namespace renderer
+diff --git a/src/appleseed/renderer/kernel/shading/shadingcontext.h b/src/appleseed/renderer/kernel/shading/shadingcontext.h
+index a150262c0..16a5b0fab 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingcontext.h
++++ b/src/appleseed/renderer/kernel/shading/shadingcontext.h
+@@ -29,6 +29,8 @@
+ 
+ #pragma once
+ 
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++
+ // appleseed.renderer headers.
+ #include "renderer/kernel/shading/oslshadergroupexec.h"
+ 
+@@ -43,7 +45,6 @@
+ namespace foundation    { class Arena; }
+ namespace renderer      { class ILightingEngine; }
+ namespace renderer      { class Intersector; }
+-namespace renderer      { class OIIOTextureSystem; }
+ namespace renderer      { class OSLShadingSystem; }
+ namespace renderer      { class ShadingPoint; }
+ namespace renderer      { class TextureCache; }
+diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+index 2cff645bf..d2dec6b48 100644
+--- a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
++++ b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+@@ -818,7 +818,7 @@ void ShadingPoint::compute_shading_basis() const
+ 
+     if (m_primitive_type == PrimitiveCurve3)
+     {
+-        // Contruct shading basis for hair BSDF.
++        // Construct shading basis for hair BSDF.
+         // todo: add flag to differentiate curves from hair.
+         const Vector3d x = normalize(get_dpdu(0));
+         const Vector3d sn_curve = get_original_shading_normal();
+diff --git a/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp b/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp
+index dbfc031ec..6ba116687 100644
+--- a/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp
++++ b/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp
+@@ -32,15 +32,9 @@
+ namespace renderer
+ {
+ 
+-void OIIOTextureSystem::release()
++std::shared_ptr<OIIOTextureSystem> OIIOTextureSystemFactory::create(const bool shared)
+ {
+-    OIIO::TextureSystem::destroy(
+-        reinterpret_cast<OIIO::TextureSystem*>(this));
+-}
+-
+-OIIOTextureSystem* OIIOTextureSystemFactory::create(const bool shared)
+-{
+-    return reinterpret_cast<OIIOTextureSystem*>(OIIO::TextureSystem::create(shared));
++    return OIIO::TextureSystem::create(shared);
+ }
+ 
+ }   // namespace renderer
+diff --git a/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h b/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h
+index 3713f8309..6d4a43fbf 100644
+--- a/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h
++++ b/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h
+@@ -28,6 +28,8 @@
+ 
+ #pragma once
+ 
++#include <memory>
++
+ // OpenImageIO headers.
+ #include "foundation/platform/_beginoiioheaders.h"
+ #include "OpenImageIO/texture.h"
+@@ -36,21 +38,12 @@
+ namespace renderer
+ {
+ 
+-class OIIOTextureSystem
+-  : public OIIO::TextureSystem
+-{
+-  public:
+-    void release();
+-
+-  private:
+-    // Needed by gcc 8.
+-    void operator delete(void*) {}
+-};
++using OIIOTextureSystem = OIIO::TextureSystem;
+ 
+ class OIIOTextureSystemFactory
+ {
+   public:
+-    static OIIOTextureSystem* create(const bool shared = true);
++    static std::shared_ptr<OIIOTextureSystem> create(const bool shared = true);
+ };
+ 
+ }   // namespace renderer
+diff --git a/src/appleseed/renderer/meta/tests/test_environmentedf.cpp b/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
+index 6f9f0bd4f..1517d94e5 100644
+--- a/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
++++ b/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
+@@ -185,8 +185,7 @@ TEST_SUITE(Renderer_Modeling_EnvironmentEDF)
+           : m_texture_store(Base::m_scene)
+           , m_texture_cache(m_texture_store)
+           , m_texture_system(
+-                OIIOTextureSystemFactory::create(),
+-                [](OIIOTextureSystem* object) { object->release(); })
++                OIIOTextureSystemFactory::create())
+           , m_renderer_services(Base::m_project, *m_texture_system)
+           , m_shading_system(
+                 OSLShadingSystemFactory::create(&m_renderer_services, m_texture_system.get()),
+diff --git a/src/appleseed/renderer/meta/tests/test_tracer.cpp b/src/appleseed/renderer/meta/tests/test_tracer.cpp
+index 10c252cfc..ee1a28a0b 100644
+--- a/src/appleseed/renderer/meta/tests/test_tracer.cpp
++++ b/src/appleseed/renderer/meta/tests/test_tracer.cpp
+@@ -233,11 +233,10 @@ TEST_SUITE(Renderer_Kernel_Lighting_Tracer)
+           , m_texture_cache(m_texture_store)
+           , m_intersector(m_trace_context, m_texture_cache)
+           , m_texture_system(
+-                OIIOTextureSystemFactory::create(),
+-                [](OIIOTextureSystem* object) { object->release(); })
++                OIIOTextureSystemFactory::create())
+           , m_renderer_services(
+                 FixtureParams::FixtureBaseClass::m_project,
+-                reinterpret_cast<OIIO::TextureSystem&>(*m_texture_system))
++                *m_texture_system)
+           , m_shading_system(
+                 OSLShadingSystemFactory::create(&m_renderer_services, m_texture_system.get()),
+                 [](OSLShadingSystem* object) { object->release(); })
+diff --git a/src/appleseed/renderer/meta/tests/test_volume.cpp b/src/appleseed/renderer/meta/tests/test_volume.cpp
+index 07e8572be..4c3f4ed12 100644
+--- a/src/appleseed/renderer/meta/tests/test_volume.cpp
++++ b/src/appleseed/renderer/meta/tests/test_volume.cpp
+@@ -93,8 +93,7 @@ TEST_SUITE(Renderer_Modeling_Volume)
+           , m_texture_store(base.m_scene)
+           , m_texture_cache(m_texture_store)
+           , m_texture_system(
+-              OIIOTextureSystemFactory::create(),
+-              [](OIIOTextureSystem* object) { object->release(); })
++              OIIOTextureSystemFactory::create())
+           , m_renderer_services(base.m_project, *m_texture_system)
+           , m_shading_system(
+               OSLShadingSystemFactory::create(&m_renderer_services, m_texture_system.get()),
+diff --git a/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp b/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
+index e756c1fb9..e86b7925d 100644
+--- a/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
++++ b/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
+@@ -117,7 +117,7 @@ namespace
+         ~MultiChannelExrFileWriter() override
+         {
+ #if OIIO_VERSION < 20000
+-            // Destroy the ImageOutput stucture.
++            // Destroy the ImageOutput structure.
+             if (m_writer != nullptr)
+                 OIIO::ImageOutput::destroy(m_writer);
+ #endif
+diff --git a/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp b/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp
+index 5a9568c5a..a7e4c7dc7 100644
+--- a/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp
++++ b/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp
+@@ -483,7 +483,7 @@ void SeparableBSSRDF::do_evaluate(
+         return;
+     }
+ 
+-    // The profile function evalutes to zero outside the sampling disk.
++    // The profile function evaluates to zero outside the sampling disk.
+     const float square_radius =
+         static_cast<float>(
+             square_norm(outgoing_point.get_point() - incoming_point.get_point()));
+diff --git a/src/appleseed/renderer/modeling/camera/multilenscamera.cpp b/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
+index eaeedb7a7..12b36b806 100644
+--- a/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
++++ b/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
+@@ -604,7 +604,7 @@ class MultiLensCamera
+                     return true;
+                 }
+ 
+-                p0 = Vector3d(0, 0, image_plane_z); // center of iamge plane
++                p0 = Vector3d(0, 0, image_plane_z); // center of image plane
+                 pmin = Vector3d(0, 0, m_last_z); // center of the rear lens
+                 pmax = Vector3d(0.5 * m_lens_container.back().diameter, 0, m_last_z); // marginal point of the rear lens
+             }
+@@ -936,7 +936,7 @@ class MultiLensCamera
+         //
+ 
+         // Comments are preceded by a # and can stand on their own line or at the end of a line.
+-        // The first non-comment line should contain the number of following lens elments.
++        // The first non-comment line should contain the number of following lens elements.
+         // Lens elements have to be space separated values of the format:
+         // radius    thickness    ior    aperture
+         bool read_lens_file(const Project& project, double factor)
+diff --git a/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp b/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp
+index c55cb2d12..26f8697d1 100644
+--- a/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp
++++ b/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp
+@@ -126,7 +126,7 @@ namespace
+             const Vector3f local_outgoing =
+                 Vector3f::make_unit_vector(cos_theta, sin_theta, cos_phi, sin_phi);
+ 
+-            // OSL exectute system.
++            // OSL execute system.
+             payload = m_osl_shadergroup_exec.execute_background(*m_shader_group, local_outgoing);
+ 
+             importance = luminance(payload);
+@@ -396,9 +396,9 @@ namespace
+             m_probability_scale = texel_count / (2.0f * PiSquare<float>());
+ 
+             // Create OSL shading system.
+-            auto_release_ptr<OIIOTextureSystem> texture_system(
++            std::shared_ptr<OIIOTextureSystem> texture_system(
+                 OIIOTextureSystemFactory().create());
+-            RendererServices renderer_services(project, texture_system.ref());
++            RendererServices renderer_services(project, *texture_system);
+             auto_release_ptr<OSLShadingSystem> osl_shading_system(
+                 OSLShadingSystemFactory().create(
+                     &renderer_services,
+diff --git a/src/appleseed/renderer/modeling/frame/frame.cpp b/src/appleseed/renderer/modeling/frame/frame.cpp
+index bd01d80f7..4b9496564 100644
+--- a/src/appleseed/renderer/modeling/frame/frame.cpp
++++ b/src/appleseed/renderer/modeling/frame/frame.cpp
+@@ -765,7 +765,7 @@ namespace
+         const ImageAttributes& exr_attributes = std::get<2>(checkpoint_props[0]);
+         const std::string initial_layer_name = std::get<0>(checkpoint_props[0]);
+ 
+-        // Check for atttributes.
++        // Check for attributes.
+         if (!exr_attributes.exist("appleseed:LastPass"))
+         {
+             RENDERER_LOG_ERROR("incorrect checkpoint: some attributes are missing.");
+diff --git a/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp b/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp
+index 7b29f52c5..282a8dca8 100644
+--- a/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp
++++ b/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp
+@@ -123,8 +123,8 @@ void ResampleX2Applier::apply(
+         static_cast<float>(m_src_height - 1) / (dst_height - 1));
+ 
+     // Note: using "dst / 2 == m_src" instead of "dst == m_src * 2" when upsampling accounts for
+-    // the destination image having odd dimenion values, making "dst == 2 * m_src + 1" actually.
+-    // Thus, integer truncation also allows a source image with odd dimenions when downsampling.
++    // the destination image having odd dimension values, making "dst == 2 * m_src + 1" actually.
++    // Thus, integer truncation also allows a source image with odd dimensions when downsampling.
+     assert(
+         m_mode == SamplingMode::DOUBLE
+         ? dst_width / 2 == m_src_width && dst_height / 2 == m_src_height    // scale x2 with bilinear filtering
+diff --git a/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp b/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp
+index ae4755468..55a426112 100644
+--- a/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp
++++ b/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp
+@@ -108,8 +108,8 @@ namespace
+ 
+             m_format_string = m_params.get_optional("format_string", DefaultFormatString, context);
+             m_scale_factor = m_params.get_optional("scale_factor", DefaultScaleFactor, context);
+-            m_icon.reset(ImageSpec(appleseed_seeds_256_width, appleseed_seeds_256_height, 4, TypeDesc::TypeFloat));
+-            m_icon.set_pixels(ROI(0, appleseed_seeds_256_width, 0, appleseed_seeds_256_height), TypeDesc::TypeFloat, appleseed_seeds_256);
++            m_icon.reset(ImageSpec(appleseed_seeds_256_width, appleseed_seeds_256_height, 4, OIIO::TypeFloat));
++            m_icon.set_pixels(ROI(0, appleseed_seeds_256_width, 0, appleseed_seeds_256_height), OIIO::TypeFloat, appleseed_seeds_256);
+ 
+             return true;
+         }
+@@ -179,7 +179,7 @@ namespace
+             ImageBufAlgo::resize(scaled_unpremult_icon, unpremult_icon, "mitchell", filter_width, roi);
+             ImageBufAlgo::premult(scaled_premult_icon, scaled_unpremult_icon, ROI::All());
+             std::unique_ptr<float[]> pixels(new float[roi.width() * roi.height() * roi.nchannels()]);
+-            scaled_premult_icon.get_pixels(ROI::All(), TypeDesc::TypeFloat, pixels.get());
++            scaled_premult_icon.get_pixels(ROI::All(), OIIO::TypeFloat, pixels.get());
+ 
+             // Blit the appleseed logo.
+             Drawing::blit_bitmap(
+diff --git a/src/appleseed/renderer/modeling/project/projectfileupdater.cpp b/src/appleseed/renderer/modeling/project/projectfileupdater.cpp
+index aed2d4d39..b225bad25 100644
+--- a/src/appleseed/renderer/modeling/project/projectfileupdater.cpp
++++ b/src/appleseed/renderer/modeling/project/projectfileupdater.cpp
+@@ -1884,7 +1884,7 @@ namespace
+ 
+                     move_if_exist(root, "passes", gfr, "passes");
+ 
+-                    // Remove the dictionnary from the root if it's empty.
++                    // Remove the dictionary from the root if it's empty.
+                     if (gfr.empty())
+                         root.dictionaries().remove("generic_frame_renderer");
+                 }
+diff --git a/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp b/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp
+index aadb4e029..61c695054 100644
+--- a/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp
++++ b/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp
+@@ -89,9 +89,9 @@ const void* ShaderParam::get_value() const
+         return &impl->m_float_array_value.front();
+     if (!impl->m_int_array_value.empty())
+         return &impl->m_int_array_value.front();
+-    if (impl->m_type_desc == OSL::TypeDesc::TypeInt)
++    if (impl->m_type_desc == OIIO::TypeInt)
+         return &impl->m_int_value;
+-    if (impl->m_type_desc == OSL::TypeDesc::TypeString)
++    if (impl->m_type_desc == OIIO::TypeString)
+         return &impl->m_string_value;
+ 
+     // All the other param types use the float storage.
+@@ -128,21 +128,21 @@ std::string ShaderParam::get_value_as_string() const
+     }
+     else
+     {
+-        if (impl->m_type_desc == OSL::TypeDesc::TypeInt)
++        if (impl->m_type_desc == OIIO::TypeInt)
+             ss << "int " << impl->m_int_value;
+-        else if (impl->m_type_desc == OSL::TypeDesc::TypeFloat)
++        else if (impl->m_type_desc == OIIO::TypeFloat)
+             ss << "float "  << impl->m_float_value[0];
+-        else if (impl->m_type_desc == OSL::TypeDesc::TypeVector)
++        else if (impl->m_type_desc == OIIO::TypeVector)
+             ss << "vector " << impl->m_float_value[0] << " " << impl->m_float_value[1] << " " << impl->m_float_value[2];
+-        else if (impl->m_type_desc == OSL::TypeDesc::TypeNormal)
++        else if (impl->m_type_desc == OIIO::TypeNormal)
+             ss << "normal " << impl->m_float_value[0] << " " << impl->m_float_value[1] << " " << impl->m_float_value[2];
+-        else if (impl->m_type_desc == OSL::TypeDesc::TypePoint)
++        else if (impl->m_type_desc == OIIO::TypePoint)
+             ss << "point "  << impl->m_float_value[0] << " " << impl->m_float_value[1] << " " << impl->m_float_value[2];
+-        else if (impl->m_type_desc == OSL::TypeDesc::TypeColor)
++        else if (impl->m_type_desc == OIIO::TypeColor)
+             ss << "color "  << impl->m_float_value[0] << " " << impl->m_float_value[1] << " " << impl->m_float_value[2];
+-        else if (impl->m_type_desc == OSL::TypeDesc::TypeString)
++        else if (impl->m_type_desc == OIIO::TypeString)
+             ss << "string " << impl->m_string_value;
+-        else if (impl->m_type_desc == OSL::TypeDesc::TypeMatrix)
++        else if (impl->m_type_desc == OIIO::TypeMatrix)
+         {
+             ss << "matrix";
+             for (size_t i = 0; i < 16; ++i)
+@@ -160,7 +160,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_int_param(
+     const int           value)
+ {
+     auto_release_ptr<ShaderParam> p(new ShaderParam(name));
+-    p->impl->m_type_desc = OSL::TypeDesc::TypeInt;
++    p->impl->m_type_desc = OIIO::TypeInt;
+     p->impl->m_int_value = value;
+     return p;
+ }
+@@ -180,7 +180,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_float_param(
+     const float         value)
+ {
+     auto_release_ptr<ShaderParam> p(new ShaderParam(name));
+-    p->impl->m_type_desc = OSL::TypeDesc::TypeFloat;
++    p->impl->m_type_desc = OIIO::TypeFloat;
+     p->impl->m_float_value[0] = value;
+     return p;
+ }
+@@ -202,7 +202,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_vector_param(
+     const float         vz)
+ {
+     auto_release_ptr<ShaderParam> p(new ShaderParam(name));
+-    p->impl->m_type_desc = OSL::TypeDesc::TypeVector;
++    p->impl->m_type_desc = OIIO::TypeVector;
+     p->impl->m_float_value[0] = vx;
+     p->impl->m_float_value[1] = vy;
+     p->impl->m_float_value[2] = vz;
+@@ -231,7 +231,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_normal_param(
+     const float         nz)
+ {
+     auto_release_ptr<ShaderParam> p(new ShaderParam(name));
+-    p->impl->m_type_desc = OSL::TypeDesc::TypeNormal;
++    p->impl->m_type_desc = OIIO::TypeNormal;
+     p->impl->m_float_value[0] = nx;
+     p->impl->m_float_value[1] = ny;
+     p->impl->m_float_value[2] = nz;
+@@ -260,7 +260,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_point_param(
+     const float         vz)
+ {
+     auto_release_ptr<ShaderParam> p(new ShaderParam(name));
+-    p->impl->m_type_desc = OSL::TypeDesc::TypePoint;
++    p->impl->m_type_desc = OIIO::TypePoint;
+     p->impl->m_float_value[0] = vx;
+     p->impl->m_float_value[1] = vy;
+     p->impl->m_float_value[2] = vz;
+@@ -289,7 +289,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_color_param(
+     const float         vz)
+ {
+     auto_release_ptr<ShaderParam> p(new ShaderParam(name));
+-    p->impl->m_type_desc = OSL::TypeDesc::TypeColor;
++    p->impl->m_type_desc = OIIO::TypeColor;
+     p->impl->m_float_value[0] = vx;
+     p->impl->m_float_value[1] = vy;
+     p->impl->m_float_value[2] = vz;
+@@ -316,7 +316,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_matrix_param(
+     const float*        values)
+ {
+     auto_release_ptr<ShaderParam> p(new ShaderParam(name));
+-    p->impl->m_type_desc = OSL::TypeDesc::TypeMatrix;
++    p->impl->m_type_desc = OIIO::TypeMatrix;
+     memcpy(p->impl->m_float_value, values, sizeof(float) * 16);
+     return p;
+ }
+@@ -341,7 +341,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_string_param(
+     const char*         value)
+ {
+     auto_release_ptr<ShaderParam> p(new ShaderParam(name));
+-    p->impl->m_type_desc = OSL::TypeDesc::TypeString;
++    p->impl->m_type_desc = OIIO::TypeString;
+     p->impl->m_string_storage = value;
+     p->impl->m_string_value = p->impl->m_string_storage.c_str();
+     return p;
+diff --git a/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp b/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
+index 08394bc7a..97dbcae99 100644
+--- a/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
++++ b/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
+@@ -71,17 +71,17 @@ struct ShaderQuery::Impl
+         const char*                     value_key,
+         Dictionary&                     dictionary)
+     {
+-        if (param.type == OSL::TypeDesc::TypeInt)
++        if (param.type == OIIO::TypeInt)
+             dictionary.insert(value_key, param.idefault[0]);
+-        else if (param.type == OSL::TypeDesc::TypeFloat)
++        else if (param.type == OIIO::TypeFloat)
+             dictionary.insert(value_key, param.fdefault[0]);
+-        else if (param.type == OSL::TypeDesc::TypeString)
++        else if (param.type == OIIO::TypeString)
+             dictionary.insert(value_key, param.sdefault[0].c_str());
+         else if (
+-            param.type == OSL::TypeDesc::TypeColor  ||
+-            param.type == OSL::TypeDesc::TypeNormal ||
+-            param.type == OSL::TypeDesc::TypePoint  ||
+-            param.type == OSL::TypeDesc::TypeVector)
++            param.type == OIIO::TypeColor  ||
++            param.type == OIIO::TypeNormal ||
++            param.type == OIIO::TypePoint  ||
++            param.type == OIIO::TypeVector)
+         {
+             dictionary.insert(
+                 value_key,
+@@ -123,7 +123,7 @@ struct ShaderQuery::Impl
+         if (is_array)
+         {
+             // Special float[2] cases (maya, UVs, etc).
+-            if (param.type.arraylen == 2 && param.type.elementtype() == OSL::TypeDesc::TypeFloat)
++            if (param.type.arraylen == 2 && param.type.elementtype() == OIIO::TypeFloat)
+             {
+                 dictionary.insert(
+                     "default",
+diff --git a/src/thirdparty/bcd/bcd/ImageIO.cpp b/src/thirdparty/bcd/bcd/ImageIO.cpp
+index afb350ca6..62721f39b 100644
+--- a/src/thirdparty/bcd/bcd/ImageIO.cpp
++++ b/src/thirdparty/bcd/bcd/ImageIO.cpp
+@@ -13,6 +13,7 @@
+ // BCD headers.
+ #include "DeepImage.h"
+ #include "ImageIO.h"
++#include "ImfHeader.h"
+ 
+ // OpenEXR headers.
+ #if defined _MSC_VER

@@ -1,0 +1,16 @@
+diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
+--- a/src/cmake/compiler.cmake
++++ b/src/cmake/compiler.cmake
+@@ -226,7 +226,11 @@
+     if (CMAKE_COMPILER_IS_INTELCLANG)
+         # Intel icx is fast-math by default, so if we don't want that, we need
+         # to explicitly disable it.
+-        add_compile_options ("-fno-fast-math")
++        if (MSVC)
++            add_compile_options ("/fp:precise")
++        else ()
++            add_compile_options ("-fno-fast-math")
++        endif ()
+     endif ()
+ endif ()
+ 

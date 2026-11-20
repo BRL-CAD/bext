@@ -1,0 +1,139 @@
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -2433,6 +2433,9 @@ target_include_directories(appleseed SYSTEM PRIVATE ${HAPPLY_INCLUDE_DIR})
+ 
+ target_link_libraries(appleseed ${APPLESEED_LIBS})
+ 
++# MinGW does not honor the stack walker's #pragma comment(lib, "version.lib").
++target_link_libraries(appleseed version)
++
+ #--------------------------------------------------------------------------------------------------
+ # Pre-build commands.
+ #--------------------------------------------------------------------------------------------------
+diff --git a/src/appleseed/foundation/platform/win32stackwalker.cpp b/src/appleseed/foundation/platform/win32stackwalker.cpp
+--- a/src/appleseed/foundation/platform/win32stackwalker.cpp
++++ b/src/appleseed/foundation/platform/win32stackwalker.cpp
+@@ -236,5 +236,5 @@
+ #if _MSC_VER < 1400
+ #define strcpy_s(dst, len, src) strcpy(dst, src)
+-#define strncpy_s(dst, len, src, maxLen) strncpy(dst, len, src)
++#define strncpy_s(dst, len, src, maxLen) strncpy(dst, src, maxLen)
+ #define strcat_s(dst, len, src) strcat(dst, src)
+ #define _snprintf_s _snprintf
+diff --git a/src/appleseed/foundation/platform/sharedlibrary.cpp b/src/appleseed/foundation/platform/sharedlibrary.cpp
+--- a/src/appleseed/foundation/platform/sharedlibrary.cpp
++++ b/src/appleseed/foundation/platform/sharedlibrary.cpp
+@@ -122,7 +122,7 @@
+ void* SharedLibrary::get_symbol(const char* name, const bool no_throw) const
+ {
+ #ifdef _WIN32
+-    void* symbol = GetProcAddress(m_handle, name);
++    void* symbol = reinterpret_cast<void*>(GetProcAddress(m_handle, name));
+ #else
+     void* symbol = dlsym(m_handle, name);
+ #endif
+diff --git a/src/appleseed/foundation/platform/defaulttimers.cpp b/src/appleseed/foundation/platform/defaulttimers.cpp
+--- a/src/appleseed/foundation/platform/defaulttimers.cpp
++++ b/src/appleseed/foundation/platform/defaulttimers.cpp
+@@ -112,7 +112,7 @@
+ std::uint64_t DefaultWallclockTimer::frequency()
+ {
+ // POSIX platforms.
+-#if defined __GNUC__
++#if defined(__GNUC__) && !defined(_WIN32)
+ 
+     return 1000000;
+ 
+@@ -132,7 +132,7 @@
+ std::uint64_t DefaultWallclockTimer::read()
+ {
+ // POSIX platforms.
+-#if defined __GNUC__
++#if defined(__GNUC__) && !defined(_WIN32)
+ 
+     timeval tv;
+     gettimeofday(&tv, nullptr);
+diff --git a/src/appleseed/foundation/platform/thread.cpp b/src/appleseed/foundation/platform/thread.cpp
+--- a/src/appleseed/foundation/platform/thread.cpp
++++ b/src/appleseed/foundation/platform/thread.cpp
+@@ -42,6 +42,7 @@
+ // Standard headers.
+ #include <cassert>
+ #include <chrono>
++#include <string>
+ #include <thread>
+ 
+ // Platform headers.
+@@ -64,44 +65,22 @@
+ // Windows.
+ #if defined _WIN32
+ 
+-    //
+-    // Reference:
+-    //
+-    //   How to: Set a Thread Name in Native Code
+-    //   https://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
+-    //
+-    // Also:
+-    //
+-    //   Issue 2692213003: Use Windows 10 thread naming API, SetThreadDescription (Closed)
+-    //   https://codereview.chromium.org/2692213003
+-    //
+-
+-#pragma pack(push, 8)
+-    struct ThreadNameInfo
+-    {
+-       DWORD    dwType;         // must be 0x1000
+-       LPCSTR   szName;         // pointer to name (in user address space)
+-       DWORD    dwThreadID;     // thread ID (-1 = caller thread)
+-       DWORD    dwFlags;        // reserved for future use, must be zero
+-    };
+-#pragma pack(pop)
+-
+-    void set_current_thread_name(const char* name)
+-    {
+-        __try
+-        {
+-            ThreadNameInfo info;
+-            info.dwType = 0x1000;
+-            info.szName = name;
+-            info.dwThreadID = -1;
+-            info.dwFlags = 0;
+-
+-            const DWORD VisualStudioException = 0x406D1388;
+-            RaiseException(VisualStudioException, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+-        }
+-        __except (EXCEPTION_EXECUTE_HANDLER)
+-        {
+-        }
++    void set_current_thread_name(const char* name)
++    {
++        // Resolve the Windows 10 API at runtime so older releases still load.
++        using SetDescription = HRESULT (WINAPI*)(HANDLE, PCWSTR);
++        static const auto set_description = reinterpret_cast<SetDescription>(
++            GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription"));
++        if (!set_description)
++            return;
++
++        const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name, -1, nullptr, 0);
++        if (length <= 0)
++            return;
++
++        std::wstring wide_name(length, L'\0');
++        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name, -1, wide_name.data(), length) > 0)
++            set_description(GetCurrentThread(), wide_name.c_str());
+     }
+ 
+ // macOS.
+diff --git a/src/appleseed.cli/CMakeLists.txt b/src/appleseed.cli/CMakeLists.txt
+--- a/src/appleseed.cli/CMakeLists.txt
++++ b/src/appleseed.cli/CMakeLists.txt
+@@ -94,6 +94,6 @@
+ target_link_libraries (appleseed.cli
+ 	Threads::Threads
+-	appleseed
+ 	appleseed.common
++	appleseed
+ 	)
+ 

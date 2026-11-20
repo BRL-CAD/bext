@@ -1,0 +1,8 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -168,3 +168,3 @@
+ set(LIB_INCLUDE_DIRS
+     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}>)
++    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)

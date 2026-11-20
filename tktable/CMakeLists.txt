@@ -94,7 +94,9 @@ if (ENABLE_TKTABLE)
     STEP_TARGETS install
     )
 
-  if (NOT MSVC)
+  if (MSVC)
+    ExternalProject_Add_StepDependencies(TKTABLE_BLD build "${CMAKE_CURRENT_BINARY_DIR}/tktable_msvc.cmake")
+  else ()
     ExternalProject_Add_StepDependencies(TKTABLE_BLD configure
       "${CMAKE_CURRENT_BINARY_DIR}/tktable_configure.cmake" ${BEXT_TCL_CONFIGURE_ENV})
   endif ()

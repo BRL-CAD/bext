@@ -42,17 +42,27 @@ include("${CMAKE_CURRENT_LIST_DIR}/BextGit.cmake")
 # used to cut down on boilerplate code
 ###############################################################################
 
+function(bext_dependency_target output name)
+  set(target "${name}_BLD")
+  # The Windows Flex project installs both generators.
+  if (WIN32 AND name STREQUAL "BISON" AND NOT TARGET "${target}")
+    set(target FLEX_BLD)
+  endif ()
+  set(${output} "${target}" PARENT_SCOPE)
+endfunction()
+
 macro(TargetVars roots)
   foreach(root ${${roots}})
     if (NOT ${root}_ADDED)
       message(FATAL_ERROR "${root} is listed as a dependency but is not yet added - fix project ordering in top level CMakeLists.txt file")
     endif (NOT ${root}_ADDED)
-    if (TARGET ${root}_BLD)
+    bext_dependency_target(_bext_dependency_target "${root}")
+    if (TARGET "${_bext_dependency_target}")
       set(${root}_TARGET 1)
       # Also set the TARGET var in the parent scope - may need it in other
       # build logic besides the current directory.
       set(${root}_TARGET 1 PARENT_SCOPE)
-    endif (TARGET ${root}_BLD)
+    endif ()
   endforeach(root ${${roots}})
 endmacro(TargetVars root)
 
@@ -89,9 +99,10 @@ endmacro(RegisterDeps)
 
 macro(TargetInstallDeps croot roots)
   foreach(root ${${roots}})
-    if (TARGET ${root}_BLD)
-      ExternalProject_Add_stepdependencies(${croot}_BLD configure ${root}_BLD-install)
-    endif (TARGET ${root}_BLD)
+    bext_dependency_target(_bext_dependency_target "${root}")
+    if (TARGET "${_bext_dependency_target}")
+      ExternalProject_Add_stepdependencies(${croot}_BLD configure ${_bext_dependency_target}-install)
+    endif ()
   endforeach(root ${${root}})
 endmacro(TargetInstallDeps root)
 
@@ -268,7 +279,7 @@ macro(bext_enable pname)
       # path that simply turns on the local build below, and the configure
       # summary already reports which packages are built locally vs. found on
       # the system. QUIET avoids verbose warnings for missing system packages.
-      find_package(${pname} QUIET)
+      find_package(${pname} ${ARGN} QUIET)
 
       if (NOT ${pname}_FOUND AND NOT DEFINED ENABLE_${upname})
         set(ENABLE_${upname} "ON" CACHE BOOL "Enable ${pname} build")

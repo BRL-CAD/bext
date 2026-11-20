@@ -75,7 +75,15 @@ function(ExternalProject_Add name)
     foreach(step BUILD INSTALL)
       string(TOLOWER "${step}" lower_step)
       if (NOT has_${lower_step}_command)
-        string(APPEND ep_call " ${step}_COMMAND [==[${CMAKE_COMMAND}]==] --build <BINARY_DIR> --parallel ${BEXT_BUILD_JOBS}")
+        string(APPEND ep_call " ${step}_COMMAND")
+        if (CMAKE_HOST_WIN32 AND WIN32 AND CMAKE_BUNDLE_INSTALL_PREFIX)
+          # Tools running from a dependency's build directory may load DLLs
+          # already installed by another dependency.
+          string(APPEND ep_call
+            " [==[${CMAKE_COMMAND}]==] -E env --modify"
+            " [==[PATH=path_list_prepend:${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}]==] --")
+        endif ()
+        string(APPEND ep_call " [==[${CMAKE_COMMAND}]==] --build <BINARY_DIR> --parallel ${BEXT_BUILD_JOBS}")
         if (CMAKE_CONFIGURATION_TYPES)
           string(APPEND ep_call " --config [==[$<CONFIG>]==]")
         endif ()
