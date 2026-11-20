@@ -1,0 +1,162 @@
+From 0426d1b3b47f8e727165b2fa7e9299e03c4c78e1 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 05:20:19 +0000
+Subject: [PATCH] fix(testrender): support OBJ file reads on FreeBSD
+
+Reuse the POSIX reader with pread and advisory posix_fadvise calls on
+FreeBSD. Keep the Linux read-ahead and large-offset functions unchanged.
+
+Add a parser unit test for missing files, partial final blocks, and
+sequential and parallel reads. The new regression and existing OSL unit
+tests pass. The parser test also passes Valgrind without memory errors
+or lost allocations.
+
+diff --git a/src/testrender/CMakeLists.txt b/src/testrender/CMakeLists.txt
+index 4e6e428b8a76d0cd125d862d039fef8a76a5736c..4595205d26161d55b0bcf9817e0cab699d413c5a 100644
+--- a/src/testrender/CMakeLists.txt
++++ b/src/testrender/CMakeLists.txt
+@@ -91,4 +91,9 @@ endif ()
+ 
+ osl_optix_target (testrender)
+ 
++add_executable (rapidobj_test rapidobj_test.cpp)
++target_link_libraries (rapidobj_test PRIVATE OpenImageIO::OpenImageIO Threads::Threads)
++set_target_properties (rapidobj_test PROPERTIES FOLDER "Unit Tests")
++add_test (unit_rapidobj ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rapidobj_test)
++
+ install ( TARGETS testrender RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+diff --git a/src/testrender/rapidobj/rapidobj.hpp b/src/testrender/rapidobj/rapidobj.hpp
+index 225d0ef044e8696c510248444fa453290b59c407..717d2f81ec851537d9509685e1aa8ed26de3dbb3 100755
+--- a/src/testrender/rapidobj/rapidobj.hpp
++++ b/src/testrender/rapidobj/rapidobj.hpp
+@@ -43,7 +43,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ #include <variant>
+ #include <vector>
+ 
+-#ifdef __linux__
++#if defined(__linux__) || defined(__FreeBSD__)
+ 
+ #include <fcntl.h>
+ #include <sys/stat.h>
+@@ -4835,7 +4835,7 @@ struct Reader {
+ 
+ namespace sys {
+ 
+-#ifdef __linux__
++#if defined(__linux__) || defined(__FreeBSD__)
+ 
+ inline auto AlignedAllocate(size_t size, size_t alignment)
+ {
+@@ -4902,7 +4902,12 @@ struct FileReader : Reader {
+         m_size   = size;
+         m_buffer = buffer;
+ 
++#ifdef __linux__
+         readahead(m_fd, offset, size);
++#else
++        // Read-ahead is advisory; unsupported hints must not prevent reading.
++        (void)posix_fadvise(m_fd, static_cast<off_t>(offset), static_cast<off_t>(size), POSIX_FADV_WILLNEED);
++#endif
+ 
+         auto t2 = std::chrono::steady_clock::now();
+ 
+@@ -4915,7 +4920,11 @@ struct FileReader : Reader {
+     {
+         auto t1 = std::chrono::steady_clock::now();
+ 
++#ifdef __linux__
+         auto result = pread64(m_fd, m_buffer, m_size, m_offset);
++#else
++        auto result = pread(m_fd, m_buffer, m_size, static_cast<off_t>(m_offset));
++#endif
+ 
+         auto t2 = std::chrono::steady_clock::now();
+ 
+diff --git a/src/testrender/rapidobj_test.cpp b/src/testrender/rapidobj_test.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..d08dbb3a14f2827f88772250852beeb2df38e8af
+--- /dev/null
++++ b/src/testrender/rapidobj_test.cpp
+@@ -0,0 +1,82 @@
++// Copyright Contributors to the Open Shading Language project.
++// SPDX-License-Identifier: BSD-3-Clause
++// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
++
++#include "rapidobj/rapidobj.hpp"
++
++#include <OpenImageIO/filesystem.h>
++#include <OpenImageIO/unittest.h>
++
++#include <algorithm>
++#include <filesystem>
++#include <fstream>
++#include <string>
++#include <vector>
++
++
++namespace {
++
++void
++check_file_read(const std::filesystem::path& path, size_t minimum_bytes)
++{
++    std::string source = "v 0 0 0\nv 1 0 0\nv 0 1 0\n";
++    while (source.size() < minimum_bytes)
++        source += "# Padding to exercise file-reader block boundaries.\n";
++    // Also exercise a partial final block without a trailing newline.
++    source += "f 1 2 3";
++    {
++        std::ofstream output(path, std::ios::binary);
++        output << source;
++        OIIO_CHECK_ASSERT(output.good());
++        if (!output.good())
++            return;
++    }
++
++    const auto result = rapidobj::ParseFile(path);
++    OIIO_CHECK_ASSERT(!result.error);
++    if (result.error)
++        return;
++
++    const std::vector<float> positions { 0, 0, 0, 1, 0, 0, 0, 1, 0 };
++    OIIO_CHECK_ASSERT(std::equal(result.attributes.positions.begin(),
++                                 result.attributes.positions.end(),
++                                 positions.begin(), positions.end()));
++    OIIO_CHECK_EQUAL(result.shapes.size(), 1);
++    if (result.shapes.size() != 1)
++        return;
++
++    const auto& mesh = result.shapes.front().mesh;
++    OIIO_CHECK_EQUAL(mesh.num_face_vertices.size(), 1);
++    OIIO_CHECK_EQUAL(mesh.indices.size(), 3);
++    if (mesh.indices.size() == 3) {
++        for (size_t i = 0; i < mesh.indices.size(); ++i)
++            OIIO_CHECK_EQUAL(mesh.indices[i].position_index,
++                             static_cast<int>(i));
++    }
++}
++
++}  // namespace
++
++
++int
++main()
++{
++    const auto path    = std::filesystem::path(
++                             OIIO::Filesystem::temp_directory_path())
++                         / OIIO::Filesystem::unique_path("osl-obj-%%%%-%%%%.obj");
++    const auto missing = rapidobj::ParseFile(path);
++    OIIO_CHECK_ASSERT(missing.error);
++    OIIO_CHECK_ASSERT(missing.error.code
++                      == std::errc::no_such_file_or_directory);
++
++    // Cross the actual reader thresholds so both sequential and parallel
++    // reads remain covered if the vendored parser changes its block sizes.
++    for (const size_t minimum_bytes :
++         { size_t(0), rapidobj::detail::kBlockSize + 1,
++           rapidobj::detail::kSingleThreadCutoff + rapidobj::detail::kBlockSize
++               + 1 }) {
++        check_file_read(path, minimum_bytes);
++    }
++    OIIO_CHECK_ASSERT(std::filesystem::remove(path));
++    return unit_test_failures;
++}

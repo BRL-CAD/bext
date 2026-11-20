@@ -1,0 +1,284 @@
+diff --git a/src/ispc_version.h b/src/ispc_version.h
+--- a/src/ispc_version.h
++++ b/src/ispc_version.h
+@@ -21,8 +21,9 @@
+ #define ISPC_LLVM_21_0 210000
+ #define ISPC_LLVM_22_0 220000
+ #define ISPC_LLVM_23_0 230000
++#define ISPC_LLVM_23_1 230100
+ 
+ #define OLDEST_SUPPORTED_LLVM ISPC_LLVM_18_1
+-#define LATEST_SUPPORTED_LLVM ISPC_LLVM_23_0
++#define LATEST_SUPPORTED_LLVM ISPC_LLVM_23_1
+ 
+ #ifdef __ispc__xstr
+@@ -35,7 +36,7 @@
+     __ispc__xstr(LLVM_VERSION_MAJOR) "." __ispc__xstr(LLVM_VERSION_MINOR) "." __ispc__xstr(LLVM_VERSION_PATCH)
+ 
+ #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
+-#error "Only LLVM 18.1 - 22.1 and 23.0 development branch are supported"
++#error "Only LLVM 18.1 through LLVM 23.1 are supported"
+ #endif
+ 
+ #define ISPC_VERSION_STRING                                                                                            \
+diff --git a/src/opt.cpp b/src/opt.cpp
+--- a/src/opt.cpp
++++ b/src/opt.cpp
+@@ -312,9 +312,15 @@
+     llvm::SimplifyCFGOptions simplifyCFGopt;
+     simplifyCFGopt.HoistCommonInsts = true;
+ 
++#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_1
++    // ISPC opt level 1 uses the size-optimized inlining threshold.
++    llvm::InlineParams IP = optLevel == 1 ? llvm::getInlineParams(llvm::InlineConstants::OptSizeThreshold)
++                                         : llvm::getInlineParamsFromOptLevel(optLevel);
++#else
+     // SizeOptLevel of 1 corresponds to the -Os flag and 2 corresponds to the -Oz flag.
+     const unsigned SizeOptLevel = (optLevel == 1) ? 1 : 0;
+     llvm::InlineParams IP = llvm::getInlineParams(optLevel, SizeOptLevel);
++#endif
+     if (optLevel == 0) {
+         //  This is more or less the minimum set of optimizations that we
+         //  need to do to generate code that will actually run.  (We can't
+diff --git a/src/opt/LowerAMXBuiltinsPass.cpp b/src/opt/LowerAMXBuiltinsPass.cpp
+--- a/src/opt/LowerAMXBuiltinsPass.cpp
++++ b/src/opt/LowerAMXBuiltinsPass.cpp
+@@ -114,6 +114,17 @@
+     return ConstIntV;
+ }
+ 
++static llvm::CallInst *lCreateAMXIntrinsic(llvm::IRBuilder<> &builder, llvm::Intrinsic::ID id,
++                                          llvm::ArrayRef<llvm::Value *> args) {
++    auto *returnType = llvm::Type::getVoidTy(builder.getContext());
++#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_1
++    // AMX operations have side effects and the caller needs a call instruction.
++    return builder.CreateIntrinsicWithoutFolding(returnType, id, args);
++#else
++    return builder.CreateIntrinsic(returnType, id, args);
++#endif
++}
++
+ static llvm::CallInst *lLowerAMXTileZeroBuiltin(llvm::CallInst *CI) {
+     llvm::IRBuilder<> builder(CI);
+     Assert(CI->arg_size() == 1);
+@@ -122,7 +133,7 @@
+ 
+     if (auto *CTile = lValidateAMXTileArgument(CI, TileOp)) {
+         llvm::SmallVector<llvm::Value *, 1> Ops({CTile});
+-        return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), llvm::Intrinsic::x86_tilezero, Ops);
++        return lCreateAMXIntrinsic(builder, llvm::Intrinsic::x86_tilezero, Ops);
+     } else {
+         return nullptr;
+     }
+@@ -150,7 +161,7 @@
+     }
+ 
+     llvm::SmallVector<llvm::Value *, 3> Ops({CTile, CI->getArgOperand(1), CI->getArgOperand(2)});
+-    return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), LoadStoreID, Ops);
++    return lCreateAMXIntrinsic(builder, LoadStoreID, Ops);
+ }
+ 
+ static llvm::CallInst *lLowerAMXDotProductBuiltin(llvm::CallInst *CI) {
+@@ -184,7 +195,7 @@
+     }
+ 
+     llvm::SmallVector<llvm::Value *, 3> Ops({DstTile, Src1Tile, Src2Tile});
+-    return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), DotProdID, Ops);
++    return lCreateAMXIntrinsic(builder, DotProdID, Ops);
+ }
+ 
+ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
+diff --git a/src/ispc.cpp b/src/ispc.cpp
+--- a/src/ispc.cpp
++++ b/src/ispc.cpp
+@@ -152,9 +152,15 @@
+                 Error(SourcePos(), "Invalid CPU name for AArch64 architecture: %s", cpu.c_str());
+                 return {};
+             }
++#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_1
++            llvm::AArch64::ExtensionSet extensions;
++            extensions.addCPUDefaults(*cpuInfo);
++            llvm::AArch64::getExtensionFeatures(extensions.Enabled, targetFeatures);
++#else
+             using CpuExtensionsType = llvm::AArch64::ExtensionBitset;
+             CpuExtensionsType cpuExtensions = cpuInfo->getImpliedExtensions();
+             llvm::AArch64::getExtensionFeatures(cpuExtensions, targetFeatures);
++#endif
+         } else {
+             UNREACHABLE();
+         }
+diff --git a/src/intrinsics.cpp b/src/intrinsics.cpp
+--- a/src/intrinsics.cpp
++++ b/src/intrinsics.cpp
+@@ -421,6 +421,9 @@
+ }
+ 
+ bool lIsAnyArgumentKind(const IITDesc &D) {
++#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_1
++    return D.Kind == IITDesc::Overloaded;
++#else
+     if (D.Kind != IITDesc::Argument) {
+         return false;
+     }
+@@ -428,8 +431,10 @@
+     unsigned Kind = D.getArgumentKind();
+     return Kind == IITDesc::AK_Any || Kind == IITDesc::AK_AnyInteger || Kind == IITDesc::AK_AnyFloat ||
+            Kind == IITDesc::AK_AnyVector || Kind == IITDesc::AK_AnyPointer;
+-}
+-
++#endif
++}
++
++#if ISPC_LLVM_VERSION < ISPC_LLVM_23_1
+ bool lIsArgDesc(const IITDesc &D) {
+     bool IsArgDescriptor = D.Kind == IITDesc::Argument || D.Kind == IITDesc::ExtendArgument ||
+                            D.Kind == IITDesc::TruncArgument ||
+@@ -441,8 +446,13 @@
+                            D.Kind == IITDesc::VecOfBitcastsToInt;
+     return IsArgDescriptor;
+ }
++#endif
+ 
+ bool lIsAliased(const IITDesc &L, const IITDesc &R) {
++#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_1
++    return (R.Kind == IITDesc::Match || R.Kind == IITDesc::OneNthEltsVec) &&
++           R.getOverloadIndex() == L.getOverloadIndex();
++#else
+ #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+     if (R.Kind == IITDesc::OneNthEltsVecArgument) {
+         return R.getArgumentNumber() == L.getArgumentNumber();
+@@ -451,14 +461,20 @@
+     // Check if R is argument with MatchType and has the same argument number as L
+     return lIsArgDesc(R) && R.getArgumentKind() == IITDesc::AK_MatchType && R.Kind == IITDesc::Argument &&
+            R.getArgumentNumber() == L.getArgumentNumber();
++#endif
+ }
+ 
+ size_t lNextIITDescs(const IITDesc &D) {
+     switch (D.Kind) {
+     case IITDesc::Struct:
++#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_1
++        return D.StructNumElements + 1;
++    case IITDesc::SameVecWidth:
++#else
+         return D.Struct_NumElements + 1;
++    case IITDesc::SameVecWidthArgument:
++#endif
+     case IITDesc::Vector:
+-    case IITDesc::SameVecWidthArgument:
+         return 2;
+     default:
+         return 1;
+diff --git a/src/llvmutil.cpp b/src/llvmutil.cpp
+--- a/src/llvmutil.cpp
++++ b/src/llvmutil.cpp
+@@ -11,6 +11,7 @@
+ #include "llvmutil.h"
+ #include "type.h"
+ 
++#include <algorithm>
+ #include <cstdlib>
+ #include <map>
+ #include <set>
+@@ -18,6 +19,7 @@
+ 
+ #include <llvm/Analysis/ValueTracking.h>
+ #include <llvm/IR/BasicBlock.h>
++#include <llvm/IR/Constants.h>
+ #include <llvm/IR/Instructions.h>
+ #include <llvm/IR/Module.h>
+ 
+@@ -788,6 +790,15 @@
+         return true;
+     }
+ 
++    // LLVM can represent an integer vector splat as a ConstantInt.
++    if (auto *splat = llvm::dyn_cast<llvm::ConstantInt>(v)) {
++        if (splat->getBitWidth() > 64) {
++            return false;
++        }
++        std::fill_n(ret, *nElts, splat->getZExtValue());
++        return true;
++    }
++
+     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
+     if (cv == nullptr) {
+         return false;
+@@ -1048,30 +1059,15 @@
+         return true;
+     }
+ 
+-    if (llvm::isa<llvm::ConstantAggregateZero>(v)) {
+-        if (splatValue) {
+-            llvm::ConstantAggregateZero *caz = llvm::dyn_cast<llvm::ConstantAggregateZero>(v);
+-            *splatValue = caz->getSequentialElement();
+-        }
+-        return true;
+-    }
+-
+-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
+-    if (cv != nullptr) {
+-        llvm::Value *splat = cv->getSplatValue();
++    if (auto *constant = llvm::dyn_cast<llvm::Constant>(v)) {
++        if (!constant->getType()->isVectorTy() || llvm::isa<llvm::UndefValue>(constant)) {
++            return false;
++        }
++        llvm::Constant *splat = constant->getSplatValue();
+         if (splat != nullptr && splatValue) {
+             *splatValue = splat;
+         }
+-        return (splat != nullptr);
+-    }
+-
+-    llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
+-    if (cdv != nullptr) {
+-        llvm::Value *splat = cdv->getSplatValue();
+-        if (splat != nullptr && splatValue) {
+-            *splatValue = splat;
+-        }
+-        return (splat != nullptr);
++        return splat != nullptr;
+     }
+ 
+     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
+@@ -1124,13 +1120,6 @@
+         seenPhis.pop_back();
+         return true;
+     }
+-
+-    if (llvm::isa<llvm::UndefValue>(v)) {
+-        // ?
+-        return false;
+-    }
+-
+-    Assert(!llvm::isa<llvm::Constant>(v));
+ 
+     if (llvm::isa<llvm::CallInst>(v) || llvm::isa<llvm::LoadInst>(v) || !llvm::isa<llvm::Instruction>(v)) {
+         return false;
+@@ -1528,16 +1517,8 @@
+     llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(v->getType());
+     Assert(vt != nullptr);
+ 
+-    // First, handle various constant types; do the extraction manually, as
+-    // appropriate.
+-    if (llvm::isa<llvm::ConstantAggregateZero>(v) == true) {
+-        return llvm::Constant::getNullValue(vt->getElementType());
+-    }
+-    if (llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v)) {
+-        return cv->getOperand(0);
+-    }
+-    if (llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v)) {
+-        return cdv->getElementAsConstant(0);
++    if (auto *constant = llvm::dyn_cast<llvm::Constant>(v)) {
++        return llvm::ConstantExpr::getExtractElement(constant, LLVMInt32(0));
+     }
+ 
+     // Function argument value is neither constant nor instruction result, so generate
+@@ -1553,7 +1534,6 @@
+ 
+     // Otherwise, all that we should have at this point is an instruction
+     // of some sort
+-    Assert(llvm::isa<llvm::Constant>(v) == false);
+     Assert(llvm::isa<llvm::Instruction>(v) == true);
+ 
+     std::string newName = v->getName().str() + std::string(".elt0");

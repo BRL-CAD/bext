@@ -3,17 +3,28 @@ bext_enable(RKCOMMON)
 
 if (ENABLE_RKCOMMON)
 
-  git_submodule_init(rkcommon CMakeLists.txt)
+  set(RKCOMMON_PATCH_FILES rkcommon_win32_symbol.patch)
+  if (MINGW)
+    list(APPEND RKCOMMON_PATCH_FILES
+      rkcommon_mingw_resource.patch
+      rkcommon_mingw_math_constants.patch
+      rkcommon_mingw_dll_methods.patch)
+  endif ()
+  git_submodule_init(rkcommon CMakeLists.txt
+    PATCH_FILES ${RKCOMMON_PATCH_FILES}
+    PATCH_COMMAND_VAR RKCOMMON_PATCH_COMMAND)
 
   RegisterDeps(RKCOMMON)
 
-    ExternalProject_Add(RKCOMMON_BLD
+  ExternalProject_Add(RKCOMMON_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/rkcommon"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
-    #PATCH_COMMAND ${PATCH_EXECUTABLE};-E;-p1;${PATCH_OPTIONS};-i;${CMAKE_CURRENT_SOURCE_DIR}/rkcommon.patch
+    PATCH_COMMAND ${RKCOMMON_PATCH_COMMAND}
     CMAKE_ARGS
     -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
     ${BUILD_TYPE_SPECIFIER}
+    # The oneTBB recipe owns the bundled runtime DLLs.
+    -DINSTALL_DEPS=OFF
     $<$<BOOL:${ONETBB_TARGET}>:-DRKCOMMON_TBB_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
     $<$<BOOL:${ONETBB_TARGET}>:-DTBB_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DBIN_DIR=${BIN_DIR}

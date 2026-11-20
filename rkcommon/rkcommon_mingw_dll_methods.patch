@@ -1,0 +1,66 @@
+diff --git a/rkcommon/os/FileName.h b/rkcommon/os/FileName.h
+--- a/rkcommon/os/FileName.h
++++ b/rkcommon/os/FileName.h
+@@ -24,22 +24,13 @@
+     RKCOMMON_INTERFACE static FileName homeFolder();
+ 
+     /*! auto convert into a string */
+-    RKCOMMON_INTERFACE operator std::string() const
+-    {
+-      return filename;
+-    }
++    RKCOMMON_INTERFACE operator std::string() const;
+ 
+     /*! returns a string of the filename */
+-    RKCOMMON_INTERFACE const std::string &str() const
+-    {
+-      return filename;
+-    }
++    RKCOMMON_INTERFACE const std::string &str() const;
+ 
+     /*! returns a c-string of the filename */
+-    RKCOMMON_INTERFACE const char *c_str() const
+-    {
+-      return filename.c_str();
+-    }
++    RKCOMMON_INTERFACE const char *c_str() const;
+ 
+     /*! returns the canonical absolute path to filename */
+     /*! pre-C++17 implementation of std::filesystem::canonical */
+diff --git a/rkcommon/os/FileName.cpp b/rkcommon/os/FileName.cpp
+--- a/rkcommon/os/FileName.cpp
++++ b/rkcommon/os/FileName.cpp
+@@ -47,6 +47,21 @@
+     if (home)
+       return home;
+     return "";
++  }
++
++  FileName::operator std::string() const
++  {
++    return filename;
++  }
++
++  const std::string &FileName::str() const
++  {
++    return filename;
++  }
++
++  const char *FileName::c_str() const
++  {
++    return filename.c_str();
+   }
+ 
+   /*! returns the canonical absolute path to filename */
+diff --git a/rkcommon/common.h b/rkcommon/common.h
+--- a/rkcommon/common.h
++++ b/rkcommon/common.h
+@@ -36,7 +36,7 @@ typedef int ssize_t;
+ #define RKCOMMON_INTERFACE
+ #endif
+ 
+-#ifdef _WIN32
++#ifdef _MSC_VER
+ #define __PRETTY_FUNCTION__ __FUNCSIG__
+ #endif
+ 

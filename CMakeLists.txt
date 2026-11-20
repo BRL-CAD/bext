@@ -238,8 +238,8 @@ endif (NOT isMultiConfig)
 # With MSVC, some non-CMake subbuilds need the vcvars bat file to set up their
 # environment.  Always reinitialize the generated wrappers: a parent shell such
 # as Git Bash can reorder PATH while leaving Visual Studio's environment markers
-# intact.  The wrappers also put the selected compiler's directory first so a
-# POSIX utility named link cannot shadow MSVC's link.exe.
+# intact.  The wrappers put Visual C++'s tools first so a POSIX utility named
+# link cannot shadow the Windows linker.
 if(MSVC)
 
   if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -249,6 +249,13 @@ if(MSVC)
   endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
 
   get_filename_component(BEXT_MSVC_COMPILER_BIN_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+  if(NOT EXISTS "${BEXT_MSVC_COMPILER_BIN_DIR}/cl.exe")
+    # An MSVC-compatible compiler can live outside Visual Studio. Find
+    # the Visual C++ tools that supply nmake, link.exe, and vcvars.
+    get_filename_component(_bext_msvc_linker_dir "${CMAKE_LINKER}" DIRECTORY)
+    find_program(_bext_msvc_cl NAMES cl HINTS "${_bext_msvc_linker_dir}" NO_CACHE REQUIRED)
+    get_filename_component(BEXT_MSVC_COMPILER_BIN_DIR "${_bext_msvc_cl}" DIRECTORY)
+  endif()
   set(COMPILER_DIR "${BEXT_MSVC_COMPILER_BIN_DIR}")
   get_filename_component(COMPILER_ROOT "${COMPILER_DIR}" NAME)
   set(VCVARS_BAT "${COMPILER_DIR}/vcvars${COMPILER_ROOT}.bat")
@@ -268,6 +275,17 @@ if(MSVC)
       message(FATAL_ERROR "Could not find vcvars bat file in ${COMPILER_DIR}")
     endif(NOT EXISTS "${VCVARS_BAT}")
   endif(NOT EXISTS "${VCVARS_BAT}")
+
+  set(BEXT_MSVC_NMAKE_PATH "${BEXT_MSVC_COMPILER_BIN_DIR}")
+  set(BEXT_MSVC_NMAKE_COMPILER_ARG "")
+  if(CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM")
+    # Use Intel's compiler in the Tcl-family makefiles while keeping the
+    # Visual C++ SDK, linker, and resource tools on PATH.
+    get_filename_component(_bext_nmake_cc_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+    get_filename_component(_bext_nmake_cc "${CMAKE_C_COMPILER}" NAME)
+    string(APPEND BEXT_MSVC_NMAKE_PATH ";${_bext_nmake_cc_dir}")
+    set(BEXT_MSVC_NMAKE_COMPILER_ARG " CC=${_bext_nmake_cc}")
+  endif()
 
 endif(MSVC)
 
@@ -439,7 +457,7 @@ add_project(llvm GROUPS "APPLESEED;OSPRAY")
 
 # zstd - fast lossless compression library
 # https://github.com/facebook/zstd
-add_project(zstd GROUPS "APPLESEED;OSPRAY")
+add_project(zstd GROUPS "APPLESEED;OSPRAY;BRLCAD")
 
 # minizip-ng - zip manipulation library written in C
 # https://github.com/zlib-ng/minizip-ng
@@ -451,7 +469,7 @@ add_project(lz4 GROUPS "APPLESEED")
 
 # libdeflate fast, whole-buffer DEFLATE-based compression
 # https://github.com/ebiggers/libdeflate
-add_project(deflate GROUPS "APPLESEED")
+add_project(deflate GROUPS "APPLESEED;BRLCAD")
 
 # fmt  - formatting library providing an alternative to C++ iostreams
 # https://github.com/fmtlib/fmt
@@ -482,10 +500,9 @@ add_project(icu GROUPS "APPLESEED")
 # https://xerces.apache.org/xerces-c/
 add_project(xerces-c GROUPS "APPLESEED")
 
-# Boost - C++ libraries
-# https://www.boost.org
-# https://github.com/boostorg/boost
-add_project(boost GROUPS "APPLESEED")
+# PCRE2 - Perl-compatible regular expressions
+# https://github.com/BRL-CAD/pcre2
+add_project(pcre2 GROUPS "APPLESEED")
 
 # netpbm library - support for pnm,ppm,pbm, etc. image files
 # http://netpbm.sourceforge.net/
@@ -499,15 +516,23 @@ add_project(jpeg GROUPS "APPLESEED;BRLCAD;GDAL")
 # http://www.libpng.org/pub/png/libpng.html
 add_project(png GROUPS "APPLESEED;BRLCAD;TCL")
 
+# struetype - bounded font parsing and rasterization
+# https://github.com/BRL-CAD/struetype
+add_project(struetype GROUPS "APPLESEED;BRLCAD")
+
 # libtiff - Tag Image File Format (TIFF) support
 # https://libtiff.gitlab.io/libtiff/
 # https://gitlab.com/libtiff/libtiff
 add_project(tiff GROUPS "APPLESEED;GDAL")
 
+# Imath - math types shared by the image and shading libraries
+# https://github.com/AcademySoftwareFoundation/Imath
+add_project(imath GROUPS "APPLESEED;BRLCAD")
+
 # OpenEXR - EXR image storage format
 # https://openexr.com/
 # https://github.com/AcademySoftwareFoundation/openexr
-add_project(openexr GROUPS "APPLESEED")
+add_project(openexr GROUPS "APPLESEED;BRLCAD")
 
 # OpenColorIO - color management
 # https://opencolorio.org
@@ -516,6 +541,14 @@ add_project(openexr GROUPS "APPLESEED")
 # is a useful reference for what versions to expect elements
 # of the rendering pipeline software stack to use/require
 add_project(opencolorio GROUPS "APPLESEED")
+
+# robin-map - hash containers required by OpenImageIO
+# https://github.com/BRL-CAD/robin-map
+add_project(robin-map GROUPS "APPLESEED")
+
+# oneTBB - Threading Building Blocks
+# https://github.com/oneapi-src/oneTBB
+add_project(onetbb GROUPS "APPLESEED;OSPRAY;BRLCAD")
 
 # OpenImageIO - reading and writing images, aimed at VFX studios
 # https://github.com/OpenImageIO/oiio
@@ -532,10 +565,6 @@ add_project(lmdb GROUPS "BRLCAD")
 # Eigen - linear algebra library
 # https://eigen.tuxfamily.org
 add_project(eigen GROUPS "BRLCAD;APPLESEED")
-
-# oneTBB - Threading Building Blocks
-# https://github.com/oneapi-src/oneTBB
-add_project(onetbb GROUPS "APPLESEED;OSPRAY;BRLCAD")
 
 # rkcommon -  C++ infrastructure and CMake utilities
 # https://github.com/ospray/rkcommon
@@ -655,6 +684,10 @@ add_project(tktable GROUPS "TCL")
 # Qt - cross-platform user interface/application development toolkit
 # https://download.qt.io/archive/qt
 add_project(qt GROUPS "QT")
+
+# Happly - PLY input used by Appleseed
+# https://github.com/BRL-CAD/happly
+add_project(happly GROUPS "APPLESEED")
 
 # Appleseed - global illumination rendering engine
 # https://github.com/appleseedhq/appleseed

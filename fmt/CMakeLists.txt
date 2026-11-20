@@ -3,13 +3,20 @@ bext_enable(FMT)
 
 if (ENABLE_FMT)
 
-  git_submodule_init(fmt CMakeLists.txt)
+  set(FMT_PATCH_ARGS)
+  if (MINGW)
+    list(APPEND FMT_PATCH_ARGS
+      PATCH_FILES fmt_mingw_optional_rtti.patch
+      PATCH_COMMAND_VAR FMT_PATCH_COMMAND)
+  endif ()
+  git_submodule_init(fmt CMakeLists.txt ${FMT_PATCH_ARGS})
 
   RegisterDeps(FMT)
 
   ExternalProject_Add(FMT_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/fmt"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${FMT_PATCH_COMMAND}
     CMAKE_ARGS
     -DFMT_DOC=OFF
     -DFMT_TEST=OFF

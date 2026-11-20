@@ -1,0 +1,222 @@
+Subject: [PATCH 08/50] Use standard optional caches and drop unused Wave
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 3f9e298dae1ecc15b7dd0599d8a0b5be9d17f6be
+Original-Commit: 0ee533a86125cf4f6b4a738f550a3f03e15618b6
+
+diff --git a/.github/workflows/build-pr-linux.yaml b/.github/workflows/build-pr-linux.yaml
+index 1d7486a9d..400cffde1 100644
+--- a/.github/workflows/build-pr-linux.yaml
++++ b/.github/workflows/build-pr-linux.yaml
+@@ -95,7 +95,6 @@ jobs:
+             -DBoost_REGEX_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_regex-gcc63-mt-1_61.so.1.61.0 \
+             -DBoost_SYSTEM_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_system-gcc63-mt-1_61.so.1.61.0 \
+             -DBoost_THREAD_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_thread-gcc63-mt-1_61.so.1.61.0 \
+-            -DBoost_WAVE_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_wave-gcc63-mt-1_61.so.1.61.0 \
+             -DEMBREE_INCLUDE_DIR=${{ env.APPLESEED_DEPENDENCIES }}/include \
+             -DEMBREE_LIBRARY=${{ env.APPLESEED_DEPENDENCIES }}/lib/libembree3.so \
+             -DLZ4_INCLUDE_DIR=${{ env.APPLESEED_DEPENDENCIES }}/include \
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 78ccaada3..83ce4e063 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -248,7 +248,7 @@ set(Boost_MULTITHREADED TRUE)
+ if (USE_STATIC_BOOST)
+   set(Boost_USE_STATIC_LIBS TRUE)
+ endif ()
+-find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time filesystem regex system thread wave)
++find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time filesystem regex system thread)
+ add_definitions(-DBOOST_FILESYSTEM_VERSION=3 -DBOOST_FILESYSTEM_NO_DEPRECATED -DBOOST_ALL_DYN_LINK)
+ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+ link_directories(${Boost_LIBRARY_DIRS})
+diff --git a/scripts/travis/build-linux.sh b/scripts/travis/build-linux.sh
+index c043ff306..9d976b2a2 100644
+--- a/scripts/travis/build-linux.sh
++++ b/scripts/travis/build-linux.sh
+@@ -95,7 +95,6 @@ cmake \
+     -DBoost_REGEX_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_regex-gcc63-mt-1_61.so.1.61.0 \
+     -DBoost_SYSTEM_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_system-gcc63-mt-1_61.so.1.61.0 \
+     -DBoost_THREAD_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_thread-gcc63-mt-1_61.so.1.61.0 \
+-    -DBoost_WAVE_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_wave-gcc63-mt-1_61.so.1.61.0 \
+     -DEMBREE_INCLUDE_DIR=$APPLESEED_DEPENDENCIES/include \
+     -DEMBREE_LIBRARY=$APPLESEED_DEPENDENCIES/lib/libembree3.so \
+     -DLZ4_INCLUDE_DIR=$APPLESEED_DEPENDENCIES/include \
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index 9134e2573..95011d517 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -1530,6 +1530,7 @@ set (renderer_meta_tests_sources
+     renderer/meta/tests/test_samplegeneratorjob.cpp
+     renderer/meta/tests/test_scene.cpp
+     renderer/meta/tests/test_shaderparamparser.cpp
++    renderer/meta/tests/test_shaderquery.cpp
+     renderer/meta/tests/test_shadingresult.cpp
+     renderer/meta/tests/test_sphericalcamera.cpp
+     renderer/meta/tests/test_sss.cpp
+diff --git a/src/appleseed/renderer/meta/tests/test_shaderquery.cpp b/src/appleseed/renderer/meta/tests/test_shaderquery.cpp
+new file mode 100644
+index 000000000..a6ece76a0
+--- /dev/null
++++ b/src/appleseed/renderer/meta/tests/test_shaderquery.cpp
+@@ -0,0 +1,106 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.renderer headers.
++#include "renderer/modeling/shadergroup/shaderquery.h"
++
++// appleseed.foundation headers.
++#include "foundation/containers/dictionary.h"
++#include "foundation/utility/test.h"
++
++// Standard headers.
++#include <string>
++
++using namespace foundation;
++using namespace renderer;
++
++TEST_SUITE(Renderer_Modeling_ShaderQuery)
++{
++    // These minimal OSO streams exercise queries without a runtime compiler
++    // or filesystem fixtures. They are not executed by the shading system.
++    const char FirstShader[] =
++        "OpenShadingLanguage 1.00\n"
++        "shader first %meta{string,help,\"first shader\"}\n"
++        "param float weight 1.25 %meta{string,label,\"First weight\"}\n"
++        "code ___main___\nend\n";
++
++    const char SecondShader[] =
++        "OpenShadingLanguage 1.00\n"
++        "shader second %meta{string,help,\"second shader\"}\n"
++        "param int count 7\n"
++        "param string filename \"image.tx\"\n"
++        "code ___main___\nend\n";
++
++    TEST_CASE(RepeatedQueriesReturnCachedDictionaries)
++    {
++        auto query = ShaderQueryFactory::create();
++        ASSERT_TRUE(query->open_bytecode(FirstShader));
++        ASSERT_EQ(1, query->get_param_count());
++        const Dictionary& parameter = query->get_param_info(0);
++        const Dictionary& metadata = query->get_metadata();
++
++        EXPECT_EQ("weight", std::string(parameter.get("name")));
++        EXPECT_EQ("First weight", std::string(parameter.dictionaries().get("metadata")
++            .dictionaries().get("label").get("value")));
++        EXPECT_EQ("first shader", std::string(metadata.dictionaries().get("help").get("value")));
++        EXPECT_EQ(&parameter, &query->get_param_info(0));
++        EXPECT_EQ(&metadata, &query->get_metadata());
++    }
++
++    TEST_CASE(ReopeningDiscardsCachedMetadataAndParameters)
++    {
++        auto query = ShaderQueryFactory::create();
++        ASSERT_TRUE(query->open_bytecode(FirstShader));
++        query->get_param_info(0);
++        query->get_metadata();
++
++        ASSERT_TRUE(query->open_bytecode(SecondShader));
++        ASSERT_EQ(2, query->get_param_count());
++        EXPECT_EQ("second", std::string(query->get_shader_name()));
++        EXPECT_EQ("count", std::string(query->get_param_info(0).get("name")));
++        EXPECT_EQ("filename", std::string(query->get_param_info(1).get("name")));
++        EXPECT_EQ("second shader", std::string(query->get_metadata()
++            .dictionaries().get("help").get("value")));
++    }
++
++    TEST_CASE(FailedOpenClearsCachedStateAndAllowsRecovery)
++    {
++        auto query = ShaderQueryFactory::create();
++        ASSERT_TRUE(query->open_bytecode(FirstShader));
++        query->get_param_info(0);
++        query->get_metadata();
++
++        EXPECT_FALSE(query->open_bytecode("not a compiled shader"));
++        EXPECT_EQ(0, query->get_param_count());
++        EXPECT_TRUE(query->get_metadata().empty());
++
++        ASSERT_TRUE(query->open_bytecode(SecondShader));
++        ASSERT_EQ(2, query->get_param_count());
++        EXPECT_EQ("count", std::string(query->get_param_info(0).get("name")));
++        EXPECT_EQ("second shader", std::string(query->get_metadata()
++            .dictionaries().get("help").get("value")));
++    }
++}
+diff --git a/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp b/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
+index 97dbcae99..c15bfdef9 100644
+--- a/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
++++ b/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
+@@ -41,10 +41,8 @@
+ #include "OSL/oslquery.h"
+ #include "foundation/platform/_endoslheaders.h"
+ 
+-// Boost headers.
+-#include "boost/optional.hpp"
+-
+ // Standard headers.
++#include <optional>
+ #include <string>
+ #include <vector>
+ 
+@@ -59,7 +57,7 @@ namespace renderer
+ 
+ struct ShaderQuery::Impl
+ {
+-    typedef boost::optional<Dictionary> OptionalDictionary;
++    typedef std::optional<Dictionary> OptionalDictionary;
+ 
+     std::string                              m_search_path;
+     OSL::OSLQuery                            m_query;
+@@ -178,7 +176,7 @@ struct ShaderQuery::Impl
+ 
+     void init()
+     {
+-        m_metadata = OptionalDictionary();
++        m_metadata.reset();
+         m_param_info.clear();
+ 
+         m_query = OSL::OSLQuery();
+@@ -250,7 +248,7 @@ const Dictionary& ShaderQuery::get_param_info(const size_t param_index) const
+             Impl::param_to_dict(*impl->m_query.getparam(param_index));
+     }
+ 
+-    return impl->m_param_info[param_index].get();
++    return *impl->m_param_info[param_index];
+ }
+ 
+ const Dictionary& ShaderQuery::get_metadata() const
+@@ -269,7 +267,7 @@ const Dictionary& ShaderQuery::get_metadata() const
+         impl->m_metadata = metadata;
+     }
+ 
+-    return impl->m_metadata.get();
++    return *impl->m_metadata;
+ }
+ 
+ 

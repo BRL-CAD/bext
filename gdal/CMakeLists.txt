@@ -12,6 +12,13 @@ if (ENABLE_GDAL)
     "${CMAKE_CURRENT_SOURCE_DIR}/gdal_setjmp.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/gdal_metadata.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/gdal_relocatable_data.patch")
+  if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "^(Clang|IntelLLVM)$")
+    list(APPEND GDAL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/gdal_clangcl_simd.patch")
+  elseif (MINGW)
+    list(APPEND GDAL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/gdal_mingw_cad_include.patch")
+  endif ()
   git_submodule_init(gdal CMakeLists.txt
     PATCH_FILES ${GDAL_PATCH_FILES}
     PATCH_COMMAND_VAR GDAL_PATCH_COMMAND)

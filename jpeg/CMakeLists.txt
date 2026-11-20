@@ -11,11 +11,19 @@ if (ENABLE_JPEG)
 
   RegisterDeps(JPEG)
 
+  set(JPEG_CRT_ARGS)
+  if (MSVC AND CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM")
+    # Keep the static and shared targets on the DLL CRT. The static CRT
+    # default for the tools otherwise mixes CRTs when icx-cl links a DLL.
+    set(JPEG_CRT_ARGS -DWITH_CRT_DLL=ON)
+  endif ()
+
   ExternalProject_Add(JPEG_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libjpeg-turbo"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
+    ${JPEG_CRT_ARGS}
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}

@@ -11,7 +11,15 @@ if (ENABLE_ISPC)
 
   set(ISPC_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/ispc.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ispc_cpu_intrinsics.patch")
+    "${CMAKE_CURRENT_SOURCE_DIR}/ispc_cpu_intrinsics.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ispc_llvm_23_1.patch")
+  if (MINGW)
+    list(APPEND ISPC_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/ispc_mingw.patch")
+  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    list(APPEND ISPC_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/ispc_msvc_clang_ast.patch")
+  endif ()
   git_submodule_init(ispc CMakeLists.txt
     PATCH_FILES ${ISPC_PATCH_FILES}
     PATCH_COMMAND_VAR ISPC_PATCH_COMMAND)
@@ -72,7 +80,7 @@ if (ENABLE_ISPC)
   endif ()
 
   set(ISPC_DEBUG_ARGS)
-  if (WIN32)
+  if (MSVC)
     # ispc is a build-time codegen tool we never need to debug, and (like LLVM)
     # it statically links the large bundled LLVM.  In a Debug config MSVC links
     # ispc.exe with the default "/debug /INCREMENTAL" and tries to emit a full

@@ -1,0 +1,74 @@
+diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
+--- a/src/cmake/compiler.cmake
++++ b/src/cmake/compiler.cmake
+@@ -393,6 +393,17 @@
+     endif ()
+ endif ()
+ 
++# Clang-based Windows drivers require real target features for the SSE
++# intrinsics. Only native MSVC and classic Intel use the /arch: mapping.
++set (_simd_msvc_arch OFF)
++if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_COMPILER_IS_INTEL)
++    set (_simd_msvc_arch ON)
++endif ()
++set (_simd_x86_flag "-m")
++if (MSVC AND NOT _simd_msvc_arch)
++    set (_simd_x86_flag "/clang:-m")
++endif ()
++
+ set (SIMD_COMPILE_FLAGS "")
+ message (STATUS "Compiling with SIMD level ${USE_SIMD}")
+ if (NOT USE_SIMD STREQUAL "")
+@@ -411,7 +422,7 @@
+                 if (_simd_skip_x86)
+                     continue ()
+                 endif ()
+-                if (MSVC OR CMAKE_COMPILER_IS_INTEL)
++                if (_simd_msvc_arch)
+                     # The SSE levels are handled unconditionally below. Here we
+                     # only need to track the highest /arch: level requested.
+                     if (feature STREQUAL "avx" AND _highest_msvc_arch LESS 1)
+@@ -424,7 +435,7 @@
+                         set(_highest_msvc_arch 3)
+                     endif ()
+                 else ()
+-                    list (APPEND SIMD_COMPILE_FLAGS ${_simd_x86_xarch} "-m${feature}")
++                    list (APPEND SIMD_COMPILE_FLAGS ${_simd_x86_xarch} "${_simd_x86_flag}${feature}")
+                 endif ()
+                 if (feature STREQUAL "fma" AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
+                     # If fma is requested, for numerical accuracy sake, turn it
+@@ -451,13 +462,13 @@
+                 endif ()
+             else ()
+                 # Unrecognized token: pass it through the way we always have.
+-                if (NOT (MSVC OR CMAKE_COMPILER_IS_INTEL))
+-                    list (APPEND SIMD_COMPILE_FLAGS "-m${feature}")
++                if (NOT _simd_msvc_arch)
++                    list (APPEND SIMD_COMPILE_FLAGS "${_simd_x86_flag}${feature}")
+                 endif ()
+             endif ()
+         endforeach()
+ 
+-        if ((MSVC OR CMAKE_COMPILER_IS_INTEL) AND SIMD_TARGET_X86_64)
++        if (_simd_msvc_arch AND SIMD_TARGET_X86_64)
+             # MSVC makes every intrinsic through AVX2 available regardless of
+             # the /arch: setting, and it never predefines the __SSE*__ macros
+             # that simd.h keys off. Since all x86-64 hardware is SSE4.2 or
+@@ -466,7 +477,7 @@
+         endif ()
+ 
+         # Only add a single /arch flag representing the highest level of support.
+-        if (MSVC OR CMAKE_COMPILER_IS_INTEL)
++        if (_simd_msvc_arch)
+             if (_highest_msvc_arch EQUAL 1)
+                 list (APPEND SIMD_COMPILE_FLAGS "/arch:AVX")
+             endif ()
+@@ -487,6 +498,8 @@
+ unset (_simd_x86_xarch)
+ unset (_simd_arm_xarch)
+ unset (_simd_skip_x86)
++unset (_simd_msvc_arch)
++unset (_simd_x86_flag)
+ 
+ 
+ ###########################################################################

@@ -1,0 +1,14 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -429,7 +429,10 @@
+     message(FATAL_ERROR "ISPC requires LLVM 18.0.0 or later")
+ endif()
+ 
+ set(CLANG_LIBRARY_LIST clangFrontend clangBasic clangEdit clangLex clangSupport clangASTMatchers)
++# clangEdit can reuse clangAST's precompiled header. The MSVC link needs
++# the companion object in clangAST.lib.
++list(APPEND CLANG_LIBRARY_LIST clangAST)
+ 
+ set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp passes)
+ if (ISPC_LIBRARY_JIT)

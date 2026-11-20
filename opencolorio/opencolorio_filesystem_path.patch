@@ -1,0 +1,20 @@
+diff --git a/src/OpenColorIO/transforms/FileTransform.cpp b/src/OpenColorIO/transforms/FileTransform.cpp
+--- a/src/OpenColorIO/transforms/FileTransform.cpp
++++ b/src/OpenColorIO/transforms/FileTransform.cpp
+@@ -2,6 +2,7 @@
+ // Copyright Contributors to the OpenColorIO Project.
+ 
+ #include <algorithm>
++#include <filesystem>
+ #include <fstream>
+ #include <map>
+ #include <sstream>
+@@ -218,7 +219,7 @@
+ 
+     // Default behavior. Return file stream.
+     return std::unique_ptr<std::istream>(new std::ifstream(
+-        Platform::filenameToUTF(filepath), mode));
++        std::filesystem::path(Platform::filenameToUTF(filepath)), mode));
+ }
+ 
+ bool CollectContextVariables(const Config &, 

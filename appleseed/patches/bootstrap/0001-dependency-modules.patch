@@ -1,0 +1,2105 @@
+Subject: [PATCH 01/50] Dependency modules
+
+Carry the dependency-compatible baseline over the actual upstream
+source. This patch contains one reviewable part of the combined
+historical changes; full original messages are retained in HISTORY.
+
+Original-Commits: See the compatibility-baseline entries in HISTORY.
+
+diff --git a/cmake/CompilerFlags.cmake b/cmake/CompilerFlags.cmake
+new file mode 100644
+index 000000000..42f3bcc07
+--- /dev/null
++++ b/cmake/CompilerFlags.cmake
+@@ -0,0 +1,218 @@
++#             C O M P I L E R F L A G S . C M A K E
++# BRL-CAD
++#
++# Copyright (c) 2011-2023 United States Government as represented by
++# the U.S. Army Research Laboratory.
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++#
++# 1. Redistributions of source code must retain the above copyright
++# notice, this list of conditions and the following disclaimer.
++#
++# 2. Redistributions in binary form must reproduce the above
++# copyright notice, this list of conditions and the following
++# disclaimer in the documentation and/or other materials provided
++# with the distribution.
++#
++# 3. The name of the author may not be used to endorse or promote
++# products derived from this software without specific prior written
++# permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
++# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
++# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
++# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++#
++###
++
++include(CheckCCompilerFlag)
++include(CheckCXXCompilerFlag)
++include(CMakeParseArguments)
++include(CMakePushCheckState)
++
++# Debugging function to print all current flags
++function(PRINT_BUILD_FLAGS)
++  message("Current Build Flags (${ARGV0}):\n")
++  message("CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
++  message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
++  message("CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
++  message("CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
++  foreach(BTYPE ${CMAKE_BUILD_TYPES})
++    message(" ")
++    message("CMAKE_C_FLAGS_${BTYPE}: ${CMAKE_C_FLAGS_${BTYPE}}")
++    message("CMAKE_CXX_FLAGS_${BTYPE}: ${CMAKE_CXX_FLAGS_${BTYPE}}")
++    message("CMAKE_SHARED_LINKER_FLAGS_${BTYPE}: ${CMAKE_SHARED_LINKER_FLAGS_${BTYPE}}")
++    message("CMAKE_EXE_LINKER_FLAGS_${BTYPE}: ${CMAKE_EXE_LINKER_FLAGS_${BTYPE}}")
++  endforeach(BTYPE ${CMAKE_BUILD_TYPES})
++  message(" ")
++endfunction(PRINT_BUILD_FLAGS)
++
++# To reduce verbosity in this file, determine up front which
++# build configuration type (if any) we are using and stash
++# the variables we want to assign flags to into a common
++# variable that will be used for all routines.
++macro(ADD_NEW_FLAG FLAG_TYPE NEW_FLAG CONFIG_LIST)
++  if(${NEW_FLAG})
++    if("${CONFIG_LIST}" STREQUAL "ALL")
++      set(CMAKE_${FLAG_TYPE}_FLAGS "${CMAKE_${FLAG_TYPE}_FLAGS} ${${NEW_FLAG}}")
++    elseif("${CONFIG_LIST}" STREQUAL "Debug" AND NOT CMAKE_BUILD_TYPE)
++      set(CMAKE_${FLAG_TYPE}_FLAGS "${CMAKE_${FLAG_TYPE}_FLAGS} ${${NEW_FLAG}}")
++    else("${CONFIG_LIST}" STREQUAL "ALL")
++      foreach(CFG_TYPE ${CONFIG_LIST})
++	set(VALID_CONFIG 1)
++        if(CMAKE_CONFIGURATION_TYPES)
++          list(FIND CMAKE_CONFIGURATION_TYPES "${CFG_TYPE}" VALID_CONFIG)
++	else(CMAKE_CONFIGURATION_TYPES)
++	  if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${CFG_TYPE}")
++	    set(VALID_CONFIG "-1")
++	  endif(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${CFG_TYPE}")
++	endif(CMAKE_CONFIGURATION_TYPES)
++	if(NOT "${VALID_CONFIG}" STREQUAL "-1")
++	  string(TOUPPER "${CFG_TYPE}" CFG_TYPE)
++	  if(CMAKE_${FLAG_TYPE}_FLAGS_${CFG_TYPE})
++	    set(CMAKE_${FLAG_TYPE}_FLAGS_${CFG_TYPE} "${CMAKE_${FLAG_TYPE}_FLAGS_${CFG_TYPE}} ${${NEW_FLAG}}")
++	  else(CMAKE_${FLAG_TYPE}_FLAGS_${CFG_TYPE})
++	    set(CMAKE_${FLAG_TYPE}_FLAGS_${CFG_TYPE} "${${NEW_FLAG}}")
++	  endif(CMAKE_${FLAG_TYPE}_FLAGS_${CFG_TYPE})
++	endif(NOT "${VALID_CONFIG}" STREQUAL "-1")
++      endforeach(CFG_TYPE ${CMAKE_CONFIGURATION_TYPES})
++    endif("${CONFIG_LIST}" STREQUAL "ALL")
++  endif(${NEW_FLAG})
++endmacro(ADD_NEW_FLAG)
++
++
++# This macro tests for a specified C or C++ compiler flag, setting the
++# result in the specified variable.
++if(NOT COMMAND CHECK_COMPILER_FLAG)
++  macro(CHECK_COMPILER_FLAG FLAG_LANG NEW_FLAG RESULTVAR)
++    if("${FLAG_LANG}" STREQUAL "C")
++      check_c_compiler_flag(${NEW_FLAG} ${RESULTVAR})
++    endif("${FLAG_LANG}" STREQUAL "C")
++    if("${FLAG_LANG}" STREQUAL "CXX")
++      check_cxx_compiler_flag(${NEW_FLAG} ${RESULTVAR})
++    endif("${FLAG_LANG}" STREQUAL "CXX")
++  endmacro(CHECK_COMPILER_FLAG LANG NEW_FLAG RESULTVAR)
++endif(NOT COMMAND CHECK_COMPILER_FLAG)
++
++
++# Synopsis:  CHECK_FLAG(LANG flag [BUILD_TYPES type1 type2 ...] [GROUPS group1 group2 ...] [VARS var1 var2 ...] )
++#
++# CHECK_FLAG is BRL-CAD's core macro for C/C++ flag testing.
++# The first value is the language to test (C or C++ currently).  The
++# second entry is the flag (without preliminary dash).
++#
++# If the first two mandatory options are the only ones provided, a
++# successful test of the flag will result in its being assigned to
++# *all* compilations using the appropriate global C/C++ CMake
++# variable.  If optional parameters are included, they tell the macro
++# what to do with the test results instead of doing the default global
++# assignment.  Options include assigning the flag to one or more of
++# the variable lists associated with build types (e.g. Debug or
++# Release), appending the variable to a string that contains a group
++# of variables, or assigning the flag to a variable if that variable
++# does not already hold a value.  The assignments are not mutually
++# exclusive - any or all of them may be used in a given command.
++#
++# For example, to test a flag and add it to the C Debug configuration
++# flags:
++#
++# CHECK_FLAG(C ggdb3 BUILD_TYPES Debug)
++#
++# To assign a C flag to a unique variable:
++#
++# CHECK_FLAG(C c99 VARS C99_FLAG)
++#
++# To do all assignments at once, for multiple configs and vars:
++#
++# CHECK_FLAG(C ggdb3
++#                   BUILD_TYPES Debug Release
++#                   GROUPS DEBUG_FLAGS
++#                   VARS DEBUG1 DEBUG2)
++macro(CHECK_FLAG)
++  # Set up some variables and names
++  set(FLAG_LANG ${ARGV0})
++  set(flag ${ARGV1})
++  string(TOUPPER ${flag} UPPER_FLAG)
++  string(REGEX REPLACE "[^a-zA-Z0-9]" "_" UPPER_FLAG ${UPPER_FLAG})
++  set(NEW_FLAG "-${flag}")
++
++  # Start processing arguments
++  if(${ARGC} LESS 3)
++
++    # Handle default (global) case
++    CHECK_COMPILER_FLAG(${FLAG_LANG} ${NEW_FLAG} ${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++    if(${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++      ADD_NEW_FLAG(${FLAG_LANG} NEW_FLAG ALL)
++    endif(${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++
++  else(${ARGC} LESS 3)
++
++    # Parse extra arguments
++    CMAKE_PARSE_ARGUMENTS(FLAG "" "" "BUILD_TYPES;GROUPS;VARS" ${ARGN})
++
++    # Iterate over listed Build types and append the flag to them if successfully tested.
++    foreach(build_type ${FLAG_BUILD_TYPES})
++      CHECK_COMPILER_FLAG(${FLAG_LANG} "${NEW_FLAG}" ${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++      if(${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++	ADD_NEW_FLAG(${FLAG_LANG} NEW_FLAG "${build_type}")
++      endif(${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++    endforeach(build_type ${FLAG_BUILD_TYPES})
++
++    # Append flag to a group of flags (this apparently needs to be
++    # a string build, not a CMake list build.  Do this for all supplied
++    # group variables.
++    foreach(flag_group ${FLAG_GROUPS})
++      CHECK_COMPILER_FLAG(${FLAG_LANG} "${NEW_FLAG}" ${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++      if(${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++	if(${flag_group})
++	  set(${flag_group} "${${flag_group}} ${NEW_FLAG}")
++	else(${flag_group})
++	  set(${flag_group} "${NEW_FLAG}")
++	endif(${flag_group})
++      endif(${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++    endforeach(flag_group ${FLAG_GROUPS})
++
++    # If a variable does not have a value, check the flag and if valid assign
++    # the flag as the variable's value.  Do this for all supplied variables.
++    foreach(flag_var ${FLAG_VARS})
++      if(NOT ${flag_var})
++	CHECK_COMPILER_FLAG(${FLAG_LANG} "${NEW_FLAG}" ${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND)
++	if(${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND AND NOT "${${flag_var}}")
++	  set(${flag_var} "${NEW_FLAG}")
++	endif(${UPPER_FLAG}_${FLAG_LANG}_FLAG_FOUND AND NOT "${${flag_var}}")
++      endif(NOT ${flag_var})
++    endforeach(flag_var ${FLAG_VARS})
++  endif(${ARGC} LESS 3)
++
++endmacro(CHECK_FLAG)
++
++
++# This macro checks whether a specified C flag is available.  See
++# CHECK_FLAG() for arguments.
++macro(CHECK_C_FLAG)
++  CHECK_FLAG(C ${ARGN})
++endmacro(CHECK_C_FLAG)
++
++
++# This macro checks whether a specified C++ flag is available.  See
++# CHECK_FLAG() for arguments.
++macro(CHECK_CXX_FLAG)
++  CHECK_FLAG(CXX ${ARGN})
++endmacro(CHECK_CXX_FLAG)
++
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
+diff --git a/cmake/modules/DELETE.FindAlembic.cmake b/cmake/FindAlembic.cmake
+similarity index 100%
+rename from cmake/modules/DELETE.FindAlembic.cmake
+rename to cmake/FindAlembic.cmake
+diff --git a/cmake/FindEigen3.cmake b/cmake/FindEigen3.cmake
+new file mode 100644
+index 000000000..0b36805e7
+--- /dev/null
++++ b/cmake/FindEigen3.cmake
+@@ -0,0 +1,107 @@
++# - Try to find Eigen3 lib
++#
++# This module supports requiring a minimum version, e.g. you can do
++#   find_package(Eigen3 3.1.2)
++# to require version 3.1.2 or newer of Eigen3.
++#
++# Once done this will define
++#
++#  EIGEN3_FOUND - system has eigen lib with correct version
++#  EIGEN3_INCLUDE_DIR - the eigen include directory
++#  EIGEN3_VERSION - eigen version
++#
++# and the following imported target:
++#
++#  Eigen3::Eigen - The header-only Eigen library
++#
++# This module reads hints about search locations from 
++# the following environment variables:
++#
++# EIGEN3_ROOT
++# EIGEN3_ROOT_DIR
++
++# Copyright (c) 2006, 2007 Montel Laurent, <montel@kde.org>
++# Copyright (c) 2008, 2009 Gael Guennebaud, <g.gael@free.fr>
++# Copyright (c) 2009 Benoit Jacob <jacob.benoit.1@gmail.com>
++# Redistribution and use is allowed according to the terms of the 2-clause BSD license.
++
++if(NOT Eigen3_FIND_VERSION)
++  if(NOT Eigen3_FIND_VERSION_MAJOR)
++    set(Eigen3_FIND_VERSION_MAJOR 2)
++  endif()
++  if(NOT Eigen3_FIND_VERSION_MINOR)
++    set(Eigen3_FIND_VERSION_MINOR 91)
++  endif()
++  if(NOT Eigen3_FIND_VERSION_PATCH)
++    set(Eigen3_FIND_VERSION_PATCH 0)
++  endif()
++
++  set(Eigen3_FIND_VERSION "${Eigen3_FIND_VERSION_MAJOR}.${Eigen3_FIND_VERSION_MINOR}.${Eigen3_FIND_VERSION_PATCH}")
++endif()
++
++macro(_eigen3_check_version)
++  file(READ "${EIGEN3_INCLUDE_DIR}/Eigen/src/Core/util/Macros.h" _eigen3_version_header)
++
++  string(REGEX MATCH "define[ \t]+EIGEN_WORLD_VERSION[ \t]+([0-9]+)" _eigen3_world_version_match "${_eigen3_version_header}")
++  set(EIGEN3_WORLD_VERSION "${CMAKE_MATCH_1}")
++  string(REGEX MATCH "define[ \t]+EIGEN_MAJOR_VERSION[ \t]+([0-9]+)" _eigen3_major_version_match "${_eigen3_version_header}")
++  set(EIGEN3_MAJOR_VERSION "${CMAKE_MATCH_1}")
++  string(REGEX MATCH "define[ \t]+EIGEN_MINOR_VERSION[ \t]+([0-9]+)" _eigen3_minor_version_match "${_eigen3_version_header}")
++  set(EIGEN3_MINOR_VERSION "${CMAKE_MATCH_1}")
++
++  set(EIGEN3_VERSION ${EIGEN3_WORLD_VERSION}.${EIGEN3_MAJOR_VERSION}.${EIGEN3_MINOR_VERSION})
++  if(${EIGEN3_VERSION} VERSION_LESS ${Eigen3_FIND_VERSION})
++    set(EIGEN3_VERSION_OK FALSE)
++  else()
++    set(EIGEN3_VERSION_OK TRUE)
++  endif()
++
++  if(NOT EIGEN3_VERSION_OK)
++
++    message(STATUS "Eigen3 version ${EIGEN3_VERSION} found in ${EIGEN3_INCLUDE_DIR}, "
++                   "but at least version ${Eigen3_FIND_VERSION} is required")
++  endif()
++endmacro()
++
++if (EIGEN3_INCLUDE_DIR)
++
++  # in cache already
++  _eigen3_check_version()
++  set(EIGEN3_FOUND ${EIGEN3_VERSION_OK})
++  set(Eigen3_FOUND ${EIGEN3_VERSION_OK})
++
++else ()
++  
++  # search first if an Eigen3Config.cmake is available in the system,
++  # if successful this would set EIGEN3_INCLUDE_DIR and the rest of
++  # the script will work as usual
++  find_package(Eigen3 ${Eigen3_FIND_VERSION} NO_MODULE QUIET)
++
++  if(NOT EIGEN3_INCLUDE_DIR)
++    find_path(EIGEN3_INCLUDE_DIR NAMES signature_of_eigen3_matrix_library
++        HINTS
++        ENV EIGEN3_ROOT 
++        ENV EIGEN3_ROOT_DIR
++        PATHS
++        ${CMAKE_INSTALL_PREFIX}/include
++        ${KDE4_INCLUDE_DIR}
++        PATH_SUFFIXES eigen3 eigen
++      )
++  endif()
++
++  if(EIGEN3_INCLUDE_DIR)
++    _eigen3_check_version()
++  endif()
++
++  include(FindPackageHandleStandardArgs)
++  find_package_handle_standard_args(Eigen3 DEFAULT_MSG EIGEN3_INCLUDE_DIR EIGEN3_VERSION_OK)
++
++  mark_as_advanced(EIGEN3_INCLUDE_DIR)
++
++endif()
++
++if(EIGEN3_FOUND AND NOT TARGET Eigen3::Eigen)
++  add_library(Eigen3::Eigen INTERFACE IMPORTED)
++  set_target_properties(Eigen3::Eigen PROPERTIES
++    INTERFACE_INCLUDE_DIRECTORIES "${EIGEN3_INCLUDE_DIR}")
++endif()
+diff --git a/cmake/modules/DELETE.FindEmbree.cmake b/cmake/FindEmbree.cmake
+similarity index 100%
+rename from cmake/modules/DELETE.FindEmbree.cmake
+rename to cmake/FindEmbree.cmake
+diff --git a/cmake/modules/DELETE.FindImath.cmake b/cmake/FindImath.cmake
+similarity index 69%
+rename from cmake/modules/DELETE.FindImath.cmake
+rename to cmake/FindImath.cmake
+index e739daec4..524e7dd21 100644
+--- a/cmake/modules/DELETE.FindImath.cmake
++++ b/cmake/FindImath.cmake
+@@ -33,7 +33,8 @@
+ # This module can take the following variables to define
+ # custom search locations:
+ #
+-#   IMATH_LOCATION
++#   ILMBASE_ROOT
++#   ILMBASE_LOCATION
+ #
+ # This module defines the following variables:
+ #
+@@ -42,18 +43,34 @@
+ #   IMATH_LIBRARIES     List of Imath libraries to link against
+ #
+ 
+-
+ include (FindPackageHandleStandardArgs)
+ 
+-find_path (IMATH_INCLUDE_DIR NAMES Imath/ImathVec.h
+-           HINTS ${IMATH_LOCATION}/include
++find_path (IMATH_INCLUDE_DIR NAMES ImathVec.h
++           PATH_SUFFIXES OpenEXR
++           HINTS ${ILMBASE_ROOT}
++                 ${ILMBASE_LOCATION}
+                  /usr/local/include
+                  /usr/include
+ )
+ 
+-find_library (IMATH_MATH_LIBRARY NAMES Imath
++find_library (IMATH_HALF_LIBRARY NAMES Half-2_3 Half-2_2 Half
++              PATH_SUFFIXES lib64 lib
++              HINTS ${ILMBASE_ROOT}
++                    ${ILMBASE_LOCATION}
++                    /usr/local
++                    /usr
++)
++find_library (IMATH_IEX_LIBRARY NAMES Iex-2_3 Iex-2_2 Iex
+               PATH_SUFFIXES lib64 lib
+-              HINTS ${IMATH_LOCATION}
++              HINTS ${ILMBASE_ROOT}
++                    ${ILMBASE_LOCATION}
++                    /usr/local
++                    /usr
++)
++find_library (IMATH_MATH_LIBRARY NAMES Imath-2_3 Imath-2_2 Imath
++              PATH_SUFFIXES lib64 lib
++              HINTS ${ILMBASE_ROOT}
++                    ${ILMBASE_LOCATION}
+                     /usr/local
+                     /usr
+ )
+@@ -61,16 +78,17 @@ find_library (IMATH_MATH_LIBRARY NAMES Imath
+ # Handle the QUIETLY and REQUIRED arguments and set IMATH_FOUND.
+ find_package_handle_standard_args (IMATH DEFAULT_MSG
+     IMATH_INCLUDE_DIR
++    IMATH_HALF_LIBRARY
++    IMATH_IEX_LIBRARY
+     IMATH_MATH_LIBRARY
+ )
+ 
+ # Set the output variables.
+ if (IMATH_FOUND)
+-    set (IMATH_INCLUDE_DIRS
+-        ${IMATH_INCLUDE_DIR}
+-        ${IMATH_INCLUDE_DIR}/Imath
+-    )
++    set (IMATH_INCLUDE_DIRS ${IMATH_INCLUDE_DIR})
+     set (IMATH_LIBRARIES
++        ${IMATH_HALF_LIBRARY}
++        ${IMATH_IEX_LIBRARY}
+         ${IMATH_MATH_LIBRARY}
+     )
+ else ()
+@@ -80,5 +98,7 @@ endif ()
+ 
+ mark_as_advanced (
+     IMATH_INCLUDE_DIR
++    IMATH_HALF_LIBRARY
++    IMATH_IEX_LIBRARY
+     IMATH_MATH_LIBRARY
+ )
+diff --git a/cmake/FindOSL.cmake b/cmake/FindOSL.cmake
+new file mode 100644
+index 000000000..a0419587d
+--- /dev/null
++++ b/cmake/FindOSL.cmake
+@@ -0,0 +1,171 @@
++# SPDX-License-Identifier: BSD-3-Clause
++# Copyright Contributors to the OpenColorIO Project.
++#
++# Locate OpenShadingLanguage (OSL)
++#
++# Variables defined by this module:
++#   OSL_FOUND                          - Indicate whether the library was found or not
++#   OSL_LIB_DIR                        - Location of the libary files
++#   OSL_INCLUDE_DIR                    - Location of the header files
++#   OSL_VERSION                        - Library's version
++#   OSL_SHADERS_INCLUDE_DIR            - Location of the shader's header files
++#   OSL_SHADERS_DIR                    - Used for OSL unit tests
++#   
++#   These variables are set only when OSL_ROOT is provided:
++#   oslcomp_LIBRARY                    - Path to the library file
++#   oslexec_LIBRARY                    - Path to the library file
++#   oslquery_LIBRARY                   - Path to the library file
++#
++# Global targets defined by this module:
++#   osl::osl
++#
++# Usually CMake will use the dynamic library rather than static, if both are present. 
++#
++# If the library is not installed in a typical location where CMake will find it, you may specify 
++# the location using one of the following methods:
++# -- Set -DOpenShadingLanguage_DIR to point to the directory containing the CMake configuration file for the package.
++# -- Set -DOpenShadingLanguage_ROOT to point to the directory containing the lib and include directories.
++#
++
++###############################################################################
++### Try to find package ###
++
++if(NOT DEFINED OSL_ROOT)
++    find_package(OSL ${OSL_FIND_VERSION} CONFIG QUIET)
++
++    set(OSL_SHADERS_INCLUDE_DIR ${OSL_INCLUDE_DIR}/../share)
++    # Variable used by the OSL unit tests. 
++    set(OSL_SHADERS_DIR ${OSL_SHADERS_INCLUDE_DIR}/OSL/shaders)
++
++    include (FindPackageHandleStandardArgs)
++    find_package_handle_standard_args (OSL
++        REQUIRED_VARS 
++            OSL_INCLUDE_DIR 
++            OSL_LIB_DIR 
++        VERSION_VAR   
++            OSL_VERSION
++    )
++else()
++    # helper macro to get library location and implib for use with set_target_properties
++    macro (osl_library_loc_and_imp library _LOC _IMP)
++        # Find the library.
++        find_library(${_IMP}
++            NAMES
++                lib${library} ${library}
++            HINTS
++                ${OSL_ROOT}
++            PATH_SUFFIXES
++                lib
++        )
++        if (MSVC)
++            # on windows, IMPORTED_LOCATION should be fullpath to .dll
++            #             IMPORTED_IMPLIB should point to .lib
++            find_file(${_LOC}
++            NAMES
++                ${library}.dll
++            HINTS
++                ${OSL_ROOT}
++            PATH_SUFFIXES
++                bin
++        )
++        else()
++            # everywhere else, IMPORTED_LOCATION should be fullpath to .lib
++            #                  IMPORTED_IMPLIB should point to .lib
++            set(${_LOC} ${_IMP})
++        endif (MSVC)
++    endmacro()
++
++    set(OSL_INCLUDE_DIR ${OSL_ROOT}/include)
++    set(OSL_VERSION_HEADER "${OSL_INCLUDE_DIR}/OSL/oslversion.h")
++
++    if(EXISTS "${OSL_VERSION_HEADER}")
++        # Try to figure out version number
++        file (STRINGS "${OSL_VERSION_HEADER}" TMP REGEX "^#define OSL_LIBRARY_VERSION_MAJOR .*$")
++        string (REGEX MATCHALL "[0-9]+" OSL_VERSION_MAJOR ${TMP})
++        file (STRINGS "${OSL_VERSION_HEADER}" TMP REGEX "^#define OSL_LIBRARY_VERSION_MINOR .*$")
++        string (REGEX MATCHALL "[0-9]+" OSL_VERSION_MINOR ${TMP})
++        file (STRINGS "${OSL_VERSION_HEADER}" TMP REGEX "^#define OSL_LIBRARY_VERSION_PATCH .*$")
++        string (REGEX MATCHALL "[0-9]+" OSL_VERSION_PATCH ${TMP})
++        file (STRINGS "${OSL_VERSION_HEADER}" TMP REGEX "^#define OSL_LIBRARY_VERSION_TWEAK .*$")
++
++        if (TMP)
++            string (REGEX MATCHALL "[0-9]+" OSL_VERSION_TWEAK ${TMP})
++        else ()
++            set (OSL_VERSION_TWEAK 0)
++        endif ()
++
++        set (OSL_VERSION "${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}.${OSL_VERSION_TWEAK}")
++
++        # Fine the oslcomp library.
++        osl_library_loc_and_imp(oslcomp oslcomp_LIBRARY_LOC oslcomp_LIBRARY_IMP)
++        add_library(OSL::oslcomp SHARED IMPORTED)
++        set_target_properties(OSL::oslcomp PROPERTIES 
++            IMPORTED_LOCATION ${oslcomp_LIBRARY_LOC}
++            IMPORTED_IMPLIB ${oslcomp_LIBRARY_IMP}
++        )
++
++        # Find the oslexec library.
++        osl_library_loc_and_imp(oslexec oslexec_LIBRARY_LOC oslexec_LIBRARY_IMP)
++        add_library(OSL::oslexec SHARED IMPORTED)
++        set_target_properties(OSL::oslexec PROPERTIES
++            IMPORTED_LOCATION ${oslexec_LIBRARY_LOC}
++            IMPORTED_IMPLIB ${oslexec_LIBRARY_IMP}
++        )
++
++        # Find the oslquery library.
++        osl_library_loc_and_imp(oslquery oslquery_LIBRARY_LOC oslquery_LIBRARY_IMP)
++        add_library(OSL::oslquery SHARED IMPORTED)
++        set_target_properties(OSL::oslquery PROPERTIES
++            IMPORTED_LOCATION ${oslquery_LIBRARY_LOC}
++            IMPORTED_IMPLIB ${oslquery_LIBRARY_IMP}
++        )
++
++        set(OSL_SHADERS_INCLUDE_DIR ${OSL_ROOT}/share)
++        # Variable used by the OSL unit tests. 
++        set(OSL_SHADERS_DIR ${OSL_SHADERS_INCLUDE_DIR}/OSL/shaders)
++    endif()
++
++    include (FindPackageHandleStandardArgs)
++    find_package_handle_standard_args (OSL
++        REQUIRED_VARS 
++            OSL_INCLUDE_DIR
++            OSL_SHADERS_DIR
++            oslcomp_LIBRARY_IMP
++            oslexec_LIBRARY_IMP
++        VERSION_VAR   
++            OSL_VERSION
++    )
++endif()
++
++# Programs
++find_program(OSL_QUERY_INFO oslinfo ${OSL_LIB_DIR}/../bin)
++find_program(OSL_COMPILER oslc ${OSL_LIB_DIR}/../bin)
++
++###############################################################################
++### Create target
++
++if(NOT TARGET osl::osl)
++    add_library(osl::osl INTERFACE IMPORTED GLOBAL)
++endif()
++
++###############################################################################
++### Configure target ###
++
++if(OSL_FOUND)
++    list(APPEND LIB_INCLUDE_DIRS ${OSL_INCLUDE_DIR})
++    list(APPEND LIB_INCLUDE_DIRS ${OSL_SHADERS_INCLUDE_DIR})
++
++    target_include_directories(osl::osl INTERFACE "${LIB_INCLUDE_DIRS}")
++    target_link_libraries(osl::osl INTERFACE OSL::oslcomp OSL::oslexec)
++
++    # C++14 is required for OSL 1.12+
++    if (${OSL_VERSION} VERSION_GREATER_EQUAL "1.12" AND ${CMAKE_CXX_STANDARD} LESS_EQUAL 11)
++        set(OSL_FOUND OFF)
++        message(WARNING "Need C++14 or higher to compile OpenShadingLanguage. Skipping build the OSL unit tests")
++    endif()
++
++    mark_as_advanced(OSL_INCLUDE_DIR
++        oslcomp_LIBRARY oslcomp_FOUND
++        oslexec_LIBRARY oslexec_FOUND
++    )
++endif()
+diff --git a/cmake/modules/DELETE.FindOpenColorIO.cmake b/cmake/FindOpenColorIO.cmake
+similarity index 93%
+rename from cmake/modules/DELETE.FindOpenColorIO.cmake
+rename to cmake/FindOpenColorIO.cmake
+index 9d8029cad..b83972220 100644
+--- a/cmake/modules/DELETE.FindOpenColorIO.cmake
++++ b/cmake/FindOpenColorIO.cmake
+@@ -34,12 +34,6 @@
+ #  OPENCOLORIO_LIBRARIES    - List of libraries when using OpenColorIO.
+ #  OPENCOLORIO_FOUND        - True if OpenColorIO found.
+ 
+-# If OCIO is defined, it will try to look for OpenEXR libs there as well.
+-
+-if (DEFINED OpenColorIO_ROOT)
+-    list (APPEND CMAKE_PREFIX_PATH ${OpenColorIO_ROOT})
+-endif()
+-
+ # Look for the header file.
+ find_path (OPENCOLORIO_INCLUDE_DIR NAMES OpenColorIO/OpenColorIO.h)
+ 
+diff --git a/cmake/FindOpenEXR.cmake b/cmake/FindOpenEXR.cmake
+new file mode 100644
+index 000000000..00c769d02
+--- /dev/null
++++ b/cmake/FindOpenEXR.cmake
+@@ -0,0 +1,272 @@
++# Copyright Contributors to the OpenImageIO project.
++# SPDX-License-Identifier: BSD-3-Clause and Apache-2.0
++# https://github.com/OpenImageIO/oiio
++
++# Module to find OpenEXR and Imath.
++#
++# I'm afraid this is a mess, due to needing to support a wide range of
++# OpenEXR versions.
++#
++# For OpenEXR & Imath 3.0, this will establish the following imported
++# targets:
++#
++#    Imath::Imath
++#    Imath::Half
++#    OpenEXR::OpenEXR
++#    OpenEXR::Iex
++#    OpenEXR::IlmThread
++#
++# For OpenEXR 2.4 & 2.5, it will establish the following imported targets:
++#
++#    IlmBase::Imath
++#    IlmBase::Half
++#    IlmBase::Iex
++#    IlmBase::IlmThread
++#    OpenEXR::IlmImf
++#
++# For all versions -- but for OpenEXR < 2.4 the only thing this sets --
++# are the following CMake variables:
++#
++#   OPENEXR_FOUND          true, if found
++#   OPENEXR_INCLUDES       directory where OpenEXR headers are found
++#   OPENEXR_LIBRARIES      libraries for OpenEXR + IlmBase
++#   OPENEXR_VERSION        OpenEXR version (accurate for >= 2.0.0,
++#                              otherwise will just guess 1.6.1)
++#   IMATH_INCLUDES         directory where Imath headers are found
++#   ILMBASE_INCLUDES       directory where IlmBase headers are found
++#   ILMBASE_LIBRARIES      libraries just IlmBase
++#
++#
++
++# First, try to fine just the right config files
++find_package(Imath CONFIG)
++if (NOT TARGET Imath::Imath)
++    # Couldn't find Imath::Imath, maybe it's older and has IlmBase?
++    find_package(IlmBase CONFIG)
++endif ()
++find_package(OpenEXR CONFIG)
++
++if (TARGET OpenEXR::OpenEXR AND TARGET Imath::Imath)
++    # OpenEXR 3.x if both of these targets are found
++    set (FOUND_OPENEXR_WITH_CONFIG 1)
++    if (NOT OpenEXR_FIND_QUIETLY)
++        message (STATUS "Found CONFIG for OpenEXR 3 (OpenEXR_VERSION=${OpenEXR_VERSION})")
++    endif ()
++
++    # Mimic old style variables
++    set (OPENEXR_VERSION ${OpenEXR_VERSION})
++    get_target_property(IMATH_INCLUDES Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
++    get_target_property(ILMBASE_INCLUDES Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
++    get_target_property(ILMBASE_IMATH_LIBRARY Imath::Imath INTERFACE_LINK_LIBRARIES)
++    get_target_property(IMATH_LIBRARY Imath::Imath INTERFACE_LINK_LIBRARIES)
++    get_target_property(OPENEXR_IEX_LIBRARY OpenEXR::Iex INTERFACE_LINK_LIBRARIES)
++    get_target_property(OPENEXR_ILMTHREAD_LIBRARY OpenEXR::IlmThread INTERFACE_LINK_LIBRARIES)
++    set (ILMBASE_LIBRARIES ${ILMBASE_IMATH_LIBRARY})
++    set (ILMBASE_FOUND true)
++
++    get_target_property(OPENEXR_INCLUDES OpenEXR::OpenEXR INTERFACE_INCLUDE_DIRECTORIES)
++    get_target_property(OPENEXR_ILMIMF_LIBRARY OpenEXR::OpenEXR INTERFACE_LINK_LIBRARIES)
++    set (OPENEXR_LIBRARIES ${OPENEXR_ILMIMF_LIBRARY} ${OPENEXR_IEX_LIBRARY} ${OPENEXR_ILMTHREAD_LIBRARY} ${ILMBASE_LIBRARIES})
++    set (OPENEXR_FOUND true)
++
++    # Link with pthreads if required
++    find_package (Threads)
++    if (CMAKE_USE_PTHREADS_INIT)
++        list (APPEND ILMBASE_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
++    endif ()
++
++elseif (TARGET OpenEXR::IlmImf AND TARGET IlmBase::Imath AND
++        (OPENEXR_VERSION VERSION_GREATER_EQUAL 2.4 OR OpenEXR_VERSION VERSION_GREATER_EQUAL 2.4))
++    # OpenEXR 2.4 or 2.5 with exported config
++    set (FOUND_OPENEXR_WITH_CONFIG 1)
++    if (NOT OpenEXR_FIND_QUIETLY)
++        message (STATUS "Found CONFIG for OpenEXR 2 (OpenEXR_VERSION=${OpenEXR_VERSION})")
++    endif ()
++
++    # Mimic old style variables
++    get_target_property(ILMBASE_INCLUDES IlmBase::IlmBaseConfig INTERFACE_INCLUDE_DIRECTORIES)
++    get_target_property(IMATH_INCLUDES IlmBase::IlmBaseConfig INTERFACE_INCLUDE_DIRECTORIES)
++    get_target_property(ILMBASE_Imath_LIBRARY IlmBase::Imath INTERFACE_LINK_LIBRARIES)
++    get_target_property(ILMBASE_IMATH_LIBRARY IlmBase::Imath INTERFACE_LINK_LIBRARIES)
++    get_target_property(ILMBASE_HALF_LIBRARY IlmBase::Half INTERFACE_LINK_LIBRARIES)
++    get_target_property(OPENEXR_IEX_LIBRARY IlmBase::Iex INTERFACE_LINK_LIBRARIES)
++    get_target_property(OPENEXR_ILMTHREAD_LIBRARY IlmBase::IlmThread INTERFACE_LINK_LIBRARIES)
++    set (ILMBASE_LIBRARIES ${ILMBASE_IMATH_LIBRARY} ${ILMBASE_HALF_LIBRARY} ${OPENEXR_IEX_LIBRARY} ${OPENEXR_ILMTHREAD_LIBRARY})
++    set (ILMBASE_FOUND true)
++
++    get_target_property(OPENEXR_INCLUDES OpenEXR::IlmImfConfig INTERFACE_INCLUDE_DIRECTORIES)
++    get_target_property(OPENEXR_ILMIMF_LIBRARY OpenEXR::IlmImf INTERFACE_LINK_LIBRARIES)
++    set (OPENEXR_LIBRARIES ${OPENEXR_ILMIMF_LIBRARY} ${ILMBASE_LIBRARIES})
++    set (OPENEXR_FOUND true)
++
++    # Link with pthreads if required
++    find_package (Threads)
++    if (CMAKE_USE_PTHREADS_INIT)
++        list (APPEND ILMBASE_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
++    endif ()
++
++    # Correct for how old OpenEXR config exports set the directory one
++    # level lower than we prefer it.
++    string(REGEX REPLACE "include/OpenEXR$" "include" ILMBASE_INCLUDES "${ILMBASE_INCLUDES}")
++    string(REGEX REPLACE "include/OpenEXR$" "include" IMATH_INCLUDES "${IMATH_INCLUDES}")
++    string(REGEX REPLACE "include/OpenEXR$" "include" OPENEXR_INCLUDES "${OPENEXR_INCLUDES}")
++
++else ()
++    # OpenEXR 2.x older versions without a config or whose configs we don't
++    # trust.
++
++    set (FOUND_OPENEXR_WITH_CONFIG 0)
++
++# Other standard issue macros
++include (FindPackageHandleStandardArgs)
++include (SelectLibraryConfigurations)
++
++find_package (ZLIB REQUIRED)
++
++# Link with pthreads if required
++find_package (Threads)
++if (CMAKE_USE_PTHREADS_INIT)
++    set (ILMBASE_PTHREADS ${CMAKE_THREAD_LIBS_INIT})
++endif ()
++
++# Attempt to find OpenEXR with pkgconfig
++find_package(PkgConfig)
++if (PKG_CONFIG_FOUND)
++    if (NOT Ilmbase_ROOT AND NOT ILMBASE_ROOT
++        AND NOT DEFINED ENV{Ilmbase_ROOT} AND NOT DEFINED ENV{ILMBASE_ROOT})
++        pkg_check_modules(_ILMBASE QUIET IlmBase>=2.0.0)
++    endif ()
++    if (NOT OpenEXR_ROOT AND NOT OPENEXR_ROOT
++        AND NOT DEFINED ENV{OpenEXR_ROOT} AND NOT DEFINED ENV{OPENEXR_ROOT})
++        pkg_check_modules(_OPENEXR QUIET OpenEXR>=2.0.0)
++    endif ()
++endif (PKG_CONFIG_FOUND)
++
++# List of likely places to find the headers -- note priority override of
++# ${OPENEXR_ROOT}/include.
++# ILMBASE is needed in case ilmbase an openexr are installed in separate
++# directories, like NixOS does
++set (GENERIC_INCLUDE_PATHS
++    ${OPENEXR_ROOT}/include
++    $ENV{OPENEXR_ROOT}/include
++    ${ILMBASE_ROOT}/include
++    $ENV{ILMBASE_ROOT}/include
++    ${_ILMBASE_INCLUDEDIR}
++    ${_OPENEXR_INCLUDEDIR}
++    /usr/local/include
++    /usr/include
++    /usr/include/${CMAKE_LIBRARY_ARCHITECTURE}
++    /sw/include
++    /opt/local/include )
++
++# Find the include file locations.
++find_path (ILMBASE_INCLUDE_PATH OpenEXR/IlmBaseConfig.h
++           HINTS ${ILMBASE_INCLUDE_DIR} ${OPENEXR_INCLUDE_DIR}
++                 ${GENERIC_INCLUDE_PATHS} )
++find_path (OPENEXR_INCLUDE_PATH OpenEXR/OpenEXRConfig.h
++           HINTS ${OPENEXR_INCLUDE_DIR}
++                 ${GENERIC_INCLUDE_PATHS} )
++
++# Try to figure out version number
++if (DEFINED _OPENEXR_VERSION AND NOT "${_OPENEXR_VERSION}" STREQUAL "")
++    set (OPENEXR_VERSION "${_OPENEXR_VERSION}")
++    set (OpenEXR_VERSION "${_OPENEXR_VERSION}")
++    string (REGEX REPLACE "([0-9]+)\\.[0-9\\.]+" "\\1" OpenEXR_VERSION_MAJOR "${_OPENEXR_VERSION}")
++    string (REGEX REPLACE "[0-9]+\\.([0-9]+)(\\.[0-9]+)?" "\\1" OpenEXR_VERSION_MINOR "${_OPENEXR_VERSION}")
++elseif (EXISTS "${OPENEXR_INCLUDE_PATH}/OpenEXR/ImfMultiPartInputFile.h")
++    # Must be at least 2.0
++    file(STRINGS "${OPENEXR_INCLUDE_PATH}/OpenEXR/OpenEXRConfig.h" TMP REGEX "^#define OPENEXR_VERSION_STRING .*$")
++    string (REGEX MATCHALL "[0-9]+[.0-9]+" OpenEXR_VERSION ${TMP})
++    file(STRINGS "${OPENEXR_INCLUDE_PATH}/OpenEXR/OpenEXRConfig.h" TMP REGEX "^#define OPENEXR_VERSION_MAJOR .*$")
++    string (REGEX MATCHALL "[0-9]+" OpenEXR_VERSION_MAJOR ${TMP})
++    file(STRINGS "${OPENEXR_INCLUDE_PATH}/OpenEXR/OpenEXRConfig.h" TMP REGEX "^#define OPENEXR_VERSION_MINOR .*$")
++    string (REGEX MATCHALL "[0-9]+" OpenEXR_VERSION_MINOR ${TMP})
++else ()
++    # Assume an old one, predates 2.x that had versions
++    set (OPENEXR_VERSION 1.6.1)
++    set (OpenEXR_VERSION 1.6.1)
++    set (OpenEXR_VERSION_MAJOR 1)
++    set (OpenEXR_VERSION_MINOR 6)
++endif ()
++
++
++# List of likely places to find the libraries -- note priority override of
++# ${OPENEXR_ROOT}/lib.
++set (GENERIC_LIBRARY_PATHS
++    ${OPENEXR_ROOT}/lib
++    ${ILMBASE_ROOT}/lib
++    ${OPENEXR_INCLUDE_PATH}/../lib
++    ${ILMBASE_INCLUDE_PATH}/../lib
++    ${_ILMBASE_LIBDIR}
++    ${_OPENEXR_LIBDIR}
++    /usr/local/lib
++    /usr/local/lib/${CMAKE_LIBRARY_ARCHITECTURE}
++    /usr/lib
++    /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}
++    /sw/lib
++    /opt/local/lib
++    $ENV{PROGRAM_FILES}/OpenEXR/lib/static )
++
++# message (STATUS "Generic lib paths: ${GENERIC_LIBRARY_PATHS}")
++
++# Handle request for static libs by altering CMAKE_FIND_LIBRARY_SUFFIXES.
++# We will restore it at the end of this file.
++set (_openexr_orig_suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
++if (OpenEXR_USE_STATIC_LIBS)
++    if (WIN32)
++        set (CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
++    else ()
++        set (CMAKE_FIND_LIBRARY_SUFFIXES .a)
++    endif ()
++endif ()
++
++# Look for the libraries themselves, for all the components.
++# This is complicated because the OpenEXR libraries may or may not be
++# built with version numbers embedded.
++set (_openexr_components IlmThread IlmImf Imath Iex Half)
++foreach (COMPONENT ${_openexr_components})
++    string (TOUPPER ${COMPONENT} UPPERCOMPONENT)
++    # First try with the version embedded
++    find_library (OPENEXR_${UPPERCOMPONENT}_LIBRARY
++                  NAMES ${COMPONENT}-${OpenEXR_VERSION_MAJOR}_${OpenEXR_VERSION_MINOR}
++                        ${COMPONENT}
++                        ${COMPONENT}-${OpenEXR_VERSION_MAJOR}_${OpenEXR_VERSION_MINOR}_d
++                        ${COMPONENT}_d
++                  HINTS ${OPENEXR_LIBRARY_DIR} $ENV{OPENEXR_LIBRARY_DIR}
++                        ${GENERIC_LIBRARY_PATHS} )
++endforeach ()
++
++find_package_handle_standard_args (OpenEXR
++    REQUIRED_VARS ILMBASE_INCLUDE_PATH OPENEXR_INCLUDE_PATH
++                  OPENEXR_IMATH_LIBRARY OPENEXR_ILMIMF_LIBRARY
++                  OPENEXR_IEX_LIBRARY OPENEXR_HALF_LIBRARY
++    )
++
++if (OPENEXR_FOUND)
++    set (OPENEXR_VERSION_MAJOR ${OpenEXR_VERSION_MAJOR})
++    set (OPENEXR_VERSION_MINOR ${OpenEXR_VERSION_MINOR})
++    set (Imath_VERSION_MAJOR ${OpenEXR_VERSION_MAJOR})
++    set (Imath_VERSION_MINOR ${OpenEXR_VERSION_MINOR})
++    set (ILMBASE_FOUND TRUE)
++    set (ILMBASE_INCLUDES ${ILMBASE_INCLUDE_PATH})
++    set (IMATH_INCLUDES ${ILMBASE_INCLUDE_PATH})
++    set (OPENEXR_INCLUDES ${OPENEXR_INCLUDE_PATH})
++    set (ILMBASE_INCLUDE_DIR ${ILMBASE_INCLUDE_PATH})
++    set (IMATH_INCLUDE_DIR ${ILMBASE_INCLUDE_PATH})
++    set (OPENEXR_INCLUDE_DIR ${OPENEXR_INCLUDE_PATH})
++    set (ILMBASE_LIBRARIES ${OPENEXR_IMATH_LIBRARY} ${OPENEXR_IEX_LIBRARY} ${OPENEXR_HALF_LIBRARY} ${OPENEXR_ILMTHREAD_LIBRARY} ${ILMBASE_PTHREADS} CACHE STRING "The libraries needed to use IlmBase")
++    set (OPENEXR_LIBRARIES ${OPENEXR_ILMIMF_LIBRARY} ${ILMBASE_LIBRARIES} ${ZLIB_LIBRARIES} CACHE STRING "The libraries needed to use OpenEXR")
++    set (FINDOPENEXR_FALLBACK TRUE)
++endif ()
++
++mark_as_advanced(
++    OPENEXR_ILMIMF_LIBRARY
++    OPENEXR_IMATH_LIBRARY
++    OPENEXR_IEX_LIBRARY
++    OPENEXR_HALF_LIBRARY
++    OPENEXR_VERSION)
++
++# Restore the original CMAKE_FIND_LIBRARY_SUFFIXES
++set (CMAKE_FIND_LIBRARY_SUFFIXES ${_openexr_orig_suffixes})
++
++endif ()
+diff --git a/cmake/modules/FindOptiX.cmake b/cmake/FindOptiX.cmake
+similarity index 100%
+rename from cmake/modules/FindOptiX.cmake
+rename to cmake/FindOptiX.cmake
+diff --git a/cmake/FindPNG.cmake b/cmake/FindPNG.cmake
+new file mode 100644
+index 000000000..358646efc
+--- /dev/null
++++ b/cmake/FindPNG.cmake
+@@ -0,0 +1,190 @@
++# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
++# file Copyright.txt or https://cmake.org/licensing for details.
++
++#[=======================================================================[.rst:
++FindPNG
++-------
++
++Find libpng, the official reference library for the PNG image format.
++
++Imported targets
++^^^^^^^^^^^^^^^^
++
++.. versionadded:: 3.5
++
++This module defines the following :prop_tgt:`IMPORTED` target:
++
++``PNG::PNG``
++The libpng library, if found.
++
++Result variables
++^^^^^^^^^^^^^^^^
++
++This module will set the following variables in your project:
++
++``PNG_INCLUDE_DIRS``
++where to find png.h, etc.
++``PNG_LIBRARIES``
++the libraries to link against to use PNG.
++``PNG_DEFINITIONS``
++You should add_definitions(${PNG_DEFINITIONS}) before compiling code
++that includes png library files.
++``PNG_FOUND``
++If false, do not try to use PNG.
++``PNG_VERSION_STRING``
++the version of the PNG library found (since CMake 2.8.8)
++
++Obsolete variables
++^^^^^^^^^^^^^^^^^^
++
++The following variables may also be set, for backwards compatibility:
++
++``PNG_LIBRARY``
++where to find the PNG library.
++``PNG_INCLUDE_DIR``
++where to find the PNG headers (same as PNG_INCLUDE_DIRS)
++
++Since PNG depends on the ZLib compression library, none of the above
++will be defined unless ZLib can be found.
++#]=======================================================================]
++
++if(PNG_FIND_QUIETLY)
++  set(_FIND_ZLIB_ARG QUIET)
++endif()
++find_package(ZLIB ${_FIND_ZLIB_ARG})
++
++if(ZLIB_FOUND)
++  set(_PNG_SEARCHES)
++
++  # Search PNG_ROOT first if it is set.
++  if(PNG_ROOT)
++    set(_PNG_SEARCH_ROOT PATHS ${PNG_ROOT} NO_DEFAULT_PATH)
++    list(APPEND _PNG_SEARCHES _PNG_SEARCH_ROOT)
++  endif()
++
++  list(APPEND PNG_NAMES png_brl libpng_brl png libpng)
++  unset(PNG_NAMES_DEBUG)
++  set(_PNG_VERSION_SUFFIXES 17 16 15 14 12)
++  if (PNG_FIND_VERSION MATCHES "^([0-9]+)\\.([0-9]+)(\\..*)?$")
++    set(_PNG_VERSION_SUFFIX_MIN "${CMAKE_MATCH_1}${CMAKE_MATCH_2}")
++    if (PNG_FIND_VERSION_EXACT)
++      set(_PNG_VERSION_SUFFIXES ${_PNG_VERSION_SUFFIX_MIN})
++    else ()
++      string(REGEX REPLACE
++	"${_PNG_VERSION_SUFFIX_MIN}.*" "${_PNG_VERSION_SUFFIX_MIN}"
++	_PNG_VERSION_SUFFIXES "${_PNG_VERSION_SUFFIXES}")
++    endif ()
++    unset(_PNG_VERSION_SUFFIX_MIN)
++  endif ()
++  foreach(v IN LISTS _PNG_VERSION_SUFFIXES)
++    list(APPEND PNG_NAMES png_brl${v} libpng_brl${v} png${v} libpng${v} libpng${v}_static)
++    list(APPEND PNG_NAMES_DEBUG png_brl${v}d libpng_brl${v}d png${v}d libpng${v}d libpng${v}_staticd)
++  endforeach()
++  unset(_PNG_VERSION_SUFFIXES)
++
++  # Try each search configuration.
++  # For compatibility with versions prior to this multi-config search, honor
++  # any PNG_LIBRARY that is already specified and skip the search.
++  if(NOT PNG_LIBRARY)
++    foreach(search ${_PNG_SEARCHES})
++      find_path(PNG_PNG_INCLUDE_DIR png.h ${${search}} PATH_SUFFIXES include include/libpng)
++      find_library(PNG_LIBRARY_RELEASE    ${${search}} NAMES ${PNG_NAMES} NAMES_PER_DIR PATH_SUFFIXES lib)
++      find_library(PNG_LIBRARY_DEBUG      ${${search}} NAMES ${PNG_NAMES_DEBUG} NAMES_PER_DIR PATH_SUFFIXES lib)
++      include(SelectLibraryConfigurations)
++      select_library_configurations(PNG)
++      mark_as_advanced(PNG_LIBRARY_RELEASE PNG_LIBRARY_DEBUG)
++    endforeach()
++  endif()
++
++  mark_as_advanced(PNG_LIBRARY)
++  mark_as_advanced(PNG_PNG_INCLUDE_DIR)
++
++  # If we still don't have PNG_LIBRARY, try without specifying search paths
++  if(NOT PNG_LIBRARY)
++    find_library(PNG_LIBRARY_RELEASE NAMES ${PNG_NAMES} NAMES_PER_DIR PATH_SUFFIXES lib)
++    find_library(PNG_LIBRARY_DEBUG NAMES ${PNG_NAMES_DEBUG} NAMES_PER_DIR PATH_SUFFIXES lib)
++    include(SelectLibraryConfigurations)
++    select_library_configurations(PNG)
++    mark_as_advanced(PNG_LIBRARY_RELEASE PNG_LIBRARY_DEBUG)
++  endif()
++  unset(PNG_NAMES)
++  unset(PNG_NAMES_DEBUG)
++
++  # Set by select_library_configurations(), but we want the one from
++  # find_package_handle_standard_args() below.
++  unset(PNG_FOUND)
++
++  if (PNG_LIBRARY AND PNG_PNG_INCLUDE_DIR)
++    # png.h includes zlib.h. Sigh.
++    set(PNG_INCLUDE_DIRS ${PNG_PNG_INCLUDE_DIR} ${ZLIB_INCLUDE_DIR} )
++    set(PNG_INCLUDE_DIR ${PNG_INCLUDE_DIRS} ) # for backward compatibility
++    set(PNG_LIBRARIES ${PNG_LIBRARY} ${ZLIB_LIBRARY})
++    if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND
++      ("${PNG_LIBRARY}" MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$"))
++      list(APPEND PNG_LIBRARIES m)
++    endif()
++
++    if (CYGWIN)
++      if(BUILD_SHARED_LIBS)
++	# No need to define PNG_USE_DLL here, because it's default for Cygwin.
++      else()
++	set (PNG_DEFINITIONS -DPNG_STATIC)
++	set(_PNG_COMPILE_DEFINITIONS PNG_STATIC)
++      endif()
++    endif ()
++
++    if(NOT TARGET PNG::PNG)
++      add_library(PNG::PNG UNKNOWN IMPORTED)
++      set_target_properties(PNG::PNG PROPERTIES
++	INTERFACE_COMPILE_DEFINITIONS "${_PNG_COMPILE_DEFINITIONS}"
++	INTERFACE_INCLUDE_DIRECTORIES "${PNG_INCLUDE_DIRS}"
++	INTERFACE_LINK_LIBRARIES ZLIB::ZLIB)
++      if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND
++	("${PNG_LIBRARY}" MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$"))
++	set_property(TARGET PNG::PNG APPEND PROPERTY
++	  INTERFACE_LINK_LIBRARIES m)
++      endif()
++
++      if(EXISTS "${PNG_LIBRARY}")
++	set_target_properties(PNG::PNG PROPERTIES
++	  IMPORTED_LINK_INTERFACE_LANGUAGES "C"
++	  IMPORTED_LOCATION "${PNG_LIBRARY}")
++      endif()
++      if(EXISTS "${PNG_LIBRARY_RELEASE}")
++	set_property(TARGET PNG::PNG APPEND PROPERTY
++	  IMPORTED_CONFIGURATIONS RELEASE)
++	set_target_properties(PNG::PNG PROPERTIES
++	  IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "C"
++	  IMPORTED_LOCATION_RELEASE "${PNG_LIBRARY_RELEASE}")
++      endif()
++      if(EXISTS "${PNG_LIBRARY_DEBUG}")
++	set_property(TARGET PNG::PNG APPEND PROPERTY
++	  IMPORTED_CONFIGURATIONS DEBUG)
++	set_target_properties(PNG::PNG PROPERTIES
++	  IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
++	  IMPORTED_LOCATION_DEBUG "${PNG_LIBRARY_DEBUG}")
++      endif()
++    endif()
++
++    unset(_PNG_COMPILE_DEFINITIONS)
++  endif ()
++
++  if (PNG_PNG_INCLUDE_DIR AND EXISTS "${PNG_PNG_INCLUDE_DIR}/png.h")
++    file(STRINGS "${PNG_PNG_INCLUDE_DIR}/png.h" png_version_str REGEX "^#define[ \t]+PNG_LIBPNG_VER_STRING[ \t]+\".+\"")
++
++    string(REGEX REPLACE "^#define[ \t]+PNG_LIBPNG_VER_STRING[ \t]+\"([^\"]+)\".*" "\\1" PNG_VERSION_STRING "${png_version_str}")
++    unset(png_version_str)
++  endif ()
++endif()
++
++include(FindPackageHandleStandardArgs)
++find_package_handle_standard_args(PNG
++  REQUIRED_VARS PNG_LIBRARY PNG_PNG_INCLUDE_DIR
++  VERSION_VAR PNG_VERSION_STRING)
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
+diff --git a/cmake/modules/DELETE.FindPython3.cmake b/cmake/FindPython3.cmake
+similarity index 100%
+rename from cmake/modules/DELETE.FindPython3.cmake
+rename to cmake/FindPython3.cmake
+diff --git a/cmake/modules/DELETE.FindXerces.cmake b/cmake/FindXerces.cmake
+similarity index 100%
+rename from cmake/modules/DELETE.FindXerces.cmake
+rename to cmake/FindXerces.cmake
+diff --git a/cmake/FindZLIB.cmake b/cmake/FindZLIB.cmake
+new file mode 100644
+index 000000000..e06dc8743
+--- /dev/null
++++ b/cmake/FindZLIB.cmake
+@@ -0,0 +1,123 @@
++#.rst:
++# FindZLIB
++# --------
++#
++# Find the native ZLIB includes and library.
++#
++# IMPORTED Targets
++# ^^^^^^^^^^^^^^^^
++#
++# This module defines :prop_tgt:`IMPORTED` target ``ZLIB::ZLIB``, if
++# ZLIB has been found.
++#
++# Result Variables
++# ^^^^^^^^^^^^^^^^
++#
++# This module defines the following variables:
++#
++# ::
++#
++#   ZLIB_INCLUDE_DIRS   - where to find zlib.h, etc.
++#   ZLIB_LIBRARIES      - List of libraries when using zlib.
++#   ZLIB_FOUND          - True if zlib found.
++#
++# ::
++#
++#   ZLIB_VERSION_STRING - The version of zlib found (x.y.z)
++#   ZLIB_VERSION_MAJOR  - The major version of zlib
++#   ZLIB_VERSION_MINOR  - The minor version of zlib
++#   ZLIB_VERSION_PATCH  - The patch version of zlib
++#   ZLIB_VERSION_TWEAK  - The tweak version of zlib
++#
++# Backward Compatibility
++# ^^^^^^^^^^^^^^^^^^^^^^
++#
++# The following variable are provided for backward compatibility
++#
++# ::
++#
++#   ZLIB_MAJOR_VERSION  - The major version of zlib
++#   ZLIB_MINOR_VERSION  - The minor version of zlib
++#   ZLIB_PATCH_VERSION  - The patch version of zlib
++#
++# Hints
++# ^^^^^
++#
++# A user may set ``ZLIB_ROOT`` to a zlib installation root to tell this
++# module where to look.
++
++#=============================================================================
++# Copyright 2001-2011 Kitware, Inc.
++#
++# Distributed under the OSI-approved BSD License (the "License");
++# see accompanying file Copyright.txt for details.
++#
++# This software is distributed WITHOUT ANY WARRANTY; without even the
++# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++# See the License for more information.
++#=============================================================================
++# (To distribute this file outside of CMake, substitute the full
++#  License text for the above reference.)
++
++set(_ZLIB_SEARCHES)
++
++# Search ZLIB_ROOT first if it is set.
++if(ZLIB_ROOT)
++  set(_ZLIB_SEARCH_ROOT PATHS ${ZLIB_ROOT} NO_DEFAULT_PATH)
++  list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_ROOT)
++endif()
++
++# Normal search.
++set(_ZLIB_SEARCH_NORMAL
++  PATHS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\GnuWin32\\Zlib;InstallPath]"
++        "$ENV{PROGRAMFILES}/zlib"
++  )
++list(APPEND _ZLIB_SEARCHES _ZLIB_SEARCH_NORMAL)
++
++set(ZLIB_NAMES z_brl z zlib zdll zlib1 zlibd zlibd1)
++
++# Try each search configuration.
++foreach(search ${_ZLIB_SEARCHES})
++  find_path(ZLIB_INCLUDE_DIR NAMES zlib.h        ${${search}} PATH_SUFFIXES include)
++  find_library(ZLIB_LIBRARY  NAMES ${ZLIB_NAMES} ${${search}} PATH_SUFFIXES lib)
++endforeach()
++
++mark_as_advanced(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
++
++if(ZLIB_INCLUDE_DIR AND EXISTS "${ZLIB_INCLUDE_DIR}/zlib.h")
++    file(STRINGS "${ZLIB_INCLUDE_DIR}/zlib.h" ZLIB_H REGEX "^#define ZLIB_VERSION \"[^\"]*\"$")
++
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"([0-9]+).*$" "\\1" ZLIB_VERSION_MAJOR "${ZLIB_H}")
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_MINOR  "${ZLIB_H}")
++    string(REGEX REPLACE "^.*ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" ZLIB_VERSION_PATCH "${ZLIB_H}")
++    set(ZLIB_VERSION_STRING "${ZLIB_VERSION_MAJOR}.${ZLIB_VERSION_MINOR}.${ZLIB_VERSION_PATCH}")
++
++    # only append a TWEAK version if it exists:
++    set(ZLIB_VERSION_TWEAK "")
++    if( "${ZLIB_H}" MATCHES "ZLIB_VERSION \"[0-9]+\\.[0-9]+\\.[0-9]+\\.([0-9]+)")
++        set(ZLIB_VERSION_TWEAK "${CMAKE_MATCH_1}")
++        set(ZLIB_VERSION_STRING "${ZLIB_VERSION_STRING}.${ZLIB_VERSION_TWEAK}")
++    endif()
++
++    set(ZLIB_MAJOR_VERSION "${ZLIB_VERSION_MAJOR}")
++    set(ZLIB_MINOR_VERSION "${ZLIB_VERSION_MINOR}")
++    set(ZLIB_PATCH_VERSION "${ZLIB_VERSION_PATCH}")
++endif()
++
++# handle the QUIETLY and REQUIRED arguments and set ZLIB_FOUND to TRUE if
++# all listed variables are TRUE
++include(FindPackageHandleStandardArgs)
++FIND_PACKAGE_HANDLE_STANDARD_ARGS(ZLIB REQUIRED_VARS ZLIB_LIBRARY ZLIB_INCLUDE_DIR
++                                       VERSION_VAR ZLIB_VERSION_STRING)
++
++if(ZLIB_FOUND)
++    set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
++    set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
++
++    if(NOT TARGET ZLIB::ZLIB)
++      add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
++      set_target_properties(ZLIB::ZLIB PROPERTIES
++        IMPORTED_LOCATION "${ZLIB_LIBRARY}"
++        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
++    endif()
++endif()
+diff --git a/cmake/modules/DELETE.FindLZ4.cmake b/cmake/Findlz4.cmake
+similarity index 100%
+rename from cmake/modules/DELETE.FindLZ4.cmake
+rename to cmake/Findlz4.cmake
+diff --git a/cmake/TargetArch.cmake b/cmake/TargetArch.cmake
+new file mode 100644
+index 000000000..8b945079f
+--- /dev/null
++++ b/cmake/TargetArch.cmake
+@@ -0,0 +1,172 @@
++# Based on https://github.com/Amber-MD/cmake-buildscripts/blob/master/TargetArch.cmake
++# Previously from https://github.com/axr/solar-cmake
++
++# Based on the Qt processor detection code (LGPL-3.0-only), so should be very accurate:
++# https://code.qt.io/cgit/qt/qtbase.git/tree/src/corelib/global/qprocessordetection.h
++
++# Currently handles arm (v5, v6, v7, v8), x86 (32/64), ia64, and ppc (32/64)
++
++# Regarding POWER/PowerPC, just as is noted in the Qt source,
++# "There are many more known variants/revisions that we do not handle/detect."
++
++set(archdetect_c_code "
++#if defined(__arm__) || defined(__TARGET_ARCH_ARM) || defined(_M_ARM) || defined(__aarch64__) || defined(__ARM64__)
++    #if defined(__aarch64__) || defined(__ARM64__)
++        #if defined(__ARM64_ARCH_8__)
++            || defined(__aarch64__)
++	        || defined(__ARMv8__)
++	        || defined(__ARMv8_A__)
++            #error cmake_ARCH arm64v8
++        #else
++            #error cmake_ARCH arm64
++        #endif
++    #else
++        #if defined(__ARM_ARCH_7__) \\
++            || defined(__ARM_ARCH_7A__) \\
++            || defined(__ARM_ARCH_7R__) \\
++            || defined(__ARM_ARCH_7M__) \\
++            || (defined(__TARGET_ARCH_ARM) && __TARGET_ARCH_ARM-0 >= 7)
++            #error cmake_ARCH armv7
++        #elif defined(__ARM_ARCH_6__) \\
++            || defined(__ARM_ARCH_6J__) \\
++            || defined(__ARM_ARCH_6T2__) \\
++            || defined(__ARM_ARCH_6Z__) \\
++            || defined(__ARM_ARCH_6K__) \\
++            || defined(__ARM_ARCH_6ZK__) \\
++            || defined(__ARM_ARCH_6M__) \\
++            || (defined(__TARGET_ARCH_ARM) && __TARGET_ARCH_ARM-0 >= 6)
++            #error cmake_ARCH armv6
++        #elif defined(__ARM_ARCH_5TEJ__) \\
++            || (defined(__TARGET_ARCH_ARM) && __TARGET_ARCH_ARM-0 >= 5)
++            #error cmake_ARCH armv5
++        #else
++            #error cmake_ARCH arm
++        #endif
++    #endif
++#elif defined(__i386) || defined(__i386__) || defined(_M_IX86)
++    #error cmake_ARCH i386
++#elif defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(_M_X64)
++    #error cmake_ARCH x86_64
++#elif defined(__ia64) || defined(__ia64__) || defined(_M_IA64)
++    #error cmake_ARCH ia64
++#elif defined(__ppc__) || defined(__ppc) || defined(__powerpc__) \\
++      || defined(_ARCH_COM) || defined(_ARCH_PWR) || defined(_ARCH_PPC)  \\
++      || defined(_M_MPPC) || defined(_M_PPC)
++    #if defined(__ppc64__) || defined(__powerpc64__) || defined(__64BIT__)
++        #error cmake_ARCH ppc64
++    #else
++        #error cmake_ARCH ppc
++    #endif
++#endif
++
++#error cmake_ARCH unknown
++")
++
++# Set ppc_support to TRUE before including this file or ppc and ppc64
++# will be treated as invalid architectures since they are no longer supported by Apple
++
++function(target_architecture output_var)
++  if((APPLE AND DEFINED CMAKE_OSX_ARCHITECTURES) AND NOT "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
++    # On OS X we use CMAKE_OSX_ARCHITECTURES *if* it was set
++    # First let's normalize the order of the values
++
++    # Note that it's not possible to compile PowerPC applications if you are using
++    # the OS X SDK version 10.6 or later - you'll need 10.4/10.5 for that, so we
++    # disable it by default
++    # See this page for more information:
++    # http://stackoverflow.com/questions/5333490/how-can-we-restore-ppc-ppc64-as-well-as-full-10-4-10-5-sdk-support-to-xcode-4
++
++    # Architecture defaults to i386 or ppc on OS X 10.5 and earlier, depending on the CPU type detected at runtime.
++    # On OS X 10.6+ the default is x86_64 if the CPU supports it, i386 otherwise.
++
++    foreach(osx_arch ${CMAKE_OSX_ARCHITECTURES})
++      if("${osx_arch}" STREQUAL "ppc" AND ppc_support)
++	set(osx_arch_ppc TRUE)
++      elseif("${osx_arch}" STREQUAL "i386")
++	set(osx_arch_i386 TRUE)
++      elseif("${osx_arch}" STREQUAL "x86_64")
++	set(osx_arch_x86_64 TRUE)
++      elseif("${osx_arch}" STREQUAL "ppc64" AND ppc_support)
++	set(osx_arch_ppc64 TRUE)
++      else()
++	message(FATAL_ERROR "Invalid OS X arch name: ${osx_arch}")
++      endif()
++    endforeach()
++
++    # Now add all the architectures in our normalized order
++    if(osx_arch_ppc)
++      list(APPEND ARCH ppc)
++    endif()
++
++    if(osx_arch_i386)
++      list(APPEND ARCH i386)
++    endif()
++
++    if(osx_arch_x86_64)
++      list(APPEND ARCH x86_64)
++    endif()
++
++    if(osx_arch_ppc64)
++      list(APPEND ARCH ppc64)
++    endif()
++  else()
++    # figure out extension for the source file
++    if(CMAKE_C_COMPILER_LOADED)
++      set(TA_EXTENSION "c")
++    elseif(CMAKE_CXX_COMPILER_LOADED)
++      set(TA_EXTENSION "cpp")
++    elseif(CMAKE_FORTRAN_COMPILER_LOADED)
++      set(TA_EXTENSION "F90")
++    else()
++      message(FATAL_ERROR "You must enable a C, CXX, or Fortran compiler to use TargetArch.cmake")
++    endif()
++
++    file(WRITE "${CMAKE_BINARY_DIR}/arch.${TA_EXTENSION}" "${archdetect_c_code}")
++
++    # Detect the architecture in a rather creative way...
++    # This compiles a small C program which is a series of ifdefs that selects a
++    # particular #error preprocessor directive whose message string contains the
++    # target architecture. The program will always fail to compile (both because
++    # file is not a valid C program, and obviously because of the presence of the
++    # #error preprocessor directives... but by exploiting the preprocessor in this
++    # way, we can detect the correct target architecture even when cross-compiling,
++    # since the program itself never needs to be run (only the compiler/preprocessor)
++
++    if(DEFINED CMAKE_OSX_ARCHITECTURES)
++      set(TA_CMAKE_FLAGS CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES})
++    else()
++      set(TA_CMAKE_FLAGS "")
++    endif()
++    try_run(
++      run_result_unused
++      compile_result_unused
++      "${CMAKE_BINARY_DIR}"
++      "${CMAKE_BINARY_DIR}/arch.${TA_EXTENSION}"
++      COMPILE_OUTPUT_VARIABLE ARCH
++      CMAKE_FLAGS ${TA_CMAKE_FLAGS}
++      )
++
++    # Parse the architecture name from the compiler output
++    string(REGEX MATCH "cmake_ARCH ([a-zA-Z0-9_]+)" ARCH "${ARCH}")
++
++    # Get rid of the value marker leaving just the architecture name
++    string(REPLACE "cmake_ARCH " "" ARCH "${ARCH}")
++
++    # If we are compiling with an unknown architecture this variable should
++    # already be set to "unknown" but in the case that it's empty (i.e. due
++    # to a typo in the code), then set it to unknown
++    if (NOT ARCH)
++      set(ARCH unknown)
++    endif()
++  endif()
++
++  set(${output_var} "${ARCH}" PARENT_SCOPE)
++endfunction()
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
++
+diff --git a/cmake/Util.cmake b/cmake/Util.cmake
+new file mode 100644
+index 000000000..14abad59c
+--- /dev/null
++++ b/cmake/Util.cmake
+@@ -0,0 +1,191 @@
++# This source file is part of appleseed.
++# Visit https://appleseedhq.net/ for additional information and resources.
++#
++# This software is released under the MIT license.
++#
++# Copyright (c) 2010-2013 Francois Beaune, Jupiter Jazz Limited
++# Copyright (c) 2014-2018 Francois Beaune, The appleseedhq Organization
++#
++# Permission is hereby granted, free of charge, to any person obtaining a copy
++# of this software and associated documentation files (the "Software"), to deal
++# in the Software without restriction, including without limitation the rights
++# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++# copies of the Software, and to permit persons to whom the Software is
++# furnished to do so, subject to the following conditions:
++#
++# The above copyright notice and this permission notice shall be included in
++# all copies or substantial portions of the Software.
++#
++# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++# THE SOFTWARE.
++
++# CMake provides us with a way to set fPIC - use it.
++set(CMAKE_POSITION_INDEPENDENT_CODE ON)
++
++# Print a progress message when a target is about to be built.
++macro (set_target_progress_message target message)
++	add_custom_command (
++		TARGET ${target}
++		PRE_BUILD
++		COMMAND ${CMAKE_COMMAND} -E echo ${message}
++		)
++endmacro()
++
++# Replace slashes by backslashes in a string.
++macro (slashes_to_backslashes output input)
++	string (REGEX REPLACE "/" "\\\\" ${output} ${input})
++endmacro ()
++
++# Filter a list of items using a regular expression.
++macro (filter_list output_list input_list regex)
++	foreach (item ${input_list})
++		if (${item} MATCHES ${regex})
++			list (APPEND ${output_list} ${item})
++		endif ()
++	endforeach ()
++endmacro ()
++
++# Convert a semicolon-separated list to a whitespace-separated string.
++macro (convert_list_to_string output_string input_list)
++	foreach (item ${input_list})
++		if (DEFINED ${output_string})
++			set (${output_string} "${${output_string}} ${item}")
++		else ()
++			set (${output_string} "${item}")
++		endif ()
++	endforeach ()
++endmacro ()
++
++# Assign a whitespace-separated string to a variable, given a list.
++macro (set_to_string output_variable first_arg)
++	set (arg_list ${first_arg} ${ARGN})
++	convert_list_to_string (${output_variable} "${arg_list}")
++endmacro ()
++
++#
++# A variant of the QT5_WRAP_CPP macro designed to moc .cpp files.
++#
++# It differs from the original macro in two ways:
++#
++#   1.  It generates a file of the form moc_cpp_XXX.cxx for a given input file XXX.cpp,
++#       whereas the original macro generates a file of the form moc_XXX.cxx for a given
++#       input file XXX.h.
++#
++#   2.  It adds a dependency between the input file XXX.cpp and the generated file so
++#       that the generated file gets rebuilt whenever the input file is modified. This
++#       is necessary because the generated file is to be included in the input file.
++#
++# The original QT5_WRAP_CPP macro can be found in qt5/lib/cmake/Qt5Core/Qt5CoreMacros.cmake
++#
++
++macro (QT5_WRAP_CPP_CPLUSPLUS_FILES outfiles)
++	QT5_GET_MOC_FLAGS (moc_flags)
++
++	set (options)
++	set (oneValueArgs TARGET)
++	set (multiValueArgs OPTIONS DEPENDS)
++
++	cmake_parse_arguments (_WRAP_CPP "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
++
++	set (moc_files ${_WRAP_CPP_UNPARSED_ARGUMENTS})
++	set (moc_options ${_WRAP_CPP_OPTIONS})
++	set (moc_target ${_WRAP_CPP_TARGET})
++	set (moc_depends ${_WRAP_CPP_DEPENDS})
++
++	foreach (it ${moc_files})
++		get_filename_component (it ${it} ABSOLUTE)
++		QT5_MAKE_OUTPUT_FILE (${it} moc_cpp_ cxx outfile)
++		QT5_CREATE_MOC_COMMAND (${it} ${outfile} "${moc_flags}" "${moc_options}" "${moc_target}" "${moc_depends}")
++		set (${outfiles} ${${outfiles}} ${outfile})
++		set_source_files_properties (${it} PROPERTIES OBJECT_DEPENDS ${outfile})
++	endforeach (it)
++endmacro ()
++
++#--------------------------------------------------------------------------------------------------
++# Copy a target binary to the sandbox.
++#--------------------------------------------------------------------------------------------------
++
++macro (get_sandbox_bin_path path)
++	file(TO_CMAKE_PATH ${PROJECT_SOURCE_DIR}/sandbox/bin/${CMAKE_BUILD_TYPE} ${path})
++endmacro ()
++
++macro (get_sandbox_lib_path path)
++	file(TO_CMAKE_PATH ${PROJECT_SOURCE_DIR}/sandbox/lib/${CMAKE_BUILD_TYPE} ${path})
++endmacro ()
++
++macro (get_sandbox_py_path path)
++	get_sandbox_lib_path (${path})
++	file(TO_MAKE_PATH ${${path}}/python ${path})
++endmacro ()
++
++macro (get_relative_path_from_module_name path name)
++	string (REPLACE "." "/" ${path} ${name})
++endmacro ()
++
++macro (add_copy_target_exe_to_sandbox_command target)
++
++	get_sandbox_bin_path (bin_path)
++
++	add_custom_command (TARGET ${target} POST_BUILD
++		COMMAND ${CMAKE_COMMAND} -E make_directory ${bin_path}
++		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${target}> ${bin_path}
++		)
++endmacro ()
++
++macro (add_copy_target_lib_to_sandbox_command target)
++	get_sandbox_lib_path (lib_path)
++
++	add_custom_command (TARGET ${target} POST_BUILD
++		COMMAND ${CMAKE_COMMAND} -E make_directory ${lib_path}
++		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${target}> ${lib_path}
++		)
++endmacro ()
++
++macro (add_copy_target_to_sandbox_py_module_command target module_name)
++	get_sandbox_py_path (py_path)
++	get_relative_path_from_module_name (relative_module_path ${module_name})
++	set (module_path "${py_path}/${relative_module_path}")
++
++	add_custom_command (TARGET ${target} POST_BUILD
++		COMMAND ${CMAKE_COMMAND} -E make_directory ${module_path}
++		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${target}> ${module_path}
++		)
++endmacro ()
++
++macro (add_copy_py_file_to_sandbox_py_module_command py_src module_name)
++	get_sandbox_py_path (py_path)
++	get_relative_path_from_module_name (relative_module_path ${module_name})
++	set (module_path "${py_path}/${relative_module_path}")
++
++	add_custom_command (TARGET appleseed.python.copy_py_files POST_BUILD
++		COMMAND ${CMAKE_COMMAND} -E make_directory ${module_path}
++		COMMAND ${CMAKE_COMMAND} -E copy ${py_src} ${module_path}
++		)
++endmacro ()
++
++macro (add_copy_dir_to_sandbox_py_module_command py_dir module_name)
++	get_sandbox_py_path (py_path)
++	get_relative_path_from_module_name (relative_module_path ${module_name})
++	set (module_path "${py_path}/${relative_module_path}")
++
++	add_custom_command (TARGET appleseed.python.copy_py_files POST_BUILD
++		COMMAND ${CMAKE_COMMAND} -E make_directory ${module_path}
++		COMMAND ${CMAKE_COMMAND} -E copy -r ${py_dir} ${module_path}
++		)
++endmacro ()
++
++macro (add_copy_studio_py_file_to_sandbox_py_module_command py_src module_name)
++	get_sandbox_py_path (py_path)
++	get_relative_path_from_module_name (relative_module_path ${module_name})
++	set (module_path "${py_path}/${relative_module_path}")
++
++	add_custom_command (TARGET appleseed.studio.copy_py_files POST_BUILD
++		COMMAND ${CMAKE_COMMAND} -E make_directory ${module_path}
++		COMMAND ${CMAKE_COMMAND} -E copy ${py_src} ${module_path}
++		)
++endmacro ()
+diff --git a/cmake/config/linux-gcc-clang.txt b/cmake/config/linux-gcc-clang.txt
+index d28c69843..12b3cd620 100644
+--- a/cmake/config/linux-gcc-clang.txt
++++ b/cmake/config/linux-gcc-clang.txt
+@@ -191,14 +191,11 @@ macro (link_against_oiio target)
+ endmacro ()
+ 
+ macro (link_against_openexr target)
+-    target_link_libraries (${target}
+-        Imath::Imath
+-        OpenEXR::OpenEXR
+-    )
++    target_link_libraries (${target} Imath::Imath OpenEXR::OpenEXR OpenEXR::Iex OpenEXR::IlmThread)
+ endmacro ()
+ 
+ macro (link_against_osl target)
+-    target_link_libraries (${target} oslexec oslcomp oslquery)
++    target_link_libraries (${target} ${oslexec_LIBRARY} ${oslcomp_LIBRARY} ${oslquery_LIBRARY})
+ endmacro ()
+ 
+ macro (link_against_xercesc target)
+diff --git a/cmake/modules/DELETE.FindOSL.cmake b/cmake/modules/DELETE.FindOSL.cmake
+deleted file mode 100644
+index 4ed9e007b..000000000
+--- a/cmake/modules/DELETE.FindOSL.cmake
++++ /dev/null
+@@ -1,88 +0,0 @@
+-
+-#
+-# This source file is part of appleseed.
+-# Visit https://appleseedhq.net/ for additional information and resources.
+-#
+-# This software is released under the MIT license.
+-#
+-# Copyright (c) 2013-2018 Esteban Tovagliari, The appleseedhq Organization
+-#
+-# Permission is hereby granted, free of charge, to any person obtaining a copy
+-# of this software and associated documentation files (the "Software"), to deal
+-# in the Software without restriction, including without limitation the rights
+-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-# copies of the Software, and to permit persons to whom the Software is
+-# furnished to do so, subject to the following conditions:
+-#
+-# The above copyright notice and this permission notice shall be included in
+-# all copies or substantial portions of the Software.
+-#
+-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-# THE SOFTWARE.
+-#
+-
+-
+-#
+-# Find OSL headers and libraries.
+-#
+-# This module defines the following variables:
+-#
+-#   OSL_FOUND           True if OSL was found
+-#   OSL_INCLUDE_DIRS    Where to find OSL header files
+-#   OSL_LIBRARIES       List of OSL libraries to link against
+-#   OSL_COMPILER        Path to oslc binary
+-#   OSL_QUERY_INFO      Path to oslinfo binary
+-#   OSL_MAKETX          Path to OpenImageIO's maketx binary
+-#
+-
+-# If OSL_ROOT is defined, it will try to look for OSL libs there
+-# as well (OSL_ROOT is expected to point to OSL dist directory).
+-#
+-
+-if (DEFINED OSL_ROOT)
+-    list (APPEND CMAKE_PREFIX_PATH ${OSL_ROOT})
+-endif()
+-
+-include (FindPackageHandleStandardArgs)
+-
+-find_path (OSL_INCLUDE_DIR NAMES OSL/oslexec.h)
+-
+-find_library (OSL_EXEC_LIBRARY NAMES oslexec)
+-find_library (OSL_COMP_LIBRARY NAMES oslcomp)
+-find_library (OSL_QUERY_LIBRARY NAMES oslquery)
+-
+-find_program (OSL_COMPILER NAMES oslc)
+-find_program (OSL_QUERY_INFO NAMES oslinfo)
+-find_program (OSL_MAKETX NAMES maketx)
+-
+-# Handle the QUIETLY and REQUIRED arguments and set OSL_FOUND.
+-find_package_handle_standard_args (OSL DEFAULT_MSG
+-    OSL_INCLUDE_DIR
+-    OSL_EXEC_LIBRARY
+-    OSL_COMP_LIBRARY
+-    OSL_QUERY_LIBRARY
+-    OSL_COMPILER
+-    OSL_QUERY_INFO
+-    OSL_MAKETX
+-)
+-
+-# Set the output variables.
+-if (OSL_FOUND)
+-    set (OSL_INCLUDE_DIRS ${OSL_INCLUDE_DIR})
+-    set (OSL_LIBRARIES ${OSL_EXEC_LIBRARY} ${OSL_COMP_LIBRARY} ${OSL_QUERY_LIBRARY})
+-else ()
+-    set (OSL_INCLUDE_DIRS)
+-    set (OSL_LIBRARIES)
+-endif ()
+-
+-mark_as_advanced (
+-    OSL_INCLUDE_DIR
+-    OSL_EXEC_LIBRARY
+-    OSL_COMP_LIBRARY
+-    OSL_QUERY_LIBRARY
+-)
+diff --git a/cmake/modules/DELETE.FindOpenEXR.cmake b/cmake/modules/DELETE.FindOpenEXR.cmake
+deleted file mode 100644
+index 374e5f3bc..000000000
+--- a/cmake/modules/DELETE.FindOpenEXR.cmake
++++ /dev/null
+@@ -1,106 +0,0 @@
+-
+-#
+-# This source file is part of appleseed.
+-# Visit https://appleseedhq.net/ for additional information and resources.
+-#
+-# This software is released under the MIT license.
+-#
+-# Copyright (c) 2013-2018 Esteban Tovagliari, The appleseedhq Organization
+-#
+-# Permission is hereby granted, free of charge, to any person obtaining a copy
+-# of this software and associated documentation files (the "Software"), to deal
+-# in the Software without restriction, including without limitation the rights
+-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-# copies of the Software, and to permit persons to whom the Software is
+-# furnished to do so, subject to the following conditions:
+-#
+-# The above copyright notice and this permission notice shall be included in
+-# all copies or substantial portions of the Software.
+-#
+-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-# THE SOFTWARE.
+-#
+-
+-
+-#
+-# Find OpenEXR headers and libraries.
+-#
+-# This module can take the following variables to define
+-# custom search locations:
+-#
+-#   OPENEXR_LOCATION
+-
+-# This module defines the following variables:
+-#
+-#   OPENEXR_FOUND           True if OpenEXR was found
+-#   OPENEXR_INCLUDE_DIRS    Where to find OpenEXR header files
+-#   OPENEXR_LIBRARIES       List of OpenEXR libraries to link against
+-#
+-
+-# If OPENEXR_ROOT is defined, it will try to look for OpenEXR libs there
+-# as well.
+-
+-include (FindPackageHandleStandardArgs)
+-
+-find_path (OPENEXR_INCLUDE_DIR NAMES ImfHeader.h
+-           PATH_SUFFIXES OpenEXR
+-           HINTS ${OPENEXR_LOCATION}/include
+-                 /usr/local/include
+-                 /usr/include
+-)
+-
+-# TODO: rename OPENEXR_IMF_LIBRARY
+-find_library (OPENEXR_IMF_LIBRARY NAMES OpenEXR
+-              PATH_SUFFIXES lib64 lib
+-              HINTS ${OPENEXR_LOCATION}
+-                    /usr/local
+-                    /usr
+-)
+-
+-find_library (OPENEXR_THREADS_LIBRARY
+-              NAMES IlmThread-2_3 IlmThread-2_2 IlmThread
+-              PATH_SUFFIXES lib64 lib
+-              HINTS ${OPENEXR_LOCATION}
+-                    /usr/local
+-                    /usr
+-)
+-
+-find_library (IMATH_IEX_LIBRARY NAMES Iex-2_3 Iex-2_2 Iex
+-              PATH_SUFFIXES lib64 lib
+-              HINTS ${OPENEXR_LOCATION}
+-                    /usr/local
+-                    /usr
+-)
+-
+-# Handle the QUIETLY and REQUIRED arguments and set OPENEXR_FOUND.
+-find_package_handle_standard_args (OPENEXR DEFAULT_MSG
+-    OPENEXR_INCLUDE_DIR
+-    OPENEXR_IMF_LIBRARY
+-    OPENEXR_THREADS_LIBRARY
+-    IMATH_IEX_LIBRARY
+-)
+-
+-# Set the output variables.
+-if (OPENEXR_FOUND)
+-    set (OPENEXR_INCLUDE_DIRS ${OPENEXR_INCLUDE_DIR})
+-    set (OPENEXR_LIBRARIES
+-        ${OPENEXR_IMF_LIBRARY}
+-        ${OPENEXR_THREADS_LIBRARY}
+-        ${IMATH_IEX_LIBRARY}
+-    )
+-else ()
+-    set (OPENEXR_INCLUDE_DIRS)
+-    set (OPENEXR_LIBRARIES)
+-endif ()
+-
+-mark_as_advanced (
+-    OPENEXR_INCLUDE_DIR
+-    OPENEXR_IMF_LIBRARY
+-    OPENEXR_THREADS_LIBRARY
+-    IMATH_IEX_LIBRARY
+-)
+diff --git a/cmake/modules/DELETE.FindOpenImageIO.cmake b/cmake/modules/DELETE.FindOpenImageIO.cmake
+deleted file mode 100644
+index b881c59b3..000000000
+--- a/cmake/modules/DELETE.FindOpenImageIO.cmake
++++ /dev/null
+@@ -1,83 +0,0 @@
+-
+-#
+-# This source file is part of appleseed.
+-# Visit https://appleseedhq.net/ for additional information and resources.
+-#
+-# This software is released under the MIT license.
+-#
+-# Copyright (c) 2013-2018 Esteban Tovagliari, The appleseedhq Organization
+-#
+-# Permission is hereby granted, free of charge, to any person obtaining a copy
+-# of this software and associated documentation files (the "Software"), to deal
+-# in the Software without restriction, including without limitation the rights
+-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-# copies of the Software, and to permit persons to whom the Software is
+-# furnished to do so, subject to the following conditions:
+-#
+-# The above copyright notice and this permission notice shall be included in
+-# all copies or substantial portions of the Software.
+-#
+-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-# THE SOFTWARE.
+-#
+-
+-
+-#
+-# Find OpenImageIO headers and libraries.
+-#
+-# This module defines the following variables:
+-#
+-#   OPENIMAGEIO_FOUND           True if OpenImageIO was found
+-#   OPENIMAGEIO_INCLUDE_DIRS    Where to find OpenImageIO header files
+-#   OPENIMAGEIO_LIBRARIES       List of OpenImageIO libraries to link against
+-#
+-
+-# If OIIO_ROOT is defined, it will try to look for OpenImageIO libs there
+-# as well (OIIO_ROOT is expected to point to OSL dist directory).
+-#
+-
+-if (DEFINED OIIO_ROOT)
+-    list (APPEND CMAKE_PREFIX_PATH ${OIIO_ROOT})
+-endif()
+-
+-include (FindPackageHandleStandardArgs)
+-
+-find_path (OPENIMAGEIO_INCLUDE_DIR NAMES OpenImageIO/imageio.h)
+-
+-find_library (OPENIMAGEIO_LIBRARY NAMES OpenImageIO)
+-find_library (OPENIMAGEIO_UTIL_LIBRARY NAMES OpenImageIO_Util)
+-
+-find_program (OPENIMAGEIO_OIIOTOOL NAMES oiiotool)
+-find_program (OPENIMAGEIO_IDIFF NAMES idiff)
+-
+-# Handle the QUIETLY and REQUIRED arguments and set OPENIMAGEIO_FOUND.
+-find_package_handle_standard_args (OPENIMAGEIO DEFAULT_MSG
+-    OPENIMAGEIO_INCLUDE_DIR
+-    OPENIMAGEIO_LIBRARY
+-    OPENIMAGEIO_UTIL_LIBRARY
+-    OPENIMAGEIO_OIIOTOOL
+-    OPENIMAGEIO_IDIFF
+-)
+-
+-# Set the output variables.
+-if (OPENIMAGEIO_FOUND)
+-    set (OPENIMAGEIO_INCLUDE_DIRS ${OPENIMAGEIO_INCLUDE_DIR})
+-    set (OPENIMAGEIO_LIBRARIES
+-        ${OPENIMAGEIO_LIBRARY}
+-        ${OPENIMAGEIO_UTIL_LIBRARY}
+-    )
+-else ()
+-    set (OPENIMAGEIO_INCLUDE_DIRS)
+-    set (OPENIMAGEIO_LIBRARIES)
+-endif ()
+-
+-mark_as_advanced (
+-    OPENIMAGEIO_INCLUDE_DIR
+-    OPENIMAGEIO_LIBRARY
+-    OPENIMAGEIO_UTIL_LIBRARY
+-)
+diff --git a/cmake/utilities.txt b/cmake/utilities.txt
+deleted file mode 100644
+index b41fa2b2d..000000000
+--- a/cmake/utilities.txt
++++ /dev/null
+@@ -1,152 +0,0 @@
+-
+-#
+-# This source file is part of appleseed.
+-# Visit https://appleseedhq.net/ for additional information and resources.
+-#
+-# This software is released under the MIT license.
+-#
+-# Copyright (c) 2010-2013 Francois Beaune, Jupiter Jazz Limited
+-# Copyright (c) 2014-2018 Francois Beaune, The appleseedhq Organization
+-#
+-# Permission is hereby granted, free of charge, to any person obtaining a copy
+-# of this software and associated documentation files (the "Software"), to deal
+-# in the Software without restriction, including without limitation the rights
+-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-# copies of the Software, and to permit persons to whom the Software is
+-# furnished to do so, subject to the following conditions:
+-#
+-# The above copyright notice and this permission notice shall be included in
+-# all copies or substantial portions of the Software.
+-#
+-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-# THE SOFTWARE.
+-#
+-
+-
+-# Print a progress message when a target is about to be built.
+-macro (set_target_progress_message target message)
+-    add_custom_command (
+-        TARGET ${target}
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E echo ${message}
+-    )
+-endmacro()
+-
+-# Replace slashes by backslashes in a string.
+-macro (slashes_to_backslashes output input)
+-    string (REGEX REPLACE "/" "\\\\" ${output} ${input})
+-endmacro ()
+-
+-# Filter a list of items using a regular expression.
+-macro (filter_list output_list input_list regex)
+-    foreach (item ${input_list})
+-        if (${item} MATCHES ${regex})
+-            list (APPEND ${output_list} ${item})
+-        endif ()
+-    endforeach ()
+-endmacro ()
+-
+-# Convert a semicolon-separated list to a whitespace-separated string.
+-macro (convert_list_to_string output_string input_list)
+-    foreach (item ${input_list})
+-        if (DEFINED ${output_string})
+-            set (${output_string} "${${output_string}} ${item}")
+-        else ()
+-            set (${output_string} "${item}")
+-        endif ()
+-    endforeach ()
+-endmacro ()
+-
+-# Assign a whitespace-separated string to a variable, given a list.
+-macro (set_to_string output_variable first_arg)
+-    set (arg_list ${first_arg} ${ARGN})
+-    convert_list_to_string (${output_variable} "${arg_list}")
+-endmacro ()
+-
+-#
+-# A variant of the QT5_WRAP_CPP macro designed to moc .cpp files.
+-#
+-# It differs from the original macro in two ways:
+-#
+-#   1.  It generates a file of the form moc_cpp_XXX.cxx for a given input file XXX.cpp,
+-#       whereas the original macro generates a file of the form moc_XXX.cxx for a given
+-#       input file XXX.h.
+-#
+-#   2.  It adds a dependency between the input file XXX.cpp and the generated file so
+-#       that the generated file gets rebuilt whenever the input file is modified. This
+-#       is necessary because the generated file is to be included in the input file.
+-#
+-# The original QT5_WRAP_CPP macro can be found in qt5/lib/cmake/Qt5Core/Qt5CoreMacros.cmake
+-#
+-
+-macro (QT5_WRAP_CPP_CPLUSPLUS_FILES outfiles)
+-    QT5_GET_MOC_FLAGS (moc_flags)
+-
+-    set (options)
+-    set (oneValueArgs TARGET)
+-    set (multiValueArgs OPTIONS DEPENDS)
+-
+-    cmake_parse_arguments (_WRAP_CPP "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+-
+-    set (moc_files ${_WRAP_CPP_UNPARSED_ARGUMENTS})
+-    set (moc_options ${_WRAP_CPP_OPTIONS})
+-    set (moc_target ${_WRAP_CPP_TARGET})
+-    set (moc_depends ${_WRAP_CPP_DEPENDS})
+-
+-    foreach (it ${moc_files})
+-        get_filename_component (it ${it} ABSOLUTE)
+-        QT5_MAKE_OUTPUT_FILE (${it} moc_cpp_ cxx outfile)
+-        QT5_CREATE_MOC_COMMAND (${it} ${outfile} "${moc_flags}" "${moc_options}" "${moc_target}" "${moc_depends}")
+-        set (${outfiles} ${${outfiles}} ${outfile})
+-        set_source_files_properties (${it} PROPERTIES OBJECT_DEPENDS ${outfile})
+-    endforeach (it)
+-endmacro ()
+-
+-#
+-# Use the compiler in a smart way to try to figure the target architecture.
+-# Works when cross-compiling.
+-#
+-# Based on:
+-#
+-#   https://github.com/petroules/solar-cmake/blob/master/TargetArch.cmake
+-#
+-
+-function (detect_target_arch output_var)
+-    set (archdetect_c_code
+-        "#if defined(__arm__) || defined(__TARGET_ARCH_ARM)
+-             #error cmake_ARCH ARM
+-         #elif defined(__i386) || defined(__i386__) || defined(_M_IX86)
+-             #error cmake_ARCH i386
+-         #elif defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(_M_X64)
+-             #error cmake_ARCH x86_64
+-         #elif defined(__ppc__) || defined(__ppc) || defined(__powerpc__) \\
+-             || defined(_ARCH_COM) || defined(_ARCH_PWR) || defined(_ARCH_PPC) \\
+-             || defined(_M_MPPC) || defined(_M_PPC)
+-             #error cmake_ARCH PPC
+-         #endif
+-         #error cmake_ARCH unknown"
+-    )
+-
+-    file (WRITE "${CMAKE_BINARY_DIR}/arch.c" "${archdetect_c_code}")
+-    enable_language (C)
+-
+-    try_run(
+-        run_result_unused
+-        compile_result_unused
+-        "${CMAKE_BINARY_DIR}"
+-        "${CMAKE_BINARY_DIR}/arch.c"
+-        COMPILE_OUTPUT_VARIABLE ARCH)
+-
+-    # Parse the architecture name from the compiler output.
+-    string (REGEX MATCH "cmake_ARCH ([a-zA-Z0-9_]+)" ARCH "${ARCH}")
+-
+-    # Get rid of the value marker leaving just the architecture name.
+-    string (REPLACE "cmake_ARCH " "" ARCH "${ARCH}")
+-
+-    set (${output_var} "${ARCH}" PARENT_SCOPE)
+-endfunction ()

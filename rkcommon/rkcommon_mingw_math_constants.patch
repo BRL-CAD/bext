@@ -1,0 +1,144 @@
+--- a/rkcommon/math/constants.h
++++ b/rkcommon/math/constants.h
+@@ -250,15 +250,17 @@
+       }
+     } ulp MAYBE_UNUSED;
+ 
++    static constexpr double pi_value = 3.14159265358979323846;
++
+     static struct PiTy
+     {
+       __forceinline operator double() const
+       {
+-        return M_PI;
+-      }
+-      __forceinline operator float() const
+-      {
+-        return M_PI;
++        return pi_value;
++      }
++      __forceinline operator float() const
++      {
++        return pi_value;
+       }
+     } pi MAYBE_UNUSED;
+ 
+@@ -266,11 +268,11 @@
+     {
+       __forceinline operator double() const
+       {
+-        return M_1_PI;
+-      }
+-      __forceinline operator float() const
+-      {
+-        return M_1_PI;
++        return (1.0 / pi_value);
++      }
++      __forceinline operator float() const
++      {
++        return (1.0 / pi_value);
+       }
+     } one_over_pi MAYBE_UNUSED;
+ 
+@@ -278,11 +280,11 @@
+     {
+       __forceinline operator double() const
+       {
+-        return 2.0 * M_PI;
+-      }
+-      __forceinline operator float() const
+-      {
+-        return 2.0 * M_PI;
++        return 2.0 * pi_value;
++      }
++      __forceinline operator float() const
++      {
++        return 2.0 * pi_value;
+       }
+     } two_pi MAYBE_UNUSED;
+ 
+@@ -290,11 +292,11 @@
+     {
+       __forceinline operator double() const
+       {
+-        return M_PI_2;
+-      }
+-      __forceinline operator float() const
+-      {
+-        return M_PI_2;
++        return (pi_value / 2.0);
++      }
++      __forceinline operator float() const
++      {
++        return (pi_value / 2.0);
+       }
+     } half_pi MAYBE_UNUSED;
+ 
+@@ -302,11 +304,11 @@
+     {
+       __forceinline operator double() const
+       {
+-        return 0.5 * M_1_PI;
+-      }
+-      __forceinline operator float() const
+-      {
+-        return 0.5 * M_1_PI;
++        return 0.5 * (1.0 / pi_value);
++      }
++      __forceinline operator float() const
++      {
++        return 0.5 * (1.0 / pi_value);
+       }
+     } one_over_two_pi MAYBE_UNUSED;
+ 
+@@ -314,11 +316,11 @@
+     {
+       __forceinline operator double() const
+       {
+-        return 4.0 * M_PI;
+-      }
+-      __forceinline operator float() const
+-      {
+-        return 4.0 * M_PI;
++        return 4.0 * pi_value;
++      }
++      __forceinline operator float() const
++      {
++        return 4.0 * pi_value;
+       }
+     } four_pi MAYBE_UNUSED;
+ 
+@@ -326,11 +328,11 @@
+     {
+       __forceinline operator double() const
+       {
+-        return M_PI_4;
+-      }
+-      __forceinline operator float() const
+-      {
+-        return M_PI_4;
++        return (pi_value / 4.0);
++      }
++      __forceinline operator float() const
++      {
++        return (pi_value / 4.0);
+       }
+     } quarter_pi MAYBE_UNUSED;
+ 
+@@ -338,11 +340,11 @@
+     {
+       __forceinline operator double() const
+       {
+-        return 0.25 * M_1_PI;
+-      }
+-      __forceinline operator float() const
+-      {
+-        return 0.25 * M_1_PI;
++        return 0.25 * (1.0 / pi_value);
++      }
++      __forceinline operator float() const
++      {
++        return 0.25 * (1.0 / pi_value);
+       }
+     } one_over_four_pi MAYBE_UNUSED;
+ 

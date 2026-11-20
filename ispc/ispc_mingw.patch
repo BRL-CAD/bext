@@ -1,0 +1,181 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -802,7 +802,9 @@
+ list(APPEND LINK_OPTIONS_PRIVATE)
+ list(APPEND LINK_OPTIONS_PUBLIC)
+ # Link options
+-if (WIN32)
++if (MINGW)
++    list(APPEND LINK_OPTIONS_PRIVATE -Wl,--dynamicbase)
++elseif (WIN32)
+     list(APPEND LINK_OPTIONS_PRIVATE /DYNAMICBASE)
+     # Control flow guard
+     list(APPEND LINK_OPTIONS_PRIVATE /GUARD:CF)
+@@ -851,7 +853,7 @@
+ 
+ 
+ list(APPEND LINK_LIBRARIES)
+-if (NOT WIN32 AND NOT APPLE)
++if (NOT APPLE AND (NOT WIN32 OR MINGW))
+     # To resolve circular dependencies between libraries use --start-group/--end-group
+     list(APPEND LINK_LIBRARIES "-Wl,--start-group")
+ endif()
+@@ -888,7 +890,7 @@
+     list(APPEND LINK_LIBRARIES ${XE_LIBRARY_FULL_PATH_LIST})
+ endif()
+ 
+-if (NOT WIN32 AND NOT APPLE)
++if (NOT APPLE AND (NOT WIN32 OR MINGW))
+     list(APPEND LINK_LIBRARIES "-Wl,--end-group")
+ endif()
+ 
+diff --git a/cmake/GenerateBuiltins.cmake b/cmake/GenerateBuiltins.cmake
+--- a/cmake/GenerateBuiltins.cmake
++++ b/cmake/GenerateBuiltins.cmake
+@@ -189,7 +189,11 @@
+     set(fpic "")
+     set(debian_triple)
+     if (${os} STREQUAL "windows")
+-        set(triple ${arch}-pc-win32)
++        if (MINGW)
++            set(triple ${arch}-w64-windows-gnu)
++        else()
++            set(triple ${arch}-pc-win32)
++        endif()
+     elseif (${os} STREQUAL "linux")
+         if (${arch} STREQUAL "i686" OR ${arch} STREQUAL "x86_64" OR ${arch} STREQUAL "aarch64")
+             set(triple ${arch}-unknown-linux-gnu)
+@@ -227,7 +231,16 @@
+     # Determine include path
+     if (WIN32)
+         if (${os} STREQUAL "windows")
+-            set(include "")
++            if (MINGW)
++                # Use the host toolchain's CRT when generating Windows bitcode
++                # with the separately installed Clang, also for other CPUs.
++                find_path(ISPC_MINGW_CRT_INCLUDE _mingw.h
++                    PATHS ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}
++                    NO_DEFAULT_PATH REQUIRED)
++                set(include -isystem "${ISPC_MINGW_CRT_INCLUDE}")
++            else()
++                set(include "")
++            endif()
+         elseif(${os} STREQUAL "macos")
+             # -isystemC:/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
+             set(include -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
+@@ -309,7 +322,7 @@
+ 
+     get_target_flags(${os} ${arch} target_flags)
+     list(APPEND flags ${target_flags}
+-        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm --std=gnu++17
++        -I${CMAKE_SOURCE_DIR} -m${bit} -c -emit-llvm --std=gnu++17
+     )
+ 
+     set(name builtins-cpp-${bit}-${os}-${arch})
+@@ -321,10 +334,10 @@
+ 
+     add_custom_command(
+         OUTPUT ${bc}
+-        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
+-            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
++        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o ${bc}
+         DEPENDS ${input}
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
++        VERBATIM
+     )
+ 
+     add_custom_command(
+diff --git a/ispcrt/detail/cpu/ispc_tasking.cpp b/ispcrt/detail/cpu/ispc_tasking.cpp
+--- a/ispcrt/detail/cpu/ispc_tasking.cpp
++++ b/ispcrt/detail/cpu/ispc_tasking.cpp
+@@ -55,7 +55,10 @@
+       defined ISPC_USE_TBB_PARALLEL_FOR || defined ISPC_USE_OMP || defined ISPC_USE_HPX)
+ 
+ // If no task model chosen from the compiler cmdline, pick a reasonable default
+-#if defined(_WIN32) || defined(_WIN64)
++#if defined(__MINGW32__)
++// Concurrency Runtime is available with Visual C++, but not MinGW.
++#define ISPC_USE_PTHREADS
++#elif defined(_WIN32) || defined(_WIN64)
+ #define ISPC_USE_CONCRT
+ #elif defined(__linux__) || defined(__FreeBSD__)
+ #define ISPC_USE_PTHREADS
+@@ -632,7 +635,13 @@
+                     // We launch one fewer thread than there are cores,
+                     // since the main thread here will also grab jobs from
+                     // the task queue itself.
++#ifdef ISPC_IS_WINDOWS
++                    SYSTEM_INFO info;
++                    GetSystemInfo(&info);
++                    nThreads = std::max(1, static_cast<int>(info.dwNumberOfProcessors) - 1);
++#else
+                     nThreads = sysconf(_SC_NPROCESSORS_ONLN) - 1;
++#endif
+ 
+                     int err;
+                     if ((err = pthread_mutex_init(&taskSysMutex, nullptr)) != 0) {
+@@ -640,6 +649,15 @@
+                         exit(1);
+                     }
+ 
++#ifdef ISPC_IS_WINDOWS
++                    // winpthreads supports unnamed semaphores.
++                    static sem_t semaphore;
++                    if (sem_init(&semaphore, 0, 0) != 0) {
++                        fprintf(stderr, "Error creating semaphore: %s\n", strerror(errno));
++                        exit(1);
++                    }
++                    workerSemaphore = &semaphore;
++#else
+                     constexpr std::size_t SEM_NAME_MAX_SIZE{1024UL};
+                     char semaphoreName[SEM_NAME_MAX_SIZE];
+                     bool success = false;
+@@ -660,6 +678,8 @@
+                         fprintf(stderr, "Error creating semaphore (%s): %s\n", semaphoreName, strerror(errno));
+                         exit(1);
+                     }
++
++#endif
+ 
+                     threads = (pthread_t *)malloc(nThreads * sizeof(pthread_t));
+                     if (threads == nullptr) {
+diff --git a/ispcrt/detail/cpu/CPUDevice.cpp b/ispcrt/detail/cpu/CPUDevice.cpp
+--- a/ispcrt/detail/cpu/CPUDevice.cpp
++++ b/ispcrt/detail/cpu/CPUDevice.cpp
+@@ -175,7 +175,7 @@
+         void *fptr = nullptr;
+         for (auto lib : m_libs) {
+ #if defined(_WIN32) || defined(_WIN64)
+-            fptr = GetProcAddress((HMODULE)lib, name);
++            fptr = reinterpret_cast<void *>(GetProcAddress(static_cast<HMODULE>(lib), name));
+ #else
+             fptr = dlsym(lib ? lib : RTLD_DEFAULT, name);
+ #endif
+diff --git a/ispcrt/ispcrt.cpp b/ispcrt/ispcrt.cpp
+--- a/ispcrt/ispcrt.cpp
++++ b/ispcrt/ispcrt.cpp
+@@ -90,7 +90,11 @@
+ 
+ // Define names of devices libraries.
+ #if defined(_WIN32) || defined(_WIN64)
++#if defined(__MINGW32__)
++#define ISPCRT_SO_LIB_PREFIX "lib"
++#else
+ #define ISPCRT_SO_LIB_PREFIX ""
++#endif
+ #define ISPCRT_SO_LIB_SUFFIX "dll"
+ #elif defined(__APPLE__)
+ #define ISPCRT_SO_LIB_PREFIX "lib"
+diff --git a/ispcrt/CMakeLists.txt b/ispcrt/CMakeLists.txt
+--- a/ispcrt/CMakeLists.txt
++++ b/ispcrt/CMakeLists.txt
+@@ -111,7 +111,7 @@
+                            -fstack-protector-strong -fno-delete-null-pointer-checks -fwrapv)
+     target_compile_options(ispcrt_interface_lib INTERFACE -Wall -Wextra -Wno-unused-private-field)
+     target_compile_definitions(ispcrt_interface_lib INTERFACE "_FORTIFY_SOURCE=2")
+-    if (NOT APPLE)
++    if (NOT APPLE AND NOT WIN32)
+         target_link_options(ispcrt_interface_lib INTERFACE
+                    "SHELL: -z noexecstack"
+                    "SHELL: -z relro"

@@ -8,6 +8,10 @@ bext_enable(PROJ)
 if (ENABLE_PROJ)
 
   set(PROJ_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/proj.patch")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    list(APPEND PROJ_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/proj_intelllvm_flags.patch")
+  endif ()
   git_submodule_init(PROJ CMakeLists.txt
     PATCH_FILES ${PROJ_PATCH_FILES}
     PATCH_COMMAND_VAR PROJ_PATCH_COMMAND)

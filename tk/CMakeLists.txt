@@ -197,6 +197,9 @@ if (TK_DO_BUILD)
       STEP_TARGETS install
       )
 
+    ExternalProject_Add_StepDependencies(TK_BLD build
+      "${CMAKE_CURRENT_BINARY_DIR}/tk_build.cmake"
+      "${CMAKE_CURRENT_BINARY_DIR}/tk_install.cmake")
     set(TK_APPINIT)
 
   endif (NOT MSVC)

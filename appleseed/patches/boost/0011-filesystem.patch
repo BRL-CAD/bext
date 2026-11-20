@@ -1,0 +1,2228 @@
+Subject: [PATCH 11/50] Use C++17 filesystem and native file timestamps
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: 702a9c17048f4fbf407a8acbedd367c936089c6f
+Original-Commit: 411dad89f0408abd288fe35ce502f297e9b72b7b
+Original-Commit: aa19527251a68ed0d0c209ad3d5678ad8e25a09f
+Original-Commit: 1b18651f047553b007832dff292a748bde7b28e0
+
+diff --git a/.github/workflows/build-pr-linux.yaml b/.github/workflows/build-pr-linux.yaml
+index 400cffde1..ef544592e 100644
+--- a/.github/workflows/build-pr-linux.yaml
++++ b/.github/workflows/build-pr-linux.yaml
+@@ -89,11 +89,9 @@ jobs:
+             -DBoost_ATOMIC_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_atomic-gcc63-mt-1_61.so.1.61.0 \
+             -DBoost_CHRONO_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_chrono-gcc63-mt-1_61.so.1.61.0 \
+             -DBoost_DATE_TIME_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_date_time-gcc63-mt-1_61.so.1.61.0 \
+-            -DBoost_FILESYSTEM_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_filesystem-gcc63-mt-1_61.so.1.61.0 \
+             -DBoost_PYTHON_LIBRARY=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_python-gcc63-mt-1_61.so.1.61.0 \
+             -DBoost_PYTHON_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_python-gcc63-mt-1_61.so.1.61.0 \
+             -DBoost_REGEX_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_regex-gcc63-mt-1_61.so.1.61.0 \
+-            -DBoost_SYSTEM_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_system-gcc63-mt-1_61.so.1.61.0 \
+             -DBoost_THREAD_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_thread-gcc63-mt-1_61.so.1.61.0 \
+             -DEMBREE_INCLUDE_DIR=${{ env.APPLESEED_DEPENDENCIES }}/include \
+             -DEMBREE_LIBRARY=${{ env.APPLESEED_DEPENDENCIES }}/lib/libembree3.so \
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 83ce4e063..c29556c59 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -248,8 +248,8 @@ set(Boost_MULTITHREADED TRUE)
+ if (USE_STATIC_BOOST)
+   set(Boost_USE_STATIC_LIBS TRUE)
+ endif ()
+-find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time filesystem regex system thread)
+-add_definitions(-DBOOST_FILESYSTEM_VERSION=3 -DBOOST_FILESYSTEM_NO_DEPRECATED -DBOOST_ALL_DYN_LINK)
++find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time regex thread)
++add_definitions(-DBOOST_ALL_DYN_LINK)
+ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+ link_directories(${Boost_LIBRARY_DIRS})
+ find_package(OSL 1.15 REQUIRED)
+diff --git a/scripts/Ubuntu_22.04_setup/setup.sh b/scripts/Ubuntu_22.04_setup/setup.sh
+index 82e4665c1..142c5ea63 100755
+--- a/scripts/Ubuntu_22.04_setup/setup.sh
++++ b/scripts/Ubuntu_22.04_setup/setup.sh
+@@ -973,7 +973,7 @@ if [[ $_sBoostInstallDir = "" ]]; then
+   fi
+ 
+   # check for boost installation in _sInstallDir (via existence of lib file)
+-  if [ ! -f $_sInstallDir/lib/libboost_filesystem.so ]; then
++  if [ ! -f $_sInstallDir/lib/libboost_thread.so ]; then
+     if [ $_bInstallDependencies = false ]; then
+       echo "Error: Could not find a $depName installation in \"$_sDependenciesDir\". Exiting."
+       exit 1
+diff --git a/scripts/travis/build-linux.sh b/scripts/travis/build-linux.sh
+index 9d976b2a2..36b2b504e 100644
+--- a/scripts/travis/build-linux.sh
++++ b/scripts/travis/build-linux.sh
+@@ -90,10 +90,8 @@ cmake \
+     -DBoost_ATOMIC_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_atomic-gcc63-mt-1_61.so.1.61.0 \
+     -DBoost_CHRONO_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_chrono-gcc63-mt-1_61.so.1.61.0 \
+     -DBoost_DATE_TIME_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_date_time-gcc63-mt-1_61.so.1.61.0 \
+-    -DBoost_FILESYSTEM_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_filesystem-gcc63-mt-1_61.so.1.61.0 \
+     -DBoost_PYTHON_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_python-gcc63-mt-1_61.so.1.61.0 \
+     -DBoost_REGEX_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_regex-gcc63-mt-1_61.so.1.61.0 \
+-    -DBoost_SYSTEM_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_system-gcc63-mt-1_61.so.1.61.0 \
+     -DBoost_THREAD_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_thread-gcc63-mt-1_61.so.1.61.0 \
+     -DEMBREE_INCLUDE_DIR=$APPLESEED_DEPENDENCIES/include \
+     -DEMBREE_LIBRARY=$APPLESEED_DEPENDENCIES/lib/libembree3.so \
+diff --git a/src/appleseed.bench/main/main.cpp b/src/appleseed.bench/main/main.cpp
+index 51d34eb96..8ed05e62f 100644
+--- a/src/appleseed.bench/main/main.cpp
++++ b/src/appleseed.bench/main/main.cpp
+@@ -54,16 +54,13 @@
+ #include <QMessageBox>
+ #include <QString>
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <clocale>
+ #include <cstdio>
+ #include <cstdlib>
+ #include <cstring>
++#include <filesystem>
+ #include <fstream>
+ #include <sstream>
+ #include <string>
+@@ -72,7 +69,7 @@ using namespace appleseed::bench;
+ using namespace appleseed::common;
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace
+ {
+diff --git a/src/appleseed.bench/mainwindow/mainwindow.cpp b/src/appleseed.bench/mainwindow/mainwindow.cpp
+index f81eeb22d..d0aacb7dc 100644
+--- a/src/appleseed.bench/mainwindow/mainwindow.cpp
++++ b/src/appleseed.bench/mainwindow/mainwindow.cpp
+@@ -91,6 +91,7 @@
+ 
+ // Standard headers.
+ #include <cstdlib>
++#include <filesystem>
+ #include <limits>
+ #include <utility>
+ 
+@@ -98,7 +99,7 @@ using namespace appleseed::common;
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace bench {
+diff --git a/src/appleseed.bench/mainwindow/mainwindow.h b/src/appleseed.bench/mainwindow/mainwindow.h
+index b7827d927..500e825e7 100644
+--- a/src/appleseed.bench/mainwindow/mainwindow.h
++++ b/src/appleseed.bench/mainwindow/mainwindow.h
+@@ -60,14 +60,12 @@
+ #include <OpenColorIO/OpenColorIO.h>
+ namespace OCIO = OCIO_NAMESPACE;
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <cassert>
+ #include <cstddef>
+ #include <cstdint>
++#include <filesystem>
+ #include <memory>
+ 
+ // Forward declarations.
+@@ -131,7 +129,7 @@ class MainWindow
+ 
+     QNetworkAccessManager                       m_network_access_manager;
+ 
+-    const boost::filesystem::path               m_root_path;
++    const std::filesystem::path               m_root_path;
+     OCIO::ConstConfigRcPtr                      m_ocio_config;
+     const SystemInfo                            m_system_info;
+ 
+diff --git a/src/appleseed.bench/mainwindow/rendering/renderingmanager.cpp b/src/appleseed.bench/mainwindow/rendering/renderingmanager.cpp
+index a62d5bd76..6f409e488 100644
+--- a/src/appleseed.bench/mainwindow/rendering/renderingmanager.cpp
++++ b/src/appleseed.bench/mainwindow/rendering/renderingmanager.cpp
+@@ -56,21 +56,19 @@
+ #include "foundation/utility/foreach.h"
+ #include "foundation/utility/job/iabortswitch.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Qt headers.
+ #include <QApplication>
+ 
+ // Standard headers.
+ #include <cassert>
+ #include <cstddef>
++#include <filesystem>
+ 
+ using namespace appleseed::common;
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace bench {
+diff --git a/src/appleseed.cli/main.cpp b/src/appleseed.cli/main.cpp
+index 443996d97..e6a4e9a57 100644
+--- a/src/appleseed.cli/main.cpp
++++ b/src/appleseed.cli/main.cpp
+@@ -62,15 +62,12 @@
+ // appleseed.main headers.
+ #include "main/allocator.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cstddef>
+ #include <cstdint>
+ #include <cstdlib>
++#include <filesystem>
+ #include <memory>
+ #include <string>
+ 
+@@ -78,7 +75,7 @@ using namespace appleseed::cli;
+ using namespace appleseed::common;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace
+ {
+diff --git a/src/appleseed.common/application/application.cpp b/src/appleseed.common/application/application.cpp
+index ccd91cc34..52a1b421e 100644
+--- a/src/appleseed.common/application/application.cpp
++++ b/src/appleseed.common/application/application.cpp
+@@ -39,15 +39,13 @@
+ #include "foundation/utility/searchpaths.h"
+ #include "foundation/utility/settings.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/exception.hpp"
+-
+ // Standard headers.
+ #include <cstring>
++#include <filesystem>
+ #include <string>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace common {
+@@ -147,8 +145,13 @@ namespace
+ 
+         // Remove the end of the path until /bin is reached.
+         bf::path path = executable_path;
+-        while (path.has_parent_path() && path.filename() != "bin")
+-            path = path.parent_path();
++        while (path.filename() != "bin")
++        {
++            const bf::path parent = path.parent_path();
++            if (parent.empty() || parent == path)
++                return false;
++            path = parent;
++        }
+ 
+         if (!path.has_root_path())
+             return false;
+diff --git a/src/appleseed.common/application/application.h b/src/appleseed.common/application/application.h
+index a1aa24734..67a703251 100644
+--- a/src/appleseed.common/application/application.h
++++ b/src/appleseed.common/application/application.h
+@@ -32,10 +32,9 @@
+ // appleseed.foundation headers.
+ #include "foundation/log/logmessage.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-#include "boost/system/error_code.hpp"
++// Standard headers.
++#include <filesystem>
++#include <system_error>
+ 
+ // Forward declarations.
+ namespace foundation    { class Dictionary; }
+@@ -112,7 +111,7 @@ class Application
+ 
+     // Change the current directory to the root path of the application's tests.
+     // Returns the path to the current directory.
+-    static boost::filesystem::path change_current_directory_to_tests_root_path();
++    static std::filesystem::path change_current_directory_to_tests_root_path();
+ 
+     // Create output directories for the application's unit tests.
+     // Returns true on success, false otherwise.
+@@ -124,9 +123,9 @@ class Application
+ // Application class implementation.
+ //
+ 
+-inline boost::filesystem::path Application::change_current_directory_to_tests_root_path()
++inline std::filesystem::path Application::change_current_directory_to_tests_root_path()
+ {
+-    namespace bf = boost::filesystem;
++    namespace bf = std::filesystem;
+ 
+     const bf::path old_current_path = bf::current_path();
+     bf::current_path(get_tests_root_path());
+@@ -135,8 +134,8 @@ inline boost::filesystem::path Application::change_current_directory_to_tests_ro
+ 
+ inline bool Application::create_unit_tests_output_directories()
+ {
+-    boost::system::error_code ec;
+-    boost::filesystem::create_directories(get_unit_tests_output_path(), ec);
++    std::error_code ec;
++    std::filesystem::create_directories(get_unit_tests_output_path(), ec);
+     return !ec;
+ }
+ 
+diff --git a/src/appleseed.common/application/commandlinehandlerbase.cpp b/src/appleseed.common/application/commandlinehandlerbase.cpp
+index 336b62a11..f6e6b1c46 100644
+--- a/src/appleseed.common/application/commandlinehandlerbase.cpp
++++ b/src/appleseed.common/application/commandlinehandlerbase.cpp
+@@ -45,17 +45,15 @@
+ #endif
+ #include "foundation/utility/commandlineparser.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cstddef>
+ #include <cstdlib>
+ #include <cstring>
++#include <filesystem>
+ #include <string>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace common {
+diff --git a/src/appleseed.qtcommon/project/projectmanager.cpp b/src/appleseed.qtcommon/project/projectmanager.cpp
+index f7bf6db53..29fb4c6ba 100644
+--- a/src/appleseed.qtcommon/project/projectmanager.cpp
++++ b/src/appleseed.qtcommon/project/projectmanager.cpp
+@@ -44,18 +44,16 @@
+ #include <QFutureWatcher>
+ #include <QtConcurrent>
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <exception>
++#include <filesystem>
+ #include <new>
+ 
+ using namespace appleseed::common;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace qtcommon {
+diff --git a/src/appleseed.studio/debug/benchmarks/benchmarkrunnerthread.cpp b/src/appleseed.studio/debug/benchmarks/benchmarkrunnerthread.cpp
+index 92ea1e31c..6b8d1906c 100644
+--- a/src/appleseed.studio/debug/benchmarks/benchmarkrunnerthread.cpp
++++ b/src/appleseed.studio/debug/benchmarks/benchmarkrunnerthread.cpp
+@@ -39,17 +39,14 @@
+ #include "foundation/string/string.h"
+ #include "foundation/utility/benchmark.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
++#include <filesystem>
+ #include <string>
+ 
+ using namespace appleseed::common;
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp b/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
+index 23f644bf3..1aa392779 100644
+--- a/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
++++ b/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
+@@ -44,7 +44,6 @@
+ 
+ // Boost headers.
+ #include "boost/date_time/posix_time/posix_time.hpp"
+-#include "boost/filesystem/path.hpp"
+ 
+ // Qt headers.
+ #include <QKeySequence>
+@@ -59,6 +58,7 @@
+ 
+ // Standard headers.
+ #include <cstdint>
++#include <filesystem>
+ #include <string>
+ #include <utility>
+ 
+@@ -66,7 +66,7 @@ using namespace appleseed::common;
+ using namespace appleseed::qtcommon;
+ using namespace boost;
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/debug/tests/testrunnerthread.cpp b/src/appleseed.studio/debug/tests/testrunnerthread.cpp
+index dcfe2e03a..e93af7500 100644
+--- a/src/appleseed.studio/debug/tests/testrunnerthread.cpp
++++ b/src/appleseed.studio/debug/tests/testrunnerthread.cpp
+@@ -43,14 +43,13 @@
+ #include "foundation/platform/thread.h"
+ #include "foundation/utility/test.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
++// Standard headers.
++#include <filesystem>
+ 
+ using namespace appleseed::common;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/main/main.cpp b/src/appleseed.studio/main/main.cpp
+index 686a3142f..b50b3750d 100644
+--- a/src/appleseed.studio/main/main.cpp
++++ b/src/appleseed.studio/main/main.cpp
+@@ -60,16 +60,13 @@
+ #include <QString>
+ #include <QSurfaceFormat>
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <clocale>
+ #include <cstdio>
+ #include <cstdlib>
+ #include <cstring>
++#include <filesystem>
+ #include <fstream>
+ #include <sstream>
+ #include <string>
+@@ -78,7 +75,7 @@ using namespace appleseed::studio;
+ using namespace appleseed::common;
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace
+ {
+diff --git a/src/appleseed.studio/mainwindow/mainwindow.cpp b/src/appleseed.studio/mainwindow/mainwindow.cpp
+index abc4f5a0c..6815bea67 100644
+--- a/src/appleseed.studio/mainwindow/mainwindow.cpp
++++ b/src/appleseed.studio/mainwindow/mainwindow.cpp
+@@ -101,19 +101,17 @@
+ #include <QUrl>
+ #include <QVariant>
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <cassert>
+ #include <cstdlib>
++#include <filesystem>
+ 
+ using namespace appleseed::common;
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/mainwindow/project/entityeditor.cpp b/src/appleseed.studio/mainwindow/project/entityeditor.cpp
+index 5e94c47a3..a44c1fe23 100644
+--- a/src/appleseed.studio/mainwindow/project/entityeditor.cpp
++++ b/src/appleseed.studio/mainwindow/project/entityeditor.cpp
+@@ -75,13 +75,10 @@
+ #include <QVariant>
+ #include <QVBoxLayout>
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cmath>
++#include <filesystem>
+ #include <limits>
+ #include <sstream>
+ #include <utility>
+@@ -89,7 +86,7 @@
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/mainwindow/project/materialcollectionitem.cpp b/src/appleseed.studio/mainwindow/project/materialcollectionitem.cpp
+index bf1ac1525..4a3a1de8d 100644
+--- a/src/appleseed.studio/mainwindow/project/materialcollectionitem.cpp
++++ b/src/appleseed.studio/mainwindow/project/materialcollectionitem.cpp
+@@ -56,13 +56,10 @@
+ // Qt headers.
+ #include <QString>
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cstring>
++#include <filesystem>
+ #include <memory>
+ #include <string>
+ #include <utility>
+@@ -71,7 +68,7 @@ using namespace appleseed::common;
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/mainwindow/project/materialitem.cpp b/src/appleseed.studio/mainwindow/project/materialitem.cpp
+index 0283c5f45..af25237a0 100644
+--- a/src/appleseed.studio/mainwindow/project/materialitem.cpp
++++ b/src/appleseed.studio/mainwindow/project/materialitem.cpp
+@@ -48,17 +48,14 @@
+ #include <QMenu>
+ #include <QString>
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <utility>
+ 
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/mainwindow/project/objectcollectionitem.cpp b/src/appleseed.studio/mainwindow/project/objectcollectionitem.cpp
+index 7c89f88e4..96a19485e 100644
+--- a/src/appleseed.studio/mainwindow/project/objectcollectionitem.cpp
++++ b/src/appleseed.studio/mainwindow/project/objectcollectionitem.cpp
+@@ -57,17 +57,15 @@
+ #include <QString>
+ #include <QStringList>
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cstddef>
++#include <filesystem>
+ 
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/mainwindow/project/texturecollectionitem.cpp b/src/appleseed.studio/mainwindow/project/texturecollectionitem.cpp
+index 1c7b07510..1bd4a4bb2 100644
+--- a/src/appleseed.studio/mainwindow/project/texturecollectionitem.cpp
++++ b/src/appleseed.studio/mainwindow/project/texturecollectionitem.cpp
+@@ -55,17 +55,15 @@
+ #include <QString>
+ #include <QStringList>
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
++#include <filesystem>
+ #include <string>
+ 
+ using namespace appleseed::qtcommon;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/mainwindow/rendering/renderingmanager.cpp b/src/appleseed.studio/mainwindow/rendering/renderingmanager.cpp
+index 90df9f0c4..f1e67071e 100644
+--- a/src/appleseed.studio/mainwindow/rendering/renderingmanager.cpp
++++ b/src/appleseed.studio/mainwindow/rendering/renderingmanager.cpp
+@@ -58,19 +58,17 @@
+ #include "foundation/utility/foreach.h"
+ #include "foundation/utility/job/iabortswitch.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Qt headers.
+ #include <QApplication>
+ 
+ // Standard headers.
+ #include <cassert>
++#include <filesystem>
+ 
+ using namespace appleseed::common;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace appleseed {
+ namespace studio {
+diff --git a/src/appleseed.studio/python/pythoninterpreter.cpp b/src/appleseed.studio/python/pythoninterpreter.cpp
+index e269ef129..e2fcc0d75 100644
+--- a/src/appleseed.studio/python/pythoninterpreter.cpp
++++ b/src/appleseed.studio/python/pythoninterpreter.cpp
+@@ -44,13 +44,13 @@
+ #include "foundation/platform/path.h"
+ #include "foundation/string/string.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
++// Standard headers.
++#include <filesystem>
+ 
+ using namespace appleseed::common;
+ using namespace foundation;
+ namespace bpy = boost::python;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ // From appleseed.python module.cpp
+ extern "C" void bind_appleseed_python_classes();
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index 1d7b69da5..256b9fe7e 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -560,7 +560,6 @@ set (foundation_meta_tests_sources
+     foundation/meta/tests/test_beziercurve.cpp
+     foundation/meta/tests/test_bitmask.cpp
+     foundation/meta/tests/test_boost_datetime.cpp
+-    foundation/meta/tests/test_boost_path.cpp
+     foundation/meta/tests/test_boost_regex.cpp
+     foundation/meta/tests/test_bsp.cpp
+     foundation/meta/tests/test_bufferedfile.cpp
+@@ -581,6 +580,7 @@ set (foundation_meta_tests_sources
+     foundation/meta/tests/test_dictionary.cpp
+     foundation/meta/tests/test_distance.cpp
+     foundation/meta/tests/test_fastmath.cpp
++    foundation/meta/tests/test_filesystem_path.cpp
+     foundation/meta/tests/test_filtersamplingtable.cpp
+     foundation/meta/tests/test_fp.cpp
+     foundation/meta/tests/test_fresnel.cpp
+diff --git a/src/appleseed/foundation/curve/genericcurvefilereader.cpp b/src/appleseed/foundation/curve/genericcurvefilereader.cpp
+index 2517a0ef3..ec0be48bb 100644
+--- a/src/appleseed/foundation/curve/genericcurvefilereader.cpp
++++ b/src/appleseed/foundation/curve/genericcurvefilereader.cpp
+@@ -35,13 +35,11 @@
+ #include "foundation/curve/mitshairfilereader.h"
+ #include "foundation/string/string.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <string>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+diff --git a/src/appleseed/foundation/curve/genericcurvefilewriter.cpp b/src/appleseed/foundation/curve/genericcurvefilewriter.cpp
+index b5f4fa88f..1424c1412 100644
+--- a/src/appleseed/foundation/curve/genericcurvefilewriter.cpp
++++ b/src/appleseed/foundation/curve/genericcurvefilewriter.cpp
+@@ -34,13 +34,11 @@
+ #include "foundation/curve/binarycurvefilewriter.h"
+ #include "foundation/string/string.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <string>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+diff --git a/src/appleseed/foundation/image/conversion.cpp b/src/appleseed/foundation/image/conversion.cpp
+index 89f07e687..ae970c33e 100644
+--- a/src/appleseed/foundation/image/conversion.cpp
++++ b/src/appleseed/foundation/image/conversion.cpp
+@@ -39,8 +39,9 @@
+ // Standard headers.
+ #include <cassert>
+ #include <cstddef>
++#include <filesystem>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+diff --git a/src/appleseed/foundation/image/conversion.h b/src/appleseed/foundation/image/conversion.h
+index a1d083415..a76219a70 100644
+--- a/src/appleseed/foundation/image/conversion.h
++++ b/src/appleseed/foundation/image/conversion.h
+@@ -28,18 +28,21 @@
+ 
+ #pragma once
+ 
++// appleseed.main headers.
++#include "main/dllsymbol.h"
++
++// Standard headers.
++#include <filesystem>
++
+ // Forward declarations.
+ namespace foundation { class Image; }
+ namespace foundation { class Tile; }
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-
+ namespace foundation
+ {
+ 
+ // Return true if a given path references a linear, high dynamic range image file format such as OpenEXR or HDR.
+-APPLESEED_DLLSYMBOL bool is_linear_image_file_format(const boost::filesystem::path& path);
++APPLESEED_DLLSYMBOL bool is_linear_image_file_format(const std::filesystem::path& path);
+ 
+ // Transform an RGB or RGBA (with premultiplied alpha) tile or image from sRGB to linear RGB.
+ APPLESEED_DLLSYMBOL void convert_srgb_to_linear_rgb(Tile& tile);
+diff --git a/src/appleseed/foundation/image/genericimagefilewriter.cpp b/src/appleseed/foundation/image/genericimagefilewriter.cpp
+index c88ae93af..054d5e89b 100644
+--- a/src/appleseed/foundation/image/genericimagefilewriter.cpp
++++ b/src/appleseed/foundation/image/genericimagefilewriter.cpp
+@@ -40,9 +40,6 @@
+ #include "foundation/string/string.h"
+ #include "foundation/utility/iostreamop.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // OpenImageIO headers.
+ #include "foundation/platform/_beginoiioheaders.h"
+ #include "OpenImageIO/version.h"
+@@ -52,6 +49,7 @@
+ #include <algorithm>
+ #include <cstdint>
+ #include <cstring>
++#include <filesystem>
+ #include <memory>
+ #include <stdexcept>
+ #include <vector>
+@@ -156,7 +154,7 @@ struct GenericImageFileWriter::Impl
+         }
+ 
+         // Format of the pixel data.
+-        const boost::filesystem::path filepath(m_filename);
++        const std::filesystem::path filepath(m_filename);
+         const std::string extension = lower_case(filepath.extension().string());
+ 
+         set_image_output_format(props.m_pixel_format);
+@@ -501,7 +499,7 @@ void GenericImageFileWriter::set_image_attributes(const ImageAttributes& image_a
+     impl->set_generic_image_attributes(image_attributes);
+ 
+     // Retrieve filename extension.
+-    const boost::filesystem::path filepath(impl->m_filename);
++    const std::filesystem::path filepath(impl->m_filename);
+     const std::string extension = lower_case(filepath.extension().string());
+ 
+     // Set file format-specific image attributes.
+diff --git a/src/appleseed/foundation/meshio/genericmeshfilereader.cpp b/src/appleseed/foundation/meshio/genericmeshfilereader.cpp
+index 0714f36a7..78f681549 100644
+--- a/src/appleseed/foundation/meshio/genericmeshfilereader.cpp
++++ b/src/appleseed/foundation/meshio/genericmeshfilereader.cpp
+@@ -37,16 +37,14 @@
+ #include "foundation/meshio/plymeshfilereader.h"
+ #include "foundation/string/string.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <string>
+ 
+ // TEMPORARY: Remove this include when the PLY reader is implemented.
+ #include <iostream>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+diff --git a/src/appleseed/foundation/meshio/genericmeshfilewriter.cpp b/src/appleseed/foundation/meshio/genericmeshfilewriter.cpp
+index 2915fbf59..8e0188d81 100644
+--- a/src/appleseed/foundation/meshio/genericmeshfilewriter.cpp
++++ b/src/appleseed/foundation/meshio/genericmeshfilewriter.cpp
+@@ -36,13 +36,11 @@
+ #include "foundation/meshio/objmeshfilewriter.h"
+ #include "foundation/string/string.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <string>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+diff --git a/src/appleseed/foundation/meta/tests/test_boost_path.cpp b/src/appleseed/foundation/meta/tests/test_filesystem_path.cpp
+similarity index 84%
+rename from src/appleseed/foundation/meta/tests/test_boost_path.cpp
+rename to src/appleseed/foundation/meta/tests/test_filesystem_path.cpp
+index ff9c7b24e..24c7bce6d 100644
+--- a/src/appleseed/foundation/meta/tests/test_boost_path.cpp
++++ b/src/appleseed/foundation/meta/tests/test_filesystem_path.cpp
+@@ -30,15 +30,13 @@
+ // appleseed.foundation headers.
+ #include "foundation/utility/test.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <string>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+-TEST_SUITE(Boost_Path)
++TEST_SUITE(Foundation_Platform_FilesystemPath)
+ {
+     TEST_CASE(Constructor_GivenPathWithFilenameEndingWithDot_ConstructsValidPath)
+     {
+@@ -62,40 +60,56 @@ TEST_SUITE(Boost_Path)
+     TEST_CASE(String_GivenPathWithSlashes)
+     {
+         const std::string s = bf::path("dir/file.txt").string();
++        EXPECT_EQ("dir/file.txt", s);
+     }
+ 
+     TEST_CASE(String_GivenPathWithBackSlashes)
+     {
+         const std::string s = bf::path("dir\\file.txt").string();
++        EXPECT_EQ("dir\\file.txt", s);
+     }
+ 
+     TEST_CASE(Native_GivenPathWithSlashes)
+     {
+         const bf::path::string_type s = bf::path("dir/file.txt").native();
++        EXPECT_EQ("dir/file.txt", bf::path(s).string());
+     }
+ 
+     TEST_CASE(Native_GivenPathWithBackSlashes)
+     {
+         const bf::path::string_type s = bf::path("dir\\file.txt").native();
++        EXPECT_EQ("dir\\file.txt", bf::path(s).string());
+     }
+ 
+     TEST_CASE(GenericString_GivenPathWithSlashes)
+     {
+         const std::string s = bf::path("dir/file.txt").generic_string();
++        EXPECT_EQ("dir/file.txt", s);
+     }
+ 
+     TEST_CASE(GenericString_GivenPathWithBackSlashes)
+     {
+         const std::string s = bf::path("dir\\file.txt").generic_string();
++#ifdef _WIN32
++        EXPECT_EQ("dir/file.txt", s);
++#else
++        EXPECT_EQ("dir\\file.txt", s);
++#endif
+     }
+ 
+     TEST_CASE(MakePreferred_GivenPathWithSlashes)
+     {
+         const std::string s = bf::path("dir/file.txt").make_preferred().string();
++#ifdef _WIN32
++        EXPECT_EQ("dir\\file.txt", s);
++#else
++        EXPECT_EQ("dir/file.txt", s);
++#endif
+     }
+ 
+     TEST_CASE(MakePreferred_GivenPathWithBackSlashes)
+     {
+         const std::string s = bf::path("dir\\file.txt").make_preferred().string();
++        EXPECT_EQ("dir\\file.txt", s);
+     }
+ }
+diff --git a/src/appleseed/foundation/meta/tests/test_path.cpp b/src/appleseed/foundation/meta/tests/test_path.cpp
+index 224a31eb0..d84aa1bfc 100644
+--- a/src/appleseed/foundation/meta/tests/test_path.cpp
++++ b/src/appleseed/foundation/meta/tests/test_path.cpp
+@@ -31,17 +31,16 @@
+ #include "foundation/platform/path.h"
+ #include "foundation/utility/test.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cstdio>
++#include <filesystem>
++#include <fstream>
+ #include <string>
++#include <system_error>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ TEST_SUITE(Foundation_Platform_Path)
+ {
+@@ -57,6 +56,7 @@ TEST_SUITE(Foundation_Platform_Path)
+         const std::string executable_dir = get_executable_directory();
+ 
+         EXPECT_FALSE(executable_dir.empty());
++        EXPECT_EQ(bf::path(get_executable_path()).parent_path().string(), executable_dir);
+     }
+ 
+     TEST_CASE(HasExtension_GivenEmptyPath_ReturnsFalse)
+@@ -229,6 +229,86 @@ TEST_SUITE(Foundation_Platform_Path)
+         EXPECT_EQ("bar\\file.ext", r2.make_preferred().string());
+     }
+ 
++#endif
++
++    TEST_CASE(SplitPaths_WithRelativePaths_ReturnsCommonDirectory)
++    {
++        bf::path common, first, second;
++        split_paths("assets/textures/a.tx", "assets/models/b.obj", common, first, second);
++
++        EXPECT_EQ("assets", common.generic_string());
++        EXPECT_EQ("textures/a.tx", first.generic_string());
++        EXPECT_EQ("models/b.obj", second.generic_string());
++    }
++
++    TEST_CASE(SplitPaths_WithIdenticalRelativeFiles_LeavesFilenameInBothRemainders)
++    {
++        bf::path common, first, second;
++        split_paths("assets/textures/a.tx", "assets/textures/a.tx", common, first, second);
++
++        EXPECT_EQ("assets/textures", common.generic_string());
++        EXPECT_EQ("a.tx", first.generic_string());
++        EXPECT_EQ("a.tx", second.generic_string());
++    }
++
++    TEST_CASE(SplitPaths_WithUnrelatedRelativePaths_ReturnsNoCommonDirectory)
++    {
++        bf::path common, first, second;
++        split_paths("textures/a.tx", "models/b.obj", common, first, second);
++
++        EXPECT_TRUE(common.empty());
++        EXPECT_EQ("textures/a.tx", first.generic_string());
++        EXPECT_EQ("models/b.obj", second.generic_string());
++    }
++
++    struct CanonicalPathFixture
++    {
++        const std::filesystem::path m_root;
++
++        CanonicalPathFixture()
++          : m_root(std::filesystem::absolute("unit tests/outputs/test_canonical_path"))
++        {
++            std::filesystem::remove_all(m_root);
++            std::filesystem::create_directories(m_root / "target");
++            std::ofstream file;
++            file.exceptions(std::ios::failbit | std::ios::badbit);
++            file.open(m_root / "file");
++            file << "file";
++        }
++
++        ~CanonicalPathFixture()
++        {
++            // Cleanup must not replace a test failure with a second exception.
++            std::error_code ignored;
++            std::filesystem::remove_all(m_root, ignored);
++        }
++
++        bf::path path(const char* relative) const
++        {
++            return bf::path((m_root / relative).string());
++        }
++    };
++
++    TEST_CASE_F(SafeWeaklyCanonical_NormalizesMissingTail, CanonicalPathFixture)
++    {
++        EXPECT_EQ(path("target/new.oso").generic_string(),
++            safe_weakly_canonical(path("target/missing/../new.oso")).generic_string());
++    }
++
++    TEST_CASE_F(SafeWeaklyCanonical_WithNonDirectoryParent_ReturnsOriginalPath, CanonicalPathFixture)
++    {
++        const bf::path original = path("file/shader.oso");
++        EXPECT_EQ(original.generic_string(), safe_weakly_canonical(original).generic_string());
++    }
++
++#ifndef _WIN32
++    // Creating symlinks on Windows can require privileges unavailable to tests.
++    TEST_CASE_F(SafeWeaklyCanonical_ResolvesSymlinkBeforeMissingTail, CanonicalPathFixture)
++    {
++        std::filesystem::create_directory_symlink(m_root / "target", m_root / "link");
++        EXPECT_EQ(path("target/new.oso").generic_string(),
++            safe_weakly_canonical(path("link/new.oso")).generic_string());
++    }
+ #endif
+ 
+     struct FindNextAvailablePathFixture
+diff --git a/src/appleseed/foundation/meta/tests/test_zip.cpp b/src/appleseed/foundation/meta/tests/test_zip.cpp
+index 11ea88c5e..56976b0b5 100644
+--- a/src/appleseed/foundation/meta/tests/test_zip.cpp
++++ b/src/appleseed/foundation/meta/tests/test_zip.cpp
+@@ -28,20 +28,27 @@
+ 
+ // appleseed.foundation headers.
+ #include "foundation/utility/countof.h"
++#include "foundation/utility/minizip/unzip.h"
+ #include "foundation/utility/test.h"
+ #include "foundation/utility/zip.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
++// OpenImageIO headers.
++#include "foundation/platform/_beginoiioheaders.h"
++#include "OpenImageIO/filesystem.h"
++#include "foundation/platform/_endoiioheaders.h"
+ 
+ // Standard headers.
+ #include <algorithm>
++#include <ctime>
++#include <filesystem>
++#include <fstream>
+ #include <set>
+ #include <string>
++#include <system_error>
+ #include <vector>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ TEST_SUITE(Foundation_Utility_Zip)
+ {
+@@ -114,6 +121,70 @@ TEST_SUITE(Foundation_Utility_Zip)
+         }
+     }
+ 
++    struct TimestampFixture
++    {
++        const std::filesystem::path m_root;
++
++        TimestampFixture()
++          : m_root("unit tests/outputs/test_zip_timestamp")
++        {
++            std::filesystem::remove_all(m_root);
++            std::filesystem::create_directories(m_root / "input");
++            std::ofstream file;
++            file.exceptions(std::ios::failbit | std::ios::badbit);
++            file.open(m_root / "input/stamp.txt");
++            file << "timestamp";
++        }
++
++        ~TimestampFixture()
++        {
++            std::error_code ignored;
++            std::filesystem::remove_all(m_root, ignored);
++        }
++    };
++
++    TEST_CASE_F(Zip_PreservesFileModificationTime, TimestampFixture)
++    {
++        std::tm date = {};
++        date.tm_year = 2020 - 1900;
++        date.tm_mon = 0;
++        date.tm_mday = 2;
++        date.tm_hour = 12;
++        date.tm_min = 34;
++        // DOS timestamps store seconds in pairs.
++        date.tm_sec = 56;
++        date.tm_isdst = -1;
++        const std::time_t timestamp = std::mktime(&date);
++        ASSERT_TRUE(timestamp != std::time_t(-1));
++        OIIO::Filesystem::last_write_time((m_root / "input/stamp.txt").u8string(), timestamp);
++        ASSERT_EQ(timestamp,
++            OIIO::Filesystem::last_write_time((m_root / "input/stamp.txt").u8string()));
++
++        const std::string archive_path = (m_root / "stamp.zip").string();
++        zip(archive_path, (m_root / "input").string());
++
++        struct ArchiveReader
++        {
++            unzFile m_file;
++            ~ArchiveReader()
++            {
++                if (m_file)
++                    unzClose(m_file);
++            }
++        } archive = { unzOpen(archive_path.c_str()) };
++        ASSERT_TRUE(archive.m_file != nullptr);
++        ASSERT_EQ(UNZ_OK, unzGoToFirstFile(archive.m_file));
++        unz_file_info info = {};
++        ASSERT_EQ(UNZ_OK, unzGetCurrentFileInfo(
++            archive.m_file, &info, nullptr, 0, nullptr, 0, nullptr, 0));
++        EXPECT_EQ(2020, info.tmu_date.tm_year);
++        EXPECT_EQ(0, info.tmu_date.tm_mon);
++        EXPECT_EQ(2, info.tmu_date.tm_mday);
++        EXPECT_EQ(12, info.tmu_date.tm_hour);
++        EXPECT_EQ(34, info.tmu_date.tm_min);
++        EXPECT_EQ(56, info.tmu_date.tm_sec);
++    }
++
+     TEST_CASE(IsZipFile_GivenValidZipFile_ReturnsTrue)
+     {
+         EXPECT_TRUE(is_zip_file("unit tests/inputs/test_zip_validzipfile.zip"));
+diff --git a/src/appleseed/foundation/platform/path.cpp b/src/appleseed/foundation/platform/path.cpp
+index 5b594c3cb..9a2fcbe23 100644
+--- a/src/appleseed/foundation/platform/path.cpp
++++ b/src/appleseed/foundation/platform/path.cpp
+@@ -38,6 +38,7 @@
+ #include <cstddef>
+ #include <cstdint>
+ #include <cstring>
++#include <filesystem>
+ 
+ // Platform headers.
+ #if defined __APPLE__
+@@ -52,7 +53,7 @@
+ #include <unistd.h>
+ #endif
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+@@ -119,7 +120,7 @@ const char* get_executable_directory()
+         bf::path executable_path(get_executable_path());
+ 
+         assert(executable_path.has_filename());
+-        executable_path.remove_filename();
++        executable_path = executable_path.parent_path();
+ 
+         assert(executable_path.string().size() <= FOUNDATION_MAX_PATH_LENGTH);
+         std::strncpy(path, executable_path.string().c_str(), sizeof(path) - 1);
+diff --git a/src/appleseed/foundation/platform/path.h b/src/appleseed/foundation/platform/path.h
+index b908ee7cb..2cf0e0c5e 100644
+--- a/src/appleseed/foundation/platform/path.h
++++ b/src/appleseed/foundation/platform/path.h
+@@ -39,13 +39,9 @@
+ // appleseed.main headers.
+ #include "main/dllsymbol.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/exception.hpp"
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
++#include <filesystem>
+ 
+ // Platform headers.
+ #if defined __APPLE__ || defined __FreeBSD__
+@@ -94,64 +90,64 @@ APPLESEED_DLLSYMBOL const char* get_home_directory();
+ 
+ 
+ //
+-// Operations on boost::filesystem::path objects.
++// Operations on std::filesystem::path objects.
+ //
+ 
+-// Try to call boost::filesystem::weakly_canonical() on a given path such that it won't
+-// fail if the path does not exist, then call boost::filesystem::path::make_preferred()
++// Try to call std::filesystem::weakly_canonical() on a given path such that it won't
++// fail if the path does not exist, then call std::filesystem::path::make_preferred()
+ // on the result.
+-boost::filesystem::path safe_weakly_canonical(const boost::filesystem::path& p);
++std::filesystem::path safe_weakly_canonical(const std::filesystem::path& p);
+ 
+ // Return true if a path has a non-empty extension.
+-bool has_extension(const boost::filesystem::path& p);
++bool has_extension(const std::filesystem::path& p);
+ 
+ // Split two paths into a common base path and two relative paths.
+ void split_paths(
+-    const boost::filesystem::path&  p1,
+-    const boost::filesystem::path&  p2,
+-    boost::filesystem::path&        common,
+-    boost::filesystem::path&        r1,
+-    boost::filesystem::path&        r2);
++    const std::filesystem::path&  p1,
++    const std::filesystem::path&  p2,
++    std::filesystem::path&        common,
++    std::filesystem::path&        r1,
++    std::filesystem::path&        r2);
+ 
+ // Find the next available file path by searching for the first path that does not
+ // refer to an existing file on disk, and where the path follows the given pattern
+ // where consecutive '#' characters have been replaced by increasing integer values
+ // starting with 1.
+-boost::filesystem::path find_next_available_path(const boost::filesystem::path& p);
++std::filesystem::path find_next_available_path(const std::filesystem::path& p);
+ 
+ 
+ //
+-// Inline implementation of functions using boost::filesystem to allow using them
++// Inline implementation of functions using std::filesystem to allow using them
+ // outside of appleseed's shared library (for instance in appleseed.studio).
+ //
+ 
+-inline boost::filesystem::path safe_weakly_canonical(const boost::filesystem::path& p)
++inline std::filesystem::path safe_weakly_canonical(const std::filesystem::path& p)
+ {
+     auto result = p;
+ 
+     try
+     {
+-        result = boost::filesystem::weakly_canonical(result);
++        result = std::filesystem::weakly_canonical(result);
+     }
+-    catch (const boost::filesystem::filesystem_error&)
++    catch (const std::filesystem::filesystem_error&)
+     {
+     }
+ 
+     return result.make_preferred();
+ }
+ 
+-inline bool has_extension(const boost::filesystem::path& p)
++inline bool has_extension(const std::filesystem::path& p)
+ {
+     const auto ext = p.extension();
+     return !ext.empty() && ext != ".";
+ }
+ 
+ inline void split_paths(
+-    const boost::filesystem::path&  p1,
+-    const boost::filesystem::path&  p2,
+-    boost::filesystem::path&        common,
+-    boost::filesystem::path&        r1,
+-    boost::filesystem::path&        r2)
++    const std::filesystem::path&  p1,
++    const std::filesystem::path&  p2,
++    std::filesystem::path&        common,
++    std::filesystem::path&        r1,
++    std::filesystem::path&        r2)
+ {
+     assert(common.empty());
+     assert(r1.empty());
+@@ -181,20 +177,20 @@ inline void split_paths(
+         r2 /= *i2++;
+ }
+ 
+-inline boost::filesystem::path find_next_available_path(const boost::filesystem::path& p)
++inline std::filesystem::path find_next_available_path(const std::filesystem::path& p)
+ {
+     const auto pattern = p.string();
+     const auto max_value = get_numbered_string_max_value(pattern);
+ 
+     for (size_t value = 1; value <= max_value; ++value)
+     {
+-        const boost::filesystem::path candidate(get_numbered_string(pattern, value));
++        const std::filesystem::path candidate(get_numbered_string(pattern, value));
+ 
+-        if (!boost::filesystem::exists(candidate))
++        if (!std::filesystem::exists(candidate))
+             return candidate;
+     }
+ 
+-    return boost::filesystem::path(get_numbered_string(pattern, 1));
++    return std::filesystem::path(get_numbered_string(pattern, 1));
+ }
+ 
+ }   // namespace foundation
+diff --git a/src/appleseed/foundation/resources/logo/generatelogofiles.cpp b/src/appleseed/foundation/resources/logo/generatelogofiles.cpp
+index 100240130..62777ec6a 100644
+--- a/src/appleseed/foundation/resources/logo/generatelogofiles.cpp
++++ b/src/appleseed/foundation/resources/logo/generatelogofiles.cpp
+@@ -38,16 +38,14 @@
+ #include "foundation/string/string.h"
+ #include "foundation/utility/test.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cstddef>
+ #include <cstdio>
++#include <filesystem>
+ #include <memory>
+ #include <string>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ using namespace foundation;
+ 
+ TEST_SUITE(Foundation_Resources_Logos)
+diff --git a/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp b/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
+index baa1ee53f..ce373ca61 100644
+--- a/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
++++ b/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
+@@ -40,8 +40,6 @@
+ 
+ // Boost headers.
+ #include "boost/date_time/posix_time/posix_time.hpp"
+-#include "boost/filesystem.hpp"
+-#include "boost/range/iterator_range.hpp"
+ #include "boost/regex.hpp"
+ 
+ // Xerces-C++ headers.
+@@ -52,13 +50,14 @@
+ // Standard headers.
+ #include <algorithm>
+ #include <cassert>
++#include <filesystem>
+ #include <map>
+ #include <string>
+ #include <vector>
+ 
+ using namespace boost;
+ using namespace xercesc;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+@@ -301,7 +300,7 @@ void BenchmarkAggregator::scan_directory(const char* path)
+     if (!bf::is_directory(path))
+         return;
+ 
+-    for (const bf::path& entry_path : boost::make_iterator_range(bf::directory_iterator(path)))
++    for (const bf::path& entry_path : bf::directory_iterator(path))
+     {
+         if (bf::is_regular_file(entry_path))
+             scan_file(entry_path.string().c_str());
+diff --git a/src/appleseed/foundation/utility/searchpaths.cpp b/src/appleseed/foundation/utility/searchpaths.cpp
+index 5c888ee6a..e669a53fe 100644
+--- a/src/appleseed/foundation/utility/searchpaths.cpp
++++ b/src/appleseed/foundation/utility/searchpaths.cpp
+@@ -34,18 +34,15 @@
+ #include "foundation/string/string.h"
+ #include "foundation/utility/foreach.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <cassert>
+ #include <cstdlib>
++#include <filesystem>
+ #include <iterator>
+ #include <vector>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+diff --git a/src/appleseed/foundation/utility/zip.cpp b/src/appleseed/foundation/utility/zip.cpp
+index 0e8ed3373..c151f0e66 100644
+--- a/src/appleseed/foundation/utility/zip.cpp
++++ b/src/appleseed/foundation/utility/zip.cpp
+@@ -35,17 +35,18 @@
+ #include "foundation/utility/minizip/unzip.h"
+ #include "foundation/utility/minizip/zip.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-#include "boost/range/iterator_range.hpp"
+-
+ // Standard headers.
++#include <cerrno>
+ #include <ctime>
++#include <filesystem>
+ #include <fstream>
+ #include <set>
+ #include <vector>
+ 
+-namespace bf = boost::filesystem;
++// Platform headers.
++#include <sys/stat.h>
++
++namespace bf = std::filesystem;
+ 
+ namespace foundation
+ {
+@@ -74,8 +75,7 @@ namespace
+ {
+     bool is_zip_entry_directory(const std::string& dirname)
+     {
+-        // Use our own implementation of is_zip_entry_directory instead of Boost's one
+-        // because this directory is not in the filesystem but in the zip file.
++        // ZIP entry names describe archive contents, not filesystem objects.
+         return dirname[dirname.size() - 1] == '/';
+     }
+ 
+@@ -207,16 +207,35 @@ namespace
+ 
+     zip_fileinfo make_zip_fileinfo(const std::string& filename)
+     {
+-        time_t timestamp = bf::last_write_time(filename);
+-        tm* timestamp_components = localtime(&timestamp);
++        // Read calendar timestamps directly; a filesystem clock need not use
++        // the system clock epoch, and ZIP stores local calendar fields.
++#ifdef _WIN32
++        struct __stat64 metadata;
++        const int status = _wstat64(bf::path(filename).c_str(), &metadata);
++#else
++        struct stat metadata;
++        const int status = ::stat(filename.c_str(), &metadata);
++#endif
++        if (status != 0)
++            throw ZipException(("can't read file timestamp: " + filename).c_str(), errno);
++
++        const std::time_t timestamp = metadata.st_mtime;
++        std::tm timestamp_components;
++#ifdef _WIN32
++        const bool converted = localtime_s(&timestamp_components, &timestamp) == 0;
++#else
++        const bool converted = localtime_r(&timestamp, &timestamp_components) != nullptr;
++#endif
++        if (!converted)
++            throw ZipException(("can't convert file timestamp: " + filename).c_str());
+ 
+         zip_fileinfo zip_file_info;
+-        zip_file_info.tmz_date.tm_sec = timestamp_components->tm_sec;
+-        zip_file_info.tmz_date.tm_min = timestamp_components->tm_min;
+-        zip_file_info.tmz_date.tm_hour = timestamp_components->tm_hour;
+-        zip_file_info.tmz_date.tm_mday = timestamp_components->tm_mday;
+-        zip_file_info.tmz_date.tm_mon = timestamp_components->tm_mon;
+-        zip_file_info.tmz_date.tm_year = timestamp_components->tm_year;
++        zip_file_info.tmz_date.tm_sec = timestamp_components.tm_sec;
++        zip_file_info.tmz_date.tm_min = timestamp_components.tm_min;
++        zip_file_info.tmz_date.tm_hour = timestamp_components.tm_hour;
++        zip_file_info.tmz_date.tm_mday = timestamp_components.tm_mday;
++        zip_file_info.tmz_date.tm_mon = timestamp_components.tm_mon;
++        zip_file_info.tmz_date.tm_year = timestamp_components.tm_year;
+ 
+         zip_file_info.dosDate = 0;
+         zip_file_info.internal_fa = 0;
+@@ -345,7 +364,7 @@ std::set<std::string> recursive_ls(const bf::path& dir)
+ {
+     std::set<std::string> files;
+ 
+-    for (const bf::path& entry_path : boost::make_iterator_range(bf::directory_iterator(dir)))
++    for (const bf::path& entry_path : bf::directory_iterator(dir))
+     {
+         if (bf::is_directory(entry_path))
+         {
+diff --git a/src/appleseed/foundation/utility/zip.h b/src/appleseed/foundation/utility/zip.h
+index 5c06e3559..ee1502e34 100644
+--- a/src/appleseed/foundation/utility/zip.h
++++ b/src/appleseed/foundation/utility/zip.h
+@@ -31,10 +31,8 @@
+ // appleseed.foundation headers.
+ #include "foundation/core/exceptions/exception.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <set>
+ #include <string>
+ #include <vector>
+@@ -92,6 +90,6 @@ std::vector<std::string> get_filenames_with_extension_from_zip(
+ // Retrieves all files inside a given directory and its subdirectories.
+ //
+ 
+-std::set<std::string> recursive_ls(const boost::filesystem::path& dir);
++std::set<std::string> recursive_ls(const std::filesystem::path& dir);
+ 
+ }   // namespace foundation
+diff --git a/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp b/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp
+index acf87e273..28e8e8171 100644
+--- a/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp
++++ b/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp
+@@ -65,21 +65,19 @@
+ #include "foundation/utility/statistics.h"
+ #include "foundation/utility/stopwatch.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cmath>
+ #include <cstddef>
+ #include <cstdint>
++#include <filesystem>
+ #include <limits>
+ #include <memory>
+ #include <string>
+ #include <vector>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+diff --git a/src/appleseed/renderer/meta/tests/test_frame.cpp b/src/appleseed/renderer/meta/tests/test_frame.cpp
+index 0978ae4d6..0651b8361 100644
+--- a/src/appleseed/renderer/meta/tests/test_frame.cpp
++++ b/src/appleseed/renderer/meta/tests/test_frame.cpp
+@@ -39,11 +39,10 @@
+ #include "foundation/platform/thread.h"
+ #include "foundation/utility/test.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
++// Standard headers.
++#include <filesystem>
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ using namespace foundation;
+ using namespace renderer;
+ 
+diff --git a/src/appleseed/renderer/meta/tests/test_projectfilereader.cpp b/src/appleseed/renderer/meta/tests/test_projectfilereader.cpp
+index e55023613..946924431 100644
+--- a/src/appleseed/renderer/meta/tests/test_projectfilereader.cpp
++++ b/src/appleseed/renderer/meta/tests/test_projectfilereader.cpp
+@@ -37,15 +37,13 @@
+ #include "foundation/utility/test.h"
+ #include "foundation/utility/testutils.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-
+ // Standard headers.
+ #include <exception>
++#include <filesystem>
+ 
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ TEST_SUITE(Renderer_Modeling_Project_ProjectFileReader)
+ {
+diff --git a/src/appleseed/renderer/meta/tests/test_projectfilewriter.cpp b/src/appleseed/renderer/meta/tests/test_projectfilewriter.cpp
+index cd6403aca..e468df5e1 100644
+--- a/src/appleseed/renderer/meta/tests/test_projectfilewriter.cpp
++++ b/src/appleseed/renderer/meta/tests/test_projectfilewriter.cpp
+@@ -45,15 +45,11 @@
+ #include "foundation/utility/searchpaths.h"
+ #include "foundation/utility/test.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <string>
+ 
+-using namespace boost;
+-using namespace boost::filesystem;
++using namespace std::filesystem;
+ using namespace foundation;
+ using namespace renderer;
+ 
+diff --git a/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp b/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
+index e86b7925d..3aa2ba534 100644
+--- a/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
++++ b/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
+@@ -58,9 +58,6 @@
+ #include "foundation/utility/otherwise.h"
+ #include "foundation/utility/stopwatch.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-
+ // Murmurhash3 headers.
+ #include "MurmurHash3.h"
+ 
+@@ -75,6 +72,7 @@
+ #include <cmath>
+ #include <cstdint>
+ #include <cstring>
++#include <filesystem>
+ #include <map>
+ #include <memory>
+ #include <sstream>
+@@ -83,7 +81,7 @@
+ #include <vector>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace
+ {
+diff --git a/src/appleseed/renderer/modeling/aov/denoiseraov.cpp b/src/appleseed/renderer/modeling/aov/denoiseraov.cpp
+index f1da92dc0..0dbea02ea 100644
+--- a/src/appleseed/renderer/modeling/aov/denoiseraov.cpp
++++ b/src/appleseed/renderer/modeling/aov/denoiseraov.cpp
+@@ -53,16 +53,14 @@
+ #include "bcd/CovarianceMatrix.h"
+ #include "bcd/ImageIO.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-
+ // Standard headers.
+ #include <cmath>
+ #include <cstddef>
++#include <filesystem>
+ 
+ using namespace bcd;
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+diff --git a/src/appleseed/renderer/modeling/bsdf/energycompensation.cpp b/src/appleseed/renderer/modeling/bsdf/energycompensation.cpp
+index be2c2a04d..80db75960 100644
+--- a/src/appleseed/renderer/modeling/bsdf/energycompensation.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/energycompensation.cpp
+@@ -36,16 +36,15 @@
+ #include "foundation/image/tile.h"
+ #include "foundation/math/scalar.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/fstream.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
++#include <filesystem>
++#include <fstream>
+ #include <iomanip>
+ 
+ using namespace foundation;
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+@@ -64,7 +63,7 @@ namespace
+         const size_t array_size = dir_array_size + avg_array_size;
+         assert(array_size % num_columns == 0);
+ 
+-        bf::ofstream of(filename);
++        std::ofstream of(filename);
+         of << std::setprecision(6) << std::fixed;
+ 
+         of << "extern const float " << array_name << "[" << array_size << "] = " << std::endl;
+diff --git a/src/appleseed/renderer/modeling/bsdf/energycompensation.h b/src/appleseed/renderer/modeling/bsdf/energycompensation.h
+index 13b5dcfd9..3d2b75ce2 100644
+--- a/src/appleseed/renderer/modeling/bsdf/energycompensation.h
++++ b/src/appleseed/renderer/modeling/bsdf/energycompensation.h
+@@ -31,8 +31,8 @@
+ // appleseed.foundation headers.
+ #include "foundation/core/concepts/noncopyable.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
++// Standard headers.
++#include <filesystem>
+ 
+ 
+ namespace renderer
+@@ -53,11 +53,11 @@ class AlbedoTable2D
+     float get_average_albedo(const float roughness) const;
+ 
+     // Write the table to an OpenEXR image.
+-    void write_table_to_image(const boost::filesystem::path& filename) const;
++    void write_table_to_image(const std::filesystem::path& filename) const;
+ 
+     // Write the table to a cpp array.
+     void write_table_to_cpp_array(
+-        const boost::filesystem::path&  filename,
++        const std::filesystem::path&  filename,
+         const char*                     array_name) const;
+ 
+   protected:
+@@ -99,11 +99,11 @@ class AlbedoTable3D
+     float get_average_albedo(const float eta, const float roughness) const;
+ 
+     // Write the table to an OpenEXR image.
+-    void write_table_to_image(const boost::filesystem::path& filename) const;
++    void write_table_to_image(const std::filesystem::path& filename) const;
+ 
+     // Write the table to a cpp array.
+     void write_table_to_cpp_array(
+-        const boost::filesystem::path& filename,
++        const std::filesystem::path& filename,
+         const char*                    array_name) const;
+ 
+   protected:
+diff --git a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+index 305f80d31..779de4514 100644
+--- a/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+@@ -53,13 +53,11 @@
+ #include "foundation/utility/api/specializedapiarrays.h"
+ #include "foundation/utility/makevector.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <cmath>
+ #include <cstddef>
++#include <filesystem>
+ #include <string>
+ 
+ // Forward declarations.
+@@ -68,7 +66,7 @@ namespace renderer      { class Assembly; }
+ namespace renderer      { class Project; }
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+diff --git a/src/appleseed/renderer/modeling/bsdf/glossylayerbsdf.cpp b/src/appleseed/renderer/modeling/bsdf/glossylayerbsdf.cpp
+index 224f77771..bf00bcec0 100644
+--- a/src/appleseed/renderer/modeling/bsdf/glossylayerbsdf.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/glossylayerbsdf.cpp
+@@ -47,13 +47,11 @@
+ #include "foundation/math/microfacet.h"
+ #include "foundation/math/vector.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <cmath>
+ #include <cstddef>
++#include <filesystem>
+ #include <string>
+ 
+ // Forward declarations.
+@@ -62,7 +60,7 @@ namespace renderer      { class Assembly; }
+ namespace renderer      { class Project; }
+ 
+ using namespace foundation;
+-namespace bfs = boost::filesystem;
++namespace bfs = std::filesystem;
+ 
+ namespace renderer
+ {
+diff --git a/src/appleseed/renderer/modeling/bsdf/microfacethelper.cpp b/src/appleseed/renderer/modeling/bsdf/microfacethelper.cpp
+index e7e2aa679..52c726f4c 100644
+--- a/src/appleseed/renderer/modeling/bsdf/microfacethelper.cpp
++++ b/src/appleseed/renderer/modeling/bsdf/microfacethelper.cpp
+@@ -40,14 +40,12 @@
+ #include "foundation/math/scalar.h"
+ #include "foundation/math/vector.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cmath>
++#include <filesystem>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+diff --git a/src/appleseed/renderer/modeling/camera/multilenscamera.cpp b/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
+index 12b36b806..557d98588 100644
+--- a/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
++++ b/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
+@@ -63,13 +63,11 @@
+ #include "foundation/utility/api/specializedapiarrays.h"
+ #include "foundation/utility/iostreamop.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cmath>
+ #include <cstddef>
++#include <filesystem>
+ #include <fstream>
+ #include <limits>
+ #include <random>
+diff --git a/src/appleseed/renderer/modeling/frame/frame.cpp b/src/appleseed/renderer/modeling/frame/frame.cpp
+index 4b9496564..958d6d9a0 100644
+--- a/src/appleseed/renderer/modeling/frame/frame.cpp
++++ b/src/appleseed/renderer/modeling/frame/frame.cpp
+@@ -75,9 +75,6 @@
+ #include "foundation/utility/job/iabortswitch.h"
+ #include "foundation/utility/stopwatch.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-
+ // BCD headers.
+ #include "bcd/DeepImage.h"
+ #include "bcd/ImageIO.h"
+@@ -85,6 +82,7 @@
+ // Standard headers.
+ #include <algorithm>
+ #include <exception>
++#include <filesystem>
+ #include <memory>
+ #include <string>
+ #include <tuple>
+@@ -92,7 +90,7 @@
+ 
+ using namespace bcd;
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ #if WITH_STATMC // complie with StatMC Denoiser
+ namespace
+diff --git a/src/appleseed/renderer/modeling/object/curveobjectreader.cpp b/src/appleseed/renderer/modeling/object/curveobjectreader.cpp
+index 608a52aa1..dff39d8b5 100644
+--- a/src/appleseed/renderer/modeling/object/curveobjectreader.cpp
++++ b/src/appleseed/renderer/modeling/object/curveobjectreader.cpp
+@@ -55,18 +55,16 @@
+ #include "foundation/utility/searchpaths.h"
+ #include "foundation/utility/stopwatch.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cmath>
+ #include <cstddef>
+ #include <exception>
++#include <filesystem>
+ #include <string>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+diff --git a/src/appleseed/renderer/modeling/project/assethandler.cpp b/src/appleseed/renderer/modeling/project/assethandler.cpp
+index 3e59bd850..6573b523a 100644
+--- a/src/appleseed/renderer/modeling/project/assethandler.cpp
++++ b/src/appleseed/renderer/modeling/project/assethandler.cpp
+@@ -45,16 +45,14 @@
+ #include "foundation/utility/otherwise.h"
+ #include "foundation/utility/searchpaths.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-
+ // Standard headers.
++#include <algorithm>
+ #include <cassert>
+ #include <cstddef>
++#include <filesystem>
+ #include <vector>
+ 
+-using namespace boost;
+-using namespace boost::filesystem;
++using namespace std::filesystem;
+ using namespace foundation;
+ 
+ namespace renderer
+@@ -68,7 +66,7 @@ namespace
+ {
+     std::string convert_to_posix(std::string path)
+     {
+-        replace(path.begin(), path.end(), '\\', '/');
++        std::replace(path.begin(), path.end(), '\\', '/');
+         return path;
+     }
+ 
+@@ -135,7 +133,7 @@ bool AssetHandler::handle_assets() const
+     std::vector<std::string> unique_paths = array_vector<std::vector<std::string>>(paths);
+     std::sort(unique_paths.begin(), unique_paths.end());
+     unique_paths.erase(
+-        unique(unique_paths.begin(), unique_paths.end()),
++        std::unique(unique_paths.begin(), unique_paths.end()),
+         unique_paths.end());
+ 
+     StringDictionary mappings;
+diff --git a/src/appleseed/renderer/modeling/project/assethandler.h b/src/appleseed/renderer/modeling/project/assethandler.h
+index a86b53d12..261056df3 100644
+--- a/src/appleseed/renderer/modeling/project/assethandler.h
++++ b/src/appleseed/renderer/modeling/project/assethandler.h
+@@ -28,10 +28,8 @@
+ 
+ #pragma once
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <string>
+ 
+ // Forward declarations.
+@@ -59,10 +57,10 @@ class AssetHandler
+ 
+   private:
+     Project&                        m_project;
+-    const boost::filesystem::path   m_project_old_root_path;
+-    const boost::filesystem::path   m_project_new_root_path;
+-    const boost::filesystem::path   m_project_old_root_dir;
+-    const boost::filesystem::path   m_project_new_root_dir;
++    const std::filesystem::path   m_project_old_root_path;
++    const std::filesystem::path   m_project_new_root_path;
++    const std::filesystem::path   m_project_old_root_dir;
++    const std::filesystem::path   m_project_new_root_dir;
+     const Mode                      m_mode;
+ 
+     bool handle_asset(std::string& asset_path) const;
+diff --git a/src/appleseed/renderer/modeling/project/projectfilewriter.cpp b/src/appleseed/renderer/modeling/project/projectfilewriter.cpp
+index 394946293..810b08309 100644
+--- a/src/appleseed/renderer/modeling/project/projectfilewriter.cpp
++++ b/src/appleseed/renderer/modeling/project/projectfilewriter.cpp
+@@ -36,11 +36,11 @@
+ // appleseed.foundation headers.
+ #include "foundation/string/string.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
++// Standard headers.
++#include <filesystem>
+ 
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+diff --git a/src/appleseed/renderer/modeling/project/xmlprojectfilereader.cpp b/src/appleseed/renderer/modeling/project/xmlprojectfilereader.cpp
+index 96a93bf85..199690c02 100644
+--- a/src/appleseed/renderer/modeling/project/xmlprojectfilereader.cpp
++++ b/src/appleseed/renderer/modeling/project/xmlprojectfilereader.cpp
+@@ -129,14 +129,11 @@
+ #include "xercesc/util/XMLException.hpp"
+ #include "xercesc/util/XMLUni.hpp"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-#include "boost/filesystem/operations.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cstddef>
+ #include <cstring>
++#include <filesystem>
+ #include <map>
+ #include <memory>
+ #include <sstream>
+@@ -146,7 +143,7 @@
+ 
+ using namespace foundation;
+ using namespace xercesc;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+diff --git a/src/appleseed/renderer/modeling/project/xmlprojectfilewriter.cpp b/src/appleseed/renderer/modeling/project/xmlprojectfilewriter.cpp
+index 6fa26a296..4d5c39df0 100644
+--- a/src/appleseed/renderer/modeling/project/xmlprojectfilewriter.cpp
++++ b/src/appleseed/renderer/modeling/project/xmlprojectfilewriter.cpp
+@@ -84,24 +84,21 @@
+ #include "foundation/utility/xmlelement.h"
+ #include "foundation/utility/zip.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <cassert>
+ #include <cstdio>
+ #include <cstring>
+ #include <exception>
++#include <filesystem>
+ #include <functional>
+ #include <map>
+ #include <set>
+ #include <string>
+ #include <vector>
+ 
+-using namespace boost;
+ using namespace foundation;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+@@ -125,7 +122,7 @@ namespace
+             const char*         filepath,
+             FILE*               file,
+             const int           options)
+-          : m_project_new_root_dir(filesystem::path(filepath).parent_path())
++          : m_project_new_root_dir(bf::path(filepath).parent_path())
+           , m_file(file)
+           , m_options(options)
+           , m_indenter(4)
+@@ -152,7 +149,7 @@ namespace
+         }
+ 
+       private:
+-        const filesystem::path  m_project_new_root_dir;
++        const bf::path  m_project_new_root_dir;
+         FILE*                   m_file;
+         const int               m_options;
+         Indenter                m_indenter;
+diff --git a/src/appleseed/renderer/utility/filesystem.cpp b/src/appleseed/renderer/utility/filesystem.cpp
+index 33d0caf46..db0bdc929 100644
+--- a/src/appleseed/renderer/utility/filesystem.cpp
++++ b/src/appleseed/renderer/utility/filesystem.cpp
+@@ -32,8 +32,11 @@
+ // appleseed.renderer headers.
+ #include "renderer/global/globallogger.h"
+ 
+-namespace bf = boost::filesystem;
+-namespace bsys = boost::system;
++// Standard headers.
++#include <filesystem>
++#include <system_error>
++
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+@@ -44,12 +47,12 @@ void create_parent_directories(const bf::path& file_path)
+ 
+     if (!parent_path.empty() && !bf::exists(parent_path))
+     {
+-        bsys::error_code ec;
++        std::error_code ec;
+         if (!bf::create_directories(parent_path, ec))
+         {
+             RENDERER_LOG_ERROR(
+                 "could not create directory %s: %s",
+-                parent_path.c_str(),
++                parent_path.string().c_str(),
+                 ec.message().c_str());
+         }
+     }
+diff --git a/src/appleseed/renderer/utility/filesystem.h b/src/appleseed/renderer/utility/filesystem.h
+index 22037369a..f87e18080 100644
+--- a/src/appleseed/renderer/utility/filesystem.h
++++ b/src/appleseed/renderer/utility/filesystem.h
+@@ -29,13 +29,13 @@
+ #ifndef APPLESEED_RENDERER_UTILITY_FILESYSTEM_H
+ #define APPLESEED_RENDERER_UTILITY_FILESYSTEM_H
+ 
+-// Boost headers.
+-#include "boost/filesystem.hpp"
++// Standard headers.
++#include <filesystem>
+ 
+ namespace renderer
+ {
+ 
+-void create_parent_directories(const boost::filesystem::path& file_path);
++void create_parent_directories(const std::filesystem::path& file_path);
+ 
+ void create_parent_directories(const char* file_path);
+ 
+diff --git a/src/appleseed/renderer/utility/pluginstore.cpp b/src/appleseed/renderer/utility/pluginstore.cpp
+index da5256f20..0d153537f 100644
+--- a/src/appleseed/renderer/utility/pluginstore.cpp
++++ b/src/appleseed/renderer/utility/pluginstore.cpp
+@@ -39,21 +39,20 @@
+ #include "foundation/utility/searchpaths.h"
+ 
+ // Boost headers.
+-#include "boost/filesystem.hpp"
+-#include "boost/range/iterator_range.hpp"
+ #include "boost/thread/locks.hpp"
+ #include "boost/thread/mutex.hpp"
+ 
+ // Standard headers.
+ #include <cassert>
+ #include <cstddef>
++#include <filesystem>
+ #include <map>
+ #include <memory>
+ #include <string>
+ 
+ using namespace foundation;
+ 
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace renderer
+ {
+@@ -173,7 +172,7 @@ struct PluginStore::Impl
+         RENDERER_LOG_INFO("scanning %s for plugins...", path.string().c_str());
+ 
+         // Iterate over all files in this directory.
+-        for (const bf::path& entry_path : boost::make_iterator_range(bf::directory_iterator(path)))
++        for (const bf::path& entry_path : bf::directory_iterator(path))
+         {
+             // Only consider files.
+             if (!bf::is_regular_file(entry_path))
+diff --git a/src/tools/animatecamera/main.cpp b/src/tools/animatecamera/main.cpp
+index b5ec2cd93..8991f3b69 100644
+--- a/src/tools/animatecamera/main.cpp
++++ b/src/tools/animatecamera/main.cpp
+@@ -53,13 +53,11 @@
+ #include "foundation/log/log.h"
+ #include "foundation/string/string.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <cmath>
+ #include <cstddef>
+ #include <cstdlib>
++#include <filesystem>
+ #include <iomanip>
+ #include <map>
+ #include <memory>
+@@ -72,7 +70,7 @@ using namespace appleseed::animatecamera;
+ using namespace appleseed::common;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace
+ {
+diff --git a/src/tools/makefluffy/main.cpp b/src/tools/makefluffy/main.cpp
+index 6676baa47..a93781e09 100644
+--- a/src/tools/makefluffy/main.cpp
++++ b/src/tools/makefluffy/main.cpp
+@@ -53,14 +53,12 @@
+ #include "foundation/utility/foreach.h"
+ #include "foundation/utility/uid.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
+ #include <algorithm>
+ #include <cassert>
+ #include <cstddef>
+ #include <cstring>
++#include <filesystem>
+ #include <map>
+ #include <string>
+ #include <vector>
+@@ -69,7 +67,7 @@ using namespace appleseed::makefluffy;
+ using namespace appleseed::common;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace
+ {
+diff --git a/src/tools/projecttool/main.cpp b/src/tools/projecttool/main.cpp
+index c65abfd56..a75cb9c44 100644
+--- a/src/tools/projecttool/main.cpp
++++ b/src/tools/projecttool/main.cpp
+@@ -41,18 +41,15 @@
+ #include "foundation/memory/autoreleaseptr.h"
+ #include "foundation/containers/dictionary.h"
+ 
+-// Boost headers.
+-#include "boost/filesystem/operations.hpp"
+-#include "boost/filesystem/path.hpp"
+-
+ // Standard headers.
++#include <filesystem>
+ #include <string>
+ 
+ using namespace appleseed::projecttool;
+ using namespace appleseed::common;
+ using namespace foundation;
+ using namespace renderer;
+-namespace bf = boost::filesystem;
++namespace bf = std::filesystem;
+ 
+ namespace
+ {

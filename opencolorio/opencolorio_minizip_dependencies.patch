@@ -1,0 +1,14 @@
+diff --git a/share/cmake/modules/Findminizip-ng.cmake b/share/cmake/modules/Findminizip-ng.cmake
+--- a/share/cmake/modules/Findminizip-ng.cmake
++++ b/share/cmake/modules/Findminizip-ng.cmake
+@@ -55,8 +55,6 @@
+-        # Depending on the options used when minizip-ng was built, it could have multiple libraries
+-        # listed in INTERFACE_LINK_LIBRARIES. OCIO only needs ZLIB.
+-        # Only add custom zlib target ZLIB::ZLIB to INTERFACE_LINK_LIBRARIES.
+-        set_target_properties(MINIZIP::minizip-ng PROPERTIES INTERFACE_LINK_LIBRARIES "ZLIB::ZLIB")
++        # Keep the compression and platform dependencies of the imported target.
++        # A static minizip-ng library needs them when linked into OpenColorIO.
+ 
+         if (NOT minizip-ng_LIBRARY)
+             # Lib names to search for
+             set(_minizip-ng_LIB_NAMES minizip-ng)

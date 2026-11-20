@@ -10,7 +10,9 @@ endif ()
 set(ENABLE_M4 "${ENABLE_M4}" CACHE BOOL "Enable portable m4 build")
 
 if (ENABLE_M4)
-  git_submodule_init(m4 LICENSE)
+  git_submodule_init(m4 LICENSE
+    PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/m4_windows.patch"
+    PATCH_COMMAND_VAR M4_PATCH_COMMAND)
 
   RegisterDeps(M4)
 
@@ -28,9 +30,7 @@ if (ENABLE_M4)
   else ()
     set(M4_FLEX_EXECUTABLE "${FLEX_EXECUTABLE}")
   endif ()
-  # winflexbison supplies both executables from FLEX_BLD, so Windows has no
-  # separate BISON_BLD target even when the bundled Bison was requested.
-  if (BISON_TARGET OR (WIN32 AND FLEX_TARGET))
+  if (BISON_TARGET)
     set(M4_BISON_EXECUTABLE
       "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/${M4_BISON_NAME}")
   else ()
@@ -38,8 +38,9 @@ if (ENABLE_M4)
   endif ()
 
   ExternalProject_Add(M4_BLD
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/m4"
+    URL "${CMAKE_CURRENT_SOURCE_DIR}/m4"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
+    PATCH_COMMAND ${M4_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
     -DOM4_PROGRAM_NAME=m4

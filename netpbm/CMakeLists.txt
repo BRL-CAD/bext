@@ -8,6 +8,10 @@ bext_enable(NETPBM)
 if (ENABLE_NETPBM)
 
   set(NETPBM_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/netpbm_mkstemp.patch")
+  if (WIN32)
+    list(APPEND NETPBM_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/netpbm_windows_crt.patch")
+  endif ()
   git_submodule_init(netpbm CMakeLists.txt
     PATCH_FILES ${NETPBM_PATCH_FILES}
     PATCH_COMMAND_VAR NETPBM_PATCH_COMMAND)

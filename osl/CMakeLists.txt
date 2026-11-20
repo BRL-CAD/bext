@@ -3,20 +3,33 @@ bext_enable(OSL)
 
 if (ENABLE_OSL)
 
-  set(OSL_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/osl.patch")
+  set(OSL_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0002-clang-diagnostic-lifetime.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0003-bsdl-macros.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0004-freebsd-obj-reader.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0005-native-closure-callbacks.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0007-public-header-exports.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/osl.patch"
+    )
+  if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "^(Clang|IntelLLVM)$")
+    list(APPEND OSL_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/patches/0008-color-table-alignment.patch")
+  endif ()
   git_submodule_init(OpenShadingLanguage CMakeLists.txt
     PATCH_FILES ${OSL_PATCH_FILES}
+    INPUT_FILES
+      "${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake"
     PATCH_COMMAND_VAR OSL_PATCH_COMMAND)
 
   RegisterDeps(OSL)
+  if (LLVM_TARGET)
+    set(OSL_LLVM_ROOT "${CMAKE_BUNDLE_INSTALL_PREFIX}")
+  else ()
+    set(OSL_LLVM_ROOT "${LLVM_ROOT}")
+  endif ()
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")
   endif (TARGET ZLIB_BLD)
-
-  # On Windows it's both or nothing...
-  if (MSVC AND FLEX_TARGET)
-    set(BISON_TARGET 1)
-  endif (MSVC AND FLEX_TARGET)
 
   # winflexbison installs its binaries as win_flex.exe / win_bison.exe on
   # Windows; the portable names are plain flex / bison elsewhere.
@@ -54,22 +67,23 @@ if (ENABLE_OSL)
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/src/cmake/modules/FindZLIB.cmake
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
+    -DImath_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DCMAKE_PREFIX_PATH=${CMAKE_BUNDLE_INSTALL_PREFIX}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
-    -DBoost_ROOT=$<$<BOOL:${BOOST_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DBISON_ROOT=$<$<BOOL:${BISON_TARGET}>:${CMAKE_NOBUNDLE_INSTALL_PREFIX}>
     -DFLEX_ROOT=$<$<BOOL:${FLEX_TARGET}>:${CMAKE_NOBUNDLE_INSTALL_PREFIX}>
     ${OSL_FLEXBISON_ARGS}
     ${OSL_MACOS_ARGS}
-    -DLLVM_ROOT=$<$<BOOL:${LLVM_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DLLVM_ROOT=${OSL_LLVM_ROOT}
     -DOPENEXR_ROOT=$<$<BOOL:${OPENEXR_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DOpenEXR_DIR=$<$<BOOL:${OPENEXR_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/cmake/OpenEXR>
     -DOpenImageIO_ROOT=$<$<BOOL:${OPENIMAGEIO_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DPUGIXML_ROOT=$<$<BOOL:${PUGIXML_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DBUILD_MISSING_DEPS=OFF
     -DOSL_BUILD_TESTS=OFF
-    -DOSL_BUILD_SHADERS=OFF
-    -DUSE_LLVM_BITCODE=OFF
+    -DOSL_BUILD_SHADERS=ON
     -DUSE_PYTHON=OFF
     -DUSE_QT=OFF
     -DBIN_DIR=${BIN_DIR}

@@ -1,0 +1,947 @@
+From 401f90dca215ee6855fc331ea31a04de1796ac2c Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 12:12:02 +0000
+Subject: [PATCH] feat: add an optional bounded struetype text backend
+
+Keep FreeType as the default and allow shared struetype headers to
+supply font lookup, metrics, and grayscale glyph coverage. Preserve the
+text layout and compositing interfaces while checking font buffer sizes
+and integer bounds before positioning text and shadows.
+
+Document unhinted rasterization and cover UTF-8 text, family lookup,
+multiline layout, alignment, shadows, invalid fonts, and invalid bounds.
+
+diff --git a/src/cmake/externalpackages.cmake b/src/cmake/externalpackages.cmake
+index 3a24bf06f2352d46054146e24962f81edcd0b245..83c5e1ba33ed91972bc75db6bab12d9d3d668bcf 100644
+--- a/src/cmake/externalpackages.cmake
++++ b/src/cmake/externalpackages.cmake
+@@ -168,9 +168,17 @@ elseif (TARGET PNG::PNG)
+     set (PNG_TARGET PNG::PNG)
+ endif ()
+ 
+-checked_find_package (Freetype
+-                      VERSION_MIN 2.10.0
+-                      DEFINITIONS USE_FREETYPE=1 )
++option (USE_STRUETYPE "Use bounded struetype font rendering instead of FreeType" OFF)
++if (USE_STRUETYPE)
++    find_path (STRUETYPE_INCLUDE_DIR NAMES struetype.h
++              HINTS ${STRUETYPE_ROOT} PATH_SUFFIXES include REQUIRED)
++    add_compile_definitions (USE_STRUETYPE=1)
++    include_directories (SYSTEM ${STRUETYPE_INCLUDE_DIR})
++else ()
++    checked_find_package (Freetype
++                          VERSION_MIN 2.10.0
++                          DEFINITIONS USE_FREETYPE=1 )
++endif ()
+ 
+ checked_find_package (OpenColorIO REQUIRED
+                       VERSION_MIN 2.3
+diff --git a/src/doc/imagebufalgo.md b/src/doc/imagebufalgo.md
+index 52639c79d75ab1af73f310f30a0bce91fe2c87fa..76c43c57cfd22e9cca96378921103e3baf1db597 100644
+--- a/src/doc/imagebufalgo.md
++++ b/src/doc/imagebufalgo.md
+@@ -563,6 +563,15 @@ pre-allocated `dst` nor a non-default ROI.
+ 
+ ### Drawing text
+ 
++Text rendering uses FreeType by default. Builds configured with
++`-DUSE_STRUETYPE=ON -DSTRUETYPE_ROOT=<prefix>` use the bounded, header-only
++struetype backend instead. The prefix must contain `include/struetype.h`.
++This backend supports ordinary TrueType and OpenType outline fonts, UTF-8
++text, family/style lookup, alignment, and shadows. Rasterization is unhinted,
++so glyph coverage and metrics can differ from FreeType. FreeType remains
++appropriate for its additional font formats and rendering capabilities.
++
++
+ :::{doxygenfunction} render_text(ImageBuf &dst, int x, int y, string_view text, int fontsize = 16, string_view fontname = "", cspan<float> textcolor = 1.0f, TextAlignX alignx = TextAlignX::Left, TextAlignY aligny = TextAlignY::Baseline, int shadow = 0, ROI roi = {}, int nthreads = 0)
+ :::
+ 
+diff --git a/src/libOpenImageIO/CMakeLists.txt b/src/libOpenImageIO/CMakeLists.txt
+index b7eaa011cef85a2d587fde8005691efe4a5e7308..3fdeebc7766e3c81f06f21e94b260da735f839aa 100644
+--- a/src/libOpenImageIO/CMakeLists.txt
++++ b/src/libOpenImageIO/CMakeLists.txt
+@@ -43,6 +43,7 @@ set (libOpenImageIO_srcs
+                           imagebufalgo_copy.cpp
+                           imagebufalgo_deep.cpp
+                           imagebufalgo_draw.cpp
++                          imagebufalgo_font.h
+                           imagebufalgo_addsub.cpp
+                           imagebufalgo_muldiv.cpp
+                           imagebufalgo_mad.cpp
+@@ -287,6 +288,12 @@ if (OIIO_BUILD_TESTS AND BUILD_TESTING)
+     add_test (unit_imagebufalgo ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/imagebufalgo_test)
+     set_tests_properties (unit_imagebufalgo PROPERTIES PROCESSORS 2 COST 60)
+ 
++    fancy_add_executable (NAME imagebufalgo_font_test SRC imagebufalgo_font_test.cpp
++                          LINK_LIBRARIES OpenImageIO
++                          FOLDER "Unit Tests" NO_INSTALL)
++    add_test (NAME unit_imagebufalgo_font COMMAND imagebufalgo_font_test
++              "${PROJECT_SOURCE_DIR}/src/fonts/Droid_Sans/DroidSans.ttf")
++
+     fancy_add_executable (NAME imagespec_test SRC imagespec_test.cpp
+                           LINK_LIBRARIES OpenImageIO
+                           FOLDER "Unit Tests" NO_INSTALL)
+diff --git a/src/libOpenImageIO/imagebufalgo_draw.cpp b/src/libOpenImageIO/imagebufalgo_draw.cpp
+index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c79ade06e4 100644
+--- a/src/libOpenImageIO/imagebufalgo_draw.cpp
++++ b/src/libOpenImageIO/imagebufalgo_draw.cpp
+@@ -23,9 +23,8 @@
+ 
+ #include "imageio_pvt.h"
+ 
+-#ifdef USE_FREETYPE
+-#    include <ft2build.h>
+-#    include FT_FREETYPE_H
++#if defined(USE_FREETYPE) || defined(USE_STRUETYPE)
++#    include "imagebufalgo_font.h"
+ #endif
+ 
+ #if OIIO_GNUC_VERSION >= 80000 /* gcc 8+ */
+@@ -865,8 +864,12 @@ enumerate_fonts()
+         Filesystem::get_directory_entries(dir, filenames, false);
+         for (auto& f : filenames) {
+             if (Strutil::iends_with(f, ".ttf") || Strutil::iends_with(f, ".ttc")
++                || Strutil::iends_with(f, ".otf")
++#ifndef USE_STRUETYPE
+                 || Strutil::iends_with(f, ".pfa")
+-                || Strutil::iends_with(f, ".pfb")) {
++                || Strutil::iends_with(f, ".pfb")
++#endif
++            ) {
+                 std::string fontname
+                     = Filesystem::replace_extension(Filesystem::filename(f),
+                                                     "");
+@@ -915,46 +918,62 @@ pvt::font_list()
+ 
+ 
+ 
+-#ifdef USE_FREETYPE
++#if defined(USE_FREETYPE) || defined(USE_STRUETYPE)
+ namespace {  // anon
+-static mutex ft_mutex;
+-static FT_Library ft_library = NULL;
+-static bool ft_broken        = false;
++static mutex font_mutex;
+ 
+ static const char* default_font_name[] = { "DroidSans", "cour", "Courier New",
+                                            "FreeMono" };
+ 
+ 
+ 
+-// Helper: given unicode and a font face, compute its size
++// Glyph bounds and pen advances use the same backend for measuring and drawing.
+ static ROI
+-text_size_from_unicode(cspan<uint32_t> utext, FT_Face face, int fontsize)
++text_size_from_unicode(cspan<uint32_t> utext, FontFace& face, int fontsize)
+ {
+-    int y = 0;
+-    int x = 0;
++    int64_t x = 0, y = 0;
+     ROI size;
+     size.xbegin = size.ybegin = std::numeric_limits<int>::max();
+     size.xend = size.yend = std::numeric_limits<int>::min();
+-    FT_GlyphSlot slot     = face->glyph;
++    bool has_glyph        = false;
++    FontGlyph glyph;
+     for (auto ch : utext) {
++        if (ch == '\r')
++            continue;
+         if (ch == '\n') {
+             x = 0;
+             y += fontsize;
++            if (y > std::numeric_limits<int>::max())
++                return ROI();
+             continue;
+         }
+-        int error = FT_Load_Char(face, ch, FT_LOAD_RENDER);
+-        if (error)
+-            continue;  // ignore errors
+-        size.ybegin = std::min(size.ybegin, y - slot->bitmap_top);
+-        size.yend   = std::max(size.yend, y + int(slot->bitmap.rows)
+-                                              - int(slot->bitmap_top) + 1);
+-        size.xbegin = std::min(size.xbegin, x + int(slot->bitmap_left));
+-        size.xend   = std::max(size.xend, x + int(slot->bitmap.width)
+-                                              + int(slot->bitmap_left) + 1);
+-        // increment pen position
+-        x += slot->advance.x >> 6;
++        if (!face.glyph(ch, glyph))
++            return ROI();
++        const int64_t left   = x + glyph.left;
++        const int64_t right  = left + glyph.width + 1;
++        const int64_t top    = y - glyph.top;
++        const int64_t bottom = top + glyph.height + 1;
++        if (left < std::numeric_limits<int>::min()
++            || right > std::numeric_limits<int>::max()
++            || top < std::numeric_limits<int>::min()
++            || bottom > std::numeric_limits<int>::max())
++            return ROI();
++        size.xbegin = std::min(size.xbegin, int(left));
++        size.xend   = std::max(size.xend, int(right));
++        size.ybegin = std::min(size.ybegin, int(top));
++        size.yend   = std::max(size.yend, int(bottom));
++        x += glyph.advance;
++        if (x < std::numeric_limits<int>::min()
++            || x > std::numeric_limits<int>::max())
++            return ROI();
++        has_glyph = true;
+     }
+-    return size;  // Font rendering not supported
++    if (has_glyph
++        && (int64_t(size.xend) - size.xbegin > std::numeric_limits<int>::max()
++            || int64_t(size.yend) - size.ybegin
++                   > std::numeric_limits<int>::max()))
++        return ROI();
++    return has_glyph ? size : ROI(0, 0, 0, 0, 0, 1, 0, 1);
+ }
+ 
+ 
+@@ -966,48 +985,20 @@ init_font_families()
+     if (!s_font_families.empty())
+         return;
+ 
+-    // If we know FT is broken, don't bother trying again
+-    if (ft_broken)
+-        return;
+-
+-    // If FT not yet initialized, do it now.
+-    if (!ft_library) {
+-        if (FT_Init_FreeType(&ft_library)) {
+-            ft_broken = true;
+-            return;
+-        }
+-    }
+-
+     // read available fonts
+     std::unordered_set<std::string> font_family_set;
+     std::unordered_map<std::string, std::unordered_set<std::string>>
+         font_style_set;
+     const std::vector<std::string>& font_files = pvt::font_file_list();
+     for (const std::string& filename : font_files) {
+-        // Load the font.
+-        FT_Face face;
+-        int error = FT_New_Face(ft_library, filename.c_str(),
+-                                0 /* face index */, &face);
+-        if (error)
++        FontFace face;
++        if (!face.load(filename) || face.family().empty())
+             continue;
+-
+-        // Ignore if the font fmaily name is not defined.
+-        if (!face->family_name) {
+-            FT_Done_Face(face);
+-            continue;
+-        }
+-
+-        // Store the font family.
+-        std::string family = std::string(face->family_name);
++        std::string family = face.family();
+         font_family_set.insert(family);
+-
+-        // Store the font style.
+-        std::string style = face->style_name ? std::string(face->style_name)
+-                                             : std::string();
+-        if (!style.empty()) {
+-            std::unordered_set<std::string>& styles = font_style_set[family];
+-            styles.insert(style);
+-        }
++        std::string style = face.style();
++        if (!style.empty())
++            font_style_set[family].insert(style);
+ 
+         // Store the filename. Use the family and style as the key (e.g. "Arial Italic").
+         std::string font_name = family;
+@@ -1018,8 +1009,6 @@ init_font_families()
+         // Store regular fonts also with the family name only (e.g. "Arial Regular" as "Arial").
+         if (style == "Regular")
+             s_font_filename_per_family[family] = filename;
+-
+-        FT_Done_Face(face);
+     }
+ 
+     // Sort font families.
+@@ -1047,19 +1036,6 @@ resolve_font(string_view font_, std::string& result)
+ {
+     result.clear();
+ 
+-    // If we know FT is broken, don't bother trying again
+-    if (ft_broken)
+-        return false;
+-
+-    // If FT not yet initialized, do it now.
+-    if (!ft_library) {
+-        if (FT_Init_FreeType(&ft_library)) {
+-            ft_broken = true;
+-            result    = "Could not initialize FreeType for font rendering";
+-            return false;
+-        }
+-    }
+-
+     // Try to find the font.
+     enumerate_fonts();
+     std::string font = font_;
+@@ -1126,9 +1102,9 @@ ImageBufAlgo::text_size(string_view text, int fontsize, string_view font_)
+ {
+     OIIO::pvt::LoggedTimer logtime("IBA::text_size");
+     ROI size;
+-#ifdef USE_FREETYPE
++#if defined(USE_FREETYPE) || defined(USE_STRUETYPE)
+     // Thread safety
+-    lock_guard ft_lock(ft_mutex);
++    lock_guard font_lock(font_mutex);
+ 
+     std::string font;
+     bool ok = resolve_font(font_, font);
+@@ -1136,26 +1112,15 @@ ImageBufAlgo::text_size(string_view text, int fontsize, string_view font_)
+         return size;
+     }
+ 
+-    int error = 0;
+-    FT_Face face;  // handle to face object
+-    error = FT_New_Face(ft_library, font.c_str(), 0 /* face index */, &face);
+-    if (error) {
+-        return size;  // couldn't open the face
+-    }
+-
+-    error = FT_Set_Pixel_Sizes(face /*handle*/, 0 /*width*/,
+-                               fontsize /*height*/);
+-    if (error) {
+-        FT_Done_Face(face);
+-        return size;  // couldn't set the character size
+-    }
++    FontFace face;
++    if (!face.load(font) || !face.set_size(fontsize))
++        return size;
+ 
+     std::vector<uint32_t> utext;
+     utext.reserve(text.size());
+     Strutil::utf8_to_unicode(text, utext);
+     size = text_size_from_unicode(utext, face, fontsize);
+ 
+-    FT_Done_Face(face);
+ #endif
+ 
+     return size;  // Font rendering not supported
+@@ -1176,9 +1141,9 @@ ImageBufAlgo::render_text(ImageBuf& R, int x, int y, string_view text,
+         return false;
+     }
+ 
+-#ifdef USE_FREETYPE
++#if defined(USE_FREETYPE) || defined(USE_STRUETYPE)
+     // Thread safety
+-    lock_guard ft_lock(ft_mutex);
++    lock_guard font_lock(font_mutex);
+ 
+     std::string font;
+     bool ok = resolve_font(font_, font);
+@@ -1188,23 +1153,12 @@ ImageBufAlgo::render_text(ImageBuf& R, int x, int y, string_view text,
+         return false;
+     }
+ 
+-    int error = 0;
+-    FT_Face face;  // handle to face object
+-    error = FT_New_Face(ft_library, font.c_str(), 0 /* face index */, &face);
+-    if (error) {
+-        R.errorfmt("Could not set font face to \"{}\"", font);
+-        return false;  // couldn't open the face
+-    }
+-
+-    error = FT_Set_Pixel_Sizes(face /*handle*/, 0 /*width*/,
+-                               fontsize /*height*/);
+-    if (error) {
+-        FT_Done_Face(face);
+-        R.errorfmt("Could not set font size to {}", fontsize);
+-        return false;  // couldn't set the character size
++    FontFace face;
++    if (!face.load(font) || !face.set_size(fontsize)) {
++        R.errorfmt("Could not use font \"{}\": {}", font, face.error());
++        return false;
+     }
+ 
+-    FT_GlyphSlot slot = face->glyph;  // a small shortcut
+     int nchannels(R.nchannels());
+     IBA_FIX_PERCHAN_LEN_DEF(textcolor, nchannels);
+ 
+@@ -1227,62 +1181,85 @@ ImageBufAlgo::render_text(ImageBuf& R, int x, int y, string_view text,
+     Strutil::utf8_to_unicode(text, utext);
+ 
+     // Compute the size that the text will render as, into an ROI
+-    ROI textroi     = text_size_from_unicode(utext, face, fontsize);
++    ROI textroi = text_size_from_unicode(utext, face, fontsize);
++    if (!textroi.defined()) {
++        R.errorfmt("Cannot measure text: {}",
++                   face.error().empty() ? "Text bounds are out of range"
++                                        : face.error());
++        return false;
++    }
++    if (!textroi.width() || !textroi.height())
++        return true;
+     textroi.zbegin  = 0;
+     textroi.zend    = 1;
+     textroi.chbegin = 0;
+     textroi.chend   = 1;
+ 
+-    // Adjust position for alignment requests
++    // Alignment and shadow padding must fit the image's integer coordinates.
++    int64_t pen_x = x, pen_y = y;
+     if (alignx == TextAlignX::Right)
+-        x -= textroi.width();
++        pen_x -= textroi.width();
+     if (alignx == TextAlignX::Center)
+-        x -= (textroi.width() / 2 + textroi.xbegin);
++        pen_x -= int64_t(textroi.width() / 2) + textroi.xbegin;
+     if (aligny == TextAlignY::Top)
+-        y -= textroi.ybegin;
++        pen_y -= textroi.ybegin;
+     if (aligny == TextAlignY::Bottom)
+-        y -= textroi.yend;
++        pen_y -= textroi.yend;
+     if (aligny == TextAlignY::Center)
+-        y -= (textroi.height() / 2 + textroi.ybegin);
+-
+-    // Pad bounds for shadowing
+-    textroi.xbegin += x - shadow;
+-    textroi.xend += x + shadow;
+-    textroi.ybegin += y - shadow;
+-    textroi.yend += y + shadow;
++        pen_y -= int64_t(textroi.height() / 2) + textroi.ybegin;
++
++    const int64_t left   = textroi.xbegin + pen_x - shadow;
++    const int64_t right  = textroi.xend + pen_x + shadow;
++    const int64_t top    = textroi.ybegin + pen_y - shadow;
++    const int64_t bottom = textroi.yend + pen_y + shadow;
++    if (shadow < 0 || int64_t(shadow) * 2 + 1 > std::numeric_limits<int>::max()
++        || left < std::numeric_limits<int>::min()
++        || right > std::numeric_limits<int>::max()
++        || top < std::numeric_limits<int>::min()
++        || bottom > std::numeric_limits<int>::max()
++        || right - left > std::numeric_limits<int>::max()
++        || bottom - top > std::numeric_limits<int>::max()) {
++        R.errorfmt(
++            "Text position, dimensions, or shadow radius are out of range");
++        return false;
++    }
++    textroi.xbegin = int(left);
++    textroi.xend   = int(right);
++    textroi.ybegin = int(top);
++    textroi.yend   = int(bottom);
+ 
+     // Create a temp buffer of the right size and render the text into it.
+     ImageBuf textimg(ImageSpec(textroi, TypeDesc::FLOAT));
+-    ImageBufAlgo::zero(textimg);
++    if (!ImageBufAlgo::zero(textimg)) {
++        R.errorfmt("Cannot initialize text bitmap: {}", textimg.geterror());
++        return false;
++    }
+ 
+     // Glyph by glyph, fill in our textimg buffer
+-    int origx = x;
++    const int64_t origx = pen_x;
++    FontGlyph glyph;
+     for (auto ch : utext) {
+-        // on Windows a newline is encoded as '\r\n'
+-        // we simply ignore carriage return here
+-        if (ch == '\r') {
++        if (ch == '\r')
+             continue;
+-        }
+         if (ch == '\n') {
+-            x = origx;
+-            y += fontsize;
++            pen_x = origx;
++            pen_y += fontsize;
+             continue;
+         }
+-        int error = FT_Load_Char(face, ch, FT_LOAD_RENDER);
+-        if (error)
+-            continue;  // ignore errors
+-        // now, draw to our target surface
+-        for (int j = 0; j < static_cast<int>(slot->bitmap.rows); ++j) {
+-            int ry = y + j - slot->bitmap_top;
+-            for (int i = 0; i < static_cast<int>(slot->bitmap.width); ++i) {
+-                int rx  = x + i + slot->bitmap_left;
+-                float b = slot->bitmap.buffer[slot->bitmap.pitch * j + i]
+-                          / 255.0f;
+-                textimg.setpixel(rx, ry, b);
++        if (!face.glyph(ch, glyph)) {
++            R.errorfmt("Cannot rasterize text: {}", face.error());
++            return false;
++        }
++        for (int j = 0; j < glyph.height; ++j) {
++            const int ry = int(pen_y + j - glyph.top);
++            for (int i = 0; i < glyph.width; ++i) {
++                const int rx         = int(pen_x + i + glyph.left);
++                const float coverage = glyph.pixels[size_t(j) * glyph.width + i]
++                                       / 255.0f;
++                textimg.setpixel(rx, ry, coverage);
+             }
+         }
+-        // increment pen position
+-        x += slot->advance.x >> 6;
++        pen_x += glyph.advance;
+     }
+ 
+     // Generate the alpha image -- if drop shadow is requested, dilate,
+@@ -1313,11 +1290,10 @@ ImageBufAlgo::render_text(ImageBuf& R, int x, int y, string_view text,
+         R.setpixel(r.x(), r.y(), pixelcolor);
+     }
+ 
+-    FT_Done_Face(face);
+     return true;
+ 
+ #else
+-    R.errorfmt("OpenImageIO was not compiled with FreeType for font rendering");
++    R.errorfmt("OpenImageIO was not compiled with a font rendering backend");
+     return false;  // Font rendering not supported
+ #endif
+ }
+@@ -1330,8 +1306,8 @@ OIIO_NAMESPACE_BEGIN
+ const std::vector<std::string>&
+ pvt::font_family_list()
+ {
+-#ifdef USE_FREETYPE
+-    lock_guard ft_lock(ft_mutex);
++#if defined(USE_FREETYPE) || defined(USE_STRUETYPE)
++    lock_guard font_lock(font_mutex);
+     init_font_families();
+ #endif
+     return s_font_families;
+@@ -1341,8 +1317,8 @@ pvt::font_family_list()
+ const std::vector<std::string>
+ pvt::font_style_list(string_view family)
+ {
+-#ifdef USE_FREETYPE
+-    lock_guard ft_lock(ft_mutex);
++#if defined(USE_FREETYPE) || defined(USE_STRUETYPE)
++    lock_guard font_lock(font_mutex);
+     init_font_families();
+ #endif
+     auto it = s_font_styles.find(family);
+@@ -1359,8 +1335,8 @@ pvt::font_filename(string_view family, string_view style)
+     if (family.empty())
+         return std::string();
+ 
+-#ifdef USE_FREETYPE
+-    lock_guard ft_lock(ft_mutex);
++#if defined(USE_FREETYPE) || defined(USE_STRUETYPE)
++    lock_guard font_lock(font_mutex);
+     init_font_families();
+ #endif
+ 
+diff --git a/src/libOpenImageIO/imagebufalgo_font.h b/src/libOpenImageIO/imagebufalgo_font.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..84ca1ac3e9e7730323dc5b92fbcd28f0065ebe81
+--- /dev/null
++++ b/src/libOpenImageIO/imagebufalgo_font.h
+@@ -0,0 +1,236 @@
++// Copyright Contributors to the OpenImageIO project.
++// SPDX-License-Identifier: Apache-2.0
++// https://github.com/AcademySoftwareFoundation/OpenImageIO
++
++#pragma once
++
++#include <cmath>
++#include <limits>
++#include <memory>
++#include <string>
++#include <vector>
++
++#include <OpenImageIO/filesystem.h>
++#include <OpenImageIO/strutil.h>
++
++#ifdef USE_STRUETYPE
++#    define STT_STATIC
++#    define STRUETYPE_IMPLEMENTATION
++#    include <struetype.h>
++#elif defined(USE_FREETYPE)
++#    include <ft2build.h>
++#    include FT_FREETYPE_H
++#endif
++
++OIIO_NAMESPACE_BEGIN
++namespace {
++
++struct FontGlyph {
++    int width = 0, height = 0;
++    int left = 0, top = 0, advance = 0;
++    std::vector<unsigned char> pixels;
++};
++
++
++
++class FontFace {
++public:
++    FontFace()                           = default;
++    FontFace(const FontFace&)            = delete;
++    FontFace& operator=(const FontFace&) = delete;
++    ~FontFace()
++    {
++#if defined(USE_FREETYPE) && !defined(USE_STRUETYPE)
++        if (m_face)
++            FT_Done_Face(m_face);
++#endif
++    }
++
++    bool load(const std::string& filename)
++    {
++        m_error.clear();
++#ifdef USE_STRUETYPE
++        const uint64_t size = Filesystem::file_size(filename);
++        if (!size || size > uint64_t(std::numeric_limits<int>::max()))
++            return fail("Font buffer is empty, unreadable, or too large");
++        m_data.resize(size);
++        if (Filesystem::read_bytes(filename, m_data.data(), size) != size)
++            return fail("Cannot read font buffer");
++        const int offset = stt_GetFontOffsetForIndex(m_data.data(), int(size),
++                                                     0);
++        if (offset < 0
++            || !stt_InitFont(&m_font, m_data.data(), int(size), offset))
++            return fail("Invalid or unsupported TrueType/OpenType font");
++        m_family = name(FamilyName);
++        m_style  = name(StyleName);
++        if (m_family.empty())
++            m_family
++                = Filesystem::replace_extension(Filesystem::filename(filename),
++                                                "");
++        return true;
++#else
++        if (m_face) {
++            FT_Done_Face(m_face);
++            m_face = nullptr;
++        }
++        static Library library;
++        if (!library.handle)
++            return fail("Cannot initialize FreeType");
++        if (FT_New_Face(library.handle, filename.c_str(), 0, &m_face))
++            return fail("Cannot open font face");
++        m_family = m_face->family_name ? m_face->family_name : "";
++        m_style  = m_face->style_name ? m_face->style_name : "";
++        return true;
++#endif
++    }
++
++    bool set_size(int size)
++    {
++        if (size <= 0)
++            return fail("Font size must be positive");
++#ifdef USE_STRUETYPE
++        m_scale = stt_ScaleForMappingEmToPixels(&m_font, float(size));
++        return (std::isfinite(m_scale) && m_scale > 0)
++               || fail("Invalid font scale");
++#else
++        return !FT_Set_Pixel_Sizes(m_face, 0, size)
++               || fail("Cannot set font size");
++#endif
++    }
++
++    bool glyph(uint32_t codepoint, FontGlyph& glyph)
++    {
++        glyph.pixels.clear();
++        glyph.width = glyph.height = glyph.left = glyph.top = glyph.advance = 0;
++#ifdef USE_STRUETYPE
++        if (codepoint > uint32_t(std::numeric_limits<int>::max()))
++            return fail("Invalid Unicode codepoint");
++        const int index = stt_FindGlyphIndex(&m_font, int(codepoint));
++        int advance;
++        stt_GetGlyphHMetrics(&m_font, index, &advance, nullptr);
++        const double scaled_advance = std::round(double(advance) * m_scale);
++        if (!std::isfinite(scaled_advance)
++            || scaled_advance < std::numeric_limits<int>::min()
++            || scaled_advance > std::numeric_limits<int>::max())
++            return fail("Glyph advance is out of range");
++        glyph.advance = int(scaled_advance);
++        int yoff      = 0;
++        const std::unique_ptr<unsigned char, BitmapDeleter> bitmap(
++            stt_GetGlyphBitmap(&m_font, m_scale, m_scale, index, &glyph.width,
++                               &glyph.height, &glyph.left, &yoff));
++        if (yoff == std::numeric_limits<int>::min())
++            return fail("Glyph offset is out of range");
++        glyph.top = -yoff;
++        if (glyph.width < 0 || glyph.height < 0)
++            return fail("Invalid glyph dimensions");
++        if (!glyph.width || !glyph.height)
++            return true;
++        if (!bitmap)
++            return fail("Glyph rasterization failed");
++        const size_t width = size_t(glyph.width), height = size_t(glyph.height);
++        if (width > glyph.pixels.max_size() / height)
++            return fail("Glyph bitmap is too large");
++        glyph.pixels.assign(bitmap.get(), bitmap.get() + width * height);
++#else
++        if (FT_Load_Char(m_face, codepoint, FT_LOAD_RENDER))
++            return fail("Glyph rasterization failed");
++        const auto& slot   = *m_face->glyph;
++        const auto& bitmap = slot.bitmap;
++        if (bitmap.width > unsigned(std::numeric_limits<int>::max())
++            || bitmap.rows > unsigned(std::numeric_limits<int>::max()))
++            return fail("Glyph bitmap is too large");
++        glyph.width   = int(bitmap.width);
++        glyph.height  = int(bitmap.rows);
++        glyph.left    = slot.bitmap_left;
++        glyph.top     = slot.bitmap_top;
++        glyph.advance = int(slot.advance.x >> 6);
++        if (!glyph.width || !glyph.height)
++            return true;
++        if (bitmap.pixel_mode != FT_PIXEL_MODE_GRAY
++            && bitmap.pixel_mode != FT_PIXEL_MODE_MONO)
++            return fail("Unsupported glyph bitmap format");
++        const size_t width = size_t(glyph.width), height = size_t(glyph.height);
++        if (width > glyph.pixels.max_size() / height)
++            return fail("Glyph bitmap is too large");
++        glyph.pixels.resize(width * height);
++        for (int y = 0; y < glyph.height; ++y) {
++            const auto* row = bitmap.buffer + ptrdiff_t(y) * bitmap.pitch;
++            for (int x = 0; x < glyph.width; ++x) {
++                glyph.pixels[size_t(y) * width + x]
++                    = bitmap.pixel_mode == FT_PIXEL_MODE_MONO
++                          ? ((row[x / 8] & (0x80 >> (x % 8))) ? 255 : 0)
++                          : row[x];
++            }
++        }
++#endif
++        return true;
++    }
++
++    const std::string& family() const { return m_family; }
++    const std::string& style() const { return m_style; }
++    const std::string& error() const { return m_error; }
++
++private:
++    bool fail(const char* message)
++    {
++        m_error = message;
++        return false;
++    }
++
++#ifdef USE_STRUETYPE
++    static constexpr int FamilyName = 1;
++    static constexpr int StyleName  = 2;
++
++    struct BitmapDeleter {
++        void operator()(unsigned char* bitmap) const
++        {
++            stt_FreeBitmap(bitmap, nullptr);
++        }
++    };
++
++    std::string name(int id) const
++    {
++        int length        = 0;
++        const char* value = stt_GetFontNameString(&m_font, &length,
++                                                  STT_PLATFORM_ID_MICROSOFT,
++                                                  STT_MS_EID_UNICODE_BMP,
++                                                  STT_MS_LANG_ENGLISH, id);
++        if (!value)
++            value = stt_GetFontNameString(&m_font, &length,
++                                          STT_PLATFORM_ID_UNICODE,
++                                          STT_UNICODE_EID_UNICODE_2_0_BMP, 0,
++                                          id);
++        if (!value || length <= 0 || length % 2)
++            return {};
++        std::u16string decoded;
++        decoded.reserve(size_t(length) / 2);
++        for (int i = 0; i < length; i += 2)
++            decoded.push_back(char16_t((uint16_t(uint8_t(value[i])) << 8)
++                                       | uint8_t(value[i + 1])));
++        return Strutil::utf16_to_utf8(decoded);
++    }
++
++    std::vector<unsigned char> m_data;
++    stt_fontinfo m_font {};
++    float m_scale = 0;
++#else
++    struct Library {
++        FT_Library handle = nullptr;
++        Library()
++        {
++            if (FT_Init_FreeType(&handle))
++                handle = nullptr;
++        }
++        ~Library()
++        {
++            if (handle)
++                FT_Done_FreeType(handle);
++        }
++    };
++    FT_Face m_face = nullptr;
++#endif
++    std::string m_family, m_style, m_error;
++};
++
++}  // namespace
++OIIO_NAMESPACE_END
+diff --git a/src/libOpenImageIO/imagebufalgo_font_test.cpp b/src/libOpenImageIO/imagebufalgo_font_test.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..d24b32f39aebea3ce7d15083a270b4f2c22229d9
+--- /dev/null
++++ b/src/libOpenImageIO/imagebufalgo_font_test.cpp
+@@ -0,0 +1,170 @@
++// Copyright Contributors to the OpenImageIO project.
++// SPDX-License-Identifier: Apache-2.0
++// https://github.com/AcademySoftwareFoundation/OpenImageIO
++
++#include <algorithm>
++#include <cmath>
++#include <limits>
++#include <string>
++
++#include <OpenImageIO/filesystem.h>
++#include <OpenImageIO/imagebuf.h>
++#include <OpenImageIO/imagebufalgo.h>
++#include <OpenImageIO/imageio.h>
++#include <OpenImageIO/unittest.h>
++
++using namespace OIIO;
++
++namespace {
++constexpr int Width = 256, Height = 128, FontSize = 32;
++constexpr int OriginX = 20, OriginY = 60;
++const float TextColor[] = { 1.0f, 0.5f, 0.25f, 1.0f };
++
++ImageBuf
++canvas()
++{
++    ImageBuf image(ImageSpec(Width, Height, 4, TypeDesc::FLOAT));
++    ImageBufAlgo::zero(image);
++    return image;
++}
++
++void
++check_equal(const ImageBuf& a, const ImageBuf& b)
++{
++    const auto result = ImageBufAlgo::compare(a, b, 0, 0);
++    OIIO_CHECK_ASSERT(!result.error);
++    OIIO_CHECK_EQUAL(result.maxerror, 0.0);
++}
++
++void
++check_text(string_view font)
++{
++    // The accented glyph exercises UTF-8 decoding as well as ASCII rendering.
++    const std::string text = "art \xc3\x85";
++    const ROI bounds       = ImageBufAlgo::text_size(text, FontSize, font);
++    OIIO_CHECK_ASSERT(bounds.defined());
++    OIIO_CHECK_GT(bounds.width(), 0);
++    OIIO_CHECK_GT(bounds.height(), 0);
++    ImageBuf image = canvas();
++    OIIO_CHECK_ASSERT(ImageBufAlgo::render_text(image, OriginX, OriginY, text,
++                                                FontSize, font, TextColor));
++    int covered   = 0;
++    int rightmost = OriginX;
++    for (ImageBuf::ConstIterator<float> p(image); !p.done(); ++p) {
++        for (int c = 0; c < image.nchannels(); ++c) {
++            OIIO_CHECK_ASSERT(std::isfinite(p[c]));
++            OIIO_CHECK_GE(p[c], 0.0f);
++            OIIO_CHECK_LE(p[c], 1.0f);
++        }
++        if (p[3] == 0)
++            continue;
++        ++covered;
++        rightmost = std::max(rightmost, p.x());
++        OIIO_CHECK_GE(p.x(), OriginX + bounds.xbegin);
++        OIIO_CHECK_LT(p.x(), OriginX + bounds.xend);
++        OIIO_CHECK_GE(p.y(), OriginY + bounds.ybegin);
++        OIIO_CHECK_LT(p.y(), OriginY + bounds.yend);
++        OIIO_CHECK_EQUAL(p[0], p[3]);
++        OIIO_CHECK_EQUAL(p[1], 0.5f * p[3]);
++        OIIO_CHECK_EQUAL(p[2], 0.25f * p[3]);
++    }
++    OIIO_CHECK_GT(covered, 0);
++    OIIO_CHECK_GT(rightmost, OriginX + bounds.xbegin + bounds.width() / 2);
++
++    ImageBuf unix_lines = canvas(), windows_lines = canvas();
++    OIIO_CHECK_ASSERT(ImageBufAlgo::render_text(unix_lines, OriginX, OriginY,
++                                                "art\nOSL", FontSize, font));
++    OIIO_CHECK_ASSERT(ImageBufAlgo::render_text(windows_lines, OriginX, OriginY,
++                                                "art\r\nOSL", FontSize, font));
++    check_equal(unix_lines, windows_lines);
++
++    ImageBuf aligned = canvas(), positioned = canvas();
++    OIIO_CHECK_ASSERT(ImageBufAlgo::render_text(
++        aligned, Width / 2, Height / 2, text, FontSize, font, TextColor,
++        ImageBufAlgo::TextAlignX::Center, ImageBufAlgo::TextAlignY::Center));
++    OIIO_CHECK_ASSERT(ImageBufAlgo::render_text(
++        positioned, Width / 2 - (bounds.width() / 2 + bounds.xbegin),
++        Height / 2 - (bounds.height() / 2 + bounds.ybegin), text, FontSize,
++        font, TextColor));
++    check_equal(aligned, positioned);
++
++    ImageBuf shadowed = canvas();
++    ImageBufAlgo::fill(shadowed, 1.0f);
++    OIIO_CHECK_ASSERT(ImageBufAlgo::render_text(
++        shadowed, OriginX, OriginY, text, FontSize, font, TextColor,
++        ImageBufAlgo::TextAlignX::Left, ImageBufAlgo::TextAlignY::Baseline, 2));
++    bool has_shadow = false;
++    for (ImageBuf::ConstIterator<float> p(shadowed); !p.done(); ++p)
++        has_shadow |= p[0] < 1.0f;
++    OIIO_CHECK_ASSERT(has_shadow);
++
++    ImageBuf empty = canvas(), blank = canvas();
++    OIIO_CHECK_ASSERT(
++        ImageBufAlgo::render_text(empty, 0, 0, "\r\n", FontSize, font));
++    check_equal(empty, blank);
++    OIIO_CHECK_ASSERT(!ImageBufAlgo::text_size(text, 0, font).defined());
++    OIIO_CHECK_ASSERT(!ImageBufAlgo::render_text(empty, 0, 0, text, 0, font));
++    OIIO_CHECK_ASSERT(empty.has_error());
++    empty.geterror();
++    OIIO_CHECK_ASSERT(
++        !ImageBufAlgo::render_text(empty, std::numeric_limits<int>::max(),
++                                   std::numeric_limits<int>::max(), text,
++                                   FontSize, font));
++    OIIO_CHECK_ASSERT(empty.has_error());
++    empty.geterror();
++    OIIO_CHECK_ASSERT(
++        !ImageBufAlgo::render_text(empty, OriginX, OriginY, text, FontSize,
++                                   font, TextColor,
++                                   ImageBufAlgo::TextAlignX::Left,
++                                   ImageBufAlgo::TextAlignY::Baseline, -1));
++    OIIO_CHECK_ASSERT(empty.has_error());
++    empty.geterror();
++}
++}  // namespace
++
++int
++main(int argc, char** argv)
++{
++    OIIO_CHECK_EQUAL(argc, 2);
++    if (argc != 2)
++        return 1;
++#if defined(USE_FREETYPE) || defined(USE_STRUETYPE)
++    const std::string font = argv[1];
++    OIIO::attribute("font_searchpath", Filesystem::parent_path(font));
++    check_text(font);
++    check_text("DroidSans");
++    check_text("Droid Sans Regular");
++    check_text("");
++    OIIO_CHECK_ASSERT(
++        OIIO::get_string_attribute("font_family_list").find("Droid Sans")
++        != std::string::npos);
++    OIIO_CHECK_ASSERT(
++        OIIO::get_string_attribute("font_style_list:Droid Sans").find("Regular")
++        != std::string::npos);
++
++    // Existing files with truncated headers must fail, rather than fall back.
++    const std::string invalid = Filesystem::temp_directory_path() + "/"
++                                + Filesystem::unique_path(
++                                    "oiio-font-%%%%-%%%%.ttf");
++    OIIO_CHECK_ASSERT(
++        Filesystem::write_text_file(invalid,
++                                    string_view("\0\1broken font", 13)));
++    ImageBuf image = canvas();
++    OIIO_CHECK_ASSERT(
++        !ImageBufAlgo::text_size("art", FontSize, invalid).defined());
++    OIIO_CHECK_ASSERT(!ImageBufAlgo::render_text(image, 0, OriginY, "art",
++                                                 FontSize, invalid));
++    OIIO_CHECK_ASSERT(image.has_error());
++    image.geterror();
++    OIIO_CHECK_ASSERT(Filesystem::remove(invalid));
++#else
++    ImageBuf image = canvas();
++    OIIO_CHECK_ASSERT(
++        !ImageBufAlgo::text_size("art", FontSize, argv[1]).defined());
++    OIIO_CHECK_ASSERT(!ImageBufAlgo::render_text(image, 0, OriginY, "art",
++                                                 FontSize, argv[1]));
++    OIIO_CHECK_ASSERT(image.has_error());
++    image.geterror();
++#endif
++    return unit_test_failures;
++}

@@ -1,0 +1,100 @@
+diff --git a/src/mmatomic-msvc.h b/src/mmatomic-msvc.h
+--- a/src/mmatomic-msvc.h
++++ b/src/mmatomic-msvc.h
+@@ -49,7 +49,8 @@
+ 
+ typedef struct { volatile int8_t value; } mmAtomic8;
+ typedef struct { volatile int16_t value; } mmAtomic16;
+-typedef struct { volatile int32_t value; } mmAtomic32;
++/* The Windows 32-bit interlocked functions take a long pointer. */
++typedef struct { volatile long value; } mmAtomic32;
+ #if MM_ATOMIC_64_BITS_SUPPORT
+ typedef struct { volatile int64_t value; } mmAtomic64;
+ #endif
+diff --git a/src/cc.c b/src/cc.c
+--- a/src/cc.c
++++ b/src/cc.c
+@@ -316,7 +316,7 @@
+ 
+ void ccQuickSort( void **table, int count, int (*sortfunc)( void *t0, void *t1 ), uint32_t randmask )
+ {
+-  ssize_t i, pivotindex, leftcount, rightcount, highindex, pivotstore;
++  ptrdiff_t i, pivotindex, leftcount, rightcount, highindex, pivotstore;
+   void *temp;
+   void *pivot;
+   ccQuickSortStack stack[CC_SORT_STACK_DEPTH];
+@@ -504,7 +504,7 @@
+ 
+ void ccQuickSortContext( void **table, int count, int (*sortfunc)( void *context, void *t0, void *t1 ), void *context, uint32_t randmask )
+ {
+-  ssize_t i, pivotindex, leftcount, rightcount, highindex, pivotstore;
++  ptrdiff_t i, pivotindex, leftcount, rightcount, highindex, pivotstore;
+   void *temp;
+   void *pivot;
+   ccQuickSortStack stack[CC_SORT_STACK_DEPTH];
+@@ -612,7 +612,7 @@
+ int ccMergeSort( void **src, void **tmp, int count, int (*sortfunc)( void *t0, void *t1 ) )
+ {
+   int swapflag, depthbit, maxdepthbit;
+-  ssize_t i, leftcount, rightcount;
++  ptrdiff_t i, leftcount, rightcount;
+   void **dst, **sl, **sr, *temp, **swap;
+   ccMergeSortStack stack[CC_SORT_STACK_DEPTH];
+   ccMergeSortStack *sp;
+@@ -759,7 +759,7 @@
+ int ccMergeSortContext( void **src, void **tmp, int count, int (*sortfunc)( void *context, void *t0, void *t1 ), void *context )
+ {
+   int swapflag, depthbit, maxdepthbit;
+-  ssize_t i, leftcount, rightcount;
++  ptrdiff_t i, leftcount, rightcount;
+   void **dst, **sl, **sr, *temp, **swap;
+   ccMergeSortStack stack[CC_SORT_STACK_DEPTH];
+   ccMergeSortStack *sp;
+@@ -917,7 +917,7 @@
+ void ccHybridSort( void **table, void **tmp, int count, int (*sortfunc)( void *t0, void *t1 ), uint32_t randmask )
+ {
+   int msortindex, depth, depthmax;
+-  ssize_t i, pivotindex, leftcount, rightcount, highindex, pivotstore;
++  ptrdiff_t i, pivotindex, leftcount, rightcount, highindex, pivotstore;
+   void *temp;
+   void *pivot;
+   ccHybridSortStack stack[CC_SORT_STACK_DEPTH];
+@@ -1020,7 +1020,7 @@
+ void ccHybridSortContext( void **table, void **tmp, int count, int (*sortfunc)( void *context, void *t0, void *t1 ), void *context, uint32_t randmask )
+ {
+   int msortindex, depth, depthmax;
+-  ssize_t i, pivotindex, leftcount, rightcount, highindex, pivotstore;
++  ptrdiff_t i, pivotindex, leftcount, rightcount, highindex, pivotstore;
+   void *temp;
+   void *pivot;
+   ccHybridSortStack stack[CC_SORT_STACK_DEPTH];
+@@ -1406,7 +1406,7 @@
+   int retval;
+ #if CC_UNIX
+   int fd;
+-  ssize_t writtensize;
++  ptrdiff_t writtensize;
+   if( ( fd = open( path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR ) ) == -1 )
+     return 0;
+   retval = 1;
+diff --git a/src/mm.c b/src/mm.c
+--- a/src/mm.c
++++ b/src/mm.c
+@@ -2243,7 +2243,7 @@
+ void MM_FUNC(VolumeShrink)( mmVolumeHead *head, void *v, size_t bytes MM_PARAMS )
+ {
+   int32_t nextoffset, newoffset, chunkflags, nextflags, next2offset;
+-  ssize_t freesize;
++  ptrdiff_t freesize;
+   mmVolumeChunk *chunk, *next, *next2, *newchunk;
+ 
+   chunk = ADDRESS( v, -(int)head->volumechunksize );
+@@ -2263,7 +2263,7 @@
+     bytes = head->minchunksize;
+   bytes = ( bytes + head->alignment ) & ~head->alignment;
+   freesize = nextoffset - bytes;
+-  if( ( freesize < (ssize_t)head->minchunksize ) && ( !( next ) || !( nextflags & MM_VOLUME_CHUNK_FLAGS_FREE ) ) )
++  if( ( freesize < (ptrdiff_t)head->minchunksize ) && ( !( next ) || !( nextflags & MM_VOLUME_CHUNK_FLAGS_FREE ) ) )
+   {
+     mtSpinUnlock( &head->spinlock );
+     return;

@@ -1,0 +1,72 @@
+Subject: [PATCH 05/50] Support files
+
+Carry the dependency-compatible baseline over the actual upstream
+source. This patch contains one reviewable part of the combined
+historical changes; full original messages are retained in HISTORY.
+
+Original-Commits: See the compatibility-baseline entries in HISTORY.
+
+diff --git a/TODO b/TODO
+new file mode 100644
+index 000000000..d3bc137d8
+--- /dev/null
++++ b/TODO
+@@ -0,0 +1,6 @@
++Fix issue on Windows with BRL-CAD art executable not working successfully
++
++Remove requirement to use Boost - much of current usage should be covered
++by newer C++ standards, and latest dependencies (OSL, etc.) appear to be
++moving away from Boost.
++
+diff --git a/docs/source/conf.py b/docs/source/conf.py
+index c35ec679b..37c579b0f 100644
+--- a/docs/source/conf.py
++++ b/docs/source/conf.py
+@@ -441,7 +441,7 @@ epub_identifier = 'https://github.com/appleseedhq/appleseed'
+ # The format is a list of tuples containing the path and title.
+ #epub_pre_files = []
+ 
+-# HTML files shat should be inserted after the pages created by sphinx.
++# HTML files that should be inserted after the pages created by sphinx.
+ # The format is a list of tuples containing the path and title.
+ #epub_post_files = []
+ 
+diff --git a/sandbox/examples/python/helloworld/helloworld.py b/sandbox/examples/python/helloworld/helloworld.py
+index 525fee2cc..6d113d3ba 100644
+--- a/sandbox/examples/python/helloworld/helloworld.py
++++ b/sandbox/examples/python/helloworld/helloworld.py
+@@ -305,7 +305,7 @@ def main():
+     # Save the project to disk.
+     asr.ProjectFileWriter().write(project, "output/test.appleseed")
+ 
+-    # Remove the log target we added previosly.
++    # Remove the log target we added previously.
+     asr.global_logger().remove_target(log_target)
+ 
+ if __name__ == "__main__":
+diff --git a/sandbox/lib/python/site-packages/Qt.py b/sandbox/lib/python/site-packages/Qt.py
+index d60357d20..d1157c016 100644
+--- a/sandbox/lib/python/site-packages/Qt.py
++++ b/sandbox/lib/python/site-packages/Qt.py
+@@ -936,7 +936,7 @@ def _reassign_misplaced_members(binding):
+         src_module, src_member = src.split(".")
+         dst_module, dst_member = dst.split(".")
+ 
+-        # Get the member we want to store in the namesapce.
++        # Get the member we want to store in the namespace.
+         try:
+             dst_value = getattr(getattr(Qt, "_" + src_module), src_member)
+         except AttributeError:
+diff --git a/sandbox/share/rfmdisneypresets2appleseed.py b/sandbox/share/rfmdisneypresets2appleseed.py
+index fb6fd2006..7c8a14da9 100644
+--- a/sandbox/share/rfmdisneypresets2appleseed.py
++++ b/sandbox/share/rfmdisneypresets2appleseed.py
+@@ -84,7 +84,7 @@ def main():
+ 
+                 # Check the material for possible incompatibilities
+                 if params["emitColorR"] != "0.0" or params["emitColorG"] != "0.0" or params["emitColorB"] != "0.0":
+-                    print(f"Error: material {material_name} preset uses emision.")
++                    print(f"Error: material {material_name} preset uses emission.")
+ 
+                     if args.stop_error:
+                         sys.exit(1)

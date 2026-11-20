@@ -1,0 +1,42 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -8,7 +8,8 @@
+ find_package(BISON REQUIRED)
+ 
+ set(OM4_FLEX_OPTIONS -l)
+-if (MSVC)
++get_filename_component(OM4_FLEX_PROGRAM "${FLEX_EXECUTABLE}" NAME_WE)
++if (WIN32 AND OM4_FLEX_PROGRAM STREQUAL "win_flex")
+   list(APPEND OM4_FLEX_OPTIONS --wincompat)
+ endif ()
+ 
+@@ -125,7 +126,7 @@
+   strtonum.c
+   )
+ 
+-if (MSVC)
++if (WIN32)
+   list(APPEND OM4_SRCS
+     compat/win32/compat.c
+     compat/win32/regex.cpp
+@@ -139,7 +140,7 @@
+ 
+ add_executable(om4 ${OM4_SRCS})
+ target_compile_definitions(om4 PRIVATE OM4_VERSION="${PROJECT_VERSION}")
+-if (MSVC)
++if (WIN32)
+   target_include_directories(om4 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/compat/win32)
+   set_target_properties(om4 PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+ endif ()
+diff --git a/extern.h b/extern.h
+--- a/extern.h
++++ b/extern.h
+@@ -185,6 +185,6 @@
+ /* portability */
+ extern void *reallocarray(void *, size_t, size_t);
+ extern long long strtonum(const char *, long long, long long, const char **);
+-#ifdef __linux__
++#if defined(__linux__) || defined(_WIN32)
+ extern size_t strlcpy(char *, const char *, size_t);
+ #endif

@@ -8,6 +8,10 @@ bext_enable(MMESH)
 if (ENABLE_MMESH)
 
   set(MMESH_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mmesh_sse3_load.patch")
+  if (MSVC)
+    list(APPEND MMESH_PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/mmesh_windows_types.patch")
+  endif ()
   git_submodule_init(mmesh CMakeLists.txt
     PATCH_FILES ${MMESH_PATCH_FILES}
     PATCH_COMMAND_VAR MMESH_PATCH_COMMAND)

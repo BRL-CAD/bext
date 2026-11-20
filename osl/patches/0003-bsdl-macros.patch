@@ -1,0 +1,30 @@
+From 2e739b521a9f49006418ab474badb7bfd78121b4 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 05:20:19 +0000
+Subject: [PATCH] fix(testrender): shield BSDL from system min and max macros
+
+System headers can expose MIN and MAX macros before BSDL's function
+headers are included. Clear them within the renderer implementation so
+those declarations and calls compile without altering BSDL's API.
+
+Cornell, UV, and BSDL material image regressions pass on FreeBSD.
+
+diff --git a/src/testrender/shading.cpp b/src/testrender/shading.cpp
+index 7e9b0b3b200bdaf2074158b251fe44f925e0efd4..1724dff6e425a79981d8535a8af5667e4eb1da7e 100644
+--- a/src/testrender/shading.cpp
++++ b/src/testrender/shading.cpp
+@@ -8,6 +8,14 @@
+ #include "optics.h"
+ #include "sampling.h"
+ 
++// System headers can define macros that collide with BSDL's functions.
++#ifdef MAX
++#    undef MAX
++#endif
++#ifdef MIN
++#    undef MIN
++#endif
++
+ #include <BSDL/MTX/bsdf_burley_diffuse_impl.h>
+ #include <BSDL/MTX/bsdf_conductor_impl.h>
+ #include <BSDL/MTX/bsdf_dielectric_impl.h>

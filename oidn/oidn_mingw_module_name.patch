@@ -1,0 +1,12 @@
+--- a/core/module.cpp
++++ b/core/module.cpp
+@@ -30,6 +30,9 @@
+     // Get the path of the module to load
+     std::string filename = OIDN_LIBRARY_NAME "_" + name;
+   #if defined(_WIN32)
++  #if defined(__MINGW32__)
++    filename = "lib" + filename;
++  #endif
+     filename += ".dll";
+   #else
+     #if defined(OIDN_LIBRARY_VERSIONED)

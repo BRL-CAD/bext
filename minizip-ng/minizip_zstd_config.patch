@@ -1,0 +1,35 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -342,18 +342,19 @@
+ if(MZ_ZSTD)
+     # Check if zstd is present
+     if(NOT MZ_FORCE_FETCH_LIBS)
+-        find_package(PkgConfig QUIET)
+-        if(PKGCONFIG_FOUND)
+-            pkg_check_modules(ZSTD libzstd)
+-        endif()
+-        if(NOT ZSTD_FOUND)
+-            find_package(ZSTD QUIET)
+-            if(ZSTD_FOUND)
+-                if(TARGET zstd::libzstd_static)
+-                    list(APPEND ZSTD_LIBRARIES zstd::libzstd_static)
+-                else()
+-                    list(APPEND ZSTD_LIBRARIES zstd::libzstd_shared)
+-                endif()
++        # Prefer an imported target so the selected library and its include
++        # path stay paired when an SDK also provides libzstd.pc.
++        find_package(zstd CONFIG QUIET)
++        if(TARGET zstd::libzstd_static)
++            set(ZSTD_FOUND ON)
++            set(ZSTD_LIBRARIES zstd::libzstd_static)
++        elseif(TARGET zstd::libzstd_shared)
++            set(ZSTD_FOUND ON)
++            set(ZSTD_LIBRARIES zstd::libzstd_shared)
++        else()
++            find_package(PkgConfig QUIET)
++            if(PKGCONFIG_FOUND)
++                pkg_check_modules(ZSTD libzstd)
+             endif()
+         endif()
+     endif()

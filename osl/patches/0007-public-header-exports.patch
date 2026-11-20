@@ -1,0 +1,119 @@
+From 76e0634589006862fb0df8cf04aa994c5af711f3 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Mon, 16 Nov 2026 11:46:15 +0000
+Subject: [PATCH] fix(cmake): export relocatable public header paths
+
+Use a shared build/install include interface for the public OSL
+libraries and batched execution modules. Keep raw dependency include
+paths private and propagate public dependencies through their imported
+targets.
+
+Build-tree headers compile without installing OSL. Installed and
+relocated consumers compile, query and JIT-execute a shader; the old
+include export is rejected by the relocated SDK check.
+
+diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
+index 0c8bc464e41a0ebb99549cf933f790029d63094c..96b4e89d8e92467da471d789d732b0ba9541851e 100644
+--- a/src/cmake/compiler.cmake
++++ b/src/cmake/compiler.cmake
+@@ -659,6 +659,16 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
+ 
+ 
+ ###########################################################################
++# Public headers live in both the source and generated trees while building.
++# Installed targets must resolve relative to the consumer's installation.
++function (osl_target_public_headers target)
++    target_include_directories (${target} PUBLIC
++        $<BUILD_INTERFACE:${OSL_SOURCE_DIR}/src/include>
++        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
++        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
++endfunction ()
++
++
+ # Macro to install targets to the appropriate locations.  Use this instead
+ # of the install(TARGETS ...) signature. Note that it adds it to the
+ # export targets list for when we generate config files.
+diff --git a/src/liboslcomp/CMakeLists.txt b/src/liboslcomp/CMakeLists.txt
+index 261168c5420cec149b38fdf653e8871ad8e01641..2be6b32f40ee7b276288cf5df9c9ac28b95dbacf 100644
+--- a/src/liboslcomp/CMakeLists.txt
++++ b/src/liboslcomp/CMakeLists.txt
+@@ -17,10 +17,7 @@ endif ()
+ FLEX_BISON (osllex.l oslgram.y osl lib_src compiler_headers)
+ 
+ add_library (${local_lib} ${lib_src})
+-target_include_directories(${local_lib}
+-    PUBLIC
+-        ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+-    )
++osl_target_public_headers (${local_lib})
+ target_link_libraries (${local_lib}
+     PUBLIC
+         OpenImageIO::OpenImageIO
+diff --git a/src/liboslexec/CMakeLists.txt b/src/liboslexec/CMakeLists.txt
+index 611dc1c20313607a8691d0ee8e4c7c031a32d293..779c587426dc53a6d44fb117503b852f9afda374 100644
+--- a/src/liboslexec/CMakeLists.txt
++++ b/src/liboslexec/CMakeLists.txt
+@@ -513,11 +513,10 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
+         set_target_properties( ${batched_target_lib} PROPERTIES PREFIX "lib" )
+     endif()
+ 
++    osl_target_public_headers (${batched_target_lib})
+     target_include_directories (${batched_target_lib}
+-        PUBLIC
+-            ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+-            ${IMATH_INCLUDES}
+         PRIVATE
++            ${IMATH_INCLUDES}
+             ${ROBINMAP_INCLUDES}
+         )
+     target_link_libraries (${batched_target_lib}
+@@ -535,11 +534,10 @@ endforeach(batched_target)
+ configure_file (buildopts.h.in "${CMAKE_CURRENT_BINARY_DIR}/buildopts.h" @ONLY)
+ 
+ add_library (${local_lib} ${lib_src})
++osl_target_public_headers (${local_lib})
+ target_include_directories (${local_lib}
+-    PUBLIC
+-        ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+-        ${IMATH_INCLUDES}
+     PRIVATE
++        ${IMATH_INCLUDES}
+         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
+         "${CMAKE_CURRENT_BINARY_DIR}"
+         ${ROBINMAP_INCLUDES}
+diff --git a/src/liboslnoise/CMakeLists.txt b/src/liboslnoise/CMakeLists.txt
+index 23bd41147f4852e0e5de13123837c8cb4263f651..34d0574e88161cd2e9ceb76a53ac59ea7967bf5b 100644
+--- a/src/liboslnoise/CMakeLists.txt
++++ b/src/liboslnoise/CMakeLists.txt
+@@ -8,11 +8,8 @@ set (liboslnoise_srcs gabornoise.cpp simplexnoise.cpp)
+ #file ( GLOB compiler_headers "../liboslexec/*.h" )
+ 
+ add_library (${local_lib} ${liboslnoise_srcs})
+-target_include_directories (${local_lib}
+-    PUBLIC
+-        ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+-    PRIVATE
+-        ../liboslexec)
++osl_target_public_headers (${local_lib})
++target_include_directories (${local_lib} PRIVATE ../liboslexec)
+ target_include_directories (${local_lib}  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+ target_link_libraries (${local_lib}
+     PUBLIC
+diff --git a/src/liboslquery/CMakeLists.txt b/src/liboslquery/CMakeLists.txt
+index 70a252595eeeadb3b49d872159d051803bd876c2..5b54584e850bb0b8082aad88ad0cfb7adb2c29bd 100644
+--- a/src/liboslquery/CMakeLists.txt
++++ b/src/liboslquery/CMakeLists.txt
+@@ -9,11 +9,8 @@ file (GLOB compiler_headers "../liboslexec/*.h")
+ FLEX_BISON (../liboslexec/osolex.l ../liboslexec/osogram.y oso lib_src compiler_headers)
+ 
+ add_library (${local_lib} ${lib_src})
+-target_include_directories (${local_lib}
+-    PUBLIC
+-        ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+-    PRIVATE
+-        ../liboslexec)
++osl_target_public_headers (${local_lib})
++target_include_directories (${local_lib} PRIVATE ../liboslexec)
+ target_link_libraries (${local_lib}
+     PUBLIC
+         OpenImageIO::OpenImageIO_Util

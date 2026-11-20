@@ -1,0 +1,955 @@
+Subject: [PATCH 12/50] Use native atomics and standard renderer counters
+
+Consolidate the related implementation, regression tests, and build
+updates listed below. Full original messages and authorship are retained
+in HISTORY.
+
+Original-Commit: af65817e75ad3a1365c4ae7e48ea60e2ff5f0013
+Original-Commit: 5ee671942e01c824c7070fb1f63257e35fb2e633
+Original-Commit: 56d19498d33b087833d28320e466dc2d3f3818c6
+Original-Commit: 517d1335a1b56ae6db7b20ceb7d8a6bf5d750871
+Original-Commit: 924697235c7a193e28ca21bc93c0ed40d791b7f0
+Original-Commit: fe509724d2a3c9f46302047b3c9c203b679f6b1f
+Original-Commit: 3a2c390a323f9b592f6cdd7bba1819cf869718f3
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c29556c59..53b2e7a9b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -248,7 +248,7 @@ set(Boost_MULTITHREADED TRUE)
+ if (USE_STATIC_BOOST)
+   set(Boost_USE_STATIC_LIBS TRUE)
+ endif ()
+-find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time regex thread)
++find_package(Boost 1.70 REQUIRED COMPONENTS chrono date_time regex thread)
+ add_definitions(-DBOOST_ALL_DYN_LINK)
+ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+ link_directories(${Boost_LIBRARY_DIRS})
+diff --git a/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h b/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h
+index d3b47ffaf..e55d4e89c 100644
+--- a/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h
++++ b/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h
+@@ -32,12 +32,12 @@
+ // appleseed.renderer headers.
+ #include "renderer/api/rendering.h"
+ 
+-// appleseed.foundation headers.
+-#include "foundation/platform/atomic.h"
+-
+ // Qt headers.
+ #include <QObject>
+ 
++// Standard headers.
++#include <atomic>
++
+ namespace appleseed {
+ namespace bench {
+ 
+@@ -88,7 +88,7 @@ class QtRendererController
+     void signal_frame_end();
+ 
+   private:
+-    boost::atomic<Status> m_status;
++    std::atomic<Status> m_status;
+ };
+ 
+ }   // namespace bench
+diff --git a/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h b/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h
+index 6cbae1c83..8c6cb805b 100644
+--- a/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h
++++ b/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h
+@@ -32,12 +32,12 @@
+ // appleseed.renderer headers.
+ #include "renderer/api/rendering.h"
+ 
+-// appleseed.foundation headers.
+-#include "foundation/platform/atomic.h"
+-
+ // Qt headers.
+ #include <QObject>
+ 
++// Standard headers.
++#include <atomic>
++
+ namespace appleseed {
+ namespace studio {
+ 
+@@ -88,7 +88,7 @@ class QtRendererController
+     void signal_frame_end();
+ 
+   private:
+-    boost::atomic<Status> m_status;
++    std::atomic<Status> m_status;
+ };
+ 
+ }   // namespace studio
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index 256b9fe7e..d83c8bffb 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -549,11 +549,13 @@ source_group ("foundation\\meta\\benchmarks" FILES
+ )
+ 
+ set (foundation_meta_tests_sources
++    foundation/meta/tests/concurrenttest.hpp
+     foundation/meta/tests/test_aabb.cpp
+     foundation/meta/tests/test_analysis.cpp
+     foundation/meta/tests/test_array.cpp
+     foundation/meta/tests/test_arrayalgorithm.cpp
+     foundation/meta/tests/test_arrayapplyvisitor.cpp
++    foundation/meta/tests/test_atomic.cpp
+     foundation/meta/tests/test_attributeset.cpp
+     foundation/meta/tests/test_autoreleaseptr.cpp
+     foundation/meta/tests/test_benchmarkaggregator.cpp
+diff --git a/src/appleseed/foundation/meta/tests/concurrenttest.hpp b/src/appleseed/foundation/meta/tests/concurrenttest.hpp
+new file mode 100644
+index 000000000..844757081
+--- /dev/null
++++ b/src/appleseed/foundation/meta/tests/concurrenttest.hpp
+@@ -0,0 +1,63 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#pragma once
++
++// Standard headers.
++#include <cstddef>
++#include <future>
++#include <vector>
++
++namespace foundation
++{
++namespace test_impl
++{
++    template <typename Function>
++    void run_concurrently(const size_t worker_count, const Function& function)
++    {
++        std::vector<std::future<void>> tasks;
++        tasks.reserve(worker_count);
++
++        // Destroy the promise before the tasks if launching a worker throws.
++        // Its broken state releases workers waiting at the start gate.
++        std::promise<void> start;
++        const std::shared_future<void> ready = start.get_future().share();
++        for (size_t worker = 0; worker < worker_count; ++worker)
++        {
++            tasks.emplace_back(std::async(std::launch::async, [&, ready, worker]()
++            {
++                ready.wait();
++                function(worker);
++            }));
++        }
++
++        start.set_value();
++        for (auto& task : tasks)
++            task.get();
++    }
++}
++}
+diff --git a/src/appleseed/foundation/meta/tests/test_atomic.cpp b/src/appleseed/foundation/meta/tests/test_atomic.cpp
+new file mode 100644
+index 000000000..8038936b6
+--- /dev/null
++++ b/src/appleseed/foundation/meta/tests/test_atomic.cpp
+@@ -0,0 +1,202 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.foundation headers.
++#include "foundation/meta/tests/concurrenttest.hpp"
++#include "foundation/platform/atomic.h"
++#include "foundation/platform/thread.h"
++#include "foundation/utility/test.h"
++#include "foundation/utility/uid.h"
++
++// Standard headers.
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstddef>
++#include <cstdint>
++#include <limits>
++#include <thread>
++#include <vector>
++
++using namespace foundation;
++
++TEST_SUITE(Foundation_Platform_Atomic)
++{
++    TEST_CASE(ReadWrite_RoundTripAllBits)
++    {
++        std::uint32_t value = 0;
++        const auto maximum = std::numeric_limits<std::uint32_t>::max();
++        atomic_write(&value, maximum);
++        EXPECT_EQ(maximum, atomic_read(&value));
++        atomic_write(&value, 0);
++        EXPECT_EQ(0, atomic_read(&value));
++    }
++
++    TEST_CASE(IncrementAndDecrement_ReturnOldValueAndWrap)
++    {
++        const auto maximum = std::numeric_limits<std::uint32_t>::max();
++        std::uint32_t value = maximum;
++        EXPECT_EQ(maximum, atomic_inc(&value));
++        EXPECT_EQ(0, atomic_read(&value));
++        EXPECT_EQ(0, atomic_dec(&value));
++        EXPECT_EQ(maximum, atomic_read(&value));
++    }
++
++    TEST_CASE(CompareExchange_ReturnsObservedValueOnSuccessAndFailure)
++    {
++        std::uint32_t value = 7;
++        EXPECT_EQ(7, atomic_cas(&value, 7, 11));
++        EXPECT_EQ(11, atomic_read(&value));
++        EXPECT_EQ(11, atomic_cas(&value, 7, 19));
++        EXPECT_EQ(11, atomic_read(&value));
++    }
++
++    TEST_CASE(ConcurrentIncrements_ReturnEveryOldValueExactlyOnce)
++    {
++        const size_t WorkerCount = 8;
++        const size_t IncrementsPerWorker = 4096;
++        const size_t TotalIncrements = WorkerCount * IncrementsPerWorker;
++        std::uint32_t value = 0;
++        std::vector<std::uint32_t> observed(TotalIncrements);
++        test_impl::run_concurrently(WorkerCount, [&](const size_t worker)
++        {
++            for (size_t i = 0; i < IncrementsPerWorker; ++i)
++                observed[worker * IncrementsPerWorker + i] = atomic_inc(&value);
++        });
++
++        EXPECT_EQ(TotalIncrements, atomic_read(&value));
++        std::sort(observed.begin(), observed.end());
++        EXPECT_EQ(0, observed.front());
++        EXPECT_EQ(TotalIncrements - 1, observed.back());
++        EXPECT_TRUE(std::adjacent_find(observed.begin(), observed.end()) == observed.end());
++    }
++
++    TEST_CASE(ConcurrentCompareExchanges_DoNotLoseUpdates)
++    {
++        const size_t WorkerCount = 8;
++        const size_t IncrementsPerWorker = 4096;
++        std::uint32_t value = 0;
++        test_impl::run_concurrently(WorkerCount, [&](const size_t worker)
++        {
++            for (size_t i = 0; i < IncrementsPerWorker; ++i)
++            {
++                auto expected = atomic_read(&value);
++                while (true)
++                {
++                    const auto observed = atomic_cas(&value, expected, expected + 1);
++                    if (observed == expected)
++                        break;
++                    expected = observed;
++                }
++            }
++        });
++        EXPECT_EQ(WorkerCount * IncrementsPerWorker, atomic_read(&value));
++    }
++
++    TEST_CASE(FloatAdd_HandlesNonfiniteValuesWithoutRetryingForever)
++    {
++        float value = std::numeric_limits<float>::quiet_NaN();
++        atomic_add(&value, 1.0f);
++        EXPECT_TRUE(std::isnan(value));
++        value = std::numeric_limits<float>::infinity();
++        atomic_add(&value, -1.0f);
++        EXPECT_TRUE(std::isinf(value));
++        EXPECT_TRUE(value > 0.0f);
++    }
++
++    TEST_CASE(ConcurrentFloatAdds_DoNotLoseUpdates)
++    {
++        const size_t WorkerCount = 8;
++        const size_t AdditionsPerWorker = 4096;
++        const float Operand = 0.5f;
++        float value = 0.0f;
++        test_impl::run_concurrently(WorkerCount, [&](const size_t worker)
++        {
++            for (size_t i = 0; i < AdditionsPerWorker; ++i)
++                atomic_add(&value, Operand);
++        });
++        // The sum is exactly representable, so rounding cannot mask lost updates.
++        EXPECT_EQ(WorkerCount * AdditionsPerWorker * Operand, value);
++    }
++}
++
++TEST_SUITE(Foundation_Platform_ThreadFlag)
++{
++    TEST_CASE(CopiesPreserveSnapshotsWithoutSharingFlagState)
++    {
++        ThreadFlag original;
++        EXPECT_TRUE(original.is_clear());
++        original.set();
++        ThreadFlag copy(original);
++        original.clear();
++        EXPECT_TRUE(copy.is_set());
++        EXPECT_TRUE(original.is_clear());
++        copy = original;
++        EXPECT_TRUE(copy.is_clear());
++    }
++
++    TEST_CASE(Set_PublishesPreviouslyWrittenData)
++    {
++        ThreadFlag ready;
++        std::array<size_t, 64> payload = {};
++        std::array<size_t, 64> observed = {};
++        test_impl::run_concurrently(2, [&](const size_t worker)
++        {
++            if (worker == 0)
++            {
++                for (size_t i = 0; i < payload.size(); ++i)
++                    payload[i] = i + 1;
++                ready.set();
++            }
++            else
++            {
++                while (ready.is_clear())
++                    std::this_thread::yield();
++                observed = payload;
++            }
++        });
++        EXPECT_EQ(payload.size(), observed.back());
++        EXPECT_TRUE(payload == observed);
++    }
++}
++
++TEST_SUITE(Foundation_Utility_UID)
++{
++    TEST_CASE(ConcurrentGeneration_DoesNotProduceDuplicateIdentifiers)
++    {
++        const size_t WorkerCount = 8;
++        const size_t IdentifiersPerWorker = 4096;
++        std::vector<UniqueID> identifiers(WorkerCount * IdentifiersPerWorker);
++        test_impl::run_concurrently(WorkerCount, [&](const size_t worker)
++        {
++            for (size_t i = 0; i < IdentifiersPerWorker; ++i)
++                identifiers[worker * IdentifiersPerWorker + i] = new_guid();
++        });
++        std::sort(identifiers.begin(), identifiers.end());
++        EXPECT_TRUE(std::adjacent_find(identifiers.begin(), identifiers.end()) == identifiers.end());
++    }
++}
+diff --git a/src/appleseed/foundation/meta/tests/test_memory.cpp b/src/appleseed/foundation/meta/tests/test_memory.cpp
+index cdd80cc89..54fdd0118 100644
+--- a/src/appleseed/foundation/meta/tests/test_memory.cpp
++++ b/src/appleseed/foundation/meta/tests/test_memory.cpp
+@@ -135,18 +135,19 @@ TEST_SUITE(Foundation_Utility_Memory)
+ 
+ #ifdef APPLESEED_USE_SSE
+ 
+-    TEST_CASE(Malloc_AlwaysReturns16ByteAlignedPointer)
++    TEST_CASE(Malloc_GivenSIMDSizedAllocation_Returns16ByteAlignedPointer)
+     {
+         const size_t AllocationCount = 100;
+ 
+         bool aligned = true;
+         void* pointers[AllocationCount];
+ 
++        // Small allocation size classes need not support a 16-byte SIMD object.
+         MersenneTwister rng;
+ 
+         for (size_t i = 0; i < AllocationCount; ++i)
+         {
+-            const size_t alloc_size = rand_int1(rng, 1, 1024);
++            const size_t alloc_size = rand_int1(rng, 16, 1024);
+             pointers[i] = malloc(alloc_size);
+             aligned = aligned && is_aligned(pointers[i], 16);
+         }
+@@ -159,6 +160,23 @@ TEST_SUITE(Foundation_Utility_Memory)
+ 
+ #endif
+ 
++    TEST_CASE(AlignedMalloc_GivenSmallAllocation_ReturnsRequestedAlignment)
++    {
++        const size_t MaxAllocationSize = 64;
++        const size_t Alignments[] = {16, 32, 64};
++
++        for (const size_t requested_alignment : Alignments)
++        {
++            for (size_t size = 1; size <= MaxAllocationSize; ++size)
++            {
++                void* pointer = aligned_malloc(size, requested_alignment);
++                ASSERT_TRUE(pointer != nullptr);
++                EXPECT_TRUE(is_aligned(pointer, requested_alignment));
++                aligned_free(pointer);
++            }
++        }
++    }
++
+     TEST_CASE(EnsureMinimumSize_GivenEmptyVector_ResizesVectorByInsertingDefaultValue)
+     {
+         std::vector<int> v;
+diff --git a/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp b/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp
+index a867084c7..62a3cef30 100644
+--- a/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp
++++ b/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp
+@@ -633,7 +633,7 @@ TEST_SUITE(StlAllocatorTestbed)
+         typename Allocator::difference_type dt;
+         typename Allocator::pointer         p;
+         typename Allocator::const_pointer   cp;
+-        typename Allocator::value_type      v;
++        typename Allocator::value_type      v{};
+         typename Allocator::reference       r = v;   // Note: must be initialized
+         typename Allocator::const_reference cr = v;  // Note: must be initialized
+ 
+@@ -722,7 +722,7 @@ TEST_SUITE(StlAllocatorTestbed)
+     {
+         // Typedefs
+         typename Allocator::pointer         p = nullptr;
+-        typename Allocator::value_type      v;
++        typename Allocator::value_type      v{};
+         typename Allocator::reference       r = v;   // Note: must be initialized
+         typename Allocator::const_reference cr = v;  // Note: must be initialized
+ 
+@@ -1240,7 +1240,7 @@ TEST_SUITE(StlAllocatorTestbed)
+         VStack v1( Policy< Allocator >::template GetDefaultAdapter< VStack, Vector >( a ) );
+         VStack v2( Policy< Allocator >::template GetCopiedAdapter< VStack, Vector >( a ) );
+ 
+-        typename Allocator::value_type v;
++        typename Allocator::value_type v{};
+ 
+         // Test deque stacks
+         TestStack< typename Allocator::value_type >( v, a, d1 );
+diff --git a/src/appleseed/foundation/platform/atomic.h b/src/appleseed/foundation/platform/atomic.h
+index 385d80bfc..9cdb46e65 100644
+--- a/src/appleseed/foundation/platform/atomic.h
++++ b/src/appleseed/foundation/platform/atomic.h
+@@ -36,10 +36,6 @@
+ #include "foundation/utility/casts.h"
+ #include "foundation/memory/memory.h"
+ 
+-// Boost headers.
+-#include "boost/atomic/atomic.hpp"
+-#include "boost/interprocess/detail/atomic.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <cstdint>
+@@ -58,12 +54,14 @@ void atomic_write(
+     volatile std::uint32_t*     ptr,
+     const std::uint32_t         value);
+ 
++// Increment and decrement return the value before the update.
+ std::uint32_t atomic_inc(
+     volatile std::uint32_t*     ptr);
+ 
+ std::uint32_t atomic_dec(
+     volatile std::uint32_t*     ptr);
+ 
++// Return the observed value, whether or not the exchange succeeds.
+ std::uint32_t atomic_cas(
+     volatile std::uint32_t*     ptr,
+     const std::uint32_t         expected_value,
+@@ -78,29 +76,64 @@ void atomic_add(
+ // Implementation.
+ //
+ 
++#ifdef _WIN32
++namespace atomic_impl
++{
++    APPLESEED_FORCE_INLINE volatile LONG* native_pointer(volatile std::uint32_t* ptr)
++    {
++        static_assert(sizeof(LONG) == sizeof(std::uint32_t), "Interlocked requires 32-bit storage");
++        return reinterpret_cast<volatile LONG*>(ptr);
++    }
++}
++#endif
++
+ APPLESEED_FORCE_INLINE std::uint32_t atomic_read(
+     volatile std::uint32_t*     ptr)
+ {
+-    return boost::interprocess::ipcdetail::atomic_read32(ptr);
++#ifdef _WIN32
++    return static_cast<std::uint32_t>(InterlockedCompareExchange(atomic_impl::native_pointer(ptr), 0, 0));
++#elif defined __GNUC__
++    return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
++#else
++    #error Unsupported platform.
++#endif
+ }
+ 
+ APPLESEED_FORCE_INLINE void atomic_write(
+     volatile std::uint32_t*     ptr,
+     const std::uint32_t         value)
+ {
+-    boost::interprocess::ipcdetail::atomic_write32(ptr, value);
++#ifdef _WIN32
++    InterlockedExchange(atomic_impl::native_pointer(ptr), binary_cast<LONG>(value));
++#elif defined __GNUC__
++    __atomic_store_n(ptr, value, __ATOMIC_SEQ_CST);
++#else
++    #error Unsupported platform.
++#endif
+ }
+ 
+ APPLESEED_FORCE_INLINE std::uint32_t atomic_inc(
+     volatile std::uint32_t*     ptr)
+ {
+-    return boost::interprocess::ipcdetail::atomic_inc32(ptr);
++#ifdef _WIN32
++    return static_cast<std::uint32_t>(InterlockedExchangeAdd(atomic_impl::native_pointer(ptr), 1));
++#elif defined __GNUC__
++    return __atomic_fetch_add(ptr, 1, __ATOMIC_SEQ_CST);
++#else
++    #error Unsupported platform.
++#endif
+ }
+ 
+ APPLESEED_FORCE_INLINE std::uint32_t atomic_dec(
+     volatile std::uint32_t*     ptr)
+ {
+-    return boost::interprocess::ipcdetail::atomic_dec32(ptr);
++#ifdef _WIN32
++    return static_cast<std::uint32_t>(InterlockedExchangeAdd(atomic_impl::native_pointer(ptr), -1));
++#elif defined __GNUC__
++    return __atomic_fetch_sub(ptr, 1, __ATOMIC_SEQ_CST);
++#else
++    #error Unsupported platform.
++#endif
+ }
+ 
+ APPLESEED_FORCE_INLINE std::uint32_t atomic_cas(
+@@ -108,10 +141,13 @@ APPLESEED_FORCE_INLINE std::uint32_t atomic_cas(
+     const std::uint32_t         expected_value,
+     const std::uint32_t         new_value)
+ {
+-#if defined _WIN32
+-    return InterlockedCompareExchange(ptr, new_value, expected_value);
++#ifdef _WIN32
++    return static_cast<std::uint32_t>(InterlockedCompareExchange(
++        atomic_impl::native_pointer(ptr), binary_cast<LONG>(new_value), binary_cast<LONG>(expected_value)));
+ #elif defined __GNUC__
+-    return __sync_val_compare_and_swap(ptr, expected_value, new_value);
++    std::uint32_t observed = expected_value;
++    __atomic_compare_exchange_n(ptr, &observed, new_value, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
++    return observed;
+ #else
+     #error Unsupported platform.
+ #endif
+@@ -121,11 +157,12 @@ APPLESEED_FORCE_INLINE void atomic_add(
+     volatile float*             ptr,
+     const float                 operand)
+ {
+-    assert(is_aligned(ptr, 4));
++    assert(is_aligned(ptr, alignof(std::uint32_t)));
+ 
++#ifdef _WIN32
++    // Interlocked operates on the representation of existing pixel storage.
+     volatile std::uint32_t* iptr = reinterpret_cast<volatile std::uint32_t*>(ptr);
+-    std::uint32_t expected = *iptr;
+-
++    std::uint32_t expected = atomic_read(iptr);
+     while (true)
+     {
+         const float value = binary_cast<float>(expected);
+@@ -135,6 +172,20 @@ APPLESEED_FORCE_INLINE void atomic_add(
+             return;
+         expected = actual;
+     }
++#elif defined __GNUC__
++    // Generic builtins operate on floats without accessing them through an
++    // integer alias, including for the initial load under contention.
++    float expected;
++    __atomic_load(ptr, &expected, __ATOMIC_SEQ_CST);
++    while (true)
++    {
++        float desired = expected + operand;
++        if (__atomic_compare_exchange(ptr, &expected, &desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))
++            return;
++    }
++#else
++    #error Unsupported platform.
++#endif
+ }
+ 
+ }   // namespace foundation
+diff --git a/src/appleseed/foundation/platform/thread.h b/src/appleseed/foundation/platform/thread.h
+index 78ebf40a4..5c048db92 100644
+--- a/src/appleseed/foundation/platform/thread.h
++++ b/src/appleseed/foundation/platform/thread.h
+@@ -31,7 +31,6 @@
+ 
+ // appleseed.foundation headers.
+ #include "foundation/core/concepts/noncopyable.h"
+-#include "foundation/platform/atomic.h"
+ 
+ // appleseed.main headers.
+ #include "main/dllsymbol.h"
+@@ -43,6 +42,7 @@
+ #include "boost/thread/thread.hpp"
+ 
+ // Standard headers.
++#include <atomic>
+ #include <cstdint>
+ 
+ // Forward declarations.
+@@ -155,7 +155,7 @@ class ReadWriteLock
+     };
+ 
+   private:
+-    boost::atomic<std::uint32_t>    m_readers;
++    std::atomic<std::uint32_t>      m_readers;
+     boost::mutex                    m_mutex;
+ };
+ 
+@@ -275,6 +275,8 @@ class APPLESEED_DLLSYMBOL ThreadFlag
+   public:
+     // Constructor, clears the flag.
+     ThreadFlag();
++    ThreadFlag(const ThreadFlag& rhs);
++    ThreadFlag& operator=(const ThreadFlag& rhs);
+ 
+     // Clear the flag.
+     void clear();
+@@ -287,7 +289,7 @@ class APPLESEED_DLLSYMBOL ThreadFlag
+     bool is_set() const;
+ 
+   private:
+-    mutable volatile std::uint32_t m_flag;
++    std::atomic<std::uint32_t> m_flag;
+ };
+ 
+ 
+@@ -428,23 +430,34 @@ inline ReadWriteLock<WaitPolicy>::ScopedWriteLock::~ScopedWriteLock()
+ //
+ 
+ inline ThreadFlag::ThreadFlag()
++  : m_flag(0)
+ {
+-    clear();
++}
++
++inline ThreadFlag::ThreadFlag(const ThreadFlag& rhs)
++  : m_flag(rhs.m_flag.load())
++{
++}
++
++inline ThreadFlag& ThreadFlag::operator=(const ThreadFlag& rhs)
++{
++    m_flag.store(rhs.m_flag.load());
++    return *this;
+ }
+ 
+ inline void ThreadFlag::clear()
+ {
+-    atomic_write(&m_flag, 0);
++    m_flag.store(0);
+ }
+ 
+ inline void ThreadFlag::set()
+ {
+-    atomic_write(&m_flag, 1);
++    m_flag.store(1);
+ }
+ 
+ inline bool ThreadFlag::is_clear() const
+ {
+-    return atomic_read(&m_flag) == 0;
++    return m_flag.load() == 0;
+ }
+ 
+ inline bool ThreadFlag::is_set() const
+diff --git a/src/appleseed/foundation/utility/uid.cpp b/src/appleseed/foundation/utility/uid.cpp
+index 3305e73d7..768230e31 100644
+--- a/src/appleseed/foundation/utility/uid.cpp
++++ b/src/appleseed/foundation/utility/uid.cpp
+@@ -30,15 +30,15 @@
+ // Interface header.
+ #include "uid.h"
+ 
+-// Boost headers.
+-#include "boost/atomic/atomic.hpp"
++// Standard headers.
++#include <atomic>
+ 
+ namespace foundation
+ {
+ 
+ UniqueID new_guid()
+ {
+-    static boost::atomic<UniqueID> next_uid(0);
++    static std::atomic<UniqueID> next_uid(0);
+     return next_uid++;
+ }
+ 
+diff --git a/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp b/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp
+index 189685030..fb46c4422 100644
+--- a/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp
++++ b/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp
+@@ -52,9 +52,9 @@
+ 
+ // Standard headers.
+ #include <algorithm>
++#include <atomic>
+ #include <cassert>
+ 
+-using namespace boost;
+ using namespace foundation;
+ 
+ namespace renderer
+@@ -105,7 +105,7 @@ LocalSampleAccumulationBuffer::LocalSampleAccumulationBuffer(
+         level_height = std::max(level_height / 2, MinSize);
+     }
+ 
+-    m_remaining_pixels = new boost::atomic<std::int32_t>[m_levels.size()];
++    m_remaining_pixels = new std::atomic<std::int32_t>[m_levels.size()];
+ 
+     clear();
+ }
+diff --git a/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h b/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h
+index 9b2737557..de94042de 100644
+--- a/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h
++++ b/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h
+@@ -35,10 +35,10 @@
+ // appleseed.foundation headers.
+ #include "foundation/math/aabb.h"
+ #include "foundation/math/filter.h"
+-#include "foundation/platform/atomic.h"
+ #include "foundation/platform/thread.h"
+ 
+ // Standard headers.
++#include <atomic>
+ #include <cstddef>
+ #include <cstdint>
+ #include <vector>
+@@ -98,8 +98,8 @@ class LocalSampleAccumulationBuffer
+     std::vector<foundation::AccumulatorTile*>   m_levels;
+     std::vector<foundation::AccumulatorTile*>   m_read_levels;
+     std::vector<foundation::Vector2f>           m_level_scales;
+-    boost::atomic<std::int32_t>*                m_remaining_pixels;
+-    boost::atomic<std::uint32_t>                m_active_level;
++    std::atomic<std::int32_t>*                  m_remaining_pixels;
++    std::atomic<std::uint32_t>                  m_active_level;
+ };
+ 
+ }   // namespace renderer
+diff --git a/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h b/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h
+index 5538d38d4..13d6ab0fe 100644
+--- a/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h
++++ b/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h
+@@ -31,9 +31,9 @@
+ 
+ // appleseed.foundation headers.
+ #include "foundation/core/concepts/noncopyable.h"
+-#include "foundation/platform/atomic.h"
+ 
+ // Standard headers.
++#include <atomic>
+ #include <cstdint>
+ 
+ namespace renderer
+@@ -57,7 +57,7 @@ class SampleCounter
+ 
+   private:
+     const std::uint64_t             m_max_sample_count;
+-    boost::atomic<std::uint64_t>    m_sample_count;
++    std::atomic<std::uint64_t>    m_sample_count;
+ };
+ 
+ }   // namespace renderer
+diff --git a/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h b/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h
+index f87ba5be8..7013881b2 100644
+--- a/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h
++++ b/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h
+@@ -31,9 +31,9 @@
+ 
+ // appleseed.foundation headers.
+ #include "foundation/core/concepts/noncopyable.h"
+-#include "foundation/platform/atomic.h"
+ 
+ // Standard headers.
++#include <atomic>
+ #include <cstddef>
+ #include <cstdint>
+ 
+@@ -70,7 +70,7 @@ class SampleAccumulationBuffer
+         foundation::IAbortSwitch&   abort_switch) = 0;
+ 
+   protected:
+-    boost::atomic<std::uint64_t> m_sample_count;
++    std::atomic<std::uint64_t> m_sample_count{0};
+ };
+ 
+ 
+diff --git a/src/appleseed/renderer/meta/tests/test_samplecounter.cpp b/src/appleseed/renderer/meta/tests/test_samplecounter.cpp
+index c7b693f1e..5b5631828 100644
+--- a/src/appleseed/renderer/meta/tests/test_samplecounter.cpp
++++ b/src/appleseed/renderer/meta/tests/test_samplecounter.cpp
+@@ -29,10 +29,17 @@
+ 
+ // appleseed.renderer headers.
+ #include "renderer/kernel/rendering/progressive/samplecounter.h"
++#include "renderer/kernel/rendering/globalsampleaccumulationbuffer.h"
+ 
+ // appleseed.foundation headers.
++#include "foundation/meta/tests/concurrenttest.hpp"
+ #include "foundation/utility/test.h"
+ 
++// Standard headers.
++#include <cstdint>
++#include <numeric>
++#include <vector>
++
+ using namespace renderer;
+ 
+ TEST_SUITE(Renderer_Kernel_Rendering_Progressive_SampleCounter)
+@@ -83,3 +90,35 @@ TEST_SUITE(Renderer_Kernel_Rendering_Progressive_SampleCounter)
+         EXPECT_EQ(0, sample_counter.reserve(3));
+     }
+ }
++
++TEST_SUITE(Renderer_Kernel_Rendering_Progressive_SampleCounter_Concurrency)
++{
++    TEST_CASE(ConcurrentReservations_DoNotExceedTheLimit)
++    {
++        const size_t WorkerCount = 8;
++        const std::uint64_t MaximumSamples = 10003;
++        const std::uint64_t RequestSize = 7;
++        SampleCounter counter(MaximumSamples);
++        std::vector<std::uint64_t> reserved(WorkerCount, 0);
++        foundation::test_impl::run_concurrently(WorkerCount, [&](const size_t worker)
++        {
++            while (const auto count = counter.reserve(RequestSize))
++                reserved[worker] += count;
++        });
++        EXPECT_EQ(MaximumSamples, counter.read());
++        EXPECT_EQ(MaximumSamples, std::accumulate(reserved.begin(), reserved.end(), std::uint64_t(0)));
++        EXPECT_EQ(0, counter.reserve(RequestSize));
++        counter.clear();
++        EXPECT_EQ(0, counter.read());
++        EXPECT_EQ(RequestSize, counter.reserve(RequestSize));
++    }
++}
++
++TEST_SUITE(Renderer_Kernel_Rendering_SampleAccumulationBuffer)
++{
++    TEST_CASE(Constructor_InitializesStoredSampleCount)
++    {
++        GlobalSampleAccumulationBuffer buffer(2, 2);
++        EXPECT_EQ(0, buffer.get_sample_count());
++    }
++}
+diff --git a/src/thirdparty/bcd/bcd/Denoiser.cpp b/src/thirdparty/bcd/bcd/Denoiser.cpp
+index 109ec87b4..82b774801 100644
+--- a/src/thirdparty/bcd/bcd/Denoiser.cpp
++++ b/src/thirdparty/bcd/bcd/Denoiser.cpp
+@@ -16,11 +16,11 @@
+ #include "Utils.h"
+ 
+ // Boost headers.
+-#include "boost/atomic/atomic.hpp"
+ #include "boost/bind.hpp"
+ 
+ // Standard headers.
+ #include <algorithm>
++#include <atomic>
+ #include <cassert>
+ #include <chrono>
+ #include <cmath>
+@@ -90,8 +90,7 @@ bool Denoiser::denoise()
+     m_isCenterOfAlreadyDenoisedPatchImage.resize(m_width, m_height, 1);
+     m_isCenterOfAlreadyDenoisedPatchImage.fill(false);
+ 
+-    // Newer versions of gcc need the boost qualifier.
+-    boost::atomic<int> nbOfPixelsComputed(0);
++    std::atomic<int> nbOfPixelsComputed(0);
+ 
+     bool abortRequested = false;
+ 
+@@ -160,7 +159,7 @@ void Denoiser::doDenoise(
+     vector<PixelPosition>::const_iterator  i_pixelBegin,
+     vector<PixelPosition>::const_iterator  i_pixelEnd,
+     const size_t                           i_totalNbOfPixels,
+-    boost::atomic<int>&                    i_nbOfPixelsComputed,
++    std::atomic<int>&                      i_nbOfPixelsComputed,
+     const size_t                           i_threadIndex,
+     bool&                                  i_abortRequested)
+ {
+diff --git a/src/thirdparty/bcd/bcd/Denoiser.h b/src/thirdparty/bcd/bcd/Denoiser.h
+index 36671c3f2..eca366669 100644
+--- a/src/thirdparty/bcd/bcd/Denoiser.h
++++ b/src/thirdparty/bcd/bcd/Denoiser.h
+@@ -17,10 +17,8 @@
+ #include "DeepImage.h"
+ #include "IDenoiser.h"
+ 
+-// Boost headers.
+-#include "boost/atomic/atomic.hpp"
+-
+ // Standard headers.
++#include <atomic>
+ #include <memory>
+ #include <vector>
+ 
+@@ -87,7 +85,7 @@ class Denoiser
+         std::vector<PixelPosition>::const_iterator  i_pixelBegin,
+         std::vector<PixelPosition>::const_iterator  i_pixelEnd,
+         const std::size_t                           i_totalNbOfPixels,
+-        boost::atomic<int>&                         i_nbOfPixelsComputed,
++        std::atomic<int>&                           i_nbOfPixelsComputed,
+         const std::size_t                           i_threadIndex,
+         bool&                                       i_abortRequested);
+ 
+diff --git a/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp b/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp
+index 00f78483c..df6add465 100644
+--- a/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp
++++ b/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp
+@@ -18,9 +18,6 @@
+ #include "MultiscaleDenoiser.h"
+ #include "Utils.h"
+ 
+-// Boost headers.
+-#include "boost/atomic/atomic.hpp"
+-
+ // Standard headers.
+ #include <cassert>
+ #include <sstream>

@@ -1,0 +1,55 @@
+From d36af5ea0377d7fa961aaaf7b80f54abacb7eb65 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 05:10:22 +0000
+Subject: [PATCH] fix(oslcomp): own diagnostic options across preprocessing
+
+Clang 21 and newer borrow diagnostic options rather than reference
+counting them. Keep a stack-owned value alive through compiler instance
+destruction, retaining an intrusive owner with older Clang.
+
+Keep error capture alive through diagnostic shutdown as well. Successful
+and failed preprocessing both pass Valgrind with no lost allocations.
+
+diff --git a/src/liboslcomp/oslcomp.cpp b/src/liboslcomp/oslcomp.cpp
+index b7dedd90ec83493869468c826f8032d1c0f61986..f46da8e5bc781eee6ac1b025945599a6f7ad30ed 100644
+--- a/src/liboslcomp/oslcomp.cpp
++++ b/src/liboslcomp/oslcomp.cpp
+@@ -164,25 +164,30 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
+     std::unique_ptr<llvm::MemoryBuffer> mbuf(
+         llvm::MemoryBuffer::getMemBuffer(instring, filename));
+ 
+-    clang::CompilerInstance inst;
+-
+-    // Set up error capture for the preprocessor
++    // Diagnostics retain the options and error stream until inst is destroyed.
+     std::string preproc_errors;
+     llvm::raw_string_ostream errstream(preproc_errors);
+-    clang::DiagnosticOptions* diagOptions = new clang::DiagnosticOptions();
++#if OSL_LLVM_VERSION < 210
++    llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOptions(
++        new clang::DiagnosticOptions());
++#else
++    clang::DiagnosticOptions diagOptions;
++#endif
++    clang::CompilerInstance inst;
++
+     clang::TextDiagnosticPrinter* diagPrinter
+ #if OSL_LLVM_VERSION < 210
+-        = new clang::TextDiagnosticPrinter(errstream, diagOptions);
++        = new clang::TextDiagnosticPrinter(errstream, diagOptions.get());
+ #else
+-        = new clang::TextDiagnosticPrinter(errstream, *diagOptions);
++        = new clang::TextDiagnosticPrinter(errstream, diagOptions);
+ #endif
+     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(
+         new clang::DiagnosticIDs);
+     clang::DiagnosticsEngine* diagEngine
+ #if OSL_LLVM_VERSION < 210
+-        = new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
++        = new clang::DiagnosticsEngine(diagIDs, diagOptions.get(), diagPrinter);
+ #else
+-        = new clang::DiagnosticsEngine(diagIDs, *diagOptions, diagPrinter);
++        = new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
+ #endif
+     inst.setDiagnostics(diagEngine);
+ 

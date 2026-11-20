@@ -21,3 +21,19 @@
  #endif
  
  OIDN_NAMESPACE_END
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -24,6 +24,12 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+ # Common
+ include(oidn_common)
+ 
++if(MSVC)
++  # Use the imported TBB target's library, including when the rest of bext is
++  # Debug and this dependency is built in Release.
++  add_compile_definitions(__TBB_NO_IMPLICIT_LINKAGE=1)
++endif()
++
+ # Devices
+ option(OIDN_DEVICE_CPU "Enable CPU device." ON)
+ if(NOT APPLE)

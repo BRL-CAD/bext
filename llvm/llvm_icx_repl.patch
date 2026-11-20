@@ -1,0 +1,46 @@
+diff --git a/clang/tools/clang-repl/CMakeLists.txt b/clang/tools/clang-repl/CMakeLists.txt
+--- a/clang/tools/clang-repl/CMakeLists.txt
++++ b/clang/tools/clang-repl/CMakeLists.txt
+@@ -49,14 +49,20 @@
+     )
+   endif()
+ 
+-  # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
+-  # The 'SHELL' prefix tells CMake to use a space instead of comma as the
+-  # separator between the driver and linker options, which we need since MSVC's
+-  # linker uses `,DATA` as a suffix to indicate that data is being exported.
+-  list(TRANSFORM clang_repl_exports PREPEND "LINKER:SHELL:/EXPORT:")
++  if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
++    # icx-cl splits /Qoption,link at commas, including the ,DATA suffix
++    # in /EXPORT arguments. CMake merges this file with the automatic exports.
++    string(REPLACE ",DATA" " DATA" clang_repl_exports "${clang_repl_exports}")
++    list(JOIN clang_repl_exports "\n  " clang_repl_def_exports)
++    set(clang_repl_def "${CMAKE_CURRENT_BINARY_DIR}/clang-repl-manual.def")
++    file(GENERATE OUTPUT "${clang_repl_def}" CONTENT "EXPORTS\n  ${clang_repl_def_exports}\n")
++    target_sources(clang-repl PRIVATE "${clang_repl_def}")
++  else()
++    # The SHELL prefix keeps the comma in the linker's ,DATA suffix.
++    list(TRANSFORM clang_repl_exports PREPEND "LINKER:SHELL:/EXPORT:")
++    set_property(TARGET clang-repl APPEND PROPERTY LINK_OPTIONS ${clang_repl_exports})
++  endif()
+ 
+-  set_property(TARGET clang-repl APPEND PROPERTY LINK_OPTIONS ${clang_repl_exports})
+-
+ endif(MSVC)
+ 
+ clang_target_link_libraries(clang-repl PRIVATE
+@@ -71,8 +77,10 @@
+ # start to exceed this limit, e.g. when linking for arm-linux-gnueabihf with
+ # gold. This flag tells the linker to build a PLT for the full address range.
+ # Linkers without this flag are assumed to support proper PLTs by default.
+-set(flag_long_plt "LINKER:--long-plt")
+-check_linker_flag(CXX ${flag_long_plt} HAVE_LINKER_FLAG_LONG_PLT)
+-if(HAVE_LINKER_FLAG_LONG_PLT)
+-  target_link_options(clang-repl PRIVATE ${flag_long_plt})
++if(NOT WIN32)
++  set(flag_long_plt "LINKER:--long-plt")
++  check_linker_flag(CXX ${flag_long_plt} HAVE_LINKER_FLAG_LONG_PLT)
++  if(HAVE_LINKER_FLAG_LONG_PLT)
++    target_link_options(clang-repl PRIVATE ${flag_long_plt})
++  endif()
+ endif()

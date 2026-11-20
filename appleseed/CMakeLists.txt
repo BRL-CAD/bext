@@ -3,12 +3,13 @@ bext_enable(APPLESEED)
 
 if (ENABLE_APPLESEED)
 
-  set(APPLESEED_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/appleseed.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/appleseed_intelllvm.patch"
-    )
+  include("${CMAKE_CURRENT_SOURCE_DIR}/patches/Series.cmake")
+  if (MINGW)
+    list(APPEND APPLESEED_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/appleseed_mingw_platform.patch")
+  endif ()
   git_submodule_init(appleseed CMakeLists.txt
     PATCH_FILES ${APPLESEED_PATCH_FILES}
+    INPUT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/patches/Series.cmake"
     PATCH_COMMAND_VAR APPLESEED_PATCH_COMMAND)
 
   RegisterDeps(APPLESEED)
@@ -28,9 +29,10 @@ if (ENABLE_APPLESEED)
   set(APPLESEED_CXX_FLAGS_ARGS)
   if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     # Vector headers index adjacent struct members as arrays, requiring
-    # relaxed alias analysis when built with IntelLLVM.
+    # relaxed alias analysis when built with IntelLLVM. Keep the compiler's
+    # default flags, including Windows C++ exception handling.
     list(APPEND APPLESEED_CXX_FLAGS_ARGS
-      -DCMAKE_CXX_FLAGS:STRING=-fno-strict-aliasing)
+      -DCMAKE_CXX_FLAGS_INIT:STRING=-fno-strict-aliasing)
   endif ()
 
   ExternalProject_Add(APPLESEED_BLD
@@ -44,7 +46,9 @@ if (ENABLE_APPLESEED)
     ${APPLESEED_CXX_FLAGS_ARGS}
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX=ON>
     $<$<BOOL:${ZLIB_TARGET}>:-DZ_PREFIX_STR=${Z_PREFIX_STR}>
-    -DBOOST_ROOT=$<$<BOOL:${BOOST_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DPCRE2_ROOT=$<$<BOOL:${PCRE2_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
+    -DSTRUETYPE_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -Dhapply_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DEigen3_ROOT=$<$<BOOL:${EIGEN_BUNDLED}>:${CMAKE_NOBUNDLE_INSTALL_PREFIX}>
     -DEMBREE_ROOT=$<$<BOOL:${EMBREE_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DISPC_ROOT=$<$<BOOL:${ISPC_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>

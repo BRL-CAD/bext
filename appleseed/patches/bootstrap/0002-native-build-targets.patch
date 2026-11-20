@@ -1,0 +1,1639 @@
+Subject: [PATCH 02/50] Native build targets
+
+Carry the dependency-compatible baseline over the actual upstream
+source. This patch contains one reviewable part of the combined
+historical changes; full original messages are retained in HISTORY.
+
+Original-Commits: See the compatibility-baseline entries in HISTORY.
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index cc3474f91..d7d084fc1 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,5 +1,3 @@
+-
+-#
+ # This source file is part of appleseed.
+ # Visit https://appleseedhq.net/ for additional information and resources.
+ #
+@@ -25,82 +23,33 @@
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ # THE SOFTWARE.
+-#
+ 
++cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
+ 
+-#--------------------------------------------------------------------------------------------------
+-# CMake configuration.
+-#--------------------------------------------------------------------------------------------------
+ 
+-cmake_minimum_required (VERSION 3.9 FATAL_ERROR)
++project(appleseed)
+ 
+-cmake_policy (SET CMP0008 NEW)      # libraries linked by full-path must have a valid library file name
++# Must come after project().
++list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+ 
+-# TODO: so could the Find<...>.cmake files be changed accordingly?
+-cmake_policy (SET CMP0074 NEW)      # the find_package(<PackageName>) command now searches prefixes specified by the
+-                                    # <PackageName>_ROOT CMake variable and the <PackageName>_ROOT environment variable
+ 
+-cmake_policy (SET CMP0120 OLD)      # inclusion of the deprecated WriteCompilerDetectionHeader module
++# Relative paths for standard components
++if (NOT DEFINED BIN_DIR)
++  set(BIN_DIR bin)
++endif (NOT DEFINED BIN_DIR)
+ 
+-if (POLICY CMP0026)
+-    cmake_policy (SET CMP0026 OLD)  # disallow use of the LOCATION target property (CMake 3.0)
+-endif ()
++if (NOT DEFINED LIB_DIR)
++  set(LIB_DIR lib)
++endif (NOT DEFINED LIB_DIR)
+ 
+-if (POLICY CMP0042)
+-    cmake_policy (SET CMP0042 OLD)  # MACOSX_RPATH is enabled by default (CMake 3.0)
+-endif ()
+-
+-if (POLICY CMP0043)
+-    cmake_policy (SET CMP0043 OLD)  # consume the content of the suffixed COMPILE_DEFINITIONS_<CONFIG>
+-endif ()
++if (NOT DEFINED INCLUDE_DIR)
++  set(INCLUDE_DIR include)
++endif (NOT DEFINED INCLUDE_DIR)
+ 
+-set_property (GLOBAL PROPERTY USE_FOLDERS ON)
+-
+-include (cmake/utilities.txt)
+-
+-
+-#--------------------------------------------------------------------------------------------------
+-# Project configuration.
+-#--------------------------------------------------------------------------------------------------
+-
+-# Prevent in-source builds.
+-if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+-    message (FATAL_ERROR "In-source builds are not permitted; run CMake inside an empty build directory.")
+-endif ()
+-
+-# Create build configurations. Must come before project ().
+-set (CMAKE_CONFIGURATION_TYPES "Debug;Release;Profile;Ship" CACHE STRING "" FORCE)
+-
+-# Select a build configuration if none is selected yet.
+-if (NOT CMAKE_BUILD_TYPE)
+-    set (CMAKE_BUILD_TYPE Ship
+-         CACHE STRING "Choose the type of build, options are: ${CMAKE_CONFIGURATION_TYPES}" FORCE)
+-    set_property (CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
+-endif ()
+-
+-project (appleseed)
+-
+-# Must come after project ().
+-set (CMAKE_MODULE_PATH
+-    ${CMAKE_MODULE_PATH}
+-    ${PROJECT_SOURCE_DIR}/cmake/modules
+-)
+-
+-
+-#--------------------------------------------------------------------------------------------------
+-# Detect target architecture.
+-#--------------------------------------------------------------------------------------------------
+-
+-detect_target_arch (TARGET_ARCH)
+-message ("Target architecture: ${TARGET_ARCH}")
+-
+-# Detect x86-based platforms.
+-if (TARGET_ARCH MATCHES "i386|x86_64")
+-    set (is_x86 TRUE)
+-else ()
+-    set (is_x86 FALSE)
+-endif ()
++include(Util)
+ 
++include(TargetArch)
++target_architecture(CPU_TARGET)
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Language and compiler features.
+@@ -110,8 +59,12 @@ set (CMAKE_CXX_STANDARD 17)
+ set (CMAKE_CXX_STANDARD_REQUIRED ON)
+ set (CMAKE_CXX_EXTENSIONS OFF)
+ 
++# TODO - this is a problem, CMake 3.20 and later deprecate this module:
++# https://cmake.org/cmake/help/latest/module/WriteCompilerDetectionHeader.html
++#
++# Need to look at what it was doing and find another solution
++cmake_policy(SET CMP0120 OLD)
+ include (WriteCompilerDetectionHeader)
+-
+ write_compiler_detection_header (
+     FILE ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/platform/compilerfeatures.h
+     PREFIX APPLESEED
+@@ -126,344 +79,227 @@ write_compiler_detection_header (
+         cxx_attribute_deprecated
+ )
+ 
+-
+ #--------------------------------------------------------------------------------------------------
+ # Build options.
+ #--------------------------------------------------------------------------------------------------
+ 
+-option (WITH_CLI                            "Build appleseed.cli"                                       ON)
+-option (WITH_STUDIO                         "Build appleseed.studio"                                    ON)
+-option (WITH_BENCH                          "Build appleseed.bench"                                     ON)
+-option (WITH_TOOLS                          "Build appleseed tools"                                     ON)
+-option (WITH_PYTHON2_BINDINGS               "Build Python bindings for Python 2"                        ON)
+-option (WITH_PYTHON3_BINDINGS               "Build Python bindings for Python 3"                        OFF)
+-option (WITH_EMBREE                         "Include support for Embree intersection backend"           OFF)
+-option (WITH_GPU                            "Build GPU support"                                         OFF)
+-option (WITH_SPECTRAL_SUPPORT               "Include support for spectral colors"                       ON)
+-option (WITH_DOXYGEN                        "Generate API reference with Doxygen"                       OFF)
+-option (INSTALL_HEADERS                     "Install header files"                                      ON)
+-option (INSTALL_TESTS                       "Install unit tests and benchmarks"                         ON)
+-option (INSTALL_API_EXAMPLES                "Install API examples (requires header files)"              ON)
+-
+-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+-    option (USE_FIND_PACKAGE_FOR_EMBREE     "Use find_package() for Embree library"                     OFF)
+-    option (USE_FIND_PACKAGE_FOR_EXR        "Use find_package() for OpenEXR library"                    OFF)
+-    option (USE_FIND_PACKAGE_FOR_LZ4        "Use find_package() for LZ4 library"                        OFF)
+-    option (USE_FIND_PACKAGE_FOR_OCIO       "Use find_package() for OpenColorIO library"                OFF)
+-    option (USE_FIND_PACKAGE_FOR_OCV        "Use find_package() for OpenCV library"                     OFF) # TODO: not yet implemented (only implemented for linux)
+-    option (USE_FIND_PACKAGE_FOR_OIIO       "Use find_package() for OpenImageIO library"                OFF)
+-    option (USE_FIND_PACKAGE_FOR_OSL        "Use find_package() for OpenShadingLanguage library"        OFF)
+-    option (USE_FIND_PACKAGE_FOR_XERCES     "Use find_package() for Xerces library"                     OFF)
+-    option (USE_FIND_PACKAGE_FOR_ZLIB       "Use find_package() for zlib library"                       OFF)
+-    option (USE_FIND_PACKAGE_FOR_TIFF       "Use find_package() for tiff"                               OFF)
+-else ()
+-    set (USE_FIND_PACKAGE_FOR_EMBREE        ON)
+-    set (USE_FIND_PACKAGE_FOR_EXR           ON)
+-    set (USE_FIND_PACKAGE_FOR_LZ4           ON)
+-    set (USE_FIND_PACKAGE_FOR_OCIO          ON)
+-    set (USE_FIND_PACKAGE_FOR_OCV           ON)
+-    set (USE_FIND_PACKAGE_FOR_OIIO          ON)
+-    set (USE_FIND_PACKAGE_FOR_OSL           ON)
+-    set (USE_FIND_PACKAGE_FOR_PNG           ON)
+-    set (USE_FIND_PACKAGE_FOR_XERCES        ON)
+-    set (USE_FIND_PACKAGE_FOR_ZLIB          ON)
+-    set (USE_FIND_PACKAGE_FOR_TIFF          ON)
+-endif ()
+-
+-option (USE_STATIC_BOOST                    "Use static Boost libraries"                                ON)
+-option (USE_STATIC_EMBREE                   "Use static Embree libraries"                               ON)
+-option (USE_STATIC_EXR                      "Use static OpenEXR libraries"                              ON)
+-option (USE_STATIC_OCIO                     "Use static OpenColorIO libraries"                          ON)
+-option (USE_STATIC_OIIO                     "Use static OpenImageIO libraries"                          ON)
+-option (USE_STATIC_OSL                      "Use static OpenShadingLanguage libraries"                  ON)
+-
+-option (WARNINGS_AS_ERRORS                  "Treat compiler warnings as errors"                         ON)
+-option (HIDE_SYMBOLS                        "When using gcc, hide symbols not on the public API"        ON)
+-
+-if (CMAKE_SYSTEM_NAME MATCHES "Linux|FreeBSD")
+-    option (USE_VISIBILITY_MAP              "Use GNU export map for libappleseed.so (experimental)"     OFF)
+-endif ()
++option(WITH_CLI                "Build appleseed.cli"                                       ON)
++option(WITH_STUDIO             "Build appleseed.studio"                                    ON)
++option(WITH_BENCH              "Build appleseed.bench"                                     ON)
++option(WITH_TOOLS              "Build appleseed tools"                                     ON)
++option(WITH_PYTHON2_BINDINGS   "Build Python bindings for Python 2"                        OFF)
++option(WITH_PYTHON3_BINDINGS   "Build Python bindings for Python 3"                        OFF)
++option(WITH_EMBREE             "Include support for Embree intersection backend"           OFF)
++option(WITH_STATMC "Build experimental StatMC denoiser" OFF)
++option(WITH_GPU                "Build GPU support"                                         OFF)
++option(WITH_SPECTRAL_SUPPORT   "Include support for spectral colors"                       ON)
++option(WITH_DOXYGEN            "Generate API reference with Doxygen"                       OFF)
++option(INSTALL_HEADERS         "Install header files"                                      ON)
++option(INSTALL_TESTS           "Install unit tests and benchmarks"                         ON)
++option(INSTALL_API_EXAMPLES    "Install API examples(requires header files)"              ON)
++
++option(USE_STATIC_BOOST        "Use static Boost libraries"                                ON)
++option(USE_STATIC_EMBREE       "Use static Embree libraries"                               ON)
++option(USE_STATIC_EXR          "Use static OpenEXR libraries"                              ON)
++option(USE_STATIC_OCIO         "Use static OpenColorIO libraries"                          ON)
++option(USE_STATIC_OIIO         "Use static OpenImageIO libraries"                          ON)
++option(USE_STATIC_OSL          "Use static OpenShadingLanguage libraries"                  ON)
++
++option(WARNINGS_AS_ERRORS      "Treat compiler warnings as errors"                         ON)
++option(HIDE_SYMBOLS            "When using gcc, hide symbols not on the public API"        ON)
+ 
+ # SIMD options.
+-if (is_x86)
+-    option (USE_SSE                         "Use instruction sets up to and including SSE2"             ON)
+-    if (TARGET_ARCH MATCHES "x86_64")
+-        option (USE_SSE42                   "Use instruction sets up to and including SSE4.2"           OFF)
+-        option (USE_AVX                     "Use instruction sets up to and including AVX"              OFF)
+-        option (USE_AVX2                    "Use instruction sets up to and including AVX2"             OFF)
+-    endif ()
+-    option (USE_F16C                        "Use F16C instruction set"                                  OFF)
+-else ()
+-    # Unknown architecture: No SIMD.
+-endif ()
++option(USE_SSE                 "Use instruction sets up to and including SSE2"             ON)
++option(USE_SSE42               "Use instruction sets up to and including SSE4.2"           ${USE_SSE})
++option(USE_AVX                 "Use instruction sets up to and including AVX"              OFF)
++option(USE_AVX2                "Use instruction sets up to and including AVX2"             OFF)
++option(USE_F16C                "Use F16C instruction set"                                  OFF)
+ 
+ if (WITH_SPECTRAL_SUPPORT)
+-    add_definitions (-DAPPLESEED_WITH_SPECTRAL_SUPPORT)
+-endif ()
+-
+-
+-#--------------------------------------------------------------------------------------------------
+-# Common settings.
+-#--------------------------------------------------------------------------------------------------
+-
+-set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+-
+-
+-#--------------------------------------------------------------------------------------------------
+-# Platform-specific settings.
+-#--------------------------------------------------------------------------------------------------
+-
+-# This must come after project () otherwise CMAKE_SYSTEM_NAME is undefined.
+-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+-    include (cmake/config/win-vs.txt)
+-elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+-    include (cmake/config/mac-clang.txt)
+-elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|FreeBSD")
+-    include (cmake/config/linux-gcc-clang.txt)
+-else ()
+-    message (FATAL_ERROR "Unsupported system (CMAKE_SYSTEM_NAME is \"${CMAKE_SYSTEM_NAME}\"). "
+-                         "Edit ${CMAKE_CURRENT_LIST_FILE} to add support for it.")
+-endif ()
+-
++  add_definitions(-DAPPLESEED_WITH_SPECTRAL_SUPPORT)
++endif ()
++
++
++#--------------------------------------------------------------------------------------------------
++# RPath Settings
++#--------------------------------------------------------------------------------------------------
++if (NOT DEFINED CMAKE_BUILD_RPATH)
++  if (CMAKE_CONFIGURATION_TYPES)
++    set(CMAKE_BUILD_RPATH "${CMAKE_BINARY_DIR}/$<CONFIG>/${LIB_DIR}")
++  else(CMAKE_CONFIGURATION_TYPES)
++    set(CMAKE_BUILD_RPATH "${CMAKE_BINARY_DIR}/${LIB_DIR}")
++  endif (CMAKE_CONFIGURATION_TYPES)
++endif ()
++set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
++set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_DIR}")
++
++#--------------------------------------------------------------------------------------------------
++# Compiler Flags
++#--------------------------------------------------------------------------------------------------
++set(CMAKE_POSITION_INDEPENDENT_CODE ON)
++
++include(CompilerFlags)
++
++check_c_flag(Wall)
++check_c_flag(Wno-switch)
++check_c_flag(Wno-unknown-pragmas)
++check_c_flag(Wno-sign-compare)
++check_c_flag(Wno-unused-function)
++check_c_flag(Wno-strict-aliasing)
++check_c_flag(Wno-math-errno)
++check_cxx_flag(Wno-reorder)
++
++if (WARNINGS_AS_ERRORS)
++  check_c_flag(Werror)
++  check_cxx_flag(Werror)
++endif (WARNINGS_AS_ERRORS)
++
++if (HIDE_SYMBOLS)
++  check_c_flag(fvisibility=hidden)
++  check_cxx_flag(fvisibility=hidden)
++  check_cxx_flag(fvisibility-inlines-hidden)
++endif (HIDE_SYMBOLS)
++
++if ("${CMAKE_BUILD_TYPE}" MATCHES "Release")
++  check_c_flag(O3)
++  check_c_flag(fgcse-las) # eliminates stores followed by a load to the same positions
++  check_c_flag(fgcse-sm)  # moves load/save instructions out of loops, if possible
++  check_cxx_flag(O3)
++
++endif ("${CMAKE_BUILD_TYPE}" MATCHES "Release")
++
++if (USE_SSE)
++  check_c_flag(msse2 GROUPS ACCEL_C_FLAGS)
++  check_cxx_flag(msse2 GROUPS ACCEL_CXX_FLAGS)
++endif (USE_SSE)
++if (USE_F16C)
++  check_c_flag(mf16c GROUPS ACCEL_C_FLAGS)
++  check_cxx_flag(mf16c GROUPS ACCEL_CXX_FLAGS)
++endif (USE_F16C)
++if (USE_SSE42)
++  check_c_flag(msse4.2 GROUPS ACCEL_C_FLAGS)
++  check_cxx_flag(msse4.2 GROUPS ACCEL_CXX_FLAGS)
++endif (USE_SSE42)
++if (USE_MAVX)
++  check_c_flag(mavx GROUPS ACCEL_C_FLAGS)
++  check_cxx_flag(mavx GROUPS ACCEL_CXX_FLAGS)
++endif (USE_MAVX)
++if (USE_MAVX2)
++  check_c_flag(mavx2 GROUPS ACCEL_C_FLAGS)
++  check_c_flag(mfma GROUPS ACCEL_C_FLAGS)
++  check_c_flag(ffp-contract=off GROUPS ACCEL_C_FLAGS)
++  check_cxx_flag(mavx2 GROUPS ACCEL_CXX_FLAGS)
++  check_cxx_flag(mfma GROUPS ACCEL_CXX_FLAGS)
++  check_cxx_flag(ffp-contract=off GROUPS ACCEL_CXX_FLAGS)
++endif (USE_MAVX2)
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Auto-generate version header.
+ #--------------------------------------------------------------------------------------------------
+ 
+-set (appleseed_version_major    2)
+-set (appleseed_version_minor    1)
+-set (appleseed_version_patch    0)
+-set (appleseed_version_maturity beta)
++set(appleseed_version_major    2)
++set(appleseed_version_minor    1)
++set(appleseed_version_patch    0)
++set(appleseed_version_maturity beta)
+ 
+-configure_file (
+-    ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/core/version.h.in
+-    ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/core/version.h
+-)
++configure_file(
++  ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/core/version.h.in
++  ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/core/version.h
++  )
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+-# Boost libraries.
++# Find packages.
+ #--------------------------------------------------------------------------------------------------
++include(FindPackageHandleStandardArgs)
+ 
+-# bcd imports boost in a deprecated way, hence the variable below is defined to retain the old behavior.
+-# "The practice of declaring the Bind placeholders (_1, _2, ...) in the global namespace is deprecated.
+-#  Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, or define
+-#  BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’"
+-add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
++find_package(Threads REQUIRED)
+ 
+-set (Boost_MULTITHREADED TRUE)
++find_package(Eigen3 REQUIRED)
++find_path(HAPPLY_INCLUDE_DIR
++  NAMES happly.h
++  HINTS "${happly_ROOT}"
++  PATH_SUFFIXES include
++  REQUIRED)
++find_package(lz4 MODULE REQUIRED)
++find_package(PNG REQUIRED)
++find_package(ZLIB REQUIRED)
+ 
++set(Boost_MULTITHREADED TRUE)
+ if (USE_STATIC_BOOST)
+-    set (Boost_USE_STATIC_LIBS TRUE)
+-endif ()
+-
+-find_package (Boost 1.86.00 REQUIRED COMPONENTS atomic chrono date_time filesystem regex system thread wave)
+-
+-add_definitions (-DBOOST_FILESYSTEM_VERSION=3 -DBOOST_FILESYSTEM_NO_DEPRECATED)
+-
+-if (NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
+-    # Workaround for undefined reference to boost::filesystem::detail::copy_file link error
+-    # on Linux and macOS if Boost is built in C++03 mode.
+-    add_definitions (-DBOOST_NO_CXX11_SCOPED_ENUMS)
++  set(Boost_USE_STATIC_LIBS TRUE)
+ endif ()
+-
+-include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
+-link_directories (${Boost_LIBRARY_DIRS})
+-
+-
+-#--------------------------------------------------------------------------------------------------
+-# Find packages.
+-#--------------------------------------------------------------------------------------------------
+-include(FindPackageHandleStandardArgs)
++find_package(Boost 1.70 REQUIRED COMPONENTS atomic chrono date_time filesystem regex system thread wave)
++add_definitions(-DBOOST_FILESYSTEM_VERSION=3 -DBOOST_FILESYSTEM_NO_DEPRECATED -DBOOST_ALL_DYN_LINK)
++include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
++link_directories(${Boost_LIBRARY_DIRS})
++find_package(OSL 1.15 REQUIRED)
++find_package(OpenEXR REQUIRED)
++find_package(OpenImageIO 3.0 REQUIRED)
+ 
+ if (WITH_EMBREE)
+-    set (APPLESEED_WITH_EMBREE ON)
+-    add_definitions (-DAPPLESEED_WITH_EMBREE)
+-    if (USE_STATIC_EMBREE)
+-        add_definitions (-DEMBREE_STATIC_LIB)
+-    endif ()
+-    if (USE_FIND_PACKAGE_FOR_EMBREE)
+-        find_package (Embree REQUIRED CONFIG)
+-        find_package_handle_standard_args (Embree CONFIG_MODE)
+-    endif ()
++  set(APPLESEED_WITH_EMBREE ON)
++  add_definitions(-DAPPLESEED_WITH_EMBREE)
++  if (USE_STATIC_EMBREE)
++    add_definitions(-DEMBREE_STATIC_LIB)
++  endif ()
++  find_package(Embree REQUIRED)
+ endif ()
+ 
+ if (WITH_GPU)
+-    set (APPLESEED_WITH_GPU ON)
+-    add_definitions (-DAPPLESEED_WITH_GPU)
+-
+-    find_package (CUDA 9.0 REQUIRED)
+-    find_package (OptiX REQUIRED)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_EXR)
+-    find_package (Imath REQUIRED CONFIG)
+-    find_package_handle_standard_args (Imath CONFIG_MODE)
+-    find_package (OpenEXR REQUIRED CONFIG)
+-    find_package_handle_standard_args (OpenEXR CONFIG_MODE)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_LZ4)
+-    find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(lz4 REQUIRED IMPORTED_TARGET liblz4)
+-endif ()
+-
+-add_definitions (-DAPPLESEED_WITH_OCIO)
+-
+-if (USE_STATIC_OCIO)
+-    add_definitions (-DOCIO_STATIC_BUILD)
+-endif ()
+-if (USE_FIND_PACKAGE_FOR_OCIO)
+-    find_package (OpenColorIO REQUIRED CONFIG)
+-    #find_package_handle_standard_args(OpenColorIO CONFIG_MODE) # OpenColorIOConfig.cmake does this itself.
++  set(APPLESEED_WITH_GPU ON)
++  add_definitions(-DAPPLESEED_WITH_GPU)
++  find_package(CUDA 9.0 REQUIRED)
++  find_package(OptiX REQUIRED)
+ endif ()
+ 
+-if (USE_STATIC_OIIO)
+-    add_definitions (-DOIIO_STATIC_BUILD)
+-endif ()
+-if (USE_FIND_PACKAGE_FOR_OIIO)
+-    find_package (OpenImageIO REQUIRED CONFIG)
+-    find_package_handle_standard_args(OpenImageIO CONFIG_MODE)
+-endif ()
+-
+-if (USE_STATIC_OSL)
+-    add_definitions (-DOSL_STATIC_BUILD)
+-endif ()
+-if (USE_FIND_PACKAGE_FOR_OSL)
+-    find_package (OSL REQUIRED CONFIG)
+-    find_package_handle_standard_args(OSL CONFIG_MODE)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_PNG)
+-    find_package (PNG REQUIRED)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_XERCES)
+-    add_definitions (-DAPPLESEED_WITH_EXTERNAL_XERCES)
+-    find_package (Xerces REQUIRED NAMES XercesC CONFIG)
+-    find_package_handle_standard_args(Xerces CONFIG_MODE)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_ZLIB)
+-    find_package (ZLIB REQUIRED)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_TIFF)
+-    find_package (TIFF REQUIRED)
++if (WITH_STUDIO)
++  add_definitions(-DAPPLESEED_WITH_OCIO)
++  find_package(OpenColorIO REQUIRED)
+ endif ()
+ 
+-if (WITH_STATMC)
+-    if (USE_FIND_PACKAGE_FOR_OCV)
+-        find_package(OpenCV CONFIG REQUIRED)
+-        find_package_handle_standard_args(OpenCV CONFIG_MODE)
+-        MESSAGE(STATUS "OpenCV Include dirs ${OpenCV_INCLUDE_DIRS}")
+-        MESSAGE(STATUS "OpencV LINK LIBRARIES ${OpenCV_LIBS}")
+-    endif()
+-endif()
+-
++option(USE_EMBEDDED_XERCES "Don't use external Xerces" OFF)
++if (NOT USE_EMBEDDED_XERCES)
++  add_definitions(-DAPPLESEED_WITH_EXTERNAL_XERCES)
++  find_package(XercesC REQUIRED)
++endif (NOT USE_EMBEDDED_XERCES)
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Include paths.
+ #--------------------------------------------------------------------------------------------------
+ 
+ # Common include paths.
+-include_directories (
+-    src/thirdparty/bcd
+-    src/thirdparty/glad/include
+-    src/thirdparty/murmurhash3
+-    src/appleseed
+-)
+-
+-# Happly include
+-include_directories (
+-    ${happly_ROOT}
+-)
++include_directories(
++  src/thirdparty/bcd
++  src/thirdparty/glad/include
++  src/thirdparty/murmurhash3
++  src/appleseed
++  )
+ 
+ if (WITH_STATMC)
+-    include_directories ( src/thirdparty/statmc )
+-endif ()
+-
+-if (WITH_EMBREE)
+-    if (USE_FIND_PACKAGE_FOR_EMBREE)
+-        include_directories (${EMBREE_INCLUDE_DIRS})
+-    else ()
+-        include_directories (${APPLESEED_DEPS_STAGE_DIR}/embree-debug/include)
++    if (NOT WITH_GPU)
++        find_package(CUDA REQUIRED)
+     endif ()
++    find_package(OpenCV CONFIG REQUIRED)
++    include_directories(src/thirdparty/statmc)
+ endif ()
+ 
+-if (USE_FIND_PACKAGE_FOR_EXR)
+-    get_target_property(IMATH_INCLUDE_DIRS   Imath::Imath     INTERFACE_INCLUDE_DIRECTORIES)
+-    get_target_property(OPENEXR_INCLUDE_DIRS OpenEXR::OpenEXR INTERFACE_INCLUDE_DIRECTORIES)
+-
+-    # this is required for third-party code, where headers are imported differently (without 'Imath/' or 'OpenEXR/')
+-    include_directories (
+-        ${IMATH_INCLUDE_DIRS}
+-        ${IMATH_INCLUDE_DIRS}/Imath/
+-        ${OPENEXR_INCLUDE_DIRS}
+-        ${OPENEXR_INCLUDE_DIRS}/OpenEXR/
+-    )
+-else ()
+-    include_directories (
+-        ${APPLESEED_DEPS_STAGE_DIR}/ilmbase-debug/include
+-        ${APPLESEED_DEPS_STAGE_DIR}/ilmbase-debug/include/OpenEXR
+-        ${APPLESEED_DEPS_STAGE_DIR}/openexr-debug/include
+-        ${APPLESEED_DEPS_STAGE_DIR}/openexr-debug/include/OpenEXR
+-    )
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_LZ4)
+-    include_directories (${LZ4_INCLUDE_DIR})
+-else ()
+-    include_directories (${APPLESEED_DEPS_STAGE_DIR}/lz4-debug/include)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_OCIO)
+-    get_target_property (OPENCOLORIO_INCLUDE_DIRS OpenColorIO::OpenColorIO INTERFACE_INCLUDE_DIRECTORIES)
+-
+-    include_directories (${OPENCOLORIO_INCLUDE_DIRS})
+-else ()
+-    include_directories (${APPLESEED_DEPS_STAGE_DIR}/ocio-debug/include)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_OIIO)
+-    set(OPENIMAGEIO_INCLUDE_DIRS ${OpenImageIO_INCLUDES})
+-    set(OPENIMAGEIO_LIBRARIES    ${OpenImageIO_LIB_DIR})
+-    # TODO: use these vars (OpenImageIO_INCLUDES, OpenImageIO_LIB_DIR) created by OpenImageIOConfig.cmake itself.
+-
+-    include_directories (${OPENIMAGEIO_INCLUDE_DIRS})
+-    link_directories (${OPENIMAGEIO_LIBRARIES})
+-else ()
+-    include_directories (${APPLESEED_DEPS_STAGE_DIR}/oiio-debug/include)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_OSL)
+-    set(OSL_LIBRARIES ${OSL_LIB_DIR})
+-    # TODO: use OSL_LIB_DIR created by OSLConfig.cmake itself.
+-    find_program(OSL_COMPILER   oslc    HINTS ${OSL_LIB_DIR}/../bin ${OSL_INCLUDE_DIR}/../bin)
+-    find_program(OSL_QUERY_INFO oslinfo HINTS ${OSL_LIB_DIR}/../bin ${OSL_INCLUDE_DIR}/../bin)
+-    find_program(OSL_MAKETX     maketx  HINTS ${OpenImageIO_LIB_DIR}/../bin ${OpenImageIO_INCLUDE_DIR}/../bin)
+-    # TODO: correct: MakeTX is actually part of OpenImageIO.
+-
+-    include_directories (${OSL_INCLUDE_DIR})
+-    link_directories (${OSL_LIBRARIES})
+-else ()
+-    include_directories (${APPLESEED_DEPS_STAGE_DIR}/osl-debug/include)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_XERCES)
+-    get_target_property (XERCES_LIBRARIES XercesC::XercesC INTERFACE_LINK_LIBRARIES) 
+-
+-    include_directories (${XercesC_INCLUDE_DIRS})
+-else ()
+-    include_directories (${APPLESEED_DEPS_STAGE_DIR}/xerces-c-debug/include)
+-endif ()
+-
+-if (USE_FIND_PACKAGE_FOR_ZLIB)
+-    include_directories (${ZLIB_INCLUDE_DIRS})
+-else ()
+-    include_directories (${APPLESEED_DEPS_STAGE_DIR}/zlib-debug/include)
++if (WITH_EMBREE)
++  include_directories(${EMBREE_INCLUDE_DIRS})
+ endif ()
+ 
++include_directories(
++  ${IMATH_INCLUDE_DIRS}
++  ${IMATH_INCLUDE_DIRS}/OpenEXR/
++  ${LZ4_INCLUDE_DIR}
++  ${OPENCOLORIO_INCLUDE_DIRS}
++  ${OPENEXR_INCLUDE_DIRS}
++  ${OPENEXR_INCLUDE_DIRS}/OpenEXR/
++  ${OPENIMAGEIO_INCLUDE_DIRS}
++  ${OSL_INCLUDE_DIRS}
++  ${XERCES_INCLUDE_DIRS}
++  ${ZLIB_INCLUDE_DIRS}
++  )
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Preprocessor definitions.
+@@ -473,149 +309,112 @@ endif ()
+ # Definitions common to all configurations.
+ #
+ 
++set(predef_common APPLESEED_ENABLE_IMATH_INTEROP)
++
+ # $ORIGIN support in rpath.
+ if (UNIX AND NOT APPLE)
+-    set (USE_RPATH_ORIGIN TRUE)
++  set(USE_RPATH_ORIGIN TRUE)
+ endif ()
+ 
+-if (is_x86)
+-    set (preprocessor_definitions_common
+-        ${preprocessor_definitions_common}
+-        APPLESEED_X86
+-    )
++if ("${CPU_TARGET}" MATCHES "x86")
++  set(predef_common ${predef_common} APPLESEED_X86)
+ endif ()
+ 
+ # SIMD.
+-if (is_x86)
+-    if (USE_AVX2)
+-        set (APPLESEED_USE_AVX2 ON)
+-        set (preprocessor_definitions_common
+-            ${preprocessor_definitions_common}
+-            APPLESEED_USE_AVX2
+-        )
+-        set (USE_AVX TRUE)
+-    endif ()
+-    if (USE_AVX)
+-        set (APPLESEED_USE_AVX ON)
+-        set (preprocessor_definitions_common
+-            ${preprocessor_definitions_common}
+-            APPLESEED_USE_AVX
+-        )
+-        set (USE_SSE42 TRUE)
+-    endif ()
+-    if (USE_SSE42)
+-        set (APPLESEED_USE_SSE42 ON)
+-        set (preprocessor_definitions_common
+-            ${preprocessor_definitions_common}
+-            APPLESEED_USE_SSE42
+-        )
+-        set (USE_SSE TRUE)
+-    endif ()
+-    if (USE_SSE)
+-        set (APPLESEED_USE_SSE ON)
+-        set (preprocessor_definitions_common
+-            ${preprocessor_definitions_common}
+-            APPLESEED_USE_SSE
+-        )
+-        if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SIZEOF_VOID_P MATCHES 4)
+-            message (WARNING "Building appleseed with SSE/SSE2 instruction sets on 32-bit Linux is not supported.")
+-        endif ()
+-    endif ()
+-    if (USE_F16C)
+-        set (APPLESEED_USE_F16C ON)
+-        set (preprocessor_definitions_common
+-            ${preprocessor_definitions_common}
+-            APPLESEED_USE_F16C
+-        )
++if ("${CPU_TARGET}" MATCHES "x86")
++  if (USE_AVX2)
++    set(APPLESEED_USE_AVX2 ON)
++    set(predef_common ${predef_common} APPLESEED_USE_AVX2)
++    set(USE_AVX TRUE)
++  endif ()
++  if (USE_AVX)
++    set(APPLESEED_USE_AVX ON)
++    set(predef_common ${predef_common} APPLESEED_USE_AVX)
++    set(USE_SSE42 TRUE)
++  endif ()
++  if (USE_SSE42)
++    set(APPLESEED_USE_SSE42 ON)
++    set(predef_common ${predef_common} APPLESEED_USE_SSE42)
++    set(USE_SSE TRUE)
++  endif ()
++  if (USE_SSE)
++    set(APPLESEED_USE_SSE ON)
++    set(predef_common ${predef_common} APPLESEED_USE_SSE)
++    if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SIZEOF_VOID_P MATCHES 4)
++      message(WARNING "Building appleseed with SSE/SSE2 instruction sets on 32-bit Linux is not supported.")
+     endif ()
++  endif ()
++  if (USE_F16C)
++    set(APPLESEED_USE_F16C ON)
++    set(predef_common ${predef_common} APPLESEED_USE_F16C)
++  endif ()
+ endif ()
+ 
+ # Debug configuration.
+-set (preprocessor_definitions_debug
+-    ${preprocessor_definitions_debug}
+-    ${preprocessor_definitions_common}
+-    _DEBUG
+-)
++set(predef_debug ${predef_debug} _DEBUG APPLESEED_DEBUG)
+ 
+ # Release configuration.
+-set (preprocessor_definitions_release
+-    ${preprocessor_definitions_release}
+-    ${preprocessor_definitions_common}
+-    NDEBUG
+-)
++set(predef_release ${predef_release} NDEBUG APPLESEED_RELEASE)
+ 
+ # Ship configuration.
+-set (preprocessor_definitions_ship
+-    ${preprocessor_definitions_ship}
+-    ${preprocessor_definitions_release}     # the Ship configuration inherits from the Release configuration
+-)
++set(predef_ship
++  ${predef_ship}
++  ${predef_release}     # the Ship configuration inherits from the Release configuration
++  APPLESEED_PROFILE
++  )
+ 
+ # Profile configuration.
+-set (preprocessor_definitions_profile
+-    ${preprocessor_definitions_profile}
+-    ${preprocessor_definitions_ship}        # the Profile configuration inherits from the Ship configuration
+-)
+-
+-# Add symbols identifying configurations.
+-set (preprocessor_definitions_debug
+-    ${preprocessor_definitions_debug}
+-    APPLESEED_DEBUG
+-)
+-set (preprocessor_definitions_release
+-    ${preprocessor_definitions_release}
+-    APPLESEED_RELEASE
+-)
+-set (preprocessor_definitions_profile
+-    ${preprocessor_definitions_profile}
+-    APPLESEED_PROFILE
+-)
+-set (preprocessor_definitions_ship
+-    ${preprocessor_definitions_ship}
+-    APPLESEED_SHIP
+-)
+-
+-# A convenience macro to apply the preprocessor definitions to all configurations of a given target.
+-macro (apply_preprocessor_definitions target)
+-    set_property (TARGET ${target} APPEND PROPERTY
+-        COMPILE_DEFINITIONS_DEBUG ${preprocessor_definitions_debug}
++set(predef_profile
++  ${predef_profile}
++  ${predef_ship}        # the Profile configuration inherits from the Ship configuration
++  APPLESEED_SHIP
++  )
++
++# A convenience function to apply the preprocessor definitions to all configurations of a given target.
++function(apply_preprocessor_definitions target)
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS ${predef_common}
+     )
+-    set_property (TARGET ${target} APPEND PROPERTY
+-        COMPILE_DEFINITIONS_RELEASE ${preprocessor_definitions_release}
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS_DEBUG ${predef_debug}
+     )
+-    set_property (TARGET ${target} APPEND PROPERTY
+-        COMPILE_DEFINITIONS_SHIP ${preprocessor_definitions_ship}
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS_RELEASE ${predef_release}
+     )
+-    set_property (TARGET ${target} APPEND PROPERTY
+-        COMPILE_DEFINITIONS_PROFILE ${preprocessor_definitions_profile}
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS_SHIP ${predef_ship}
+     )
+-endmacro ()
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS_PROFILE ${predef_profile}
++    )
++endfunction()
+ 
+ # A convenience macro to append custom preprocessor definitions to all configurations of a given target.
+-macro (append_custom_preprocessor_definitions target first_definition)
+-    set (definitions ${first_definition} ${ARGN})
+-    set_property (TARGET ${target} APPEND PROPERTY
+-        COMPILE_DEFINITIONS_DEBUG ${definitions}
++function(append_custom_preprocessor_definitions target first_definition)
++  set(definitions ${first_definition} ${ARGN})
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS_DEBUG ${definitions}
+     )
+-    set_property (TARGET ${target} APPEND PROPERTY
+-        COMPILE_DEFINITIONS_RELEASE ${definitions}
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS_RELEASE ${definitions}
+     )
+-    set_property (TARGET ${target} APPEND PROPERTY
+-        COMPILE_DEFINITIONS_SHIP ${definitions}
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS_SHIP ${definitions}
+     )
+-    set_property (TARGET ${target} APPEND PROPERTY
+-        COMPILE_DEFINITIONS_PROFILE ${definitions}
++  set_property(TARGET ${target} APPEND PROPERTY
++    COMPILE_DEFINITIONS_PROFILE ${definitions}
+     )
+-endmacro ()
++endfunction()
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Auto-generate build options header.
+ #--------------------------------------------------------------------------------------------------
+ 
+-configure_file (
+-    ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/core/buildoptions.h.in
+-    ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/core/buildoptions.h
+-)
++configure_file(
++  ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/core/buildoptions.h.in
++  ${PROJECT_SOURCE_DIR}/src/appleseed/foundation/core/buildoptions.h
++  )
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+@@ -623,85 +422,101 @@ configure_file (
+ #--------------------------------------------------------------------------------------------------
+ 
+ # Debug configuration.
+-set (c_compiler_flags_debug             ${c_compiler_flags_common}          ${c_compiler_flags_debug})
+-set (cxx_compiler_flags_debug           ${cxx_compiler_flags_common}        ${cxx_compiler_flags_debug})
+-set (exe_linker_flags_debug             ${exe_linker_flags_common}          ${exe_linker_flags_debug})
+-set (shared_lib_linker_flags_debug      ${shared_lib_linker_flags_common}   ${shared_lib_linker_flags_debug})
+-set (static_lib_linker_flags_debug      ${static_lib_linker_flags_common}   ${static_lib_linker_flags_debug})
++set(c_compiler_flags_debug             ${c_compiler_flags_common}          ${c_compiler_flags_debug})
++set(cxx_compiler_flags_debug           ${cxx_compiler_flags_common}        ${cxx_compiler_flags_debug})
++set(exe_linker_flags_debug             ${exe_linker_flags_common}          ${exe_linker_flags_debug})
++set(shared_lib_linker_flags_debug      ${shared_lib_linker_flags_common}   ${shared_lib_linker_flags_debug})
++set(static_lib_linker_flags_debug      ${static_lib_linker_flags_common}   ${static_lib_linker_flags_debug})
+ 
+ # Release configuration.
+-set (c_compiler_flags_release           ${c_compiler_flags_common}          ${c_compiler_flags_release})
+-set (cxx_compiler_flags_release         ${cxx_compiler_flags_common}        ${cxx_compiler_flags_release})
+-set (exe_linker_flags_release           ${exe_linker_flags_common}          ${exe_linker_flags_release})
+-set (shared_lib_linker_flags_release    ${shared_lib_linker_flags_common}   ${shared_lib_linker_flags_release})
+-set (static_lib_linker_flags_release    ${static_lib_linker_flags_common}   ${static_lib_linker_flags_release})
+-
+-# Ship configuration (inherits from the Release configuration).
+-set (c_compiler_flags_ship              ${c_compiler_flags_release}         ${c_compiler_flags_ship})
+-set (cxx_compiler_flags_ship            ${cxx_compiler_flags_release}       ${cxx_compiler_flags_ship})
+-set (exe_linker_flags_ship              ${exe_linker_flags_release}         ${exe_linker_flags_ship})
+-set (shared_lib_linker_flags_ship       ${shared_lib_linker_flags_release}  ${shared_lib_linker_flags_ship})
+-set (static_lib_linker_flags_ship       ${static_lib_linker_flags_release}  ${static_lib_linker_flags_ship})
+-
+-# Profile configuration (inherits from the Release configuration).
+-set (c_compiler_flags_profile           ${c_compiler_flags_release}         ${c_compiler_flags_profile})
+-set (cxx_compiler_flags_profile         ${cxx_compiler_flags_release}       ${cxx_compiler_flags_profile})
+-set (exe_linker_flags_profile           ${exe_linker_flags_release}         ${exe_linker_flags_profile})
+-set (shared_lib_linker_flags_profile    ${shared_lib_linker_flags_release}  ${shared_lib_linker_flags_profile})
+-set (static_lib_linker_flags_profile    ${static_lib_linker_flags_release}  ${static_lib_linker_flags_profile})
++set(c_compiler_flags_release           ${c_compiler_flags_common}          ${c_compiler_flags_release})
++set(cxx_compiler_flags_release         ${cxx_compiler_flags_common}        ${cxx_compiler_flags_release})
++set(exe_linker_flags_release           ${exe_linker_flags_common}          ${exe_linker_flags_release})
++set(shared_lib_linker_flags_release    ${shared_lib_linker_flags_common}   ${shared_lib_linker_flags_release})
++set(static_lib_linker_flags_release    ${static_lib_linker_flags_common}   ${static_lib_linker_flags_release})
++
++# Ship configuration(inherits from the Release configuration).
++set(c_compiler_flags_ship              ${c_compiler_flags_release}         ${c_compiler_flags_ship})
++set(cxx_compiler_flags_ship            ${cxx_compiler_flags_release}       ${cxx_compiler_flags_ship})
++set(exe_linker_flags_ship              ${exe_linker_flags_release}         ${exe_linker_flags_ship})
++set(shared_lib_linker_flags_ship       ${shared_lib_linker_flags_release}  ${shared_lib_linker_flags_ship})
++set(static_lib_linker_flags_ship       ${static_lib_linker_flags_release}  ${static_lib_linker_flags_ship})
++
++# Profile configuration(inherits from the Release configuration).
++set(c_compiler_flags_profile           ${c_compiler_flags_release}         ${c_compiler_flags_profile})
++set(cxx_compiler_flags_profile         ${cxx_compiler_flags_release}       ${cxx_compiler_flags_profile})
++set(exe_linker_flags_profile           ${exe_linker_flags_release}         ${exe_linker_flags_profile})
++set(shared_lib_linker_flags_profile    ${shared_lib_linker_flags_release}  ${shared_lib_linker_flags_profile})
++set(static_lib_linker_flags_profile    ${static_lib_linker_flags_release}  ${static_lib_linker_flags_profile})
++
++
++# Convert a semicolon-separated list to a whitespace-separated string.
++macro (convert_list_to_string output_string input_list)
++  foreach (item ${input_list})
++    if (DEFINED ${output_string})
++      set (${output_string} "${${output_string}} ${item}")
++    else ()
++      set (${output_string} "${item}")
++    endif ()
++  endforeach ()
++endmacro ()
++
++# Acceleration flags are for all configs
++convert_list_to_string(CMAKE_C_FLAGS                       "${ACCEL_C_FLAGS}")
++convert_list_to_string(CMAKE_CXX_FLAGS                     "${ACCEL_CXX_FLAGS}")
+ 
+ # Apply Debug configuration compilation/linking flags.
+-convert_list_to_string (CMAKE_C_FLAGS_DEBUG                 "${c_compiler_flags_debug}")
+-convert_list_to_string (CMAKE_CXX_FLAGS_DEBUG               "${c_compiler_flags_debug} ${cxx_compiler_flags_debug}")
+-convert_list_to_string (CMAKE_EXE_LINKER_FLAGS_DEBUG        "${exe_linker_flags_debug}")
+-convert_list_to_string (CMAKE_SHARED_LINKER_FLAGS_DEBUG     "${shared_lib_linker_flags_debug}")
+-convert_list_to_string (CMAKE_MODULE_LINKER_FLAGS_DEBUG     "${shared_lib_linker_flags_debug}")
++convert_list_to_string(CMAKE_C_FLAGS_DEBUG                 "${c_compiler_flags_debug}")
++convert_list_to_string(CMAKE_CXX_FLAGS_DEBUG               "${c_compiler_flags_debug} ${cxx_compiler_flags_debug}")
++convert_list_to_string(CMAKE_EXE_LINKER_FLAGS_DEBUG        "${exe_linker_flags_debug}")
++convert_list_to_string(CMAKE_SHARED_LINKER_FLAGS_DEBUG     "${shared_lib_linker_flags_debug}")
++convert_list_to_string(CMAKE_MODULE_LINKER_FLAGS_DEBUG     "${shared_lib_linker_flags_debug}")
+ 
+ # Apply Release configuration compilation/linking flags.
+-convert_list_to_string (CMAKE_C_FLAGS_RELEASE               "${c_compiler_flags_release}")
+-convert_list_to_string (CMAKE_CXX_FLAGS_RELEASE             "${c_compiler_flags_release} ${cxx_compiler_flags_release}")
+-convert_list_to_string (CMAKE_EXE_LINKER_FLAGS_RELEASE      "${exe_linker_flags_release}")
+-convert_list_to_string (CMAKE_SHARED_LINKER_FLAGS_RELEASE   "${shared_lib_linker_flags_release}")
+-convert_list_to_string (CMAKE_MODULE_LINKER_FLAGS_RELEASE   "${shared_lib_linker_flags_release}")
++convert_list_to_string(CMAKE_C_FLAGS_RELEASE               "${c_compiler_flags_release}")
++convert_list_to_string(CMAKE_CXX_FLAGS_RELEASE             "${c_compiler_flags_release} ${cxx_compiler_flags_release}")
++convert_list_to_string(CMAKE_EXE_LINKER_FLAGS_RELEASE      "${exe_linker_flags_release}")
++convert_list_to_string(CMAKE_SHARED_LINKER_FLAGS_RELEASE   "${shared_lib_linker_flags_release}")
++convert_list_to_string(CMAKE_MODULE_LINKER_FLAGS_RELEASE   "${shared_lib_linker_flags_release}")
+ 
+ # Apply Ship configuration compilation/linking flags.
+-convert_list_to_string (CMAKE_C_FLAGS_SHIP                  "${c_compiler_flags_ship}")
+-convert_list_to_string (CMAKE_CXX_FLAGS_SHIP                "${c_compiler_flags_ship} ${cxx_compiler_flags_ship}")
+-convert_list_to_string (CMAKE_EXE_LINKER_FLAGS_SHIP         "${exe_linker_flags_ship}")
+-convert_list_to_string (CMAKE_SHARED_LINKER_FLAGS_SHIP      "${shared_lib_linker_flags_ship}")
+-convert_list_to_string (CMAKE_MODULE_LINKER_FLAGS_SHIP      "${shared_lib_linker_flags_ship}")
++convert_list_to_string(CMAKE_C_FLAGS_SHIP                  "${c_compiler_flags_ship}")
++convert_list_to_string(CMAKE_CXX_FLAGS_SHIP                "${c_compiler_flags_ship} ${cxx_compiler_flags_ship}")
++convert_list_to_string(CMAKE_EXE_LINKER_FLAGS_SHIP         "${exe_linker_flags_ship}")
++convert_list_to_string(CMAKE_SHARED_LINKER_FLAGS_SHIP      "${shared_lib_linker_flags_ship}")
++convert_list_to_string(CMAKE_MODULE_LINKER_FLAGS_SHIP      "${shared_lib_linker_flags_ship}")
+ 
+ # Apply Profile configuration compilation/linking flags.
+-convert_list_to_string (CMAKE_C_FLAGS_PROFILE               "${c_compiler_flags_profile}")
+-convert_list_to_string (CMAKE_CXX_FLAGS_PROFILE             "${c_compiler_flags_profile} ${cxx_compiler_flags_profile}")
+-convert_list_to_string (CMAKE_EXE_LINKER_FLAGS_PROFILE      "${exe_linker_flags_profile}")
+-convert_list_to_string (CMAKE_SHARED_LINKER_FLAGS_PROFILE   "${shared_lib_linker_flags_profile}")
+-convert_list_to_string (CMAKE_MODULE_LINKER_FLAGS_PROFILE   "${shared_lib_linker_flags_profile}")
++convert_list_to_string(CMAKE_C_FLAGS_PROFILE               "${c_compiler_flags_profile}")
++convert_list_to_string(CMAKE_CXX_FLAGS_PROFILE             "${c_compiler_flags_profile} ${cxx_compiler_flags_profile}")
++convert_list_to_string(CMAKE_EXE_LINKER_FLAGS_PROFILE      "${exe_linker_flags_profile}")
++convert_list_to_string(CMAKE_SHARED_LINKER_FLAGS_PROFILE   "${shared_lib_linker_flags_profile}")
++convert_list_to_string(CMAKE_MODULE_LINKER_FLAGS_PROFILE   "${shared_lib_linker_flags_profile}")
+ 
+ # A convenience macro to apply the static library linker flags to all configurations of a given target.
+-macro (apply_static_lib_linker_flags target)
+-    set_property (TARGET ${target} PROPERTY
+-        STATIC_LIBRARY_FLAGS_DEBUG ${static_lib_linker_flags_debug}
++macro(apply_static_lib_linker_flags target)
++  set_property(TARGET ${target} PROPERTY
++    STATIC_LIBRARY_FLAGS_DEBUG ${static_lib_linker_flags_debug}
+     )
+-    set_property (TARGET ${target} PROPERTY
+-        STATIC_LIBRARY_FLAGS_RELEASE ${static_lib_linker_flags_release}
++  set_property(TARGET ${target} PROPERTY
++    STATIC_LIBRARY_FLAGS_RELEASE ${static_lib_linker_flags_release}
+     )
+-    set_property (TARGET ${target} PROPERTY
+-        STATIC_LIBRARY_FLAGS_SHIP ${static_lib_linker_flags_ship}
++  set_property(TARGET ${target} PROPERTY
++    STATIC_LIBRARY_FLAGS_SHIP ${static_lib_linker_flags_ship}
+     )
+-    set_property (TARGET ${target} PROPERTY
+-        STATIC_LIBRARY_FLAGS_PROFILE ${static_lib_linker_flags_profile}
++  set_property(TARGET ${target} PROPERTY
++    STATIC_LIBRARY_FLAGS_PROFILE ${static_lib_linker_flags_profile}
+     )
+-endmacro ()
++endmacro()
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Products.
+ #--------------------------------------------------------------------------------------------------
+ 
+-add_subdirectory (src/thirdparty/bcd)
+-add_subdirectory (src/thirdparty/glad)
+-add_subdirectory (src/thirdparty/murmurhash3)
++add_subdirectory(src/thirdparty/bcd)
++add_subdirectory(src/thirdparty/glad)
++add_subdirectory(src/thirdparty/murmurhash3)
+ 
+ if (WITH_STATMC)
+     add_subdirectory (src/thirdparty/statmc)
+@@ -711,34 +526,34 @@ add_subdirectory (src/appleseed)
+ add_subdirectory (src/appleseed.shaders)
+ 
+ if (WITH_CLI OR WITH_STUDIO OR WITH_BENCH OR WITH_TOOLS)
+-    add_subdirectory (src/appleseed.common)
++  add_subdirectory(src/appleseed.common)
+ endif ()
+ 
+ if (WITH_STUDIO OR WITH_BENCH)
+-    add_subdirectory (src/appleseed.qtcommon)
++  add_subdirectory(src/appleseed.qtcommon)
+ endif ()
+ 
+ if (WITH_CLI)
+-    add_subdirectory (src/appleseed.cli)
++  add_subdirectory(src/appleseed.cli)
+ endif ()
+ 
+ if (WITH_PYTHON2_BINDINGS)
+-    set (Python_ADDITIONAL_VERSIONS 2.7)
+-    find_package (PythonLibs REQUIRED)
++  set(Python_ADDITIONAL_VERSIONS 2.7)
++  find_package(PythonLibs REQUIRED)
+ 
+-    # Splitting version string into list.
+-    string (REGEX MATCHALL "[0123456789]+" PYTHON_VERSION_LIST "${PYTHONLIBS_VERSION_STRING}")
++  # Splitting version string into list.
++  string(REGEX MATCHALL "[0123456789]+" PYTHON_VERSION_LIST "${PYTHONLIBS_VERSION_STRING}")
+ 
+-    if (PYTHON_VERSION_LIST)
+-        # Accessing major and minor version numbers with the version list we got.
+-        list (GET PYTHON_VERSION_LIST 0 PYTHON_MAJOR_VERSION)
+-        list (GET PYTHON_VERSION_LIST 1 PYTHON_MINOR_VERSION)
+-    else ()
+-        # Default to latest Python 2 release if version string cannot be read.
+-        message (STATUS "Cannot find Python version; using Python 2.7 by default.")
+-        set (PYTHON_MAJOR_VERSION "2")
+-        set (PYTHON_MINOR_VERSION "7")
+-    endif ()
++  if (PYTHON_VERSION_LIST)
++    # Accessing major and minor version numbers with the version list we got.
++    list(GET PYTHON_VERSION_LIST 0 PYTHON_MAJOR_VERSION)
++    list(GET PYTHON_VERSION_LIST 1 PYTHON_MINOR_VERSION)
++  else()
++    # Default to latest Python 2 release if version string cannot be read.
++    message(STATUS "Cannot find Python version; using Python 2.7 by default.")
++    set(PYTHON_MAJOR_VERSION "2")
++    set(PYTHON_MINOR_VERSION "7")
++  endif ()
+ endif ()
+ 
+ if (WITH_PYTHON3_BINDINGS)
+@@ -747,7 +562,7 @@ if (WITH_PYTHON3_BINDINGS)
+ endif ()
+ 
+ if (WITH_PYTHON2_BINDINGS OR WITH_PYTHON3_BINDINGS)
+-    add_subdirectory (src/appleseed.python)
++  add_subdirectory(src/appleseed.python)
+ endif ()
+ 
+ if (WITH_STUDIO)
+@@ -758,16 +573,16 @@ if (WITH_STUDIO)
+ endif ()
+ 
+ if (WITH_BENCH)
+-    add_subdirectory (src/appleseed.bench)
++  add_subdirectory(src/appleseed.bench)
+ endif ()
+ 
+ if (WITH_TOOLS)
+-    add_subdirectory (src/tools/animatecamera)
+-    add_subdirectory (src/tools/convertmeshfile)
+-    add_subdirectory (src/tools/denoiser)
+-    add_subdirectory (src/tools/dumpmetadata)
+-    add_subdirectory (src/tools/makefluffy)
+-    add_subdirectory (src/tools/projecttool)
++  add_subdirectory(src/tools/animatecamera)
++  add_subdirectory(src/tools/convertmeshfile)
++  add_subdirectory(src/tools/denoiser)
++  add_subdirectory(src/tools/dumpmetadata)
++  add_subdirectory(src/tools/makefluffy)
++  add_subdirectory(src/tools/projecttool)
+ endif ()
+ 
+ 
+@@ -776,24 +591,24 @@ endif ()
+ #--------------------------------------------------------------------------------------------------
+ 
+ if (WITH_DOXYGEN)
+-    find_package (Doxygen)
+-
+-    if (DOXYGEN_FOUND)
+-        configure_file (
+-            ${PROJECT_SOURCE_DIR}/scripts/appleseed.doxyfile.in
+-            ${PROJECT_BINARY_DIR}/appleseed.doxyfile
+-            @ONLY
+-        )
+-
+-        add_custom_target (
+-            genarate_api_reference ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/appleseed.doxyfile
+-            WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+-            VERBATIM
+-        )
+-
+-        set_target_properties (genarate_api_reference PROPERTIES FOLDER "Contents")
+-        set_target_progress_message (genarate_api_reference "Generating API reference with Doxygen...")
+-    endif ()
++  find_package(Doxygen)
++
++  if (DOXYGEN_FOUND)
++    configure_file(
++      ${PROJECT_SOURCE_DIR}/scripts/appleseed.doxyfile.in
++      ${PROJECT_BINARY_DIR}/appleseed.doxyfile
++      @ONLY
++      )
++
++    add_custom_target(
++      genarate_api_reference ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/appleseed.doxyfile
++      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
++      VERBATIM
++      )
++
++    set_target_properties(genarate_api_reference PROPERTIES FOLDER "Contents")
++    set_target_progress_message(genarate_api_reference "Generating API reference with Doxygen...")
++  endif ()
+ endif ()
+ 
+ 
+@@ -801,78 +616,85 @@ endif ()
+ # Installation.
+ #--------------------------------------------------------------------------------------------------
+ 
+-install (
+-    DIRECTORY
+-        sandbox/docs
+-        sandbox/icons
+-        sandbox/settings
+-        sandbox/shaders
+-        sandbox/share
+-        sandbox/stylesheets
+-    DESTINATION .
+-)
+-
+-install (
+-    FILES
+-        scripts/cleanmany.py
+-        scripts/convertmany.py
+-        scripts/rendermanager.py
+-        scripts/rendermany.py
+-        scripts/rendernode.py
+-        ${OSL_COMPILER}
+-        ${OSL_QUERY_INFO}
+-        ${OSL_MAKETX}
+-        ${OPENIMAGEIO_OIIOTOOL}
+-        ${OPENIMAGEIO_IDIFF}
+-    DESTINATION bin
+-)
+-
+-install (
+-    FILES
+-        sandbox/schemas/settings.xsd
+-        sandbox/schemas/project.xsd
+-    DESTINATION schemas
+-)
+-
+-install (
+-    CODE "FILE (MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX}/images)"
+-    CODE "FILE (MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX}/images/autosave)"
+-)
++install(
++  DIRECTORY
++  sandbox/docs
++  sandbox/icons
++  sandbox/settings
++  sandbox/shaders
++  sandbox/share
++  sandbox/stylesheets
++  DESTINATION .
++  )
++
++install(
++  FILES
++  scripts/cleanmany.py
++  scripts/convertmany.py
++  scripts/rendermanager.py
++  scripts/rendermany.py
++  scripts/rendernode.py
++  ${OSL_COMPILER}
++  ${OSL_QUERY_INFO}
++  ${OSL_MAKETX}
++  ${OPENIMAGEIO_OIIOTOOL}
++  ${OPENIMAGEIO_IDIFF}
++  DESTINATION bin
++  )
++
++install(
++  FILES
++  sandbox/schemas/settings.xsd
++  sandbox/schemas/project.xsd
++  DESTINATION schemas
++  )
++
++install(
++  CODE "FILE(MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX}/images)"
++  CODE "FILE(MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX}/images/autosave)"
++  )
+ 
+ if (INSTALL_HEADERS)
+-    install (
+-        DIRECTORY src/appleseed/foundation
+-        DESTINATION include
+-        FILES_MATCHING PATTERN "*.h"
++  install(
++    DIRECTORY src/appleseed/foundation
++    DESTINATION include
++    FILES_MATCHING PATTERN "*.h"
+     )
+ 
+-    install (
+-        DIRECTORY src/appleseed/main
+-        DESTINATION include
+-        FILES_MATCHING PATTERN "*.h"
++  install(
++    DIRECTORY src/appleseed/main
++    DESTINATION include
++    FILES_MATCHING PATTERN "*.h"
+     )
+ 
+-    install (
+-        DIRECTORY src/appleseed/renderer
+-        DESTINATION include
+-        FILES_MATCHING PATTERN "*.h"
++  install(
++    DIRECTORY src/appleseed/renderer
++    DESTINATION include
++    FILES_MATCHING PATTERN "*.h"
+     )
+ endif ()
+ 
+ if (INSTALL_TESTS)
+-    install (
+-        DIRECTORY
+-            "sandbox/tests/unit benchmarks"
+-            "sandbox/tests/unit tests"
+-        DESTINATION tests
++  install(
++    DIRECTORY
++    "sandbox/tests/unit benchmarks"
++    "sandbox/tests/unit tests"
++    DESTINATION tests
+     )
+ endif ()
+ 
+ if (INSTALL_API_EXAMPLES)
+-    install (
+-        DIRECTORY
+-            sandbox/examples
+-        DESTINATION .
++  install(
++    DIRECTORY
++    sandbox/examples
++    DESTINATION .
+     )
+ endif ()
+ 
++
++# Local Variables:
++# tab-width: 8
++# mode: cmake
++# indent-tabs-mode: t
++# End:
++# ex: shiftwidth=2 tabstop=8
+diff --git a/src/appleseed.cli/CMakeLists.txt b/src/appleseed.cli/CMakeLists.txt
+index 154d63379..959bc84e5 100644
+--- a/src/appleseed.cli/CMakeLists.txt
++++ b/src/appleseed.cli/CMakeLists.txt
+@@ -91,13 +91,12 @@ apply_preprocessor_definitions (appleseed.cli)
+ # Static libraries.
+ #--------------------------------------------------------------------------------------------------
+ 
+-link_against_platform (appleseed.cli)
+-
+ target_link_libraries (appleseed.cli
+-    appleseed
+-    appleseed.common
+-    ${Boost_LIBRARIES}
+-)
++	Threads::Threads
++	appleseed
++	appleseed.common
++	${Boost_LIBRARIES}
++	)
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
+index 193c59303..71c926591 100644
+--- a/src/appleseed/CMakeLists.txt
++++ b/src/appleseed/CMakeLists.txt
+@@ -715,7 +715,7 @@ set (foundation_platform_sources
+     foundation/platform/windows.cpp
+     foundation/platform/windows.h
+ )
+-if (is_x86)
++if ("${CPU_TARGET}" MATCHES "x86")
+     list (APPEND foundation_platform_sources
+         foundation/platform/x86timer.cpp
+         foundation/platform/x86timer.h
+@@ -2373,18 +2373,25 @@ append_custom_preprocessor_definitions (appleseed
+ # Static libraries must be specified in order of reverse-dependency.
+ #--------------------------------------------------------------------------------------------------
+ 
+-link_against_platform (appleseed)
+-target_link_libraries(appleseed -ltiff)
+-link_against_xercesc (appleseed)
+-link_against_openexr (appleseed)
+-link_against_zlib (appleseed)
+-link_against_lz4 (appleseed)
+-link_against_ocio (appleseed)
+-link_against_oiio (appleseed)
+-link_against_osl (appleseed)
+-
++set(APPLESEED_LIBS
++	bcd
++	${Boost_LIBRARIES}
++	murmurhash3
++	${CMAKE_DL_LIBS}
++	Threads::Threads
++	XercesC::XercesC
++	Imath::Imath OpenEXR::OpenEXR OpenEXR::Iex OpenEXR::IlmThread
++	${ZLIB_LIBRARIES}
++	${LZ4_LIBRARY}
++	#OpenColorIO::OpenColorIO
++	OpenImageIO::OpenImageIO_Util
++	OpenImageIO::OpenImageIO
++	${oslcomp_LIBRARY_IMP}
++	${oslexec_LIBRARY_IMP}
++	${oslquery_LIBRARY_IMP}
++	)
+ if (WITH_EMBREE)
+-    link_against_embree (appleseed)
++	set(APPLESEED_LIBS ${APPLESEED_LIBS} embree)
+ endif ()
+ 
+ if (WITH_GPU OR WITH_STATMC)
+@@ -2394,68 +2401,41 @@ if (WITH_GPU OR WITH_STATMC)
+ endif ()
+ 
+ if (WITH_GPU)
+-    target_link_libraries (appleseed
++	set(APPLESEED_LIBS ${APPLESEED_LIBS}
+         ${OPTIX_LIBRARIES}
+     )
+ endif ()
+ 
+ if (WITH_STATMC)
+-    target_link_libraries (appleseed
+-        statmc
+-    )
+-    add_compile_definitions(WITH_STATMC)
++    list(APPEND APPLESEED_LIBS statmc)
++    target_compile_definitions(appleseed PRIVATE WITH_STATMC)
+ endif ()
+ 
+-target_link_libraries (appleseed
+-    bcd
+-    ${Boost_LIBRARIES}
+-    murmurhash3
+-    ${CMAKE_DL_LIBS}
+-    "${APPLESEED_LINK_EXTRA_LIBRARIES}"
+-)
++target_include_directories(appleseed SYSTEM PRIVATE ${HAPPLY_INCLUDE_DIR})
+ 
++target_link_libraries(appleseed ${APPLESEED_LIBS})
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Pre-build commands.
+ #--------------------------------------------------------------------------------------------------
+ 
+ # Copy OSL and OIIO tools to the sandbox.
+-if (USE_FIND_PACKAGE_FOR_OSL)
+-    add_custom_command (TARGET appleseed
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E copy ${OSL_QUERY_INFO} ${PROJECT_SOURCE_DIR}/sandbox/bin/
+-    )
+-    add_custom_command (TARGET appleseed
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E copy ${OSL_MAKETX} ${PROJECT_SOURCE_DIR}/sandbox/bin/
+-    )
+-    add_custom_command (TARGET appleseed
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E copy ${OPENIMAGEIO_OIIOTOOL} ${PROJECT_SOURCE_DIR}/sandbox/bin/
+-    )
+-    add_custom_command (TARGET appleseed
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E copy ${OPENIMAGEIO_IDIFF} ${PROJECT_SOURCE_DIR}/sandbox/bin/
+-    )
+-else ()
+-    add_custom_command (TARGET appleseed
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E copy ${APPLESEED_DEPS_STAGE_DIR}/osl-release/bin/oslinfo.exe ${PROJECT_SOURCE_DIR}/sandbox/bin/
+-    )
+-    add_custom_command (TARGET appleseed
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E copy ${APPLESEED_DEPS_STAGE_DIR}/oiio-release/bin/maketx.exe ${PROJECT_SOURCE_DIR}/sandbox/bin/
+-    )
+-    add_custom_command (TARGET appleseed
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E copy ${APPLESEED_DEPS_STAGE_DIR}/oiio-release/bin/oiiotool.exe ${PROJECT_SOURCE_DIR}/sandbox/bin/
+-    )
+-    add_custom_command (TARGET appleseed
+-        PRE_BUILD
+-        COMMAND ${CMAKE_COMMAND} -E copy ${APPLESEED_DEPS_STAGE_DIR}/oiio-release/bin/idiff.exe ${PROJECT_SOURCE_DIR}/sandbox/bin/
+-    )
+-endif ()
+-
++add_custom_command (TARGET appleseed
++	PRE_BUILD
++	COMMAND ${CMAKE_COMMAND} -E copy ${OSL_QUERY_INFO} ${PROJECT_SOURCE_DIR}/sandbox/bin/
++	)
++add_custom_command (TARGET appleseed
++	PRE_BUILD
++	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OpenImageIO::maketx> ${PROJECT_SOURCE_DIR}/sandbox/bin/
++	)
++add_custom_command (TARGET appleseed
++	PRE_BUILD
++	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OpenImageIO::oiiotool> ${PROJECT_SOURCE_DIR}/sandbox/bin/
++	)
++add_custom_command (TARGET appleseed
++	PRE_BUILD
++	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OpenImageIO::idiff> ${PROJECT_SOURCE_DIR}/sandbox/bin/
++	)
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Post-build commands.
+diff --git a/src/thirdparty/bcd/CMakeLists.txt b/src/thirdparty/bcd/CMakeLists.txt
+index b90d97e46..28a6ccd28 100644
+--- a/src/thirdparty/bcd/CMakeLists.txt
++++ b/src/thirdparty/bcd/CMakeLists.txt
+@@ -67,20 +67,15 @@ apply_static_lib_linker_flags (bcd)
+ # Static libraries.
+ #--------------------------------------------------------------------------------------------------
+ 
+-link_against_platform (bcd)
+-
+-link_against_openexr (bcd)
+-
+-
+-#--------------------------------------------------------------------------------------------------
+-# Include paths.
+-#--------------------------------------------------------------------------------------------------
+-
+-target_include_directories (bcd PRIVATE ext/eigen)
+-
++target_link_libraries(bcd
++  	Threads::Threads
++  	Imath::Imath OpenEXR::OpenEXR OpenEXR::Iex OpenEXR::IlmThread
++  	Eigen3::Eigen
++	)
+ 
+ #--------------------------------------------------------------------------------------------------
+ # Preprocessor definitions.
+ #--------------------------------------------------------------------------------------------------
+ 
+ apply_preprocessor_definitions (bcd)
++
+diff --git a/src/tools/animatecamera/CMakeLists.txt b/src/tools/animatecamera/CMakeLists.txt
+index 9d40ef139..d20ac4e91 100644
+--- a/src/tools/animatecamera/CMakeLists.txt
++++ b/src/tools/animatecamera/CMakeLists.txt
+@@ -91,13 +91,12 @@ apply_preprocessor_definitions (animatecamera)
+ # Static libraries.
+ #--------------------------------------------------------------------------------------------------
+ 
+-link_against_platform (animatecamera)
+-
+ target_link_libraries (animatecamera
+-    appleseed
+-    appleseed.common
+-    ${Boost_LIBRARIES}
+-)
++	Threads::Threads
++	appleseed
++	appleseed.common
++	${Boost_LIBRARIES}
++	)
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+diff --git a/src/tools/convertmeshfile/CMakeLists.txt b/src/tools/convertmeshfile/CMakeLists.txt
+index f12b70c3e..fbcd62c7d 100644
+--- a/src/tools/convertmeshfile/CMakeLists.txt
++++ b/src/tools/convertmeshfile/CMakeLists.txt
+@@ -88,14 +88,12 @@ apply_preprocessor_definitions (convertmeshfile)
+ #--------------------------------------------------------------------------------------------------
+ # Static libraries.
+ #--------------------------------------------------------------------------------------------------
+-
+-link_against_platform (convertmeshfile)
+-
+ target_link_libraries (convertmeshfile
+-    appleseed
+-    appleseed.common
+-    ${Boost_LIBRARIES}
+-)
++	Threads::Threads
++	appleseed
++	appleseed.common
++	${Boost_LIBRARIES}
++	)
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+diff --git a/src/tools/denoiser/CMakeLists.txt b/src/tools/denoiser/CMakeLists.txt
+index 577881771..3d796f6ab 100644
+--- a/src/tools/denoiser/CMakeLists.txt
++++ b/src/tools/denoiser/CMakeLists.txt
+@@ -86,12 +86,10 @@ apply_preprocessor_definitions (denoiser)
+ #--------------------------------------------------------------------------------------------------
+ # Static libraries.
+ #--------------------------------------------------------------------------------------------------
+-
+-link_against_openexr (denoiser)
+-link_against_zlib (denoiser)
+-
+ target_link_libraries (denoiser
+     bcd
++	 ${ZLIB_LIBRARIES}
++	 Imath::Imath OpenEXR::OpenEXR OpenEXR::Iex OpenEXR::IlmThread
+     "${APPLESEED_DENOISER_LINK_EXTRA_LIBRARIES}"
+ )
+ 
+diff --git a/src/tools/dumpmetadata/CMakeLists.txt b/src/tools/dumpmetadata/CMakeLists.txt
+index 3aca3b16d..736e6ab5e 100644
+--- a/src/tools/dumpmetadata/CMakeLists.txt
++++ b/src/tools/dumpmetadata/CMakeLists.txt
+@@ -87,14 +87,12 @@ apply_preprocessor_definitions (dumpmetadata)
+ #--------------------------------------------------------------------------------------------------
+ # Static libraries.
+ #--------------------------------------------------------------------------------------------------
+-
+-link_against_platform (dumpmetadata)
+-
+ target_link_libraries (dumpmetadata
+-    appleseed
+-    appleseed.common
+-    ${Boost_LIBRARIES}
+-)
++	Threads::Threads
++	appleseed
++	appleseed.common
++	${Boost_LIBRARIES}
++	)
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+diff --git a/src/tools/makefluffy/CMakeLists.txt b/src/tools/makefluffy/CMakeLists.txt
+index 75a0dd2fe..aee5bf1f4 100644
+--- a/src/tools/makefluffy/CMakeLists.txt
++++ b/src/tools/makefluffy/CMakeLists.txt
+@@ -87,14 +87,12 @@ apply_preprocessor_definitions (makefluffy)
+ #--------------------------------------------------------------------------------------------------
+ # Static libraries.
+ #--------------------------------------------------------------------------------------------------
+-
+-link_against_platform (makefluffy)
+-
+ target_link_libraries (makefluffy
+-    appleseed
+-    appleseed.common
+-    ${Boost_LIBRARIES}
+-)
++	Threads::Threads
++	appleseed
++	appleseed.common
++	${Boost_LIBRARIES}
++	)
+ 
+ 
+ #--------------------------------------------------------------------------------------------------
+diff --git a/src/tools/projecttool/CMakeLists.txt b/src/tools/projecttool/CMakeLists.txt
+index 5ca368b37..89c18992d 100644
+--- a/src/tools/projecttool/CMakeLists.txt
++++ b/src/tools/projecttool/CMakeLists.txt
+@@ -88,14 +88,12 @@ apply_preprocessor_definitions (projecttool)
+ #--------------------------------------------------------------------------------------------------
+ # Static libraries.
+ #--------------------------------------------------------------------------------------------------
+-
+-link_against_platform (projecttool)
+-
+ target_link_libraries (projecttool
+-    appleseed
+-    appleseed.common
+-    ${Boost_LIBRARIES}
+-)
++	Threads::Threads
++	appleseed
++	appleseed.common
++	${Boost_LIBRARIES}
++	)
+ 
+ 
+ #--------------------------------------------------------------------------------------------------

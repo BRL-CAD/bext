@@ -248,12 +248,6 @@
 	branch = RELEASE
 	ignore = dirty
         shallow = true
-[submodule "boost/boost"]
-	path = boost/boost
-	url = https://github.com/BRL-CAD/boost
-	branch = RELEASE
-	ignore = dirty
-        shallow = true
 [submodule "openexr/openexr"]
 	path = openexr/openexr
 	url = https://github.com/BRL-CAD/openexr
@@ -320,7 +314,7 @@
         shallow = true
 [submodule "appleseed/appleseed"]
 	path = appleseed/appleseed
-	url = https://github.com/BRL-CAD/appleseed
+	url = https://github.com/appleseedhq/appleseed
 	ignore = dirty
         shallow = true
 [submodule "gte/GeometricTools"]
@@ -363,5 +357,28 @@
 [submodule "m4/m4"]
 	path = m4/m4
 	url = https://github.com/BRL-CAD/m4.git
+	ignore = dirty
+	shallow = true
+[submodule "imath/Imath"]
+	path = imath/Imath
+	url = https://github.com/BRL-CAD/Imath
+[submodule "pcre2/pcre2"]
+	path = pcre2/pcre2
+	url = https://github.com/BRL-CAD/pcre2
+	ignore = dirty
+	shallow = true
+[submodule "struetype/struetype"]
+	path = struetype/struetype
+	url = https://github.com/BRL-CAD/struetype
+	ignore = dirty
+	shallow = true
+[submodule "happly/happly"]
+	path = happly/happly
+	url = https://github.com/BRL-CAD/happly
+	ignore = dirty
+	shallow = true
+[submodule "robin-map/robin-map"]
+	path = robin-map/robin-map
+	url = https://github.com/BRL-CAD/robin-map
 	ignore = dirty
 	shallow = true

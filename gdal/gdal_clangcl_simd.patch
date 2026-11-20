@@ -1,0 +1,39 @@
+diff --git a/gcore/rasterio.cpp b/gcore/rasterio.cpp
+--- a/gcore/rasterio.cpp
++++ b/gcore/rasterio.cpp
+@@ -3058,7 +3058,7 @@
+ // ---- AVX2 helpers for int32 narrowing (runtime dispatch) ----
+ 
+ #if defined(HAVE_AVX2_DISPATCH)
+-#if !defined(_MSC_VER)
++#if defined(__GNUC__) || defined(__clang__)
+ __attribute__((target("avx2")))
+ #endif
+ static void GDALCopyWordsInt32ToUInt8_AVX2(const int32_t *CPL_RESTRICT pSrc,
+@@ -3094,7 +3094,7 @@
+     }
+ }
+ 
+-#if !defined(_MSC_VER)
++#if defined(__GNUC__) || defined(__clang__)
+ __attribute__((target("avx2")))
+ #endif
+ static void GDALCopyWordsInt32ToUInt16_AVX2(const int32_t *CPL_RESTRICT pSrc,
+diff --git a/cmake/helpers/CheckCompilerMachineOption.cmake b/cmake/helpers/CheckCompilerMachineOption.cmake
+--- a/cmake/helpers/CheckCompilerMachineOption.cmake
++++ b/cmake/helpers/CheckCompilerMachineOption.cmake
+@@ -34,7 +34,13 @@
+ 
+   set(_FLAGS)
+   if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "(i586|i686|x86|AMD64)")
+-    if(MSVC AND (${feature} MATCHES "SSE"))
++    if(MSVC AND feature STREQUAL "SSSE3" AND
++       CMAKE_CXX_COMPILER_ID MATCHES "^(Clang|IntelLLVM)$")
++      __check_compiler_flag("/clang:-mssse3" test_clangcl_ssse3)
++      if(test_clangcl_ssse3)
++        set(_FLAGS "/clang:-mssse3")
++      endif()
++    elseif(MSVC AND (${feature} MATCHES "SSE"))
+       # SSE2 and SSE are default on
+       set(_FLAGS " ")
+     elseif(MSVC)

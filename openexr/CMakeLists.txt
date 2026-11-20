@@ -1,11 +1,11 @@
 
-bext_enable(OPENEXR)
+cad_enable(OPENEXR "libicv")
+bext_enable(OpenEXR 3.5 CONFIG)
 
 if (ENABLE_OPENEXR)
 
-  set(OPENEXR_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/openexr.patch")
   git_submodule_init(openexr CMakeLists.txt
-    PATCH_FILES ${OPENEXR_PATCH_FILES}
+    PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/openexr_windows_simd.patch"
     PATCH_COMMAND_VAR OPENEXR_PATCH_COMMAND)
 
   RegisterDeps(OPENEXR)
@@ -16,6 +16,10 @@ if (ENABLE_OPENEXR)
     PATCH_COMMAND ${OPENEXR_PATCH_COMMAND}
     CMAKE_ARGS
     ${BUILD_TYPE_SPECIFIER}
+    -DImath_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DCMAKE_PREFIX_PATH=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DOPENEXR_FORCE_INTERNAL_OPENJPH=ON
+    -DBUILD_TESTING=OFF
     -DOPENEXR_BUILD_TOOLS=OFF
     -DOPENEXR_BUILD_EXAMPLES=OFF
     -DBIN_DIR=${BIN_DIR}
@@ -39,6 +43,11 @@ if (ENABLE_OPENEXR)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/openexr/LICENSE.md
     ${DOC_LICENSE_DIR}/openexr.txt
+    COPYONLY
+    )
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/openexr/external/OpenJPH/LICENSE
+    ${DOC_LICENSE_DIR}/openexr-openjph.txt
     COPYONLY
     )
 

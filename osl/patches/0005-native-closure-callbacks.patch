@@ -1,0 +1,330 @@
+From 2d66f07120076d3f0778a6629be2b2ba86f50be3 Mon Sep 17 00:00:00 2001
+From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 13:35:53 +0000
+Subject: [PATCH] fix(oslexec): preserve signatures for native closure
+ callbacks
+
+Native closure prepare and setup callbacks are constant function
+pointers, not LLVM Function objects. Keep their explicit function
+signature when emitting scalar and batched calls instead of interpreting
+an opaque pointer as a Function.
+
+Retain the direct-call overload and add JIT tests for indirect integer
+results and closure-style prepare/setup callbacks. All 25 selected
+closure and LLVM utility tests pass.
+
+diff --git a/src/include/OSL/llvm_util.h b/src/include/OSL/llvm_util.h
+index c10f161ae30f929b636dedab9a1627b9bf995f15..0a7ed8c39d11e2e21215791b94885ce1f7d6b87f 100644
+--- a/src/include/OSL/llvm_util.h
++++ b/src/include/OSL/llvm_util.h
+@@ -838,10 +838,12 @@ public:
+                                 const std::string& name = std::string(),
+                                 int align               = 0);
+ 
+-    /// Generate code for a call to the function pointer, with the given
+-    /// arg list.  Return an llvm::Value* corresponding to the return
+-    /// value of the function, if any.
++    /// Call an LLVM function value, inferring its declared function type.
+     llvm::Value* call_function(llvm::Value* func, cspan<llvm::Value*> args);
++    /// Call a function pointer with an explicit signature. Opaque pointers
++    /// do not carry the return and parameter types needed to emit a call.
++    llvm::Value* call_function(llvm::FunctionType* type, llvm::Value* func,
++                               cspan<llvm::Value*> args);
+     /// Generate code for a call to the named function with the given arg
+     /// list.  Return an llvm::Value* corresponding to the return value of
+     /// the function, if any.
+diff --git a/src/liboslexec/backendllvm.h b/src/liboslexec/backendllvm.h
+index ed5f4fdeb9e410e38ed75129b93d96258d28ff07..ed83553db56ac3e15de5b9db4c507fec47d267c5 100644
+--- a/src/liboslexec/backendllvm.h
++++ b/src/liboslexec/backendllvm.h
+@@ -472,13 +472,9 @@ public:
+     /// TypeSpec.
+     llvm::Type* llvm_pass_type(const TypeSpec& typespec);
+ 
+-    llvm::PointerType* llvm_type_prepare_closure_func()
++    llvm::FunctionType* llvm_type_closure_callback()
+     {
+-        return m_llvm_type_prepare_closure_func;
+-    }
+-    llvm::PointerType* llvm_type_setup_closure_func()
+-    {
+-        return m_llvm_type_setup_closure_func;
++        return m_llvm_type_closure_callback;
+     }
+ 
+     /// Return the basic block of the exit for the whole instance.
+@@ -583,8 +579,7 @@ private:
+     llvm::Type* m_llvm_type_texture_options;
+     llvm::Type* m_llvm_type_trace_options;
+     llvm::Type* m_llvm_type_noise_options;
+-    llvm::PointerType* m_llvm_type_prepare_closure_func;
+-    llvm::PointerType* m_llvm_type_setup_closure_func;
++    llvm::FunctionType* m_llvm_type_closure_callback;
+     int m_llvm_local_mem;   // Amount of memory we use for locals
+     bool m_name_llvm_syms;  // Whether to name LLVM symbols
+ 
+diff --git a/src/liboslexec/batched_backendllvm.h b/src/liboslexec/batched_backendllvm.h
+index 0417b7d48cd6fe2ab97592e534b48e304d074bcd..be5fb6487dc9b7cbd417c67baa8cc6af67deef6c 100644
+--- a/src/liboslexec/batched_backendllvm.h
++++ b/src/liboslexec/batched_backendllvm.h
+@@ -681,13 +681,9 @@ public:
+     llvm::Type* llvm_pass_type(const TypeSpec& typespec);
+     llvm::Type* llvm_pass_wide_type(const TypeSpec& typespec);
+ 
+-    llvm::PointerType* llvm_type_prepare_closure_func()
++    llvm::FunctionType* llvm_type_closure_callback()
+     {
+-        return m_llvm_type_prepare_closure_func;
+-    }
+-    llvm::PointerType* llvm_type_setup_closure_func()
+-    {
+-        return m_llvm_type_setup_closure_func;
++        return m_llvm_type_closure_callback;
+     }
+ 
+     /// Return the basic block of the exit for the whole instance.
+@@ -831,8 +827,7 @@ private:
+     llvm::Type* m_llvm_type_batched_texture_options;
+     llvm::Type* m_llvm_type_batched_trace_options;
+     llvm::Type* m_llvm_type_noise_options;
+-    llvm::PointerType* m_llvm_type_prepare_closure_func;
+-    llvm::PointerType* m_llvm_type_setup_closure_func;
++    llvm::FunctionType* m_llvm_type_closure_callback;
+     int m_llvm_local_mem;   // Amount of memory we use for locals
+     bool m_name_llvm_syms;  // Whether to name LLVM symbols
+ 
+diff --git a/src/liboslexec/batched_llvm_gen.cpp b/src/liboslexec/batched_llvm_gen.cpp
+index 145b5ba611fdbd7303f5116c68d2ac1fbe8146ae..4d85155fb05121a17e0e9d778136143d192bef1a 100644
+--- a/src/liboslexec/batched_llvm_gen.cpp
++++ b/src/liboslexec/batched_llvm_gen.cpp
+@@ -7414,11 +7414,12 @@ LLVMGEN(llvm_gen_closure)
+         // zero out the closure parameter memory.
+         if (clentry->prepare) {
+             // Call clentry->prepare(renderservices *, int id, void *mem)
+-            llvm::Value* funct_ptr
+-                = rop.ll.constant_ptr((void*)clentry->prepare,
+-                                      rop.llvm_type_prepare_closure_func());
++            llvm::Value* funct_ptr = rop.ll.constant_ptr(
++                (void*)clentry->prepare,
++                rop.ll.type_ptr(rop.llvm_type_closure_callback()));
+             llvm::Value* args[] = { render_ptr, id_int, mem_void_ptr };
+-            rop.ll.call_function(funct_ptr, args);
++            rop.ll.call_function(rop.llvm_type_closure_callback(), funct_ptr,
++                                 args);
+         } else {
+             rop.ll.op_memset(mem_void_ptr, 0, clentry->struct_size,
+                              4 /*align*/);
+@@ -7498,11 +7499,12 @@ LLVMGEN(llvm_gen_closure)
+         // setup(render_services, id, mem_ptr).
+         if (clentry->setup) {
+             // Call clentry->setup(renderservices *, int id, void *mem)
+-            llvm::Value* funct_ptr
+-                = rop.ll.constant_ptr((void*)clentry->setup,
+-                                      rop.llvm_type_setup_closure_func());
++            llvm::Value* funct_ptr = rop.ll.constant_ptr(
++                (void*)clentry->setup,
++                rop.ll.type_ptr(rop.llvm_type_closure_callback()));
+             llvm::Value* args[] = { render_ptr, id_int, mem_void_ptr };
+-            rop.ll.call_function(funct_ptr, args);
++            rop.ll.call_function(rop.llvm_type_closure_callback(), funct_ptr,
++                                 args);
+         }
+ 
+         llvm_gen_keyword_fill(rop, op, clentry, closure_name, mem_void_ptr,
+diff --git a/src/liboslexec/batched_llvm_instance.cpp b/src/liboslexec/batched_llvm_instance.cpp
+index b33c4576a18ca8d3d65f3ab4451491759553db0b..df7cefc13c6ab64270748f2686d9ab7bd0d341e7 100644
+--- a/src/liboslexec/batched_llvm_instance.cpp
++++ b/src/liboslexec/batched_llvm_instance.cpp
+@@ -2607,9 +2607,7 @@ BatchedBackendLLVM::initialize_llvm_group()
+     params[0]                        = (llvm::Type*)ll.type_char_ptr();
+     params[1]                        = ll.type_int();
+     params[2]                        = (llvm::Type*)ll.type_char_ptr();
+-    m_llvm_type_prepare_closure_func = ll.type_function_ptr(ll.type_void(),
+-                                                            params);
+-    m_llvm_type_setup_closure_func   = m_llvm_type_prepare_closure_func;
++    m_llvm_type_closure_callback     = ll.type_function(ll.type_void(), params);
+ }
+ 
+ 
+diff --git a/src/liboslexec/llvm_gen.cpp b/src/liboslexec/llvm_gen.cpp
+index 3b9e788e6d8b00c3f850029294497b1bc6e3f0f0..224f774a73e1062f823e23c6303513b49b02cd13 100644
+--- a/src/liboslexec/llvm_gen.cpp
++++ b/src/liboslexec/llvm_gen.cpp
+@@ -3885,11 +3885,11 @@ LLVMGEN(llvm_gen_closure)
+     // zero out the closure parameter memory.
+     if (clentry->prepare) {
+         // Call clentry->prepare(renderservices *, int id, void *mem)
+-        llvm::Value* funct_ptr
+-            = rop.ll.constant_ptr((void*)clentry->prepare,
+-                                  rop.llvm_type_prepare_closure_func());
++        llvm::Value* funct_ptr = rop.ll.constant_ptr(
++            (void*)clentry->prepare,
++            rop.ll.type_ptr(rop.llvm_type_closure_callback()));
+         llvm::Value* args[] = { render_ptr, id_int, mem_void_ptr };
+-        rop.ll.call_function(funct_ptr, args);
++        rop.ll.call_function(rop.llvm_type_closure_callback(), funct_ptr, args);
+     } else {
+         rop.ll.op_memset(mem_void_ptr, 0, clentry->struct_size, 4 /*align*/);
+     }
+@@ -3921,11 +3921,11 @@ LLVMGEN(llvm_gen_closure)
+     // setup(render_services, id, mem_ptr).
+     if (clentry->setup) {
+         // Call clentry->setup(renderservices *, int id, void *mem)
+-        llvm::Value* funct_ptr
+-            = rop.ll.constant_ptr((void*)clentry->setup,
+-                                  rop.llvm_type_setup_closure_func());
++        llvm::Value* funct_ptr = rop.ll.constant_ptr(
++            (void*)clentry->setup,
++            rop.ll.type_ptr(rop.llvm_type_closure_callback()));
+         llvm::Value* args[] = { render_ptr, id_int, mem_void_ptr };
+-        rop.ll.call_function(funct_ptr, args);
++        rop.ll.call_function(rop.llvm_type_closure_callback(), funct_ptr, args);
+     }
+ 
+     llvm_gen_keyword_fill(rop, op, clentry, closure_name, mem_void_ptr,
+diff --git a/src/liboslexec/llvm_instance.cpp b/src/liboslexec/llvm_instance.cpp
+index 209799b6227486bc4ccd8d20d2f33928f834b6f2..b867ce9051821d01e05a2a7519e92386862d335f 100644
+--- a/src/liboslexec/llvm_instance.cpp
++++ b/src/liboslexec/llvm_instance.cpp
+@@ -1943,9 +1943,7 @@ BackendLLVM::initialize_llvm_group()
+     params[0]                        = (llvm::Type*)ll.type_char_ptr();
+     params[1]                        = ll.type_int();
+     params[2]                        = (llvm::Type*)ll.type_char_ptr();
+-    m_llvm_type_prepare_closure_func = ll.type_function_ptr(ll.type_void(),
+-                                                            params);
+-    m_llvm_type_setup_closure_func   = m_llvm_type_prepare_closure_func;
++    m_llvm_type_closure_callback     = ll.type_function(ll.type_void(), params);
+ }
+ 
+ 
+diff --git a/src/liboslexec/llvm_util.cpp b/src/liboslexec/llvm_util.cpp
+index 43ce4c5b6c90dbba093ca6bb33758e851f59a0c5..9d7e816d49fb010b987bf5808fe334ed61188025 100644
+--- a/src/liboslexec/llvm_util.cpp
++++ b/src/liboslexec/llvm_util.cpp
+@@ -4099,19 +4099,20 @@ LLVM_Util::wide_op_alloca(const TypeDesc& type, int n, const std::string& name,
+ llvm::Value*
+ LLVM_Util::call_function(llvm::Value* func, cspan<llvm::Value*> args)
+ {
+-    OSL_DASSERT(func);
+-#if 0
+-    llvm::outs() << "llvm_call_function " << *func << "\n";
+-    llvm::outs() << args.size() << " args:\n";
+-    for (auto a : args)
+-        llvm::outs() << "\t" << *a << "\n";
+-#endif
+-    //llvm_gen_debug_printf (std::string("start ") + std::string(name));
+-    llvm::Value* r = builder().CreateCall(
+-        static_cast<llvm::Function*>(func)->getFunctionType(), func,
+-        llvm::ArrayRef<llvm::Value*>(args.data(), args.size()));
+-    //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
+-    return r;
++    auto* function = llvm::cast<llvm::Function>(func);
++    return call_function(function->getFunctionType(), function, args);
++}
++
++
++
++llvm::Value*
++LLVM_Util::call_function(llvm::FunctionType* type, llvm::Value* func,
++                         cspan<llvm::Value*> args)
++{
++    OSL_DASSERT(type && func);
++    return builder().CreateCall(type, func,
++                                llvm::ArrayRef<llvm::Value*>(args.data(),
++                                                             args.size()));
+ }
+ 
+ 
+diff --git a/src/liboslexec/llvmutil_test.cpp b/src/liboslexec/llvmutil_test.cpp
+index ae57d013ef84f408b77d2b3e9f5798b1ea353091..0ff803faec4be366c7a017c0e65bc3477ed3dd6f 100644
+--- a/src/liboslexec/llvmutil_test.cpp
++++ b/src/liboslexec/llvmutil_test.cpp
+@@ -204,6 +204,79 @@ test_big_func(bool do_print = false)
+ 
+ 
+ 
++static void
++test_indirect_int_call()
++{
++    OSL::pvt::LLVM_Util::PerThreadInfo pti;
++    OSL::pvt::LLVM_Util ll(pti);
++    auto native   = +[](int a, int b) { return a - b; };
++    auto* type    = ll.type_function(ll.type_int(),
++                                     { ll.type_int(), ll.type_int() });
++    auto* wrapper = ll.make_function("indirect_subtract", false, ll.type_int(),
++                                     { ll.type_int(), ll.type_int() });
++    ll.current_function(wrapper);
++    auto* pointer = ll.constant_ptr(reinterpret_cast<void*>(native),
++                                    ll.type_ptr((llvm::Type*)type));
++    auto* result  = ll.call_function(type, pointer,
++                                     { ll.current_function_arg(0),
++                                       ll.current_function_arg(1) });
++    ll.op_return(result);
++    ll.setup_optimization_passes(0);
++    ll.do_optimize();
++    auto function = reinterpret_cast<IntFuncOfTwoInts>(
++        ll.getPointerToFunction(wrapper));
++    OIIO_CHECK_EQUAL(function(13, 29), -16);
++}
++
++
++
++static void
++test_closure_callbacks()
++{
++    struct State {
++        int prepared = 0;
++        int setup    = 0;
++    };
++    auto prepare = +[](void* context, int id, void* data) {
++        auto& state    = *static_cast<State*>(data);
++        state.prepared = *static_cast<int*>(context) + id;
++    };
++    auto setup = +[](void* context, int id, void* data) {
++        auto& state = *static_cast<State*>(data);
++        state.setup = state.prepared + *static_cast<int*>(context) + id;
++    };
++    int context             = 13;
++    constexpr int ClosureId = 29;
++    OSL::pvt::LLVM_Util::PerThreadInfo pti;
++    OSL::pvt::LLVM_Util ll(pti);
++    auto* type    = ll.type_function(ll.type_void(),
++                                     { (llvm::Type*)ll.type_void_ptr(),
++                                       ll.type_int(),
++                                       (llvm::Type*)ll.type_void_ptr() });
++    auto* wrapper = ll.make_function("closure_callbacks", false, ll.type_void(),
++                                     { (llvm::Type*)ll.type_void_ptr() });
++    ll.current_function(wrapper);
++    llvm::Value* args[] = { ll.constant_ptr(&context),
++                            (llvm::Value*)ll.constant(ClosureId),
++                            ll.current_function_arg(0) };
++    for (auto callback : { prepare, setup }) {
++        auto* pointer = ll.constant_ptr(reinterpret_cast<void*>(callback),
++                                        ll.type_ptr((llvm::Type*)type));
++        ll.call_function(type, pointer, args);
++    }
++    ll.op_return();
++    ll.setup_optimization_passes(0);
++    ll.do_optimize();
++    auto function = reinterpret_cast<void (*)(void*)>(
++        ll.getPointerToFunction(wrapper));
++    State state;
++    function(&state);
++    OIIO_CHECK_EQUAL(state.prepared, context + ClosureId);
++    OIIO_CHECK_EQUAL(state.setup, 2 * (context + ClosureId));
++}
++
++
++
+ void
+ test_isa_features()
+ {
+@@ -234,6 +307,8 @@ main(int argc, char* argv[])
+     // Test simple functions
+     test_int_func();
+     test_triple_func();
++    test_indirect_int_call();
++    test_closure_callbacks();
+ 
+     if (memtest) {
+         for (int i = 0; i < memtest; ++i) {
