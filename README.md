@@ -76,6 +76,12 @@ or passed on the command line no longer control those packages. To skip their
 local builds individually, use `ENABLE_STEPCODE=OFF`, `ENABLE_OPENVDB=OFF`,
 `ENABLE_OPENCV=OFF`, and `ENABLE_BULLET=OFF`.
 
+By default, applications compile the OpenVDB tool templates they use to reduce
+OpenVDB build times. Set `-DOPENVDB_EXPLICIT_INSTANTIATION=ON` on supported
+platforms to precompile those templates in OpenVDB and reduce downstream
+compile times (at the expense of a much longer OpenVDB build.) Rebuild
+consumers when changing the template setting.
+
 # Experimental dependencies
 
 Experimental integrations may use local source snapshots before a submodule

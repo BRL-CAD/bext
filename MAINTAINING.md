@@ -245,6 +245,13 @@ During snapshot evaluation, use `cad_enable` if needed followed by
 it, remove the local-source declaration and add the submodule initializer
 inside the enabled block.
 
+The modules in `CMake/OpenVDB` are the canonical copies for OpenVDB discovery.
+Sync changes to these files into BRL-CAD's `misc/CMake` directory. Both
+projects prefer a package config and fall back to the same finder. Bext can
+reuse a system OpenVDB with available Boost dependencies. The bundled build
+disables delayed loading and the Python module so it can build without Boost.
+BRL-CAD requires a usable OpenVDB package when its feature is enabled.
+
 Bootstrap and metadata tools inspect declarations without evaluating wrappers.
 Keep top-level `add_project` calls and source declarations on individual lines
 with literal names, paths, URLs, and full commit IDs. Remove obsolete initializer
