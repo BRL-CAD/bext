@@ -1,0 +1,32 @@
+diff --git a/src/ELF/Builder.tcc b/src/ELF/Builder.tcc
+--- a/src/ELF/Builder.tcc
++++ b/src/ELF/Builder.tcc
+@@ -304,6 +304,14 @@
+       LIEF_DEBUG("[-] Need to relocate DT_STRTAB ({:#x} new bytes)",
+                  needed_size - osize);
+       layout->relocate_dynstr(true);
++      if (binary_->has(DynamicEntry::TAG::RPATH) ||
++          binary_->has(DynamicEntry::TAG::RUNPATH)) {
++        // The bundle, build tree and install tree can use different paths.
++        // Reserve space in the new table so those edits can reuse its
++        // segment instead of leaving another full string table in the file.
++        constexpr size_t rpath_headroom = 4096;
++        layout->pad_dynstr(rpath_headroom);
++      }
+     } else {
+       LIEF_DEBUG("DT_STRTAB: -{:#x} bytes", osize - needed_size);
+     }
+diff --git a/src/ELF/ExeLayout.hpp b/src/ELF/ExeLayout.hpp
+--- a/src/ELF/ExeLayout.hpp
++++ b/src/ELF/ExeLayout.hpp
+@@ -756,6 +756,10 @@
+     relocate_dynstr_ = val;
+   }
+ 
++  void pad_dynstr(size_t extra_size) {
++    raw_dynstr_.resize(raw_dynstr_.size() + extra_size, 0);
++  }
++
+   void relocate_relr(bool val) {
+     relocate_relr_ = val;
+   }

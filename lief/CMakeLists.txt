@@ -13,7 +13,8 @@ if (NOT WIN32 AND NOT APPLE)
       "${CMAKE_CURRENT_SOURCE_DIR}/lief_cmake.patch"
       "${CMAKE_CURRENT_SOURCE_DIR}/lief_fscale_macro_fix.patch"
       "${CMAKE_CURRENT_SOURCE_DIR}/lief_major_minor_macro_fix.patch"
-      "${CMAKE_CURRENT_SOURCE_DIR}/lief_elf_phdr_relocation.patch")
+      "${CMAKE_CURRENT_SOURCE_DIR}/lief_elf_phdr_relocation.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/lief_elf_rpath_string_capacity.patch")
     git_submodule_init(LIEF CMakeLists.txt
       PATCH_FILES ${LIEF_PATCH_FILES}
       PATCH_COMMAND_VAR LIEF_PATCH_COMMAND)
