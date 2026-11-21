@@ -303,6 +303,72 @@ function(bext_git_print_mappings)
   endforeach()
 endfunction()
 
+function(bext_windows_long_path_check source_dir)
+  if (NOT WIN32)
+    return()
+  endif ()
+
+  find_package(Git 2.31 QUIET)
+  if (NOT GIT_FOUND)
+    return()
+  endif ()
+
+  set(longpaths)
+  foreach(scope IN ITEMS system global)
+    execute_process(
+      COMMAND "${GIT_EXECUTABLE}" config --${scope} --includes --type=bool --get core.longpaths
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE value
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (result EQUAL 0)
+      set(longpaths "${value}")
+    endif ()
+  endforeach()
+  if (longpaths)
+    return()
+  endif ()
+
+  # Keep this synchronized with the longest tracked path in the dependency
+  # revisions recorded by the superproject.
+  set(longest_relative_path
+    "oidn/oidn/external/composable_kernel/library/src/tensor_operation_instance/gpu/gemm_multiply_multiply/device_gemm_multiply_multiply_xdl_f8_f8_bf16/device_gemm_multiply_multiply_xdl_f8_f8_bf16_mk_nk_mn_comp_mfma16x16_kpadding_instance_part1.cpp")
+  set(windows_legacy_path_limit 259)
+  string(LENGTH "${source_dir}" source_length)
+  string(LENGTH "${longest_relative_path}" relative_length)
+  math(EXPR projected_length "${source_length} + 1 + ${relative_length}")
+  if (projected_length LESS_EQUAL windows_legacy_path_limit)
+    return()
+  endif ()
+  math(EXPR maximum_root_length "${windows_legacy_path_limit} - 1 - ${relative_length}")
+
+  set(BEXT_WINDOWS_LONG_PATH_WARNING_DELAY 10 CACHE STRING
+    "Seconds to pause after warning that Git long-path support is needed")
+  mark_as_advanced(BEXT_WINDOWS_LONG_PATH_WARNING_DELAY)
+  if (NOT BEXT_WINDOWS_LONG_PATH_WARNING_DELAY MATCHES "^[0-9]+$")
+    message(FATAL_ERROR "BEXT_WINDOWS_LONG_PATH_WARNING_DELAY must be a nonnegative integer")
+  endif ()
+
+  message(WARNING
+    "Git core.longpaths is not enabled in system or global configuration.  "
+    "The current bext dependency inventory can produce a ${projected_length}-character "
+    "path below '${source_dir}', exceeding Git for Windows' legacy "
+    "${windows_legacy_path_limit}-character limit.  Without long-path support, this "
+    "inventory requires a source root no longer than ${maximum_root_length} characters.\n"
+    "Run 'git config --global core.longpaths true' before initializing recursive "
+    "submodules.  Bext enables long paths for its own Git commands, but manual Git "
+    "operations can otherwise report false modifications or fail to check out files.")
+
+  if (NOT BEXT_WINDOWS_LONG_PATH_WARNING_SHOWN AND BEXT_WINDOWS_LONG_PATH_WARNING_DELAY GREATER 0)
+    message(STATUS
+      "Pausing configure for ${BEXT_WINDOWS_LONG_PATH_WARNING_DELAY} seconds so the long-path warning can be reviewed")
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E sleep "${BEXT_WINDOWS_LONG_PATH_WARNING_DELAY}")
+  endif ()
+  set(BEXT_WINDOWS_LONG_PATH_WARNING_SHOWN TRUE CACHE INTERNAL
+    "Whether the Git long-path warning delay has been shown")
+endfunction()
+
 function(_bext_git_command out_command out_shallow)
   # Older Git versions silently ignore GIT_CONFIG_COUNT and would fetch from
   # the original URLs, so enforce support before starting any update.

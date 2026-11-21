@@ -310,6 +310,7 @@ list(SORT BEXT_GRAPH_PROJECT_FILES)
 # in dependency CMakeLists.txt files
 ###############################################################################
 include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/Utils.cmake")
+bext_windows_long_path_check("${CMAKE_SOURCE_DIR}")
 
 
 ###############################################################################
