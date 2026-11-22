@@ -524,7 +524,7 @@ add_project(struetype GROUPS "APPLESEED;BRLCAD")
 # libtiff - Tag Image File Format (TIFF) support
 # https://libtiff.gitlab.io/libtiff/
 # https://gitlab.com/libtiff/libtiff
-add_project(tiff GROUPS "APPLESEED;GDAL")
+add_project(tiff GROUPS "APPLESEED;BRLCAD;GDAL")
 
 # Imath - math types shared by the image and shading libraries
 # https://github.com/AcademySoftwareFoundation/Imath

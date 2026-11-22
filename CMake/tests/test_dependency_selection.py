@@ -144,7 +144,7 @@ message(STATUS "PROVENANCE=${urls}|${revisions}")
             projects = next(line for line in output.splitlines()
                             if line.startswith('-- project submodules:'))
             names = projects.removeprefix('-- project submodules: ').split(', ')
-            for name in ('stepcode', 'openvdb', 'opencv', 'bullet'):
+            for name in ('stepcode', 'openvdb', 'opencv', 'tiff', 'bullet'):
                 self.assertIn(name, names)
         output = self.configure('OFF', '-DUSE_BRLCAD_EXTRA=ON')
         groups = next(line for line in output.splitlines() if 'active USE_* groups:' in line)

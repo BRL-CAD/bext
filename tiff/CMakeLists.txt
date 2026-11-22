@@ -1,6 +1,5 @@
-# tiff is needed by GDAL, which is used by libgcv.  TODO: Probably ought to
-# wire this into libicv as well if we're going to have it along for the ride...
-cad_enable(TIFF "libgcv;libicv")
+# gtools needs TIFF through OpenCV, even when GDAL support is disabled.
+cad_enable(TIFF "gtools;libgcv;libicv")
 
 bext_enable(TIFF)
 
