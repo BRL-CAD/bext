@@ -233,6 +233,7 @@ if (ENABLE_TCL)
   # Tcl-configured search flags.  On systems without a confirmed relative
   # loader token, retain Tcl's native absolute search path.
   set(TCLSH_SEARCH_FLAGS_ARG)
+  set(TCL_INSTALL_ENV)
   if (APPLE)
     set(TCLSH_SEARCH_FLAGS_ARG
       "TCLSH_SEARCH_FLAGS=-Wl,-rpath,@executable_path/../${LIB_DIR}"
@@ -240,6 +241,11 @@ if (ENABLE_TCL)
   elseif ("${CMAKE_SYSTEM_NAME}" MATCHES "^(DragonFly|FreeBSD|Linux|NetBSD|OpenBSD)$")
     set(TCLSH_SEARCH_FLAGS_ARG
       "TCLSH_SEARCH_FLAGS=-Wl,-z,origin,-rpath,'$$ORIGIN/../${LIB_DIR}'"
+      )
+    # genstubs runs the build-tree tclsh before its install runpath is usable.
+    set(TCL_INSTALL_ENV ${CMAKE_COMMAND} -E env
+      --modify "LD_LIBRARY_PATH=path_list_prepend:${TCL_BIN_DIR}"
+      "TCL_LIBRARY=${TCL_SRC_DIR}/library" --
       )
   elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS" AND
       "${CMAKE_SYSTEM_VERSION}" MATCHES "^5\\.")
@@ -335,7 +341,8 @@ if (ENABLE_TCL)
       # NOTE: Forcing -j on all sub-make calls to work around cmake+make
       # jobserver mode bug.  Tcl also seems to have a race fixed via genstubs.
       BUILD_COMMAND ${BEXT_TCL_MAKE_COMMAND} -j${pcnt} ${TCL_MAKE_OPTIONS} ${TCLSH_SEARCH_FLAGS_ARG}
-      INSTALL_COMMAND ${BEXT_TCL_MAKE_COMMAND} -j1 ${TCL_MAKE_OPTIONS} ${TCLSH_SEARCH_FLAGS_ARG} genstubs install
+      INSTALL_COMMAND ${TCL_INSTALL_ENV} ${BEXT_TCL_MAKE_COMMAND} -j1
+        ${TCL_MAKE_OPTIONS} ${TCLSH_SEARCH_FLAGS_ARG} genstubs install
       LOG_CONFIGURE ${EXT_BUILD_QUIET}
       LOG_BUILD ${EXT_BUILD_QUIET}
       LOG_INSTALL ${EXT_BUILD_QUIET}
