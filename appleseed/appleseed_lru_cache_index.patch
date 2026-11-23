@@ -1,16 +1,6 @@
-Subject: [PATCH 09/50] Use standard containers for the LRU cache index
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: 1070b0852e4286822b19571ab215f9657132085c
-Original-Commit: 2dd925a426f8ebda4cfe9bf82bbc1fa72c09bc2b
-
-diff --git a/src/appleseed/foundation/meta/tests/test_cache.cpp b/src/appleseed/foundation/meta/tests/test_cache.cpp
-index 6ee3967ba..84a695426 100644
---- a/src/appleseed/foundation/meta/tests/test_cache.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_cache.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_cache.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_cache.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_cache.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_cache.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -37,6 +37,8 @@
  // Standard headers.
  #include <cassert>
@@ -20,7 +10,7 @@ index 6ee3967ba..84a695426 100644
  
  using namespace foundation;
  
-@@ -119,6 +121,203 @@ TEST_SUITE(Foundation_Utility_Cache_SACache)
+@@ -119,6 +121,203 @@
  
  TEST_SUITE(Foundation_Utility_Cache_LRUCache)
  {
@@ -224,20 +214,19 @@ index 6ee3967ba..84a695426 100644
      TEST_CASE(Destructor_UnloadsElementsStillInCache)
      {
          ElementSwapperCountingUnloads element_swapper;
-diff --git a/src/appleseed/foundation/utility/cache.h b/src/appleseed/foundation/utility/cache.h
-index 334e1a2bc..e2fcb79d4 100644
---- a/src/appleseed/foundation/utility/cache.h
-+++ b/src/appleseed/foundation/utility/cache.h
-@@ -36,9 +36,6 @@
+diff -Naur appleseed/src/appleseed/foundation/utility/cache.h APPLESEED_BLD/src/appleseed/foundation/utility/cache.h
+--- appleseed/src/appleseed/foundation/utility/cache.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/cache.h	1970-01-01 00:00:00.000000000 +0000
+@@ -35,9 +35,6 @@
+ #include "foundation/utility/foreach.h"
  #include "foundation/utility/iterators.h"
  #include "foundation/utility/statistics.h"
- 
+-
 -// Boost headers.
 -#include "boost/unordered_map.hpp"
--
+ 
  // Standard headers.
  #include <cassert>
- #include <cstddef>
 @@ -47,6 +44,7 @@
  #include <list>
  #include <memory>
@@ -246,7 +235,7 @@ index 334e1a2bc..e2fcb79d4 100644
  #include <utility>
  
  namespace foundation
-@@ -495,7 +493,7 @@ class LRUCache
+@@ -495,7 +493,7 @@
      typedef typename Queue::iterator QueueIterator;
  
      // Index: given a key, find the cache line in the queue.

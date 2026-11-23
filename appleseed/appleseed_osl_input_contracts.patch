@@ -1,0 +1,545 @@
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -1537,6 +1537,7 @@
+     renderer/meta/tests/test_shadingresult.cpp
+     renderer/meta/tests/test_sphericalcamera.cpp
+     renderer/meta/tests/test_sss.cpp
++    renderer/meta/tests/test_texturepaths.cpp
+     renderer/meta/tests/test_texturestore.cpp
+     renderer/meta/tests/test_tracer.cpp
+     renderer/meta/tests/test_transformsequence.cpp
+diff -Naur appleseed/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp APPLESEED_BLD/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
+--- appleseed/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -77,7 +77,8 @@
+     m_renderer_services =
+         new RendererServices(
+             project,
+-            *m_texture_system);
++            *m_texture_system,
++            params.get_optional<bool>("project_rooted_textures", false));
+ 
+     RENDERER_LOG_DEBUG("creating osl shading system...");
+     m_shading_system =
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -46,9 +46,12 @@
+ #include "foundation/core/version.h"
+ #include "foundation/image/canvasproperties.h"
+ #include "foundation/image/image.h"
++#include "foundation/utility/searchpaths.h"
+ 
+ // Standard headers.
++#include <filesystem>
+ #include <limits>
++#include <stdexcept>
+ 
+ using namespace foundation;
+ 
+@@ -92,11 +95,13 @@
+ 
+ RendererServices::RendererServices(
+     const Project&              project,
+-    OIIO::TextureSystem&        texture_sys)
++    OIIO::TextureSystem&        texture_sys,
++    const bool                  project_rooted_textures)
+   : OSL::RendererServices(&texture_sys)
+   , m_texture_sys(texture_sys)
+   , m_project(project)
+   , m_texture_store(nullptr)
++  , m_project_rooted_textures(project_rooted_textures)
+ {
+     // Set up attribute getters.
+     m_global_attr_getters[OIIO::ustringhash("object:object_instance_id")] = &RendererServices::get_attr_object_instance_id;
+@@ -162,6 +167,93 @@
+     const CanvasProperties& props = m_project.get_frame()->image().properties();
+     m_resolution[0] = static_cast<int>(props.m_canvas_width);
+     m_resolution[1] = static_cast<int>(props.m_canvas_height);
++}
++
++// OSL runtime callbacks bypass get_texture_handle for dynamic names, so
++// cached handles and uncached lookups must share the same path policy.
++OIIO::ustring RendererServices::texture_filename(OIIO::ustring filename) const
++{
++    if (!m_project_rooted_textures || filename.empty())
++        return filename;
++    const std::filesystem::path path = std::filesystem::u8path(filename.c_str());
++    if (path.is_absolute())
++        return filename;
++    // Drive-relative names depend on process state outside the project.
++    if (path.has_root_name())
++        throw std::runtime_error("project-rooted textures require fully absolute or relative filenames");
++    const SearchPaths& search_paths = m_project.search_paths();
++    if (!search_paths.has_root_path())
++        throw std::runtime_error("project-rooted textures require a project root path");
++    const auto root = std::filesystem::absolute(
++        std::filesystem::u8path(search_paths.get_root_path().c_str()));
++    return OIIO::ustring((root / path).u8string());
++}
++
++OIIO::ustringhash RendererServices::texture_filename(
++    OIIO::ustringhash filename, TextureHandle* handle) const
++{
++    if (handle || !m_project_rooted_textures)
++        return filename;
++    return OIIO::ustringhash(texture_filename(OIIO::ustring::from_hash(filename.hash())));
++}
++
++RendererServices::TextureHandle* RendererServices::get_texture_handle(
++    OIIO::ustring filename, OSL::ShadingContext* context, const OSL::TextureOpt* options)
++{
++    return OSL::RendererServices::get_texture_handle(texture_filename(filename), context, options);
++}
++
++bool RendererServices::texture(
++    OIIO::ustringhash filename, TextureHandle* handle, TexturePerthread* thread,
++    OSL::TextureOpt& options, OSL::ShaderGlobals* sg,
++    float s, float t, float dsdx, float dtdx, float dsdy, float dtdy,
++    int channels, float* result, float* dresultds, float* dresultdt,
++    OIIO::ustringhash* error)
++{
++    return OSL::RendererServices::texture(texture_filename(filename, handle), handle,
++        thread, options, sg, s, t, dsdx, dtdx, dsdy, dtdy, channels,
++        result, dresultds, dresultdt, error);
++}
++
++bool RendererServices::texture3d(
++    OIIO::ustringhash filename, TextureHandle* handle, TexturePerthread* thread,
++    OSL::TextureOpt& options, OSL::ShaderGlobals* sg,
++    const OSL::Vec3& p, const OSL::Vec3& dpdx, const OSL::Vec3& dpdy,
++    const OSL::Vec3& dpdz, int channels, float* result,
++    float* dresultds, float* dresultdt, float* dresultdr, OIIO::ustringhash* error)
++{
++    return OSL::RendererServices::texture3d(texture_filename(filename, handle), handle,
++        thread, options, sg, p, dpdx, dpdy, dpdz, channels,
++        result, dresultds, dresultdt, dresultdr, error);
++}
++
++bool RendererServices::environment(
++    OIIO::ustringhash filename, TextureHandle* handle, TexturePerthread* thread,
++    OSL::TextureOpt& options, OSL::ShaderGlobals* sg,
++    const OSL::Vec3& r, const OSL::Vec3& drdx, const OSL::Vec3& drdy,
++    int channels, float* result, float* dresultds, float* dresultdt,
++    OIIO::ustringhash* error)
++{
++    return OSL::RendererServices::environment(texture_filename(filename, handle), handle,
++        thread, options, sg, r, drdx, drdy, channels, result, dresultds, dresultdt, error);
++}
++
++bool RendererServices::get_texture_info(
++    OIIO::ustringhash filename, TextureHandle* handle, TexturePerthread* thread,
++    OSL::ShaderGlobals* sg, int subimage, OIIO::ustringhash name,
++    OIIO::TypeDesc type, void* data, OIIO::ustringhash* error)
++{
++    return OSL::RendererServices::get_texture_info(texture_filename(filename, handle),
++        handle, thread, sg, subimage, name, type, data, error);
++}
++
++bool RendererServices::get_texture_info(
++    OIIO::ustringhash filename, TextureHandle* handle, float s, float t,
++    TexturePerthread* thread, OSL::ShaderGlobals* sg, int subimage,
++    OIIO::ustringhash name, OIIO::TypeDesc type, void* data, OIIO::ustringhash* error)
++{
++    return OSL::RendererServices::get_texture_info(texture_filename(filename, handle),
++        handle, s, t, thread, sg, subimage, name, type, data, error);
+ }
+ 
+ OIIO::TextureSystem* RendererServices::texturesys() const
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.h	1970-01-01 00:00:00.000000000 +0000
+@@ -69,7 +69,8 @@
+     // Constructor.
+     RendererServices(
+         const Project&              project,
+-        OIIO::TextureSystem&        texture_sys);
++        OIIO::TextureSystem&        texture_sys,
++        const bool                  project_rooted_textures = false);
+ 
+     // Initialize before rendering starts.
+     void initialize(TextureStore& texture_store);
+@@ -77,6 +78,45 @@
+     // Return a pointer to the texture system.
+     OIIO::TextureSystem* texturesys() const override;
+ 
++    using OSL::RendererServices::get_texture_handle;
++    TextureHandle* get_texture_handle(
++        OIIO::ustring filename, OSL::ShadingContext* context,
++        const OSL::TextureOpt* options = nullptr) override;
++
++    bool texture(
++        OIIO::ustringhash filename, TextureHandle* handle,
++        TexturePerthread* thread, OSL::TextureOpt& options, OSL::ShaderGlobals* sg,
++        float s, float t, float dsdx, float dtdx, float dsdy, float dtdy,
++        int channels, float* result, float* dresultds, float* dresultdt,
++        OIIO::ustringhash* error) override;
++
++    bool texture3d(
++        OIIO::ustringhash filename, TextureHandle* handle,
++        TexturePerthread* thread, OSL::TextureOpt& options, OSL::ShaderGlobals* sg,
++        const OSL::Vec3& p, const OSL::Vec3& dpdx, const OSL::Vec3& dpdy,
++        const OSL::Vec3& dpdz, int channels, float* result,
++        float* dresultds, float* dresultdt, float* dresultdr,
++        OIIO::ustringhash* error) override;
++
++    bool environment(
++        OIIO::ustringhash filename, TextureHandle* handle,
++        TexturePerthread* thread, OSL::TextureOpt& options, OSL::ShaderGlobals* sg,
++        const OSL::Vec3& r, const OSL::Vec3& drdx, const OSL::Vec3& drdy,
++        int channels, float* result, float* dresultds, float* dresultdt,
++        OIIO::ustringhash* error) override;
++
++    bool get_texture_info(
++        OIIO::ustringhash filename, TextureHandle* handle, TexturePerthread* thread,
++        OSL::ShaderGlobals* sg, int subimage, OIIO::ustringhash name,
++        OIIO::TypeDesc type, void* data, OIIO::ustringhash* error) override;
++
++    bool get_texture_info(
++        OIIO::ustringhash filename, TextureHandle* handle, float s, float t,
++        TexturePerthread* thread, OSL::ShaderGlobals* sg, int subimage,
++        OIIO::ustringhash name, OIIO::TypeDesc type, void* data,
++        OIIO::ustringhash* error) override;
++
++
+     // Get the 4x4 matrix that transforms by the specified
+     // transformation at the given time.  Return true if ok, false
+     // on error.
+@@ -286,7 +326,12 @@
+     float                           m_shutter_interval;
+     const Project&                  m_project;
+     TextureStore*                   m_texture_store;
++    const bool                      m_project_rooted_textures;
+ 
++    OIIO::ustring texture_filename(OIIO::ustring filename) const;
++    OIIO::ustringhash texture_filename(OIIO::ustringhash filename, TextureHandle* handle) const;
++
++
+     #define DECLARE_ATTR_GETTER(name)           \
+         bool get_attr_##name(                   \
+             OSL::ShaderGlobals*     sg,         \
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_shaderparamparser.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shaderparamparser.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_shaderparamparser.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shaderparamparser.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -37,6 +37,28 @@
+ 
+ TEST_SUITE(Renderer_Modeling_ShaderParamParser)
+ {
++    TEST_CASE(ShaderParamParserEmptyValue)
++    {
++        EXPECT_EXCEPTION(ExceptionOSLParamParseError,
++        {
++            ShaderParamParser parser("");
++        });
++    }
++
++    TEST_CASE(ShaderParamParserWhitespaceOnlyValue)
++    {
++        EXPECT_EXCEPTION(ExceptionOSLParamParseError,
++        {
++            ShaderParamParser parser(" \t\n ");
++        });
++    }
++
++    TEST_CASE(ShaderParamParserStringWithLeadingWhitespace)
++    {
++        ShaderParamParser parser(" \t string   project assets/wood grain.tx  ");
++        EXPECT_EQ("project assets/wood grain.tx", parser.parse_string_value());
++    }
++
+     TEST_CASE(ShaderParamParser3Values)
+     {
+         {
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_texturepaths.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_texturepaths.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_texturepaths.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_texturepaths.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,215 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.renderer headers.
++#include "renderer/kernel/rendering/rendererservices.h"
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++#include "renderer/modeling/project/project.h"
++
++// appleseed.foundation headers.
++#include "foundation/utility/searchpaths.h"
++#include "foundation/utility/test.h"
++
++// Standard headers.
++#include <chrono>
++#include <cstdio>
++#include <cstdlib>
++#include <filesystem>
++#include <fstream>
++#include <stdexcept>
++#include <string>
++
++using namespace foundation;
++using namespace renderer;
++namespace fs = std::filesystem;
++
++TEST_SUITE(Renderer_Kernel_Rendering_TexturePaths)
++{
++    class TestDirectory
++    {
++        const fs::path m_path;
++      public:
++        explicit TestDirectory(const fs::path& path) : m_path(path)
++        {
++            if (!fs::create_directory(m_path))
++                throw std::runtime_error("cannot create texture fixture directory");
++        }
++        ~TestDirectory()
++        {
++            std::error_code error;
++            fs::remove_all(m_path, error);
++            if (error)
++            {
++                std::fprintf(stderr, "texture fixture cleanup failed: %s\n", error.message().c_str());
++                std::abort();
++            }
++        }
++        const fs::path& path() const { return m_path; }
++        TestDirectory(const TestDirectory&) = delete;
++        TestDirectory& operator=(const TestDirectory&) = delete;
++    };
++
++    struct Fixture
++    {
++        static constexpr int ProjectWidth = 7;
++        static constexpr int ShadowWidth = 3;
++        const std::string directory;
++        const std::string unicode_image = u8"texture \u03bb.pgm";
++        TestDirectory root;
++        TestDirectory shadow;
++        auto_release_ptr<Project> project;
++        std::shared_ptr<OIIOTextureSystem> textures;
++
++        Fixture()
++          : directory("texture-path-test-" + std::to_string(
++                std::chrono::steady_clock::now().time_since_epoch().count()))
++          , root(fs::temp_directory_path() / (directory + "-project"))
++          , shadow(fs::current_path() / directory)
++          , project(ProjectFactory::create("texture paths"))
++          , textures(OIIOTextureSystemFactory::create(false))
++        {
++            fs::create_directory(root.path() / directory);
++            project->search_paths().set_root_path(root.path().u8string().c_str());
++            write_image(root.path() / directory / "shared image.pgm", ProjectWidth);
++            write_image(shadow.path() / "shared image.pgm", ShadowWidth);
++            write_image(shadow.path() / "cwd only.pgm", ShadowWidth);
++            write_image(root.path() / directory / "tile.1001.pgm", ProjectWidth);
++            write_image(shadow.path() / "tile.1001.pgm", ShadowWidth);
++            write_image(root.path() / directory / fs::u8path(unicode_image), ProjectWidth);
++            write_image(shadow.path() / fs::u8path(unicode_image), ShadowWidth);
++        }
++
++        static void write_image(const fs::path& path, const int width)
++        {
++            std::ofstream output(path, std::ios::binary);
++            output << "P5\n" << width << " 1\n255\n" << std::string(width, '\0');
++            output.close();
++            if (!output)
++                throw std::runtime_error("cannot write texture fixture");
++        }
++
++        bool resolution(RendererServices& services, const std::string& name, int& width,
++            RendererServices::TextureHandle* handle = nullptr)
++        {
++            int size[2] = {};
++            OIIO::ustringhash error;
++            const bool result = services.get_texture_info(OIIO::ustringhash(name), handle,
++                nullptr, nullptr, 0, OIIO::ustringhash("resolution"),
++                OIIO::TypeDesc(OIIO::TypeDesc::INT, 2), size, &error);
++            width = size[0];
++            return result;
++        }
++    };
++
++    TEST_CASE_F(ProjectRootWinsOverWorkingDirectory, Fixture)
++    {
++        RendererServices services(*project, *textures, true);
++        int width = 0;
++        EXPECT_TRUE(resolution(services, directory + "/shared image.pgm", width));
++        EXPECT_EQ(ProjectWidth, width);
++    }
++
++    TEST_CASE_F(MissingProjectFileDoesNotUseWorkingDirectory, Fixture)
++    {
++        RendererServices services(*project, *textures, true);
++        int width = 0;
++        EXPECT_FALSE(resolution(services, directory + "/cwd only.pgm", width));
++    }
++
++    TEST_CASE_F(ExplicitAbsolutePathIsPreserved, Fixture)
++    {
++        RendererServices services(*project, *textures, true);
++        int width = 0;
++        EXPECT_TRUE(resolution(services, (shadow.path() / "shared image.pgm").u8string(), width));
++        EXPECT_EQ(ShadowWidth, width);
++    }
++
++    TEST_CASE_F(PreboundHandleIsPreserved, Fixture)
++    {
++        RendererServices services(*project, *textures, true);
++        const auto name = (root.path() / directory / "shared image.pgm").u8string();
++        auto* handle = textures->get_texture_handle(OIIO::ustring(name));
++        int width = 0;
++        EXPECT_TRUE(resolution(services, (shadow.path() / "shared image.pgm").u8string(), width, handle));
++        EXPECT_EQ(ProjectWidth, width);
++    }
++
++    TEST_CASE_F(ProjectRootAppliesToUdimPatterns, Fixture)
++    {
++        RendererServices services(*project, *textures, true);
++        int width = 0;
++        EXPECT_TRUE(resolution(services, directory + "/tile.<UDIM>.pgm", width));
++        EXPECT_EQ(ProjectWidth, width);
++    }
++
++    TEST_CASE_F(UnicodeFilenameUsesProjectRoot, Fixture)
++    {
++        RendererServices services(*project, *textures, true);
++        int width = 0;
++        EXPECT_TRUE(resolution(services, directory + "/" + unicode_image, width));
++        EXPECT_EQ(ProjectWidth, width);
++    }
++
++    TEST_CASE_F(RelativeLookupRequiresProjectRoot, Fixture)
++    {
++        project->search_paths().set_root_path("");
++        RendererServices services(*project, *textures, true);
++        int width = 0;
++        EXPECT_EXCEPTION(std::runtime_error,
++        {
++            resolution(services, directory + "/shared image.pgm", width);
++        });
++    }
++
++#ifdef _WIN32
++    TEST_CASE_F(DriveRelativeFilenameIsRejected, Fixture)
++    {
++        RendererServices services(*project, *textures, true);
++        int width = 0;
++        EXPECT_EXCEPTION(std::runtime_error,
++        {
++            resolution(services, "C:ambiguous.pgm", width);
++        });
++    }
++#endif
++
++    TEST_CASE_F(EmptyFilenameReportsMissingTexture, Fixture)
++    {
++        RendererServices services(*project, *textures, true);
++        int width = 0;
++        EXPECT_FALSE(resolution(services, "", width));
++    }
++
++    TEST_CASE_F(DefaultLookupPolicyRemainsAvailable, Fixture)
++    {
++        RendererServices services(*project, *textures);
++        int width = 0;
++        EXPECT_TRUE(resolution(services, directory + "/shared image.pgm", width));
++        EXPECT_EQ(ShadowWidth, width);
++    }
++}
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shaderparamparser.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderparamparser.cpp
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shaderparamparser.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderparamparser.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -42,9 +42,11 @@
+ //
+ 
+ ShaderParamParser::ShaderParamParser(const std::string& s)
+-  : m_original_string(s)
++  : m_original_string(trim_both(s))
+ {
+-    tokenize(s, Blanks, m_tokens);
++    tokenize(m_original_string, Blanks, m_tokens);
++    if (m_tokens.empty())
++        throw ExceptionOSLParamParseError();
+ 
+     m_tok_it = m_tokens.begin();
+     m_tok_end = m_tokens.end();
+@@ -130,7 +132,7 @@
+     assert(param_type() == OSLParamTypeString);
+ 
+     // Remove the string prefix and trim whitespace.
+-    std::string val(m_original_string, 6, std::string::npos);
++    std::string val(m_original_string, m_tokens.front().size(), std::string::npos);
+     return trim_both(val);
+ }
+ 
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -41,6 +41,11 @@
+ #include "OSL/oslquery.h"
+ #include "foundation/platform/_endoslheaders.h"
+ 
++// OpenImageIO headers.
++#include "foundation/platform/_beginoiioheaders.h"
++#include "OpenImageIO/filesystem.h"
++#include "foundation/platform/_endoiioheaders.h"
++
+ // Standard headers.
+ #include <optional>
+ #include <string>
+@@ -154,7 +159,18 @@
+     {
+         init();
+ 
+-        const bool ok = m_query.open(shader_name, m_search_path);
++        std::string filename(shader_name);
++        if (OIIO::Filesystem::extension(filename) != ".oso")
++            filename += ".oso";
++
++        std::vector<std::string> directories;
++        OIIO::Filesystem::searchpath_split(m_search_path, directories);
++        // Match OSL execution: the caller directory is implicit only when
++        // no search path is configured. Query the selected file directly
++        // so OSLQuery cannot apply its different working-directory policy.
++        filename = OIIO::Filesystem::searchpath_find(
++            filename, directories, directories.empty());
++        const bool ok = !filename.empty() && m_query.open(filename);
+ 
+         if (ok)
+             m_param_info.assign(m_query.nparams(), OptionalDictionary());
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shaderquery.h APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderquery.h
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shaderquery.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderquery.h	1970-01-01 00:00:00.000000000 +0000
+@@ -103,7 +103,7 @@
+ {
+   public:
+     // Create a new shader query without a search path.
+-    // Shaders can only be queried using absolute paths.
++    // Relative filenames use the caller directory, as in OSL execution.
+     static foundation::auto_release_ptr<ShaderQuery> create();
+ 
+     // Create a new shader query with a single search path.

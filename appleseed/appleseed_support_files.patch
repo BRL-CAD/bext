@@ -1,16 +1,6 @@
-Subject: [PATCH 05/50] Support files
-
-Carry the dependency-compatible baseline over the actual upstream
-source. This patch contains one reviewable part of the combined
-historical changes; full original messages are retained in HISTORY.
-
-Original-Commits: See the compatibility-baseline entries in HISTORY.
-
-diff --git a/TODO b/TODO
-new file mode 100644
-index 000000000..d3bc137d8
---- /dev/null
-+++ b/TODO
+diff -Naur appleseed/TODO APPLESEED_BLD/TODO
+--- appleseed/TODO	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/TODO	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,6 @@
 +Fix issue on Windows with BRL-CAD art executable not working successfully
 +
@@ -18,11 +8,10 @@ index 000000000..d3bc137d8
 +by newer C++ standards, and latest dependencies (OSL, etc.) appear to be
 +moving away from Boost.
 +
-diff --git a/docs/source/conf.py b/docs/source/conf.py
-index c35ec679b..37c579b0f 100644
---- a/docs/source/conf.py
-+++ b/docs/source/conf.py
-@@ -441,7 +441,7 @@ epub_identifier = 'https://github.com/appleseedhq/appleseed'
+diff -Naur appleseed/docs/source/conf.py APPLESEED_BLD/docs/source/conf.py
+--- appleseed/docs/source/conf.py	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/docs/source/conf.py	1970-01-01 00:00:00.000000000 +0000
+@@ -441,7 +441,7 @@
  # The format is a list of tuples containing the path and title.
  #epub_pre_files = []
  
@@ -31,11 +20,10 @@ index c35ec679b..37c579b0f 100644
  # The format is a list of tuples containing the path and title.
  #epub_post_files = []
  
-diff --git a/sandbox/examples/python/helloworld/helloworld.py b/sandbox/examples/python/helloworld/helloworld.py
-index 525fee2cc..6d113d3ba 100644
---- a/sandbox/examples/python/helloworld/helloworld.py
-+++ b/sandbox/examples/python/helloworld/helloworld.py
-@@ -305,7 +305,7 @@ def main():
+diff -Naur appleseed/sandbox/examples/python/helloworld/helloworld.py APPLESEED_BLD/sandbox/examples/python/helloworld/helloworld.py
+--- appleseed/sandbox/examples/python/helloworld/helloworld.py	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/python/helloworld/helloworld.py	1970-01-01 00:00:00.000000000 +0000
+@@ -305,7 +305,7 @@
      # Save the project to disk.
      asr.ProjectFileWriter().write(project, "output/test.appleseed")
  
@@ -44,11 +32,10 @@ index 525fee2cc..6d113d3ba 100644
      asr.global_logger().remove_target(log_target)
  
  if __name__ == "__main__":
-diff --git a/sandbox/lib/python/site-packages/Qt.py b/sandbox/lib/python/site-packages/Qt.py
-index d60357d20..d1157c016 100644
---- a/sandbox/lib/python/site-packages/Qt.py
-+++ b/sandbox/lib/python/site-packages/Qt.py
-@@ -936,7 +936,7 @@ def _reassign_misplaced_members(binding):
+diff -Naur appleseed/sandbox/lib/python/site-packages/Qt.py APPLESEED_BLD/sandbox/lib/python/site-packages/Qt.py
+--- appleseed/sandbox/lib/python/site-packages/Qt.py	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/lib/python/site-packages/Qt.py	1970-01-01 00:00:00.000000000 +0000
+@@ -936,7 +936,7 @@
          src_module, src_member = src.split(".")
          dst_module, dst_member = dst.split(".")
  
@@ -57,11 +44,10 @@ index d60357d20..d1157c016 100644
          try:
              dst_value = getattr(getattr(Qt, "_" + src_module), src_member)
          except AttributeError:
-diff --git a/sandbox/share/rfmdisneypresets2appleseed.py b/sandbox/share/rfmdisneypresets2appleseed.py
-index fb6fd2006..7c8a14da9 100644
---- a/sandbox/share/rfmdisneypresets2appleseed.py
-+++ b/sandbox/share/rfmdisneypresets2appleseed.py
-@@ -84,7 +84,7 @@ def main():
+diff -Naur appleseed/sandbox/share/rfmdisneypresets2appleseed.py APPLESEED_BLD/sandbox/share/rfmdisneypresets2appleseed.py
+--- appleseed/sandbox/share/rfmdisneypresets2appleseed.py	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/share/rfmdisneypresets2appleseed.py	1970-01-01 00:00:00.000000000 +0000
+@@ -84,7 +84,7 @@
  
                  # Check the material for possible incompatibilities
                  if params["emitColorR"] != "0.0" or params["emitColorG"] != "0.0" or params["emitColorB"] != "0.0":

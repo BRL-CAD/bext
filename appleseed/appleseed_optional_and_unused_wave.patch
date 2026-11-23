@@ -1,17 +1,7 @@
-Subject: [PATCH 08/50] Use standard optional caches and drop unused Wave
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: 3f9e298dae1ecc15b7dd0599d8a0b5be9d17f6be
-Original-Commit: 0ee533a86125cf4f6b4a738f550a3f03e15618b6
-
-diff --git a/.github/workflows/build-pr-linux.yaml b/.github/workflows/build-pr-linux.yaml
-index 1d7486a9d..400cffde1 100644
---- a/.github/workflows/build-pr-linux.yaml
-+++ b/.github/workflows/build-pr-linux.yaml
-@@ -95,7 +95,6 @@ jobs:
+diff -Naur appleseed/.github/workflows/build-pr-linux.yaml APPLESEED_BLD/.github/workflows/build-pr-linux.yaml
+--- appleseed/.github/workflows/build-pr-linux.yaml	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/.github/workflows/build-pr-linux.yaml	1970-01-01 00:00:00.000000000 +0000
+@@ -95,7 +95,6 @@
              -DBoost_REGEX_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_regex-gcc63-mt-1_61.so.1.61.0 \
              -DBoost_SYSTEM_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_system-gcc63-mt-1_61.so.1.61.0 \
              -DBoost_THREAD_LIBRARY_RELEASE=${{ env.APPLESEED_DEPENDENCIES }}/lib/libboost_thread-gcc63-mt-1_61.so.1.61.0 \
@@ -19,11 +9,10 @@ index 1d7486a9d..400cffde1 100644
              -DEMBREE_INCLUDE_DIR=${{ env.APPLESEED_DEPENDENCIES }}/include \
              -DEMBREE_LIBRARY=${{ env.APPLESEED_DEPENDENCIES }}/lib/libembree3.so \
              -DLZ4_INCLUDE_DIR=${{ env.APPLESEED_DEPENDENCIES }}/include \
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 78ccaada3..83ce4e063 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -248,7 +248,7 @@ set(Boost_MULTITHREADED TRUE)
+diff -Naur appleseed/CMakeLists.txt APPLESEED_BLD/CMakeLists.txt
+--- appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -248,7 +248,7 @@
  if (USE_STATIC_BOOST)
    set(Boost_USE_STATIC_LIBS TRUE)
  endif ()
@@ -32,11 +21,10 @@ index 78ccaada3..83ce4e063 100644
  add_definitions(-DBOOST_FILESYSTEM_VERSION=3 -DBOOST_FILESYSTEM_NO_DEPRECATED -DBOOST_ALL_DYN_LINK)
  include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories(${Boost_LIBRARY_DIRS})
-diff --git a/scripts/travis/build-linux.sh b/scripts/travis/build-linux.sh
-index c043ff306..9d976b2a2 100644
---- a/scripts/travis/build-linux.sh
-+++ b/scripts/travis/build-linux.sh
-@@ -95,7 +95,6 @@ cmake \
+diff -Naur appleseed/scripts/travis/build-linux.sh APPLESEED_BLD/scripts/travis/build-linux.sh
+--- appleseed/scripts/travis/build-linux.sh	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/scripts/travis/build-linux.sh	1970-01-01 00:00:00.000000000 +0000
+@@ -95,7 +95,6 @@
      -DBoost_REGEX_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_regex-gcc63-mt-1_61.so.1.61.0 \
      -DBoost_SYSTEM_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_system-gcc63-mt-1_61.so.1.61.0 \
      -DBoost_THREAD_LIBRARY_DEBUG=$APPLESEED_DEPENDENCIES/lib/libboost_thread-gcc63-mt-1_61.so.1.61.0 \
@@ -44,11 +32,10 @@ index c043ff306..9d976b2a2 100644
      -DEMBREE_INCLUDE_DIR=$APPLESEED_DEPENDENCIES/include \
      -DEMBREE_LIBRARY=$APPLESEED_DEPENDENCIES/lib/libembree3.so \
      -DLZ4_INCLUDE_DIR=$APPLESEED_DEPENDENCIES/include \
-diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
-index 9134e2573..95011d517 100644
---- a/src/appleseed/CMakeLists.txt
-+++ b/src/appleseed/CMakeLists.txt
-@@ -1530,6 +1530,7 @@ set (renderer_meta_tests_sources
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -1530,6 +1530,7 @@
      renderer/meta/tests/test_samplegeneratorjob.cpp
      renderer/meta/tests/test_scene.cpp
      renderer/meta/tests/test_shaderparamparser.cpp
@@ -56,11 +43,9 @@ index 9134e2573..95011d517 100644
      renderer/meta/tests/test_shadingresult.cpp
      renderer/meta/tests/test_sphericalcamera.cpp
      renderer/meta/tests/test_sss.cpp
-diff --git a/src/appleseed/renderer/meta/tests/test_shaderquery.cpp b/src/appleseed/renderer/meta/tests/test_shaderquery.cpp
-new file mode 100644
-index 000000000..a6ece76a0
---- /dev/null
-+++ b/src/appleseed/renderer/meta/tests/test_shaderquery.cpp
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_shaderquery.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shaderquery.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_shaderquery.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shaderquery.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,106 @@
 +
 +//
@@ -168,10 +153,9 @@ index 000000000..a6ece76a0
 +            .dictionaries().get("help").get("value")));
 +    }
 +}
-diff --git a/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp b/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
-index 97dbcae99..c15bfdef9 100644
---- a/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
-+++ b/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -41,10 +41,8 @@
  #include "OSL/oslquery.h"
  #include "foundation/platform/_endoslheaders.h"
@@ -184,7 +168,7 @@ index 97dbcae99..c15bfdef9 100644
  #include <string>
  #include <vector>
  
-@@ -59,7 +57,7 @@ namespace renderer
+@@ -59,7 +57,7 @@
  
  struct ShaderQuery::Impl
  {
@@ -193,7 +177,7 @@ index 97dbcae99..c15bfdef9 100644
  
      std::string                              m_search_path;
      OSL::OSLQuery                            m_query;
-@@ -178,7 +176,7 @@ struct ShaderQuery::Impl
+@@ -178,7 +176,7 @@
  
      void init()
      {
@@ -202,7 +186,7 @@ index 97dbcae99..c15bfdef9 100644
          m_param_info.clear();
  
          m_query = OSL::OSLQuery();
-@@ -250,7 +248,7 @@ const Dictionary& ShaderQuery::get_param_info(const size_t param_index) const
+@@ -250,7 +248,7 @@
              Impl::param_to_dict(*impl->m_query.getparam(param_index));
      }
  
@@ -211,7 +195,7 @@ index 97dbcae99..c15bfdef9 100644
  }
  
  const Dictionary& ShaderQuery::get_metadata() const
-@@ -269,7 +267,7 @@ const Dictionary& ShaderQuery::get_metadata() const
+@@ -269,7 +267,7 @@
          impl->m_metadata = metadata;
      }
  

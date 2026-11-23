@@ -1,22 +1,7 @@
-Subject: [PATCH 13/50] Use standard locks, threads and condition variables
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: 17cf42a2275cde665834e2af4d5d90181d2a61c3
-Original-Commit: d1589c479b5fd4a1d0bcb86b09b8987b090c0a74
-Original-Commit: d3b0b675ddad7f274046e7cb93dbee05cbae4e43
-Original-Commit: 36f53332d57c7d2f338396db810488c78e43b8f7
-Original-Commit: 3b7aaf52d73d40fe69498839e8ea032c85403e27
-Original-Commit: db130459d1b22c79e9cbbe9c3358100b3cc9e43e
-Original-Commit: a6b6495b1310869d47d36a96e8b130d404967bc5
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 53b2e7a9b..c87e018a1 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -248,7 +248,7 @@ set(Boost_MULTITHREADED TRUE)
+diff -Naur appleseed/CMakeLists.txt APPLESEED_BLD/CMakeLists.txt
+--- appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -248,7 +248,7 @@
  if (USE_STATIC_BOOST)
    set(Boost_USE_STATIC_LIBS TRUE)
  endif ()
@@ -25,10 +10,9 @@ index 53b2e7a9b..c87e018a1 100644
  add_definitions(-DBOOST_ALL_DYN_LINK)
  include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories(${Boost_LIBRARY_DIRS})
-diff --git a/src/appleseed.cli/stdouttilecallback.cpp b/src/appleseed.cli/stdouttilecallback.cpp
-index 655077601..676ff1c77 100644
---- a/src/appleseed.cli/stdouttilecallback.cpp
-+++ b/src/appleseed.cli/stdouttilecallback.cpp
+diff -Naur appleseed/src/appleseed.cli/stdouttilecallback.cpp APPLESEED_BLD/src/appleseed.cli/stdouttilecallback.cpp
+--- appleseed/src/appleseed.cli/stdouttilecallback.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.cli/stdouttilecallback.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -44,6 +44,7 @@
  #include <cstddef>
  #include <cstdint>
@@ -37,7 +21,7 @@ index 655077601..676ff1c77 100644
  
  // Platform headers.
  #ifdef _WIN32
-@@ -86,7 +87,7 @@ namespace
+@@ -86,7 +87,7 @@
              const size_t        thread_index,
              const size_t        thread_count) override
          {
@@ -46,7 +30,7 @@ index 655077601..676ff1c77 100644
  
  #ifdef _WIN32
              const int old_stdout_mode = _setmode(_fileno(stdout), _O_BINARY);
-@@ -104,7 +105,7 @@ namespace
+@@ -104,7 +105,7 @@
              const size_t        tile_x,
              const size_t        tile_y) override
          {
@@ -55,7 +39,7 @@ index 655077601..676ff1c77 100644
  
  #ifdef _WIN32
              const int old_stdout_mode = _setmode(_fileno(stdout), _O_BINARY);
-@@ -129,7 +130,7 @@ namespace
+@@ -129,7 +130,7 @@
              ChunkTypeTileData               = 13
          };
  
@@ -64,10 +48,9 @@ index 655077601..676ff1c77 100644
  
          bool m_header_sent;
          const StdOutTileCallbackFactory::TileOutputOptions m_export_options;
-diff --git a/src/appleseed.common/application/progresstilecallback.cpp b/src/appleseed.common/application/progresstilecallback.cpp
-index f0db87917..6b22609fe 100644
---- a/src/appleseed.common/application/progresstilecallback.cpp
-+++ b/src/appleseed.common/application/progresstilecallback.cpp
+diff -Naur appleseed/src/appleseed.common/application/progresstilecallback.cpp APPLESEED_BLD/src/appleseed.common/application/progresstilecallback.cpp
+--- appleseed/src/appleseed.common/application/progresstilecallback.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.common/application/progresstilecallback.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -45,6 +45,7 @@
  
  // Standard headers.
@@ -76,7 +59,7 @@ index f0db87917..6b22609fe 100644
  #include <string>
  
  using namespace foundation;
-@@ -89,7 +90,7 @@ namespace
+@@ -89,7 +90,7 @@
              const size_t    tile_x,
              const size_t    tile_y) override
          {
@@ -85,7 +68,7 @@ index f0db87917..6b22609fe 100644
  
              // Keep track of the total number of rendered pixels.
              const Tile& tile = frame->image().tile(tile_x, tile_y);
-@@ -123,7 +124,7 @@ namespace
+@@ -123,7 +124,7 @@
        private:
          Logger&                             m_logger;
          const size_t                        m_pass_count;
@@ -94,10 +77,9 @@ index f0db87917..6b22609fe 100644
          size_t                              m_rendered_pixels;
          size_t                              m_rendered_tiles;
          Stopwatch<DefaultWallclockTimer>    m_stopwatch;
-diff --git a/src/appleseed/foundation/log/logger.cpp b/src/appleseed/foundation/log/logger.cpp
-index c526e3516..eb4af143d 100644
---- a/src/appleseed/foundation/log/logger.cpp
-+++ b/src/appleseed/foundation/log/logger.cpp
+diff -Naur appleseed/src/appleseed/foundation/log/logger.cpp APPLESEED_BLD/src/appleseed/foundation/log/logger.cpp
+--- appleseed/src/appleseed/foundation/log/logger.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/log/logger.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -50,6 +50,8 @@
  #include <cstdlib>
  #include <list>
@@ -107,7 +89,7 @@ index c526e3516..eb4af143d 100644
  #include <vector>
  
  using namespace boost::posix_time;
-@@ -177,7 +179,7 @@ namespace
+@@ -177,7 +179,7 @@
          {
          }
  
@@ -116,7 +98,7 @@ index c526e3516..eb4af143d 100644
          {
              const ThreadIdToIntMap::const_iterator i = m_thread_id_to_int.find(id);
  
-@@ -190,7 +192,7 @@ namespace
+@@ -190,7 +192,7 @@
          }
  
        private:
@@ -125,7 +107,7 @@ index c526e3516..eb4af143d 100644
  
          size_t              m_thread_count;
          ThreadIdToIntMap    m_thread_id_to_int;
-@@ -206,7 +208,7 @@ struct Logger::Impl
+@@ -206,7 +208,7 @@
  {
      typedef std::list<ILogTarget*> LogTargetContainer;
  
@@ -134,7 +116,7 @@ index c526e3516..eb4af143d 100644
      bool                    m_enabled;
      LogMessage::Category    m_verbosity_level;
      LogTargetContainer      m_targets;
-@@ -236,8 +238,8 @@ Logger::~Logger()
+@@ -236,8 +238,8 @@
  
  void Logger::initialize_from(const Logger& source)
  {
@@ -145,7 +127,7 @@ index c526e3516..eb4af143d 100644
  
      impl->m_enabled = source.impl->m_enabled;
      impl->m_verbosity_level = source.impl->m_verbosity_level;
-@@ -255,55 +257,55 @@ void Logger::initialize_from(const Logger& source)
+@@ -255,55 +257,55 @@
  
  void Logger::set_enabled(const bool enabled)
  {
@@ -210,7 +192,7 @@ index c526e3516..eb4af143d 100644
  
      assert(target);
      impl->m_targets.push_back(target);
-@@ -311,7 +313,7 @@ void Logger::add_target(ILogTarget* target)
+@@ -311,7 +313,7 @@
  
  void Logger::remove_target(ILogTarget* target)
  {
@@ -219,7 +201,7 @@ index c526e3516..eb4af143d 100644
  
      assert(target);
      impl->m_targets.remove(target);
-@@ -364,7 +366,7 @@ void Logger::write(
+@@ -364,7 +366,7 @@
      const size_t                        line,
      APPLESEED_PRINTF_FMT const char*    format, ...)
  {
@@ -228,7 +210,7 @@ index c526e3516..eb4af143d 100644
  
      if (category < impl->m_verbosity_level)
          return;
-@@ -387,7 +389,7 @@ void Logger::write(
+@@ -387,7 +389,7 @@
          const ptime datetime(microsec_clock::universal_time());
  
          // Format the header and message.
@@ -237,10 +219,9 @@ index c526e3516..eb4af143d 100644
          const FormatEvaluator format_evaluator(effective_category, datetime, thread, &impl->m_message_buffer[0]);
          const std::string header = format_evaluator.evaluate(impl->m_formatter.get_header_format(effective_category));
          std::string message = format_evaluator.evaluate(impl->m_formatter.get_message_format(effective_category));
-diff --git a/src/appleseed/foundation/meta/tests/test_job.cpp b/src/appleseed/foundation/meta/tests/test_job.cpp
-index 9e3f6dfa4..b0732e7c2 100644
---- a/src/appleseed/foundation/meta/tests/test_job.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_job.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_job.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_job.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_job.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_job.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -42,6 +42,7 @@
  // Standard headers.
  #include <cstddef>
@@ -249,10 +230,11 @@ index 9e3f6dfa4..b0732e7c2 100644
  #include <new>
  #include <utility>
  
-@@ -413,6 +414,51 @@ TEST_SUITE(Foundation_Utility_Job_WorkerThread)
+@@ -412,7 +413,52 @@
+             throw std::bad_alloc();
          }
      };
- 
++
 +    class GatedJob
 +      : public IJob
 +    {
@@ -275,7 +257,7 @@ index 9e3f6dfa4..b0732e7c2 100644
 +        JobQueue queue;
 +        WorkerThread worker(0, logger, queue, JobManager::KeepRunningOnEmptyQueue);
 +        volatile std::uint32_t execution_count = 0;
-+
+ 
 +        for (size_t i = 0; i < RestartCount; ++i)
 +        {
 +            GatedJob first;
@@ -301,10 +283,9 @@ index 9e3f6dfa4..b0732e7c2 100644
      TEST_CASE(Run_MemoryFailureDuingJobExecution_RetiresFailedJob)
      {
          JobQueue job_queue;
-diff --git a/src/appleseed/foundation/meta/tests/test_thread.cpp b/src/appleseed/foundation/meta/tests/test_thread.cpp
-index c2bde53aa..2bfcd2c10 100644
---- a/src/appleseed/foundation/meta/tests/test_thread.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_thread.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_thread.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_thread.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_thread.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_thread.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -27,16 +27,79 @@
  //
  
@@ -385,10 +366,9 @@ index c2bde53aa..2bfcd2c10 100644
      TEST_CASE(InterruptibleSleep_AbortSwitchIsTriggered)
      {
          AbortSwitch abort_switch;
-diff --git a/src/appleseed/foundation/platform/system.cpp b/src/appleseed/foundation/platform/system.cpp
-index 08278289c..a71b82aa6 100644
---- a/src/appleseed/foundation/platform/system.cpp
-+++ b/src/appleseed/foundation/platform/system.cpp
+diff -Naur appleseed/src/appleseed/foundation/platform/system.cpp APPLESEED_BLD/src/appleseed/foundation/platform/system.cpp
+--- appleseed/src/appleseed/foundation/platform/system.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/system.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -45,6 +45,8 @@
  // Standard headers.
  #include <cstring>
@@ -416,7 +396,7 @@ index 08278289c..a71b82aa6 100644
      std::uint64_t xgetbv(const std::int32_t index)
      {
          return _xgetbv(index);
-@@ -1129,7 +1135,7 @@ const char* System::get_cpu_architecture()
+@@ -1129,7 +1135,7 @@
  std::size_t System::get_logical_cpu_core_count()
  {
      const std::size_t concurrency =
@@ -425,10 +405,9 @@ index 08278289c..a71b82aa6 100644
  
      return concurrency > 1 ? concurrency : 1;
  }
-diff --git a/src/appleseed/foundation/platform/thread.cpp b/src/appleseed/foundation/platform/thread.cpp
-index 6f255398c..6e7b6704a 100644
---- a/src/appleseed/foundation/platform/thread.cpp
-+++ b/src/appleseed/foundation/platform/thread.cpp
+diff -Naur appleseed/src/appleseed/foundation/platform/thread.cpp APPLESEED_BLD/src/appleseed/foundation/platform/thread.cpp
+--- appleseed/src/appleseed/foundation/platform/thread.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/thread.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -39,11 +39,10 @@
  #include "foundation/utility/job/iabortswitch.h"
  #include "foundation/log/log.h"
@@ -452,7 +431,7 @@ index 6f255398c..6e7b6704a 100644
  namespace foundation
  {
  
-@@ -143,12 +140,12 @@ namespace foundation
+@@ -143,12 +140,12 @@
  
  void sleep(const std::uint32_t ms)
  {
@@ -467,7 +446,7 @@ index 6f255398c..6e7b6704a 100644
  
      DefaultWallclockTimer timer;
  
-@@ -163,13 +160,13 @@ void sleep(const std::uint32_t ms, IAbortSwitch& abort_switch)
+@@ -163,13 +160,13 @@
          if (elapsed_ms >= ms)
              break;
  
@@ -483,10 +462,9 @@ index 6f255398c..6e7b6704a 100644
  }
  
  
-diff --git a/src/appleseed/foundation/platform/thread.h b/src/appleseed/foundation/platform/thread.h
-index 5c048db92..6540e2183 100644
---- a/src/appleseed/foundation/platform/thread.h
-+++ b/src/appleseed/foundation/platform/thread.h
+diff -Naur appleseed/src/appleseed/foundation/platform/thread.h APPLESEED_BLD/src/appleseed/foundation/platform/thread.h
+--- appleseed/src/appleseed/foundation/platform/thread.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/thread.h	1970-01-01 00:00:00.000000000 +0000
 @@ -35,15 +35,10 @@
  // appleseed.main headers.
  #include "main/dllsymbol.h"
@@ -504,7 +482,7 @@ index 5c048db92..6540e2183 100644
  
  // Forward declarations.
  namespace foundation    { class IAbortSwitch; }
-@@ -89,11 +84,11 @@ class Spinlock
+@@ -89,11 +84,11 @@
          explicit ScopedLock(Spinlock& spinlock);
  
        private:
@@ -518,7 +496,7 @@ index 5c048db92..6540e2183 100644
  };
  
  
-@@ -156,7 +151,7 @@ class ReadWriteLock
+@@ -156,7 +151,7 @@
  
    private:
      std::atomic<std::uint32_t>      m_readers;
@@ -527,7 +505,7 @@ index 5c048db92..6540e2183 100644
  };
  
  
-@@ -297,27 +292,28 @@ class APPLESEED_DLLSYMBOL ThreadFlag
+@@ -297,27 +292,28 @@
  // Spinlock class implementation.
  //
  
@@ -561,10 +539,9 @@ index 5c048db92..6540e2183 100644
  {
  }
  
-diff --git a/src/appleseed/foundation/utility/job/jobmanager.cpp b/src/appleseed/foundation/utility/job/jobmanager.cpp
-index ba66857b3..2a816423d 100644
---- a/src/appleseed/foundation/utility/job/jobmanager.cpp
-+++ b/src/appleseed/foundation/utility/job/jobmanager.cpp
+diff -Naur appleseed/src/appleseed/foundation/utility/job/jobmanager.cpp APPLESEED_BLD/src/appleseed/foundation/utility/job/jobmanager.cpp
+--- appleseed/src/appleseed/foundation/utility/job/jobmanager.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/job/jobmanager.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -40,8 +40,6 @@
  #include <cassert>
  #include <vector>
@@ -574,10 +551,9 @@ index ba66857b3..2a816423d 100644
  namespace foundation
  {
  
-diff --git a/src/appleseed/foundation/utility/job/jobqueue.cpp b/src/appleseed/foundation/utility/job/jobqueue.cpp
-index 9de782d21..cb67a19eb 100644
---- a/src/appleseed/foundation/utility/job/jobqueue.cpp
-+++ b/src/appleseed/foundation/utility/job/jobqueue.cpp
+diff -Naur appleseed/src/appleseed/foundation/utility/job/jobqueue.cpp APPLESEED_BLD/src/appleseed/foundation/utility/job/jobqueue.cpp
+--- appleseed/src/appleseed/foundation/utility/job/jobqueue.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/job/jobqueue.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -37,11 +37,10 @@
  #include "foundation/utility/job/abortswitch.h"
  #include "foundation/utility/job/ijob.h"
@@ -592,7 +568,7 @@ index 9de782d21..cb67a19eb 100644
  
  namespace foundation
  {
-@@ -52,8 +51,8 @@ namespace foundation
+@@ -52,8 +51,8 @@
  
  struct JobQueue::Impl
  {
@@ -603,7 +579,7 @@ index 9de782d21..cb67a19eb 100644
      JobList                         m_scheduled_jobs;
      JobList                         m_running_jobs;
  
-@@ -89,7 +88,7 @@ JobQueue::~JobQueue()
+@@ -89,7 +88,7 @@
  
  void JobQueue::clear_scheduled_jobs()
  {
@@ -612,7 +588,7 @@ index 9de782d21..cb67a19eb 100644
  
      impl->delete_jobs(impl->m_scheduled_jobs);
  
-@@ -99,42 +98,42 @@ void JobQueue::clear_scheduled_jobs()
+@@ -99,42 +98,42 @@
  
  bool JobQueue::has_scheduled_jobs() const
  {
@@ -661,7 +637,7 @@ index 9de782d21..cb67a19eb 100644
  
      return impl->m_scheduled_jobs.size() + impl->m_running_jobs.size();
  }
-@@ -143,7 +142,7 @@ void JobQueue::schedule(IJob* job, const bool transfer_ownership)
+@@ -143,7 +142,7 @@
  {
      assert(job);
  
@@ -670,7 +646,7 @@ index 9de782d21..cb67a19eb 100644
  
      impl->m_scheduled_jobs.push_back(JobInfo(job, transfer_ownership));
  
-@@ -153,7 +152,7 @@ void JobQueue::schedule(IJob* job, const bool transfer_ownership)
+@@ -153,7 +152,7 @@
  
  void JobQueue::wait_until_completion()
  {
@@ -679,7 +655,7 @@ index 9de782d21..cb67a19eb 100644
  
      // Wait until there is no more scheduled or running jobs.
      while (!impl->m_scheduled_jobs.empty() || !impl->m_running_jobs.empty())
-@@ -162,7 +161,7 @@ void JobQueue::wait_until_completion()
+@@ -162,7 +161,7 @@
  
  JobQueue::RunningJobInfo JobQueue::acquire_scheduled_job()
  {
@@ -688,7 +664,7 @@ index 9de782d21..cb67a19eb 100644
  
      return acquire_scheduled_job_no_lock();
  }
-@@ -186,7 +185,7 @@ JobQueue::RunningJobInfo JobQueue::acquire_scheduled_job_no_lock()
+@@ -186,7 +185,7 @@
  
  JobQueue::RunningJobInfo JobQueue::wait_for_scheduled_job(AbortSwitch& abort_switch)
  {
@@ -697,7 +673,7 @@ index 9de782d21..cb67a19eb 100644
  
      // Wait for a scheduled job to be available.
      while (!abort_switch.is_aborted() && impl->m_scheduled_jobs.empty())    // order matters
-@@ -197,7 +196,7 @@ JobQueue::RunningJobInfo JobQueue::wait_for_scheduled_job(AbortSwitch& abort_swi
+@@ -197,7 +196,7 @@
  
  void JobQueue::retire_running_job(const RunningJobInfo& running_job_info)
  {
@@ -706,7 +682,7 @@ index 9de782d21..cb67a19eb 100644
  
      // Remove the job from the running list.
      impl->m_running_jobs.erase(running_job_info.second);
-@@ -212,7 +211,7 @@ void JobQueue::retire_running_job(const RunningJobInfo& running_job_info)
+@@ -212,7 +211,7 @@
  
  void JobQueue::signal_event()
  {
@@ -715,23 +691,23 @@ index 9de782d21..cb67a19eb 100644
  
      impl->m_event.notify_all();
  }
-diff --git a/src/appleseed/foundation/utility/job/workerthread.cpp b/src/appleseed/foundation/utility/job/workerthread.cpp
-index 9fb9da839..bfefcdd42 100644
---- a/src/appleseed/foundation/utility/job/workerthread.cpp
-+++ b/src/appleseed/foundation/utility/job/workerthread.cpp
-@@ -43,9 +43,9 @@
+diff -Naur appleseed/src/appleseed/foundation/utility/job/workerthread.cpp APPLESEED_BLD/src/appleseed/foundation/utility/job/workerthread.cpp
+--- appleseed/src/appleseed/foundation/utility/job/workerthread.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/job/workerthread.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -43,10 +43,10 @@
  
  // Standard headers.
  #include <exception>
 +#include <mutex>
  #include <new>
--
--using namespace boost;
 +#include <thread>
  
+-using namespace boost;
+-
  namespace foundation
  {
-@@ -83,7 +83,7 @@ void WorkerThread::start()
+ 
+@@ -83,7 +83,7 @@
      assert(!m_abort_switch.is_aborted());
  
      // Start the thread.
@@ -740,7 +716,7 @@ index 9fb9da839..bfefcdd42 100644
  }
  
  void WorkerThread::stop()
-@@ -92,12 +92,16 @@ void WorkerThread::stop()
+@@ -92,12 +92,16 @@
      if (!m_thread)
          return;
  
@@ -761,7 +737,7 @@ index 9fb9da839..bfefcdd42 100644
      m_job_queue.signal_event();
      m_thread->join();
      m_abort_switch.clear();
-@@ -113,7 +117,7 @@ void WorkerThread::pause()
+@@ -113,7 +117,7 @@
      if (!m_thread)
          return;
  
@@ -770,7 +746,7 @@ index 9fb9da839..bfefcdd42 100644
      m_pause_flag.set();
  }
  
-@@ -123,7 +127,7 @@ void WorkerThread::resume()
+@@ -123,7 +127,7 @@
      if (!m_thread)
          return;
  
@@ -779,7 +755,7 @@ index 9fb9da839..bfefcdd42 100644
      m_pause_flag.clear();
      m_pause_event.notify_all();
  }
-@@ -163,7 +167,7 @@ void WorkerThread::run()
+@@ -163,7 +167,7 @@
          if (m_pause_flag.is_set())
          {
              // Wait until the resume event.
@@ -788,10 +764,9 @@ index 9fb9da839..bfefcdd42 100644
              while (m_pause_flag.is_set())
                  m_pause_event.wait(lock);
          }
-diff --git a/src/appleseed/foundation/utility/job/workerthread.h b/src/appleseed/foundation/utility/job/workerthread.h
-index 9deec5e54..68a2256d9 100644
---- a/src/appleseed/foundation/utility/job/workerthread.h
-+++ b/src/appleseed/foundation/utility/job/workerthread.h
+diff -Naur appleseed/src/appleseed/foundation/utility/job/workerthread.h APPLESEED_BLD/src/appleseed/foundation/utility/job/workerthread.h
+--- appleseed/src/appleseed/foundation/utility/job/workerthread.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/job/workerthread.h	1970-01-01 00:00:00.000000000 +0000
 @@ -34,14 +34,13 @@
  #include "foundation/platform/thread.h"
  #include "foundation/utility/job/abortswitch.h"
@@ -810,7 +785,7 @@ index 9deec5e54..68a2256d9 100644
  namespace foundation    { class IJob; }
  namespace foundation    { class JobQueue; }
  namespace foundation    { class Logger; }
-@@ -81,7 +80,7 @@ class WorkerThread
+@@ -81,7 +80,7 @@
  
    private:
      // A helper class that encapsulates the run() method of the worker thread
@@ -819,7 +794,7 @@ index 9deec5e54..68a2256d9 100644
      struct ThreadFunc
      {
          WorkerThread&   m_parent;
-@@ -105,11 +104,11 @@ class WorkerThread
+@@ -105,11 +104,11 @@
      AbortSwitch                     m_abort_switch;
  
      ThreadFunc                      m_thread_func;
@@ -834,10 +809,9 @@ index 9deec5e54..68a2256d9 100644
  
      void set_thread_name();
  
-diff --git a/src/appleseed/foundation/utility/lazy.h b/src/appleseed/foundation/utility/lazy.h
-index c7a1928d5..03ab44912 100644
---- a/src/appleseed/foundation/utility/lazy.h
-+++ b/src/appleseed/foundation/utility/lazy.h
+diff -Naur appleseed/src/appleseed/foundation/utility/lazy.h APPLESEED_BLD/src/appleseed/foundation/utility/lazy.h
+--- appleseed/src/appleseed/foundation/utility/lazy.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/lazy.h	1970-01-01 00:00:00.000000000 +0000
 @@ -42,6 +42,7 @@
  #include <cstddef>
  #include <cstdint>
@@ -846,7 +820,7 @@ index c7a1928d5..03ab44912 100644
  
  namespace foundation
  {
-@@ -101,7 +102,7 @@ class Lazy
+@@ -101,7 +102,7 @@
    private:
      template <typename> friend class Access;
  
@@ -855,7 +829,7 @@ index c7a1928d5..03ab44912 100644
      int             m_reference_count;
  
      FactoryType*    m_factory;
-@@ -365,7 +366,7 @@ Lazy<Object>::Lazy(ObjectType* source_object)
+@@ -365,7 +366,7 @@
  template <typename Object>
  Lazy<Object>::~Lazy()
  {
@@ -864,7 +838,7 @@ index c7a1928d5..03ab44912 100644
      assert(m_reference_count == 0);
  
      delete m_factory;
-@@ -424,7 +425,7 @@ void Access<Object>::reset(LazyType* lazy)
+@@ -424,7 +425,7 @@
      // Release access to the current lazy object, if any.
      if (m_lazy)
      {
@@ -873,7 +847,7 @@ index c7a1928d5..03ab44912 100644
          assert(m_lazy->m_reference_count > 0);
          --m_lazy->m_reference_count;
      }
-@@ -434,7 +435,7 @@ void Access<Object>::reset(LazyType* lazy)
+@@ -434,7 +435,7 @@
      // Acquire access to the new lazy object.
      if (m_lazy)
      {
@@ -882,10 +856,9 @@ index c7a1928d5..03ab44912 100644
          ++m_lazy->m_reference_count;
  
          // Create the object if it doesn't exist yet.
-diff --git a/src/appleseed/foundation/utility/xercesc.cpp b/src/appleseed/foundation/utility/xercesc.cpp
-index 84657bccb..301c3e80a 100644
---- a/src/appleseed/foundation/utility/xercesc.cpp
-+++ b/src/appleseed/foundation/utility/xercesc.cpp
+diff -Naur appleseed/src/appleseed/foundation/utility/xercesc.cpp APPLESEED_BLD/src/appleseed/foundation/utility/xercesc.cpp
+--- appleseed/src/appleseed/foundation/utility/xercesc.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/xercesc.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -38,6 +38,9 @@
  #include "xercesc/util/XMLException.hpp"
  #include "xercesc/util/XMLExceptMsgs.hpp"
@@ -896,7 +869,7 @@ index 84657bccb..301c3e80a 100644
  using namespace xercesc;
  
  namespace foundation
-@@ -47,11 +50,11 @@ namespace foundation
+@@ -47,11 +50,11 @@
  // XercesCManager class implementation.
  //
  
@@ -910,7 +883,7 @@ index 84657bccb..301c3e80a 100644
  
      try
      {
-@@ -67,7 +70,7 @@ bool XercesCManager::initialize()
+@@ -67,7 +70,7 @@
  
  bool XercesCManager::initialize(Logger& logger)
  {
@@ -919,7 +892,7 @@ index 84657bccb..301c3e80a 100644
  
      try
      {
-@@ -88,7 +91,7 @@ bool XercesCManager::initialize(Logger& logger)
+@@ -88,7 +91,7 @@
  
  void XercesCManager::terminate()
  {
@@ -928,10 +901,9 @@ index 84657bccb..301c3e80a 100644
  
      XMLPlatformUtils::Terminate();
  }
-diff --git a/src/appleseed/foundation/utility/xercesc.h b/src/appleseed/foundation/utility/xercesc.h
-index 9c14c2e88..d1422bd79 100644
---- a/src/appleseed/foundation/utility/xercesc.h
-+++ b/src/appleseed/foundation/utility/xercesc.h
+diff -Naur appleseed/src/appleseed/foundation/utility/xercesc.h APPLESEED_BLD/src/appleseed/foundation/utility/xercesc.h
+--- appleseed/src/appleseed/foundation/utility/xercesc.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/xercesc.h	1970-01-01 00:00:00.000000000 +0000
 @@ -47,6 +47,7 @@
  #include <cstddef>
  #include <map>
@@ -940,7 +912,7 @@ index 9c14c2e88..d1422bd79 100644
  #include <stack>
  #include <string>
  
-@@ -76,7 +77,7 @@ class XercesCManager
+@@ -76,7 +77,7 @@
      static void terminate();
  
    private:
@@ -949,10 +921,9 @@ index 9c14c2e88..d1422bd79 100644
  };
  
  
-diff --git a/src/appleseed/main/allocator.cpp b/src/appleseed/main/allocator.cpp
-index 292369ec9..55a5539cc 100644
---- a/src/appleseed/main/allocator.cpp
-+++ b/src/appleseed/main/allocator.cpp
+diff -Naur appleseed/src/appleseed/main/allocator.cpp APPLESEED_BLD/src/appleseed/main/allocator.cpp
+--- appleseed/src/appleseed/main/allocator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/main/allocator.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -50,9 +50,6 @@
  #include "foundation/string/string.h"
  #include "foundation/utility/foreach.h"
@@ -979,7 +950,7 @@ index 292369ec9..55a5539cc 100644
  using namespace foundation;
  
  
-@@ -121,7 +118,7 @@ namespace
+@@ -121,7 +118,7 @@
  namespace
  {
      // This mutex is used to serialize access to all static members of this file.
@@ -988,7 +959,7 @@ index 292369ec9..55a5539cc 100644
  
      // Indicate whether memory tracking is currently enabled.
      bool g_tracking_enabled = false;
-@@ -378,7 +375,7 @@ void log_allocation(const void* unaligned_ptr, const void* aligned_ptr, const st
+@@ -378,7 +375,7 @@
      if (!g_tracking_enabled)
          return;
  
@@ -997,7 +968,7 @@ index 292369ec9..55a5539cc 100644
  
      g_tracking_enabled = false;
  
-@@ -403,7 +400,7 @@ void log_allocation_failure(const std::size_t size)
+@@ -403,7 +400,7 @@
      if (!g_tracking_enabled)
          return;
  
@@ -1006,7 +977,7 @@ index 292369ec9..55a5539cc 100644
  
      g_tracking_enabled = false;
  
-@@ -418,7 +415,7 @@ void log_deallocation(const void* unaligned_ptr, const void* aligned_ptr)
+@@ -418,7 +415,7 @@
      if (!g_tracking_enabled)
          return;
  
@@ -1015,7 +986,7 @@ index 292369ec9..55a5539cc 100644
  
      g_tracking_enabled = false;
  
-@@ -441,7 +438,7 @@ void log_deallocation(const void* unaligned_ptr, const void* aligned_ptr)
+@@ -441,7 +438,7 @@
  
  void start_memory_tracking()
  {
@@ -1024,7 +995,7 @@ index 292369ec9..55a5539cc 100644
  
      if (g_tracking_enabled)
          return;
-@@ -464,7 +461,7 @@ void start_memory_tracking()
+@@ -464,7 +461,7 @@
  
  void stop_memory_tracking()
  {
@@ -1033,10 +1004,9 @@ index 292369ec9..55a5539cc 100644
  
      if (!g_tracking_enabled)
          return;
-diff --git a/src/appleseed/renderer/kernel/lighting/lightpathrecorder.cpp b/src/appleseed/renderer/kernel/lighting/lightpathrecorder.cpp
-index 864ed3551..2257c9081 100644
---- a/src/appleseed/renderer/kernel/lighting/lightpathrecorder.cpp
-+++ b/src/appleseed/renderer/kernel/lighting/lightpathrecorder.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lightpathrecorder.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightpathrecorder.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/lightpathrecorder.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightpathrecorder.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -52,6 +52,7 @@
  #include <cstdint>
  #include <map>
@@ -1045,7 +1015,7 @@ index 864ed3551..2257c9081 100644
  #include <string>
  #include <utility>
  #include <vector>
-@@ -67,7 +68,7 @@ struct LightPathRecorder::Impl
+@@ -67,7 +68,7 @@
  {
      const Project&                                m_project;
  
@@ -1054,7 +1024,7 @@ index 864ed3551..2257c9081 100644
      std::vector<std::unique_ptr<LightPathStream>> m_streams;
  
      // One entry in the index = one pixel in the frame.
-@@ -125,7 +126,7 @@ size_t LightPathRecorder::get_vertex_count() const
+@@ -125,7 +126,7 @@
  
  LightPathStream* LightPathRecorder::create_stream()
  {
@@ -1063,10 +1033,9 @@ index 864ed3551..2257c9081 100644
  
      auto stream = new LightPathStream(impl->m_project);
      impl->m_streams.push_back(std::unique_ptr<LightPathStream>(stream));
-diff --git a/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.cpp b/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.cpp
-index a65704178..5ced77ae0 100644
---- a/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.cpp
-+++ b/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -33,6 +33,9 @@
  // appleseed.foundation headers.
  #include "foundation/memory/memory.h"
@@ -1077,7 +1046,7 @@ index a65704178..5ced77ae0 100644
  using namespace foundation;
  
  namespace renderer
-@@ -111,7 +114,7 @@ void SPPMPhotonVector::push_back(
+@@ -111,7 +114,7 @@
  
  void SPPMPhotonVector::append(const SPPMPhotonVector& rhs)
  {
@@ -1086,10 +1055,9 @@ index a65704178..5ced77ae0 100644
      m_positions.insert(m_positions.end(), rhs.m_positions.begin(), rhs.m_positions.end());
      m_mono_photons.insert(m_mono_photons.end(), rhs.m_mono_photons.begin(), rhs.m_mono_photons.end());
      m_poly_photons.insert(m_poly_photons.end(), rhs.m_poly_photons.begin(), rhs.m_poly_photons.end());
-diff --git a/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.h b/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.h
-index ae2c19881..247b1be88 100644
---- a/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.h
-+++ b/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphoton.h	1970-01-01 00:00:00.000000000 +0000
 @@ -39,6 +39,7 @@
  // Standard headers.
  #include <cstddef>
@@ -1098,7 +1066,7 @@ index ae2c19881..247b1be88 100644
  #include <vector>
  
  namespace renderer
-@@ -86,7 +87,7 @@ class SPPMPhotonVector
+@@ -86,7 +87,7 @@
      std::vector<foundation::Vector3f>   m_positions;
      std::vector<SPPMMonoPhoton>         m_mono_photons;
      std::vector<SPPMPolyPhoton>         m_poly_photons;
@@ -1107,10 +1075,9 @@ index ae2c19881..247b1be88 100644
  
      bool empty() const;
      size_t size() const;
-diff --git a/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp b/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp
-index 49b02ce00..abd1280a1 100644
---- a/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp
-+++ b/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -62,12 +62,12 @@
  #include <cstdint>
  #include <memory>
@@ -1125,7 +1092,7 @@ index 49b02ce00..abd1280a1 100644
  using namespace foundation;
  
  namespace renderer
-@@ -207,7 +207,7 @@ namespace
+@@ -207,7 +207,7 @@
                      m_abort_switch,
                      m_is_rendering));
              ThreadFunctionWrapper<PassManagerFunc> wrapper(m_pass_manager_func.get());
@@ -1134,7 +1101,7 @@ index 49b02ce00..abd1280a1 100644
          }
  
          void stop_rendering() override
-@@ -491,7 +491,7 @@ namespace
+@@ -491,7 +491,7 @@
  
          bool                                    m_is_rendering;
          std::unique_ptr<PassManagerFunc>        m_pass_manager_func;
@@ -1143,10 +1110,9 @@ index 49b02ce00..abd1280a1 100644
  
          void print_tile_renderers_stats() const
          {
-diff --git a/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.cpp b/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.cpp
-index 8ffefa245..d3afa3722 100644
---- a/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.cpp
-+++ b/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -42,8 +42,10 @@
  #include "foundation/image/tile.h"
  #include "foundation/utility/job/iabortswitch.h"
@@ -1160,7 +1126,7 @@ index 8ffefa245..d3afa3722 100644
  
  using namespace foundation;
  
-@@ -60,7 +62,7 @@ GlobalSampleAccumulationBuffer::GlobalSampleAccumulationBuffer(
+@@ -60,7 +62,7 @@
  void GlobalSampleAccumulationBuffer::clear()
  {
      // Request exclusive access.
@@ -1169,7 +1135,7 @@ index 8ffefa245..d3afa3722 100644
  
      m_sample_count = 0;
  
-@@ -73,12 +75,12 @@ void GlobalSampleAccumulationBuffer::store_samples(
+@@ -73,12 +75,12 @@
      IAbortSwitch&   abort_switch)
  {
      // Request non-exclusive access.
@@ -1184,7 +1150,7 @@ index 8ffefa245..d3afa3722 100644
              break;
      }
  
-@@ -99,12 +101,12 @@ void GlobalSampleAccumulationBuffer::develop_to_frame(
+@@ -99,12 +101,12 @@
      IAbortSwitch&   abort_switch)
  {
      // Request exclusive access.
@@ -1199,10 +1165,9 @@ index 8ffefa245..d3afa3722 100644
              break;
      }
  
-diff --git a/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.h b/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.h
-index 791301770..bedb6c7fe 100644
---- a/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.h
-+++ b/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/globalsampleaccumulationbuffer.h	1970-01-01 00:00:00.000000000 +0000
 @@ -40,6 +40,7 @@
  // Standard headers.
  #include <cstddef>
@@ -1211,7 +1176,7 @@ index 791301770..bedb6c7fe 100644
  
  // Forward declarations.
  namespace foundation    { class IAbortSwitch; }
-@@ -77,7 +78,7 @@ class GlobalSampleAccumulationBuffer
+@@ -77,7 +78,7 @@
      void increment_sample_count(const std::uint64_t delta_sample_count);
  
    private:
@@ -1220,10 +1185,9 @@ index 791301770..bedb6c7fe 100644
      foundation::AccumulatorTile     m_fb;
  
      void develop_to_tile(
-diff --git a/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp b/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp
-index 28e8e8171..ea6e9834d 100644
---- a/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp
-+++ b/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/progressive/progressiveframerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -74,6 +74,7 @@
  #include <limits>
  #include <memory>
@@ -1232,7 +1196,7 @@ index 28e8e8171..ea6e9834d 100644
  #include <vector>
  
  using namespace foundation;
-@@ -611,7 +612,7 @@ namespace
+@@ -611,7 +612,7 @@
                      m_ref_image_avg_lum,
                      m_abort_switch));
              m_statistics_thread.reset(
@@ -1241,7 +1205,7 @@ index 28e8e8171..ea6e9834d 100644
                      ThreadFunctionWrapper<StatisticsFunc>(m_statistics_func.get())));
  
              // Create and start the display thread.
-@@ -627,7 +628,7 @@ namespace
+@@ -627,7 +628,7 @@
                          m_params.m_max_fps,
                          m_display_thread_abort_switch));
                  m_display_thread.reset(
@@ -1250,7 +1214,7 @@ index 28e8e8171..ea6e9834d 100644
                          ThreadFunctionWrapper<DisplayFunc>(m_display_func.get())));
              }
  
-@@ -766,12 +767,12 @@ namespace
+@@ -766,12 +767,12 @@
          auto_release_ptr<ITileCallback>             m_tile_callback;
  
          std::unique_ptr<DisplayFunc>                m_display_func;
@@ -1265,10 +1229,9 @@ index 28e8e8171..ea6e9834d 100644
  
          TimedRendererController                     m_renderer_controller;
  
-diff --git a/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.cpp b/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.cpp
-index ef3814276..5cd002481 100644
---- a/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.cpp
-+++ b/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -36,6 +36,9 @@
  // appleseed.foundation headers.
  #include "foundation/utility/otherwise.h"
@@ -1279,7 +1242,7 @@ index ef3814276..5cd002481 100644
  namespace renderer
  {
  
-@@ -111,7 +114,7 @@ void SerialRendererController::add_on_tiled_frame_begin_callback(
+@@ -111,7 +114,7 @@
      callback.m_type = PendingTileCallback::OnTiledFrameBegin;
      callback.m_frame = frame;
  
@@ -1288,7 +1251,7 @@ index ef3814276..5cd002481 100644
      m_pending_callbacks.push_back(callback);
  }
  
-@@ -122,7 +125,7 @@ void SerialRendererController::add_on_tiled_frame_end_callback(
+@@ -122,7 +125,7 @@
      callback.m_type = PendingTileCallback::OnTiledFrameEnd;
      callback.m_frame = frame;
  
@@ -1297,7 +1260,7 @@ index ef3814276..5cd002481 100644
      m_pending_callbacks.push_back(callback);
  }
  
-@@ -141,7 +144,7 @@ void SerialRendererController::add_on_tile_begin_callback(
+@@ -141,7 +144,7 @@
      callback.m_thread_index = thread_index;
      callback.m_thread_count = thread_count;
  
@@ -1306,7 +1269,7 @@ index ef3814276..5cd002481 100644
      m_pending_callbacks.push_back(callback);
  }
  
-@@ -156,7 +159,7 @@ void SerialRendererController::add_on_tile_end_callback(
+@@ -156,7 +159,7 @@
      callback.m_tile_x = tile_x;
      callback.m_tile_y = tile_y;
  
@@ -1315,7 +1278,7 @@ index ef3814276..5cd002481 100644
      m_pending_callbacks.push_back(callback);
  }
  
-@@ -175,13 +178,13 @@ void SerialRendererController::add_on_progressive_frame_update_callback(
+@@ -175,13 +178,13 @@
      callback.m_samples_per_pixel = samples_per_pixel;
      callback.m_samples_per_second = samples_per_second;
  
@@ -1331,10 +1294,9 @@ index ef3814276..5cd002481 100644
  
      while (!m_pending_callbacks.empty())
      {
-diff --git a/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.h b/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.h
-index f8fe2dcff..3782ab91e 100644
---- a/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.h
-+++ b/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/serialrenderercontroller.h	1970-01-01 00:00:00.000000000 +0000
 @@ -39,6 +39,7 @@
  #include <cstddef>
  #include <cstdint>
@@ -1343,7 +1305,7 @@ index f8fe2dcff..3782ab91e 100644
  
  // Forward declarations.
  namespace renderer  { class Frame; }
-@@ -125,7 +126,7 @@ class SerialRendererController
+@@ -125,7 +126,7 @@
  
      IRendererController*                m_controller;
      ITileCallback*                      m_tile_callback;
@@ -1352,10 +1314,9 @@ index f8fe2dcff..3782ab91e 100644
      std::deque<PendingTileCallback>     m_pending_callbacks;
  
      void exec_callback(const PendingTileCallback& cb);
-diff --git a/src/appleseed/renderer/kernel/texturing/texturestore.h b/src/appleseed/renderer/kernel/texturing/texturestore.h
-index 2e25afad2..aa8660c26 100644
---- a/src/appleseed/renderer/kernel/texturing/texturestore.h
-+++ b/src/appleseed/renderer/kernel/texturing/texturestore.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/texturing/texturestore.h APPLESEED_BLD/src/appleseed/renderer/kernel/texturing/texturestore.h
+--- appleseed/src/appleseed/renderer/kernel/texturing/texturestore.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/texturing/texturestore.h	1970-01-01 00:00:00.000000000 +0000
 @@ -46,6 +46,7 @@
  #include <cstddef>
  #include <cstdint>
@@ -1364,7 +1325,7 @@ index 2e25afad2..aa8660c26 100644
  
  // Forward declarations.
  namespace foundation    { class Dictionary; }
-@@ -183,7 +184,7 @@ class TextureStore
+@@ -183,7 +184,7 @@
          TileSwapper
      > TileCache;
  
@@ -1373,7 +1334,7 @@ index 2e25afad2..aa8660c26 100644
      TileKeyHasher           m_tile_key_hasher;
      TileSwapper             m_tile_swapper;
      TileCache               m_tile_cache;
-@@ -196,7 +197,7 @@ class TextureStore
+@@ -196,7 +197,7 @@
  
  inline TextureStore::TileRecord& TextureStore::acquire(const TileKey& key)
  {
@@ -1382,10 +1343,9 @@ index 2e25afad2..aa8660c26 100644
  
      TileRecord& record = m_tile_cache.get(key);
      foundation::atomic_inc(&record.m_owners);
-diff --git a/src/appleseed/renderer/modeling/texture/disktexture2d.cpp b/src/appleseed/renderer/modeling/texture/disktexture2d.cpp
-index f441437f8..9c81f3324 100644
---- a/src/appleseed/renderer/modeling/texture/disktexture2d.cpp
-+++ b/src/appleseed/renderer/modeling/texture/disktexture2d.cpp
+diff -Naur appleseed/src/appleseed/renderer/modeling/texture/disktexture2d.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/texture/disktexture2d.cpp
+--- appleseed/src/appleseed/renderer/modeling/texture/disktexture2d.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/texture/disktexture2d.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -55,6 +55,7 @@
  
  // Standard headers.
@@ -1394,7 +1354,7 @@ index f441437f8..9c81f3324 100644
  #include <string>
  
  using namespace foundation;
-@@ -145,7 +146,7 @@ namespace
+@@ -145,7 +146,7 @@
  
          const CanvasProperties& properties() override
          {
@@ -1403,7 +1363,7 @@ index f441437f8..9c81f3324 100644
              open_image_file();
              return m_props;
          }
-@@ -161,7 +162,7 @@ namespace
+@@ -161,7 +162,7 @@
              const size_t            tile_x,
              const size_t            tile_y) override
          {
@@ -1412,7 +1372,7 @@ index f441437f8..9c81f3324 100644
              open_image_file();
              return TilePtr::make_owning(m_reader.read_tile(tile_x, tile_y));
          }
-@@ -170,7 +171,7 @@ namespace
+@@ -170,7 +171,7 @@
          std::string                         m_filepath;
          ColorSpace                          m_color_space;
  
@@ -1421,10 +1381,9 @@ index f441437f8..9c81f3324 100644
          GenericProgressiveImageFileReader   m_reader;
          CanvasProperties                    m_props;
  
-diff --git a/src/appleseed/renderer/utility/pluginstore.cpp b/src/appleseed/renderer/utility/pluginstore.cpp
-index 0d153537f..85376edd9 100644
---- a/src/appleseed/renderer/utility/pluginstore.cpp
-+++ b/src/appleseed/renderer/utility/pluginstore.cpp
+diff -Naur appleseed/src/appleseed/renderer/utility/pluginstore.cpp APPLESEED_BLD/src/appleseed/renderer/utility/pluginstore.cpp
+--- appleseed/src/appleseed/renderer/utility/pluginstore.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/utility/pluginstore.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -38,16 +38,13 @@
  #include "foundation/platform/sharedlibrary.h"
  #include "foundation/utility/searchpaths.h"
@@ -1443,7 +1402,7 @@ index 0d153537f..85376edd9 100644
  #include <string>
  
  using namespace foundation;
-@@ -84,7 +81,7 @@ struct PluginStore::Impl
+@@ -84,7 +81,7 @@
          }
      };
  
@@ -1452,7 +1411,7 @@ index 0d153537f..85376edd9 100644
      PluginHandlerMap    m_plugin_handlers;
      PluginMap           m_plugin_map;
      PluginInverseMap    m_plugin_inverse_map;
-@@ -203,14 +200,14 @@ void PluginStore::register_plugin_handler(
+@@ -203,14 +200,14 @@
      const char*                 entry_point_name,
      const PluginHandlerType&    plugin_handler)
  {
@@ -1469,7 +1428,7 @@ index 0d153537f..85376edd9 100644
  
      RENDERER_LOG_INFO("unloading all plugins...");
  
-@@ -220,13 +217,13 @@ void PluginStore::unload_all_plugins()
+@@ -220,13 +217,13 @@
  
  Plugin* PluginStore::load_plugin(const char* filepath)
  {
@@ -1485,7 +1444,7 @@ index 0d153537f..85376edd9 100644
  
      const auto plugin_map_inverse_it = impl->m_plugin_inverse_map.find(plugin);
      assert(plugin_map_inverse_it != impl->m_plugin_inverse_map.end());
-@@ -237,7 +234,7 @@ void PluginStore::unload_plugin(Plugin* plugin)
+@@ -237,7 +234,7 @@
  
  void PluginStore::load_all_plugins_from_paths(const SearchPaths& search_paths)
  {
@@ -1494,7 +1453,7 @@ index 0d153537f..85376edd9 100644
  
      for (size_t i = 0, e = search_paths.get_path_count(); i < e; ++i)
      {
-@@ -254,7 +251,7 @@ void PluginStore::load_all_plugins_from_paths(const SearchPaths& search_paths)
+@@ -254,7 +251,7 @@
  
  void PluginStore::load_all_plugins_from_path(const char* path)
  {

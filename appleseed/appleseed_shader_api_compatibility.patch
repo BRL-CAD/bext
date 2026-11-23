@@ -1,15 +1,6 @@
-Subject: [PATCH 04/50] Shader api compatibility
-
-Carry the dependency-compatible baseline over the actual upstream
-source. This patch contains one reviewable part of the combined
-historical changes; full original messages are retained in HISTORY.
-
-Original-Commits: See the compatibility-baseline entries in HISTORY.
-
-diff --git a/src/appleseed.shaders/CMakeLists.txt b/src/appleseed.shaders/CMakeLists.txt
-index d3d6e1e87..2f900f092 100644
---- a/src/appleseed.shaders/CMakeLists.txt
-+++ b/src/appleseed.shaders/CMakeLists.txt
+diff -Naur appleseed/src/appleseed.shaders/CMakeLists.txt APPLESEED_BLD/src/appleseed.shaders/CMakeLists.txt
+--- appleseed/src/appleseed.shaders/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
 @@ -31,18 +31,17 @@
  # Auto-generate OSL extensions header file.
  #--------------------------------------------------------------------------------------------------
@@ -31,7 +22,7 @@ index d3d6e1e87..2f900f092 100644
      oslutil.h
      stdosl.h
  )
-@@ -349,24 +348,14 @@ add_custom_target (
+@@ -349,24 +348,14 @@
  set_target_properties (prepare_sandbox PROPERTIES FOLDER "Contents")
  set_target_progress_message (prepare_sandbox "Preparing sandbox...")
  
@@ -62,7 +53,7 @@ index d3d6e1e87..2f900f092 100644
  
  
  #--------------------------------------------------------------------------------------------------
-@@ -380,6 +369,19 @@ foreach (osl_header ${osl_headers})
+@@ -380,6 +369,19 @@
  endforeach ()
  
  # Compile OSL shaders into the sandbox.
@@ -82,7 +73,7 @@ index d3d6e1e87..2f900f092 100644
  foreach (osl_source ${osl_sources})
      # Build the .oso destination file name.
      get_filename_component (osl_source_we ${osl_source} NAME_WE)
-@@ -387,31 +389,33 @@ foreach (osl_source ${osl_sources})
+@@ -387,31 +389,33 @@
  
      # Build the sandbox destination directory.
      get_filename_component (osl_dir ${osl_source} PATH)
@@ -91,14 +82,14 @@ index d3d6e1e87..2f900f092 100644
 -        "src/" "${PROJECT_SOURCE_DIR}/sandbox/shaders/"
 -        oso_dir ${osl_dir}
 -    )
--
++    string (REGEX REPLACE "src/" "${PROJECT_SOURCE_DIR}/sandbox/shaders/" oso_dir ${osl_dir})
+ 
 -    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 -        set (OSLC_OPTIONS -O0 -DDEBUG)
 -    else ()
 -        set (OSLC_OPTIONS -O2 -DNDEBUG)
 -    endif ()
-+    string (REGEX REPLACE "src/" "${PROJECT_SOURCE_DIR}/sandbox/shaders/" oso_dir ${osl_dir})
- 
+-
      add_custom_command (
          OUTPUT ${oso_dir}/${oso_filename}
          COMMAND ${CMAKE_COMMAND} -E make_directory ${oso_dir}
@@ -129,7 +120,7 @@ index d3d6e1e87..2f900f092 100644
  foreach (osl_header ${osl_headers})
      get_filename_component (path ${osl_header} PATH)
      add_custom_command (
-@@ -425,7 +429,7 @@ foreach (osl_header ${osl_headers})
+@@ -425,7 +429,7 @@
  endforeach ()
  
  add_custom_target (
@@ -138,11 +129,10 @@ index d3d6e1e87..2f900f092 100644
      DEPENDS ${abs_osl_headers_sandbox}
      SOURCES ${abs_osl_headers_sources} ${osl_sources}
      VERBATIM
-diff --git a/src/appleseed.shaders/as_osl_extensions.h.in b/src/appleseed.shaders/as_osl_extensions.h.in
-index 1396598a8..971e5f3ce 100644
---- a/src/appleseed.shaders/as_osl_extensions.h.in
-+++ b/src/appleseed.shaders/as_osl_extensions.h.in
-@@ -50,6 +50,12 @@ float max(color C)  { return max(C[0], max(C[1], C[2])); }
+diff -Naur appleseed/src/appleseed.shaders/as_osl_extensions.h.in APPLESEED_BLD/src/appleseed.shaders/as_osl_extensions.h.in
+--- appleseed/src/appleseed.shaders/as_osl_extensions.h.in	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/as_osl_extensions.h.in	1970-01-01 00:00:00.000000000 +0000
+@@ -50,6 +50,12 @@
  float min(vector V) { return min(V[0], min(V[1], V[2])); }
  float max(vector V) { return max(V[0], max(V[1], V[2])); }
  
@@ -155,10 +145,9 @@ index 1396598a8..971e5f3ce 100644
  
  //
  // BSDF closures.
-diff --git a/src/appleseed.shaders/include/appleseed/color/as_chromatic_adaptation.h b/src/appleseed.shaders/include/appleseed/color/as_chromatic_adaptation.h
-index cbbb5600f..93e9af1e8 100644
---- a/src/appleseed.shaders/include/appleseed/color/as_chromatic_adaptation.h
-+++ b/src/appleseed.shaders/include/appleseed/color/as_chromatic_adaptation.h
+diff -Naur appleseed/src/appleseed.shaders/include/appleseed/color/as_chromatic_adaptation.h APPLESEED_BLD/src/appleseed.shaders/include/appleseed/color/as_chromatic_adaptation.h
+--- appleseed/src/appleseed.shaders/include/appleseed/color/as_chromatic_adaptation.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/include/appleseed/color/as_chromatic_adaptation.h	1970-01-01 00:00:00.000000000 +0000
 @@ -28,6 +28,7 @@
  
  #pragma once
@@ -167,10 +156,9 @@ index cbbb5600f..93e9af1e8 100644
  #include "appleseed/color/as_colorimetry.h"
  
  //
-diff --git a/src/appleseed.shaders/src/appleseed/as_blackbody.osl b/src/appleseed.shaders/src/appleseed/as_blackbody.osl
-index 857d09946..4be4da815 100644
---- a/src/appleseed.shaders/src/appleseed/as_blackbody.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_blackbody.osl
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_blackbody.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_blackbody.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_blackbody.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_blackbody.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,7 @@
  // THE SOFTWARE.
  //
@@ -179,36 +167,33 @@ index 857d09946..4be4da815 100644
  #include "appleseed/material/as_material_helpers.h"
  #include "appleseed/math/as_math_helpers.h"
  
-diff --git a/src/appleseed.shaders/src/appleseed/as_disney_material.osl b/src/appleseed.shaders/src/appleseed/as_disney_material.osl
-index 3c7ba622e..609e06858 100644
---- a/src/appleseed.shaders/src/appleseed/as_disney_material.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_disney_material.osl
-@@ -28,6 +28,8 @@
- 
- // Ref: http://blog.selfshadow.com/publications/s2012-shading-course/burley/s2012_pbs_disney_brdf_slides_v2.pdf
- 
-+#include "appleseed/as_osl_extensions.h"
-+
- shader as_disney_material
- [[
-     string help = "Disney material.",
-diff --git a/src/appleseed.shaders/src/appleseed/as_glass.osl b/src/appleseed.shaders/src/appleseed/as_glass.osl
-index 4c189b777..f7c0337cb 100644
---- a/src/appleseed.shaders/src/appleseed/as_glass.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_glass.osl
-@@ -26,6 +26,8 @@
- // THE SOFTWARE.
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_disney_material.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_disney_material.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_disney_material.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_disney_material.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -27,6 +27,8 @@
  //
  
-+#include "appleseed/as_osl_extensions.h"
+ // Ref: http://blog.selfshadow.com/publications/s2012-shading-course/burley/s2012_pbs_disney_brdf_slides_v2.pdf
 +
++#include "appleseed/as_osl_extensions.h"
+ 
+ shader as_disney_material
+ [[
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_glass.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_glass.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_glass.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_glass.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -25,6 +25,8 @@
+ // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ // THE SOFTWARE.
+ //
++
++#include "appleseed/as_osl_extensions.h"
+ 
  shader as_glass
  [[
-     string help = "Glass material with absorption.",
-diff --git a/src/appleseed.shaders/src/appleseed/as_hair_material.osl b/src/appleseed.shaders/src/appleseed/as_hair_material.osl
-index e2e714bc6..539de795c 100644
---- a/src/appleseed.shaders/src/appleseed/as_hair_material.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_hair_material.osl
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_hair_material.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_hair_material.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_hair_material.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_hair_material.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,8 @@
  // THE SOFTWARE.
  //
@@ -218,10 +203,9 @@ index e2e714bc6..539de795c 100644
  shader as_hair_material
  [[
      string help = "Hair Material.",
-diff --git a/src/appleseed.shaders/src/appleseed/as_matte.osl b/src/appleseed.shaders/src/appleseed/as_matte.osl
-index d3ed2a9e4..26e0f3602 100644
---- a/src/appleseed.shaders/src/appleseed/as_matte.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_matte.osl
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_matte.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_matte.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_matte.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_matte.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,8 @@
  // THE SOFTWARE.
  //
@@ -231,10 +215,9 @@ index d3ed2a9e4..26e0f3602 100644
  shader as_matte
  [[
      string help = "Matte Material",
-diff --git a/src/appleseed.shaders/src/appleseed/as_metal.osl b/src/appleseed.shaders/src/appleseed/as_metal.osl
-index 06a22c8d4..5cb7d735f 100644
---- a/src/appleseed.shaders/src/appleseed/as_metal.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_metal.osl
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_metal.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_metal.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_metal.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_metal.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,7 @@
  // THE SOFTWARE.
  //
@@ -243,23 +226,21 @@ index 06a22c8d4..5cb7d735f 100644
  #include "appleseed/math/as_math_helpers.h"
  
  shader as_metal
-diff --git a/src/appleseed.shaders/src/appleseed/as_plastic.osl b/src/appleseed.shaders/src/appleseed/as_plastic.osl
-index 194dfdc73..f5f31194a 100644
---- a/src/appleseed.shaders/src/appleseed/as_plastic.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_plastic.osl
-@@ -26,6 +26,8 @@
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_plastic.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_plastic.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_plastic.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_plastic.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -25,6 +25,8 @@
+ // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  // THE SOFTWARE.
  //
- 
-+#include "appleseed/as_osl_extensions.h"
 +
++#include "appleseed/as_osl_extensions.h"
+ 
  shader as_plastic
  [[
-     string icon = "asPlastic.png",
-diff --git a/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl b/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
-index 5dae2f920..6aede9540 100644
---- a/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_sbs_pbrmaterial.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,8 +26,11 @@
  // THE SOFTWARE.
  //
@@ -272,10 +253,9 @@ index 5dae2f920..6aede9540 100644
  shader as_sbs_pbrmaterial
  [[
      string help = "Substance Painter PBR material.",
-diff --git a/src/appleseed.shaders/src/appleseed/as_standard_surface.osl b/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
-index fb355a11e..a836dd3c2 100644
---- a/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_standard_surface.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_standard_surface.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_standard_surface.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,7 @@
  // THE SOFTWARE.
  //
@@ -284,10 +264,9 @@ index fb355a11e..a836dd3c2 100644
  #include "appleseed/material/as_material_helpers.h"
  #include "appleseed/math/as_math_helpers.h"
  
-diff --git a/src/appleseed.shaders/src/appleseed/as_subsurface.osl b/src/appleseed.shaders/src/appleseed/as_subsurface.osl
-index ee88ff8bc..94e0277c3 100644
---- a/src/appleseed.shaders/src/appleseed/as_subsurface.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_subsurface.osl
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_subsurface.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_subsurface.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_subsurface.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_subsurface.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,7 @@
  // THE SOFTWARE.
  //
@@ -296,11 +275,10 @@ index ee88ff8bc..94e0277c3 100644
  #include "appleseed/math/as_math_helpers.h"
  
  shader as_subsurface
-diff --git a/src/appleseed.shaders/src/appleseed/as_voronoi2d.osl b/src/appleseed.shaders/src/appleseed/as_voronoi2d.osl
-index 57823b0cb..c6b24cbbf 100644
---- a/src/appleseed.shaders/src/appleseed/as_voronoi2d.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_voronoi2d.osl
-@@ -95,7 +95,7 @@ shader as_voronoi2d
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_voronoi2d.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_voronoi2d.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_voronoi2d.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_voronoi2d.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -95,7 +95,7 @@
          int as_maya_attribute_connectable = 0,
          int as_maya_attribute_keyable = 0,
          string widget = "mapper",
@@ -309,11 +287,10 @@ index 57823b0cb..c6b24cbbf 100644
          string label = "Metric",
          string page = "Cell",
          int as_blender_input_socket = 0,
-diff --git a/src/appleseed.shaders/src/appleseed/as_voronoi3d.osl b/src/appleseed.shaders/src/appleseed/as_voronoi3d.osl
-index 67c369e90..38a7c5b60 100644
---- a/src/appleseed.shaders/src/appleseed/as_voronoi3d.osl
-+++ b/src/appleseed.shaders/src/appleseed/as_voronoi3d.osl
-@@ -93,7 +93,7 @@ shader as_voronoi3d
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_voronoi3d.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_voronoi3d.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_voronoi3d.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_voronoi3d.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -93,7 +93,7 @@
      [[
          string as_maya_attribute_name = "metric",
          string widget = "mapper",
@@ -322,10 +299,9 @@ index 67c369e90..38a7c5b60 100644
          string label = "Metric",
          string page = "Cell",
          int as_maya_attribute_connectable = 0,
-diff --git a/src/appleseed.shaders/src/max/as_max_disney_material.osl b/src/appleseed.shaders/src/max/as_max_disney_material.osl
-index abff39784..2d713b298 100644
---- a/src/appleseed.shaders/src/max/as_max_disney_material.osl
-+++ b/src/appleseed.shaders/src/max/as_max_disney_material.osl
+diff -Naur appleseed/src/appleseed.shaders/src/max/as_max_disney_material.osl APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_disney_material.osl
+--- appleseed/src/appleseed.shaders/src/max/as_max_disney_material.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_disney_material.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,8 @@
  // THE SOFTWARE.
  //
@@ -335,10 +311,9 @@ index abff39784..2d713b298 100644
  surface as_max_disney_material
  (
      vector Normal = N,
-diff --git a/src/appleseed.shaders/src/max/as_max_glass_material.osl b/src/appleseed.shaders/src/max/as_max_glass_material.osl
-index f254f7a92..97df92eac 100644
---- a/src/appleseed.shaders/src/max/as_max_glass_material.osl
-+++ b/src/appleseed.shaders/src/max/as_max_glass_material.osl
+diff -Naur appleseed/src/appleseed.shaders/src/max/as_max_glass_material.osl APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_glass_material.osl
+--- appleseed/src/appleseed.shaders/src/max/as_max_glass_material.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_glass_material.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,8 @@
  // THE SOFTWARE.
  //
@@ -348,10 +323,9 @@ index f254f7a92..97df92eac 100644
  shader as_max_glass_material
  (
      vector               Normal = N,
-diff --git a/src/appleseed.shaders/src/max/as_max_metal_material.osl b/src/appleseed.shaders/src/max/as_max_metal_material.osl
-index 7091faf35..83447906b 100644
---- a/src/appleseed.shaders/src/max/as_max_metal_material.osl
-+++ b/src/appleseed.shaders/src/max/as_max_metal_material.osl
+diff -Naur appleseed/src/appleseed.shaders/src/max/as_max_metal_material.osl APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_metal_material.osl
+--- appleseed/src/appleseed.shaders/src/max/as_max_metal_material.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_metal_material.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,7 @@
  // THE SOFTWARE.
  //
@@ -360,10 +334,9 @@ index 7091faf35..83447906b 100644
  #include "appleseed/material/as_material_helpers.h"
  
  shader as_max_metal_material
-diff --git a/src/appleseed.shaders/src/max/as_max_plastic_material.osl b/src/appleseed.shaders/src/max/as_max_plastic_material.osl
-index 3e9828537..6da3369d5 100644
---- a/src/appleseed.shaders/src/max/as_max_plastic_material.osl
-+++ b/src/appleseed.shaders/src/max/as_max_plastic_material.osl
+diff -Naur appleseed/src/appleseed.shaders/src/max/as_max_plastic_material.osl APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_plastic_material.osl
+--- appleseed/src/appleseed.shaders/src/max/as_max_plastic_material.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_plastic_material.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,8 @@
  // THE SOFTWARE.
  //
@@ -373,10 +346,9 @@ index 3e9828537..6da3369d5 100644
  shader as_max_plastic_material
  [[
      string help = "Plastic surface shader"
-diff --git a/src/appleseed.shaders/src/max/as_max_sss_material.osl b/src/appleseed.shaders/src/max/as_max_sss_material.osl
-index ef979b845..3913f2d56 100644
---- a/src/appleseed.shaders/src/max/as_max_sss_material.osl
-+++ b/src/appleseed.shaders/src/max/as_max_sss_material.osl
+diff -Naur appleseed/src/appleseed.shaders/src/max/as_max_sss_material.osl APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_sss_material.osl
+--- appleseed/src/appleseed.shaders/src/max/as_max_sss_material.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/max/as_max_sss_material.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,7 @@
  // THE SOFTWARE.
  //
@@ -385,10 +357,9 @@ index ef979b845..3913f2d56 100644
  #include "appleseed/material/as_material_helpers.h"
  
  shader as_max_sss_material
-diff --git a/src/appleseed.shaders/src/maya/as_maya_areaLight.osl b/src/appleseed.shaders/src/maya/as_maya_areaLight.osl
-index 4df6f2530..aa6b5dd7d 100644
---- a/src/appleseed.shaders/src/maya/as_maya_areaLight.osl
-+++ b/src/appleseed.shaders/src/maya/as_maya_areaLight.osl
+diff -Naur appleseed/src/appleseed.shaders/src/maya/as_maya_areaLight.osl APPLESEED_BLD/src/appleseed.shaders/src/maya/as_maya_areaLight.osl
+--- appleseed/src/appleseed.shaders/src/maya/as_maya_areaLight.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/maya/as_maya_areaLight.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,8 @@
  // THE SOFTWARE.
  //
@@ -398,10 +369,9 @@ index 4df6f2530..aa6b5dd7d 100644
  surface as_maya_areaLight
  [[
      string as_node_name = "areaLight"
-diff --git a/src/appleseed.shaders/src/maya/as_maya_matrixInverse.osl b/src/appleseed.shaders/src/maya/as_maya_matrixInverse.osl
-index e35600760..cf6b97448 100644
---- a/src/appleseed.shaders/src/maya/as_maya_matrixInverse.osl
-+++ b/src/appleseed.shaders/src/maya/as_maya_matrixInverse.osl
+diff -Naur appleseed/src/appleseed.shaders/src/maya/as_maya_matrixInverse.osl APPLESEED_BLD/src/appleseed.shaders/src/maya/as_maya_matrixInverse.osl
+--- appleseed/src/appleseed.shaders/src/maya/as_maya_matrixInverse.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/maya/as_maya_matrixInverse.osl	1970-01-01 00:00:00.000000000 +0000
 @@ -26,6 +26,8 @@
  // THE SOFTWARE.
  //
@@ -411,11 +381,10 @@ index e35600760..cf6b97448 100644
  shader as_maya_matrixInverse
  [[
      string as_node_name = "matrixInverse"
-diff --git a/src/appleseed.shaders/src/maya/as_maya_remapValue.osl b/src/appleseed.shaders/src/maya/as_maya_remapValue.osl
-index 0a8803052..a6b059f41 100644
---- a/src/appleseed.shaders/src/maya/as_maya_remapValue.osl
-+++ b/src/appleseed.shaders/src/maya/as_maya_remapValue.osl
-@@ -86,25 +86,25 @@ shader as_maya_remapValue
+diff -Naur appleseed/src/appleseed.shaders/src/maya/as_maya_remapValue.osl APPLESEED_BLD/src/appleseed.shaders/src/maya/as_maya_remapValue.osl
+--- appleseed/src/appleseed.shaders/src/maya/as_maya_remapValue.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/maya/as_maya_remapValue.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -86,25 +86,25 @@
      [[
          string as_maya_attribute_name = "inputMin",
          string label = "Input Min",

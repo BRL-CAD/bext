@@ -1,21 +1,7 @@
-Subject: [PATCH 14/50] Use chrono timestamps and remove DateTime adapters
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: d6fe2722bf197116edaa09690cb48decdd50e2d7
-Original-Commit: 2408897fe9606cdfdba30d37e6975b851e6ace37
-Original-Commit: 969b58ee4790fc01fe524a99ae224d081236b509
-Original-Commit: cc8ae4844c29de5d8f21a6994c71b78312666ced
-Original-Commit: d9eb3f14d1cacfe898967a7364dfe36e82be3a7e
-Original-Commit: fbe7baba67a475fd8c8c660cb011394894d661cc
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c87e018a1..f1d1128f9 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -248,7 +248,7 @@ set(Boost_MULTITHREADED TRUE)
+diff -Naur appleseed/CMakeLists.txt APPLESEED_BLD/CMakeLists.txt
+--- appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -248,7 +248,7 @@
  if (USE_STATIC_BOOST)
    set(Boost_USE_STATIC_LIBS TRUE)
  endif ()
@@ -24,10 +10,9 @@ index c87e018a1..f1d1128f9 100644
  add_definitions(-DBOOST_ALL_DYN_LINK)
  include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories(${Boost_LIBRARY_DIRS})
-diff --git a/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp b/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
-index 1aa392779..02dbd9716 100644
---- a/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
-+++ b/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
+diff -Naur appleseed/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp APPLESEED_BLD/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp
+--- appleseed/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.studio/debug/benchmarks/benchmarkwindow.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -38,13 +38,11 @@
  
  // appleseed.foundation headers.
@@ -59,7 +44,7 @@ index 1aa392779..02dbd9716 100644
  using namespace foundation;
  namespace bf = std::filesystem;
  
-@@ -207,12 +205,12 @@ std::unique_ptr<ChartBase> BenchmarkWindow::create_chart(
+@@ -207,12 +205,12 @@
      chart->set_tooltip_formatter(
          [](const Vector2d& point, const QVariant& data) -> QString
          {
@@ -75,7 +60,7 @@ index 1aa392779..02dbd9716 100644
                      .arg(QString::fromStdString(pretty_scalar(point.y)))
                      .arg(point.y > 1 ? "s" : "");
          });
-@@ -223,13 +221,12 @@ std::unique_ptr<ChartBase> BenchmarkWindow::create_chart(
+@@ -223,13 +221,12 @@
      {
          const BenchmarkDataPoint& point = series[i];
  
@@ -91,11 +76,10 @@ index 1aa392779..02dbd9716 100644
      }
  
      return std::unique_ptr<ChartBase>(std::move(chart));
-diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
-index d83c8bffb..595846698 100644
---- a/src/appleseed/CMakeLists.txt
-+++ b/src/appleseed/CMakeLists.txt
-@@ -561,7 +561,6 @@ set (foundation_meta_tests_sources
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -561,7 +561,6 @@
      foundation/meta/tests/test_benchmarkaggregator.cpp
      foundation/meta/tests/test_beziercurve.cpp
      foundation/meta/tests/test_bitmask.cpp
@@ -103,7 +87,7 @@ index d83c8bffb..595846698 100644
      foundation/meta/tests/test_boost_regex.cpp
      foundation/meta/tests/test_bsp.cpp
      foundation/meta/tests/test_bufferedfile.cpp
-@@ -694,6 +693,7 @@ set (foundation_platform_sources
+@@ -694,6 +693,7 @@
      foundation/platform/compiler.h
      foundation/platform/console.cpp
      foundation/platform/console.h
@@ -111,10 +95,9 @@ index d83c8bffb..595846698 100644
      foundation/platform/datetime.h
      foundation/platform/debugger.cpp
      foundation/platform/debugger.h
-diff --git a/src/appleseed/foundation/log/logger.cpp b/src/appleseed/foundation/log/logger.cpp
-index eb4af143d..550d7564f 100644
---- a/src/appleseed/foundation/log/logger.cpp
-+++ b/src/appleseed/foundation/log/logger.cpp
+diff -Naur appleseed/src/appleseed/foundation/log/logger.cpp APPLESEED_BLD/src/appleseed/foundation/log/logger.cpp
+--- appleseed/src/appleseed/foundation/log/logger.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/log/logger.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -33,15 +33,13 @@
  // appleseed.foundation headers.
  #include "foundation/log/ilogtarget.h"
@@ -141,7 +124,7 @@ index eb4af143d..550d7564f 100644
  namespace foundation
  {
  
-@@ -71,12 +67,12 @@ namespace
+@@ -71,12 +67,12 @@
        public:
          FormatEvaluator(
              const LogMessage::Category  category,
@@ -156,7 +139,7 @@ index eb4af143d..550d7564f 100644
            , m_thread(pad_left(to_string(thread), '0', 3))
            , m_process_size(pad_left(to_string(System::get_process_virtual_memory_size() / (1024 * 1024)) + " MB", ' ', 8))
            , m_message(message)
-@@ -386,7 +382,8 @@ void Logger::write(
+@@ -386,7 +382,8 @@
              effective_category = LogMessage::Error;
  
          // Retrieve the current UTC time.
@@ -166,10 +149,9 @@ index eb4af143d..550d7564f 100644
  
          // Format the header and message.
          const size_t thread = impl->m_thread_map.thread_id_to_int(std::this_thread::get_id());
-diff --git a/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp b/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp
-index d80b7badc..93fe12880 100644
---- a/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_benchmarkaggregator.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -36,31 +36,61 @@
  #include "foundation/utility/test.h"
  #include "foundation/utility/uid.h"
@@ -241,7 +223,7 @@ index d80b7badc..93fe12880 100644
          const double ExpectedTicks = 1234.5678;
          const BenchmarkDataPoint data_point(ExpectedDate, ExpectedTicks);
  
-@@ -114,7 +144,7 @@ TEST_SUITE(Foundation_Utility_Benchmark_BenchmarkAggregator)
+@@ -114,7 +144,7 @@
          aggregator.scan_directory("unit tests/inputs/test_benchmarkaggregator/single benchmark file/");
          aggregator.sort_series();
  
@@ -250,7 +232,7 @@ index d80b7badc..93fe12880 100644
  
          const Dictionary& benchmarks = aggregator.get_benchmarks();
  
-@@ -158,13 +188,40 @@ TEST_SUITE(Foundation_Utility_Benchmark_BenchmarkAggregator)
+@@ -158,13 +188,40 @@
  
          ASSERT_EQ(2, series.size());
  
@@ -293,11 +275,9 @@ index d80b7badc..93fe12880 100644
      TEST_CASE(Clear_GivenOneBenchmark_RemovesBenchmark)
      {
          BenchmarkAggregator aggregator;
-diff --git a/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp b/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp
-deleted file mode 100644
-index 4602e5bf7..000000000
---- a/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp
-+++ /dev/null
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_boost_datetime.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -1,62 +0,0 @@
 -
 -//
@@ -361,10 +341,9 @@ index 4602e5bf7..000000000
 -        EXPECT_EQ("17:45:31", result);
 -    }
 -}
-diff --git a/src/appleseed/foundation/meta/tests/test_datetime.cpp b/src/appleseed/foundation/meta/tests/test_datetime.cpp
-index 4e3717c2a..936af35b3 100644
---- a/src/appleseed/foundation/meta/tests/test_datetime.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_datetime.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_datetime.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_datetime.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_datetime.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_datetime.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -29,41 +29,101 @@
  
  // appleseed.foundation headers.
@@ -394,7 +373,8 @@ index 4e3717c2a..936af35b3 100644
 +        const char*     text;
 +        std::int64_t    microseconds;
 +    };
-+
+ 
+-        const time_duration Expected(17, 29, 43, 1234);
 +    // Known Unix microseconds, independent of the parser and formatter.
 +    const TimestampCase Cases[] = {
 +        {"14000101T000000", -17987443200000000LL},
@@ -406,7 +386,8 @@ index 4e3717c2a..936af35b3 100644
 +        {"99991231T235959.999999", 253402300799999999LL}
 +    };
  
--        const time_duration Expected(17, 29, 43, 1234);
+-        const time_duration result(
+-            microseconds_to_time_duration(Expected.total_microseconds()));
 +    TEST_CASE(CompactTimestamp_PreservesLegacyCalendarRangeAndMicroseconds)
 +    {
 +        for (const auto& test : Cases)
@@ -415,7 +396,8 @@ index 4e3717c2a..936af35b3 100644
 +            EXPECT_EQ(test.text, format_timestamp(value));
 +        }
 +    }
-+
+ 
+-        EXPECT_EQ(Expected, result);
 +    TEST_CASE(ParseTimestamp_PreservesLegacyCalendarRangeAndMicroseconds)
 +    {
 +        for (const auto& test : Cases)
@@ -424,37 +406,35 @@ index 4e3717c2a..936af35b3 100644
 +            ASSERT_TRUE(parse_timestamp(test.text, value));
 +            EXPECT_EQ(test.microseconds, value.time_since_epoch().count());
 +        }
-+    }
+     }
  
--        const time_duration result(
--            microseconds_to_time_duration(Expected.total_microseconds()));
+-    TEST_CASE(PTimeToString)
 +    TEST_CASE(ExtendedTimestamp_PreservesUTCLogFormat)
-+    {
+     {
+-        using namespace gregorian;
+-        using namespace posix_time;
 +        const Timestamp value{std::chrono::microseconds(1277228731123456LL)};
 +        EXPECT_EQ("2010-06-22T17:45:31.123456", format_timestamp(value, TimestampFormat::Extended));
 +    }
  
--        EXPECT_EQ(Expected, result);
+-        const ptime time(date(2010, Jun, 22), time_duration(17, 45, 31));
+-        const std::string result = to_string(time);
 +    TEST_CASE(ReadableTimestamp_PreservesBenchmarkTooltipFormat)
 +    {
 +        const Timestamp value{std::chrono::microseconds(1277228731123456LL)};
 +        EXPECT_EQ("2010-Jun-22 17:45:31.123456", format_timestamp(value, TimestampFormat::Readable));
-     }
++    }
  
--    TEST_CASE(PTimeToString)
+-        EXPECT_EQ("20100622T174531", result);
 +    TEST_CASE(ParseTimestamp_PadsShortFractionsToMicroseconds)
-     {
--        using namespace gregorian;
--        using namespace posix_time;
++    {
 +        Timestamp value;
 +        ASSERT_TRUE(parse_timestamp("19700101T000000.1", value));
 +        EXPECT_EQ(100000, value.time_since_epoch().count());
 +        ASSERT_TRUE(parse_timestamp("19700101T000000.000001", value));
 +        EXPECT_EQ(1, value.time_since_epoch().count());
-+    }
- 
--        const ptime time(date(2010, Jun, 22), time_duration(17, 45, 31));
--        const std::string result = to_string(time);
+     }
++
 +    TEST_CASE(ParseTimestamp_RejectsInvalidTextWithoutChangingOutput)
 +    {
 +        const char* Invalid[] = {
@@ -472,8 +452,7 @@ index 4e3717c2a..936af35b3 100644
 +            EXPECT_EQ(initial, value);
 +        }
 +    }
- 
--        EXPECT_EQ("20100622T174531", result);
++
 +    TEST_CASE(FormatTimestamp_RejectsRepresentationLimitsOutsideCalendarRange)
 +    {
 +        EXPECT_EXCEPTION(std::out_of_range,
@@ -484,13 +463,11 @@ index 4e3717c2a..936af35b3 100644
 +        {
 +            format_timestamp(Timestamp::max());
 +        });
-     }
++    }
  }
-diff --git a/src/appleseed/foundation/platform/datetime.cpp b/src/appleseed/foundation/platform/datetime.cpp
-new file mode 100644
-index 000000000..96627cef7
---- /dev/null
-+++ b/src/appleseed/foundation/platform/datetime.cpp
+diff -Naur appleseed/src/appleseed/foundation/platform/datetime.cpp APPLESEED_BLD/src/appleseed/foundation/platform/datetime.cpp
+--- appleseed/src/appleseed/foundation/platform/datetime.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/datetime.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,205 @@
 +
 +//
@@ -697,10 +674,9 @@ index 000000000..96627cef7
 +}
 +
 +}   // namespace foundation
-diff --git a/src/appleseed/foundation/platform/datetime.h b/src/appleseed/foundation/platform/datetime.h
-index 20b944efc..05e202e58 100644
---- a/src/appleseed/foundation/platform/datetime.h
-+++ b/src/appleseed/foundation/platform/datetime.h
+diff -Naur appleseed/src/appleseed/foundation/platform/datetime.h APPLESEED_BLD/src/appleseed/foundation/platform/datetime.h
+--- appleseed/src/appleseed/foundation/platform/datetime.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/datetime.h	1970-01-01 00:00:00.000000000 +0000
 @@ -32,79 +32,41 @@
  // appleseed.foundation headers.
  #include "foundation/string/string.h"
@@ -736,15 +712,28 @@ index 20b944efc..05e202e58 100644
 -//
 -
 -inline boost::posix_time::time_duration microseconds_to_time_duration(std::uint64_t microseconds)
--{
++enum class TimestampFormat
+ {
 -    using namespace boost::posix_time;
--
++    Compact,    // YYYYMMDDTHHMMSS
++    Extended,   // YYYY-MM-DDTHH:MM:SS
++    Readable    // YYYY-Mon-DD HH:MM:SS, with English month abbreviations
++};
+ 
 -    std::uint64_t seconds = microseconds / 1000000;
 -    microseconds -= seconds * 1000000;
--
++// Format UTC in the legacy 1400-9999 calendar range, throwing std::out_of_range
++// outside it. Append six fractional digits only when microseconds are nonzero.
++APPLESEED_DLLSYMBOL std::string format_timestamp(
++    Timestamp           timestamp,
++    TimestampFormat     format = TimestampFormat::Compact);
+ 
 -    std::uint64_t minutes = seconds / 60;
 -    seconds -= minutes * 60;
--
++// Parse YYYYMMDDTHHMMSS[.ffffff] in UTC, with one to six fractional digits.
++// Return false for invalid dates or text, leaving the output unchanged.
++APPLESEED_DLLSYMBOL bool parse_timestamp(const std::string& text, Timestamp& timestamp) noexcept;
+ 
 -    std::uint64_t hours = minutes / 60;
 -    minutes -= hours * 60;
 -
@@ -756,41 +745,29 @@ index 20b944efc..05e202e58 100644
 -            static_cast<time_duration::fractional_seconds_type>(microseconds));
 -}
 -
--template <>
+ template <>
 -inline std::string to_string(const boost::posix_time::ptime& time)
--{
++inline std::string to_string(const Timestamp& timestamp)
+ {
 -    return boost::posix_time::to_iso_string(time);
++    return format_timestamp(timestamp);
+ }
+ 
+-template <>
+-inline std::string to_string(const boost::posix_time::time_duration& td)
+-{
+-    std::stringstream sstr;
+-    std::ostreambuf_iterator<char> oitr(sstr);
+-
+-    boost::posix_time::time_facet facet;
+-    facet.put(oitr, sstr, sstr.fill(), td);
+-
+-    return sstr.str();
 -}
 -
 -template <>
--inline std::string to_string(const boost::posix_time::time_duration& td)
-+enum class TimestampFormat
- {
--    std::stringstream sstr;
--    std::ostreambuf_iterator<char> oitr(sstr);
-+    Compact,    // YYYYMMDDTHHMMSS
-+    Extended,   // YYYY-MM-DDTHH:MM:SS
-+    Readable    // YYYY-Mon-DD HH:MM:SS, with English month abbreviations
-+};
- 
--    boost::posix_time::time_facet facet;
--    facet.put(oitr, sstr, sstr.fill(), td);
-+// Format UTC in the legacy 1400-9999 calendar range, throwing std::out_of_range
-+// outside it. Append six fractional digits only when microseconds are nonzero.
-+APPLESEED_DLLSYMBOL std::string format_timestamp(
-+    Timestamp           timestamp,
-+    TimestampFormat     format = TimestampFormat::Compact);
- 
--    return sstr.str();
--}
-+// Parse YYYYMMDDTHHMMSS[.ffffff] in UTC, with one to six fractional digits.
-+// Return false for invalid dates or text, leaving the output unchanged.
-+APPLESEED_DLLSYMBOL bool parse_timestamp(const std::string& text, Timestamp& timestamp) noexcept;
- 
- template <>
 -inline std::string to_string(const boost::gregorian::date& date)
-+inline std::string to_string(const Timestamp& timestamp)
- {
+-{
 -    std::stringstream sstr;
 -    std::ostreambuf_iterator<char> oitr(sstr);
 -
@@ -798,14 +775,12 @@ index 20b944efc..05e202e58 100644
 -    facet.put(oitr, sstr, sstr.fill(), date);
 -
 -    return sstr.str();
-+    return format_timestamp(timestamp);
- }
- 
+-}
+-
  }   // namespace foundation
-diff --git a/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp b/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
-index ce373ca61..db16416a6 100644
---- a/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
-+++ b/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
+diff -Naur appleseed/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp APPLESEED_BLD/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
+--- appleseed/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -39,7 +39,6 @@
  #include "foundation/utility/xercesc.h"
  
@@ -814,7 +789,7 @@ index ce373ca61..db16416a6 100644
  #include "boost/regex.hpp"
  
  // Xerces-C++ headers.
-@@ -101,7 +100,7 @@ struct BenchmarkAggregator::Impl
+@@ -101,7 +100,7 @@
  
      bool scan_document(
          const DOMDocument*          document,
@@ -823,7 +798,7 @@ index ce373ca61..db16416a6 100644
      {
          assert(document);
  
-@@ -126,7 +125,7 @@ struct BenchmarkAggregator::Impl
+@@ -126,7 +125,7 @@
  
      void scan_suites(
          const DOMNode*              node,
@@ -832,7 +807,7 @@ index ce373ca61..db16416a6 100644
          Dictionary&                 suites_dic)
      {
          assert(node);
-@@ -155,7 +154,7 @@ struct BenchmarkAggregator::Impl
+@@ -155,7 +154,7 @@
  
      void scan_cases(
          const DOMNode*              node,
@@ -841,7 +816,7 @@ index ce373ca61..db16416a6 100644
          Dictionary&                 cases_dic)
      {
          assert(node);
-@@ -192,7 +191,7 @@ struct BenchmarkAggregator::Impl
+@@ -192,7 +191,7 @@
  
      void scan_results(
          const DOMNode*              node,
@@ -850,7 +825,7 @@ index ce373ca61..db16416a6 100644
          BenchmarkSeries&            series)
      {
          assert(node);
-@@ -267,7 +266,11 @@ bool BenchmarkAggregator::scan_file(const char* path)
+@@ -267,7 +266,11 @@
      const std::string date_string = match[1].str();
      const std::string time_string = match[2].str();
      const std::string iso_string = date_string + "T" + time_string;
@@ -863,10 +838,9 @@ index ce373ca61..db16416a6 100644
  
      try
      {
-diff --git a/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h b/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h
-index 02dc7cd8a..b83191fb8 100644
---- a/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h
-+++ b/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h
+diff -Naur appleseed/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h APPLESEED_BLD/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h
+--- appleseed/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/benchmark/benchmarkdatapoint.h	1970-01-01 00:00:00.000000000 +0000
 @@ -35,13 +35,6 @@
  // appleseed.main headers.
  #include "main/dllsymbol.h"
@@ -881,7 +855,7 @@ index 02dc7cd8a..b83191fb8 100644
  namespace foundation
  {
  
-@@ -51,14 +44,10 @@ class APPLESEED_DLLSYMBOL BenchmarkDataPoint
+@@ -51,15 +44,11 @@
      BenchmarkDataPoint();
  
      BenchmarkDataPoint(
@@ -890,15 +864,16 @@ index 02dc7cd8a..b83191fb8 100644
          const double                    ticks);
  
 -    static std::uint64_t ptime_to_microseconds(const boost::posix_time::ptime& time);
--
++    Timestamp get_date() const;
+ 
 -    static boost::posix_time::ptime microseconds_to_ptime(const std::uint64_t microseconds);
 -
 -    boost::posix_time::ptime get_date() const;
-+    Timestamp get_date() const;
- 
+-
      double get_ticks() const;
  
-@@ -67,7 +56,7 @@ class APPLESEED_DLLSYMBOL BenchmarkDataPoint
+     bool operator==(const BenchmarkDataPoint& rhs) const;
+@@ -67,7 +56,7 @@
      bool operator<(const BenchmarkDataPoint& rhs) const;
  
    private:
@@ -907,7 +882,7 @@ index 02dc7cd8a..b83191fb8 100644
      double          m_ticks;
  };
  
-@@ -76,36 +65,23 @@ class APPLESEED_DLLSYMBOL BenchmarkDataPoint
+@@ -76,38 +65,25 @@
  // Implementation.
  //
  
@@ -933,24 +908,26 @@ index 02dc7cd8a..b83191fb8 100644
  }
  
 -inline std::uint64_t BenchmarkDataPoint::ptime_to_microseconds(const boost::posix_time::ptime& time)
--{
++inline Timestamp BenchmarkDataPoint::get_date() const
+ {
 -    return (time - benchmark_impl::Epoch).total_microseconds();
--}
--
++    return m_date;
+ }
+ 
 -inline boost::posix_time::ptime BenchmarkDataPoint::microseconds_to_ptime(const std::uint64_t microseconds)
 -{
 -    return benchmark_impl::Epoch + microseconds_to_time_duration(microseconds);
 -}
 -
 -inline boost::posix_time::ptime BenchmarkDataPoint::get_date() const
-+inline Timestamp BenchmarkDataPoint::get_date() const
- {
+-{
 -    return microseconds_to_ptime(m_date_microseconds);
-+    return m_date;
- }
- 
+-}
+-
  inline double BenchmarkDataPoint::get_ticks() const
-@@ -115,7 +91,7 @@ inline double BenchmarkDataPoint::get_ticks() const
+ {
+     return m_ticks;
+@@ -115,7 +91,7 @@
  
  inline bool BenchmarkDataPoint::operator==(const BenchmarkDataPoint& rhs) const
  {
@@ -959,7 +936,7 @@ index 02dc7cd8a..b83191fb8 100644
  }
  
  inline bool BenchmarkDataPoint::operator!=(const BenchmarkDataPoint& rhs) const
-@@ -125,7 +101,7 @@ inline bool BenchmarkDataPoint::operator!=(const BenchmarkDataPoint& rhs) const
+@@ -125,7 +101,7 @@
  
  inline bool BenchmarkDataPoint::operator<(const BenchmarkDataPoint& rhs) const
  {

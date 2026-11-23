@@ -1,18 +1,7 @@
-Subject: [PATCH 16/50] Use standard helpers and PCRE2 without core Boost
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: e61476f5266dea45b1e00c094eb237ff02e3c1fe
-Original-Commit: 811bfa1f81806ffc6db729429b283f642ab0599a
-Original-Commit: 3dcd281ccd8088829219a2a435af7fac8b68c373
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f1d1128f9..87185de1c 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -244,14 +244,19 @@ find_package(lz4 MODULE REQUIRED)
+diff -Naur appleseed/CMakeLists.txt APPLESEED_BLD/CMakeLists.txt
+--- appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -244,14 +244,19 @@
  find_package(PNG REQUIRED)
  find_package(ZLIB REQUIRED)
  
@@ -39,11 +28,10 @@ index f1d1128f9..87185de1c 100644
  find_package(OSL 1.15 REQUIRED)
  # appleseed links OSL via the oslcomp/oslexec/oslquery_LIBRARY_IMP variables,
  # which are only populated by appleseed's module-mode FindOSL.cmake.  When OSL is
-diff --git a/cmake/config/win-vs.txt b/cmake/config/win-vs.txt
-index c7bb60851..21936c509 100644
---- a/cmake/config/win-vs.txt
-+++ b/cmake/config/win-vs.txt
-@@ -47,18 +47,14 @@ set (preprocessor_definitions_common
+diff -Naur appleseed/cmake/config/win-vs.txt APPLESEED_BLD/cmake/config/win-vs.txt
+--- appleseed/cmake/config/win-vs.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/cmake/config/win-vs.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -47,18 +47,14 @@
      _USRDLL
      _WINDOWS
      XERCES_STATIC_LIBRARY                   # link statically against Xerces-C
@@ -69,10 +57,9 @@ index c7bb60851..21936c509 100644
  endif ()
  if (NOT USE_STATIC_EXR)
      set (preprocessor_definitions_common
-diff --git a/sandbox/examples/cpp/README.md b/sandbox/examples/cpp/README.md
-index 614213e0d..6bb72eb2c 100644
---- a/sandbox/examples/cpp/README.md
-+++ b/sandbox/examples/cpp/README.md
+diff -Naur appleseed/sandbox/examples/cpp/README.md APPLESEED_BLD/sandbox/examples/cpp/README.md
+--- appleseed/sandbox/examples/cpp/README.md	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/README.md	1970-01-01 00:00:00.000000000 +0000
 @@ -5,7 +5,6 @@
  The following instructions assume that:
  
@@ -81,7 +68,7 @@ index 614213e0d..6bb72eb2c 100644
  - [appleseed's dependency package](https://github.com/appleseedhq/appleseed/wiki/Building-appleseed-on-Windows#alternative-1-using-prebuilt-third-party-libraries) is installed in `C:\windows-deps`.
  
  Make sure to adapt them as required.
-@@ -20,7 +19,6 @@ Open a Command Prompt inside a plugin's folder, then type:
+@@ -20,7 +19,6 @@
        -G "Visual Studio 15 2017 Win64" ^
        -DAPPLESEED_INCLUDE_DIR=..\..\..\..\include ^
        -DAPPLESEED_LIBRARY=..\..\..\..\lib\appleseed.lib ^
@@ -89,7 +76,7 @@ index 614213e0d..6bb72eb2c 100644
        -DIMATH_INCLUDE_DIR=C:\windows-deps\stage\vc141\ilmbase-release\include ^
        -DIMATH_MATH_LIBRARY=C:\windows-deps\stage\vc141\ilmbase-release\lib\Imath-2_2.lib ^
        -DIMATH_IEX_LIBRARY=C:\windows-deps\stage\vc141\ilmbase-release\lib\Iex-2_2.lib ^
-@@ -39,7 +37,6 @@ Open a Command Prompt inside a plugin's folder, then type:
+@@ -39,7 +37,6 @@
        -G "Visual Studio 15 2017 Win64" ^
        -DAPPLESEED_INCLUDE_DIR=..\..\..\..\..\src\appleseed ^
        -DAPPLESEED_LIBRARY=..\..\..\..\lib\v141\Ship\appleseed.lib ^
@@ -97,7 +84,7 @@ index 614213e0d..6bb72eb2c 100644
        -DIMATH_INCLUDE_DIR=C:\windows-deps\stage\vc141\ilmbase-release\include ^
        -DIMATH_MATH_LIBRARY=C:\windows-deps\stage\vc141\ilmbase-release\lib\Imath-2_2.lib ^
        -DIMATH_IEX_LIBRARY=C:\windows-deps\stage\vc141\ilmbase-release\lib\Iex-2_2.lib ^
-@@ -72,8 +69,6 @@ Then:
+@@ -72,8 +69,6 @@
        mkdir build
        cd build
        cmake \
@@ -106,7 +93,7 @@ index 614213e0d..6bb72eb2c 100644
        -DAPPLESEED_INCLUDE_DIR=../../../../../src/appleseed \
        -DAPPLESEED_LIBRARY=../../../../lib/libappleseed.so \
        ..
-@@ -84,8 +79,6 @@ Then:
+@@ -84,8 +79,6 @@
        mkdir build
        cd build
        cmake \
@@ -115,11 +102,10 @@ index 614213e0d..6bb72eb2c 100644
        -DAPPLESEED_INCLUDE_DIR=../../../../../src/appleseed \
        -DAPPLESEED_LIBRARY=../../../../lib/Ship/libappleseed.so \
        ..
-diff --git a/sandbox/examples/cpp/alembicassembly/CMakeLists.txt b/sandbox/examples/cpp/alembicassembly/CMakeLists.txt
-index 30af4122f..0c7b4721c 100644
---- a/sandbox/examples/cpp/alembicassembly/CMakeLists.txt
-+++ b/sandbox/examples/cpp/alembicassembly/CMakeLists.txt
-@@ -53,7 +53,6 @@ else ()
+diff -Naur appleseed/sandbox/examples/cpp/alembicassembly/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/alembicassembly/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/alembicassembly/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/alembicassembly/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -53,7 +53,6 @@
      set (USE_FIND_PACKAGE_FOR_OSL  ON)
  endif ()
  
@@ -127,11 +113,10 @@ index 30af4122f..0c7b4721c 100644
  option (USE_STATIC_OIIO     "Use static OpenImageIO libraries"          ON)
  option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
  
-@@ -67,24 +66,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
- set (CMAKE_CXX_EXTENSIONS OFF)
+@@ -68,24 +67,6 @@
  
  
--#--------------------------------------------------------------------------------------------------
+ #--------------------------------------------------------------------------------------------------
 -# Boost libraries.
 -#--------------------------------------------------------------------------------------------------
 -
@@ -149,10 +134,11 @@ index 30af4122f..0c7b4721c 100644
 -link_directories (${Boost_LIBRARY_DIRS})
 -
 -
- #--------------------------------------------------------------------------------------------------
+-#--------------------------------------------------------------------------------------------------
  # Find packages.
  #--------------------------------------------------------------------------------------------------
-@@ -150,7 +131,6 @@ set_target_properties (alembicassembly PROPERTIES PREFIX "")
+ 
+@@ -150,7 +131,6 @@
  
  target_link_libraries (alembicassembly
      ${APPLESEED_LIBRARIES}
@@ -160,11 +146,10 @@ index 30af4122f..0c7b4721c 100644
      ${IMATH_LIBRARIES}
      ${OPENEXR_LIBRARIES}
      ${ALEMBIC_ABC_LIBRARY}
-diff --git a/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt b/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt
-index 55fdf9a0a..84572362d 100644
---- a/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt
-+++ b/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt
-@@ -53,7 +53,6 @@ else ()
+diff -Naur appleseed/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -53,7 +53,6 @@
      set (USE_FIND_PACKAGE_FOR_OSL  ON)
  endif ()
  
@@ -172,11 +157,10 @@ index 55fdf9a0a..84572362d 100644
  option (USE_STATIC_OIIO     "Use static OpenImageIO libraries"          ON)
  option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
  
-@@ -67,24 +66,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
- set (CMAKE_CXX_EXTENSIONS OFF)
+@@ -68,24 +67,6 @@
  
  
--#--------------------------------------------------------------------------------------------------
+ #--------------------------------------------------------------------------------------------------
 -# Boost libraries.
 -#--------------------------------------------------------------------------------------------------
 -
@@ -194,10 +178,11 @@ index 55fdf9a0a..84572362d 100644
 -link_directories (${Boost_LIBRARY_DIRS})
 -
 -
- #--------------------------------------------------------------------------------------------------
+-#--------------------------------------------------------------------------------------------------
  # Find packages.
  #--------------------------------------------------------------------------------------------------
-@@ -148,7 +129,6 @@ set_target_properties (distancefieldobject PROPERTIES PREFIX "")
+ 
+@@ -148,7 +129,6 @@
  
  target_link_libraries (distancefieldobject
      ${APPLESEED_LIBRARIES}
@@ -205,11 +190,10 @@ index 55fdf9a0a..84572362d 100644
      ${IMATH_LIBRARIES}
      ${OPENEXR_LIBRARIES}
  )
-diff --git a/sandbox/examples/cpp/heightfield/CMakeLists.txt b/sandbox/examples/cpp/heightfield/CMakeLists.txt
-index 95210964a..4331be3c8 100644
---- a/sandbox/examples/cpp/heightfield/CMakeLists.txt
-+++ b/sandbox/examples/cpp/heightfield/CMakeLists.txt
-@@ -54,7 +54,6 @@ else ()
+diff -Naur appleseed/sandbox/examples/cpp/heightfield/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/heightfield/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/heightfield/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/heightfield/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -54,7 +54,6 @@
      set (USE_FIND_PACKAGE_FOR_OSL  ON)
  endif ()
  
@@ -217,11 +201,10 @@ index 95210964a..4331be3c8 100644
  option (USE_STATIC_OIIO     "Use static OpenImageIO libraries"          ON)
  option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
  
-@@ -68,24 +67,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
- set (CMAKE_CXX_EXTENSIONS OFF)
+@@ -69,24 +68,6 @@
  
  
--#--------------------------------------------------------------------------------------------------
+ #--------------------------------------------------------------------------------------------------
 -# Boost libraries.
 -#--------------------------------------------------------------------------------------------------
 -
@@ -239,10 +222,11 @@ index 95210964a..4331be3c8 100644
 -link_directories (${Boost_LIBRARY_DIRS})
 -
 -
- #--------------------------------------------------------------------------------------------------
+-#--------------------------------------------------------------------------------------------------
  # Find packages.
  #--------------------------------------------------------------------------------------------------
-@@ -148,7 +129,6 @@ add_executable (heightfield heightfield.cpp)
+ 
+@@ -148,7 +129,6 @@
  
  target_link_libraries (heightfield
      ${APPLESEED_LIBRARIES}
@@ -250,11 +234,10 @@ index 95210964a..4331be3c8 100644
      ${IMATH_LIBRARIES}
      ${OPENEXR_LIBRARIES}
  )
-diff --git a/sandbox/examples/cpp/helloworld/CMakeLists.txt b/sandbox/examples/cpp/helloworld/CMakeLists.txt
-index 9393b6a94..5f107f22a 100644
---- a/sandbox/examples/cpp/helloworld/CMakeLists.txt
-+++ b/sandbox/examples/cpp/helloworld/CMakeLists.txt
-@@ -54,7 +54,6 @@ else ()
+diff -Naur appleseed/sandbox/examples/cpp/helloworld/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/helloworld/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/helloworld/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/helloworld/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -54,7 +54,6 @@
      set (USE_FIND_PACKAGE_FOR_OSL  ON)
  endif ()
  
@@ -262,11 +245,10 @@ index 9393b6a94..5f107f22a 100644
  option (USE_STATIC_OIIO     "Use static OpenImageIO libraries"          ON)
  option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
  
-@@ -68,24 +67,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
- set (CMAKE_CXX_EXTENSIONS OFF)
+@@ -69,24 +68,6 @@
  
  
--#--------------------------------------------------------------------------------------------------
+ #--------------------------------------------------------------------------------------------------
 -# Boost libraries.
 -#--------------------------------------------------------------------------------------------------
 -
@@ -284,10 +266,11 @@ index 9393b6a94..5f107f22a 100644
 -link_directories (${Boost_LIBRARY_DIRS})
 -
 -
- #--------------------------------------------------------------------------------------------------
+-#--------------------------------------------------------------------------------------------------
  # Find packages.
  #--------------------------------------------------------------------------------------------------
-@@ -148,7 +129,6 @@ add_executable (helloworld helloworld.cpp)
+ 
+@@ -148,7 +129,6 @@
  
  target_link_libraries (helloworld
      ${APPLESEED_LIBRARIES}
@@ -295,11 +278,10 @@ index 9393b6a94..5f107f22a 100644
      ${IMATH_LIBRARIES}
      ${OPENEXR_LIBRARIES}
  )
-diff --git a/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt b/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt
-index a5f8f21b2..6b39d2ca3 100644
---- a/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt
-+++ b/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt
-@@ -53,7 +53,6 @@ else ()
+diff -Naur appleseed/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -53,7 +53,6 @@
      set (USE_FIND_PACKAGE_FOR_OSL  ON)
  endif ()
  
@@ -307,11 +289,10 @@ index a5f8f21b2..6b39d2ca3 100644
  option (USE_STATIC_OIIO     "Use static OpenImageIO libraries"          ON)
  option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
  
-@@ -67,24 +66,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
- set (CMAKE_CXX_EXTENSIONS OFF)
+@@ -68,24 +67,6 @@
  
  
--#--------------------------------------------------------------------------------------------------
+ #--------------------------------------------------------------------------------------------------
 -# Boost libraries.
 -#--------------------------------------------------------------------------------------------------
 -
@@ -329,10 +310,11 @@ index a5f8f21b2..6b39d2ca3 100644
 -link_directories (${Boost_LIBRARY_DIRS})
 -
 -
- #--------------------------------------------------------------------------------------------------
+-#--------------------------------------------------------------------------------------------------
  # Find packages.
  #--------------------------------------------------------------------------------------------------
-@@ -148,7 +129,6 @@ set_target_properties (infiniteplaneobject PROPERTIES PREFIX "")
+ 
+@@ -148,7 +129,6 @@
  
  target_link_libraries (infiniteplaneobject
      ${APPLESEED_LIBRARIES}
@@ -340,11 +322,10 @@ index a5f8f21b2..6b39d2ca3 100644
      ${IMATH_LIBRARIES}
      ${OPENEXR_LIBRARIES}
  )
-diff --git a/sandbox/examples/cpp/sphereflake/CMakeLists.txt b/sandbox/examples/cpp/sphereflake/CMakeLists.txt
-index 9a42878f6..a20860c4f 100644
---- a/sandbox/examples/cpp/sphereflake/CMakeLists.txt
-+++ b/sandbox/examples/cpp/sphereflake/CMakeLists.txt
-@@ -53,7 +53,6 @@ else ()
+diff -Naur appleseed/sandbox/examples/cpp/sphereflake/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/sphereflake/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/sphereflake/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/sphereflake/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -53,7 +53,6 @@
      set (USE_FIND_PACKAGE_FOR_OSL  ON)
  endif ()
  
@@ -352,11 +333,10 @@ index 9a42878f6..a20860c4f 100644
  option (USE_STATIC_OIIO     "Use static OpenImageIO libraries"          ON)
  option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
  
-@@ -67,24 +66,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
- set (CMAKE_CXX_EXTENSIONS OFF)
+@@ -68,24 +67,6 @@
  
  
--#--------------------------------------------------------------------------------------------------
+ #--------------------------------------------------------------------------------------------------
 -# Boost libraries.
 -#--------------------------------------------------------------------------------------------------
 -
@@ -374,10 +354,11 @@ index 9a42878f6..a20860c4f 100644
 -link_directories (${Boost_LIBRARY_DIRS})
 -
 -
- #--------------------------------------------------------------------------------------------------
+-#--------------------------------------------------------------------------------------------------
  # Find packages.
  #--------------------------------------------------------------------------------------------------
-@@ -148,7 +129,6 @@ set_target_properties (sphereflake PROPERTIES PREFIX "")
+ 
+@@ -148,7 +129,6 @@
  
  target_link_libraries (sphereflake
      ${APPLESEED_LIBRARIES}
@@ -385,11 +366,10 @@ index 9a42878f6..a20860c4f 100644
      ${IMATH_LIBRARIES}
      ${OPENEXR_LIBRARIES}
  )
-diff --git a/sandbox/examples/cpp/sphereobject/CMakeLists.txt b/sandbox/examples/cpp/sphereobject/CMakeLists.txt
-index d3295330e..eba01af2c 100644
---- a/sandbox/examples/cpp/sphereobject/CMakeLists.txt
-+++ b/sandbox/examples/cpp/sphereobject/CMakeLists.txt
-@@ -53,7 +53,6 @@ else ()
+diff -Naur appleseed/sandbox/examples/cpp/sphereobject/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/sphereobject/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/sphereobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/sphereobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -53,7 +53,6 @@
      set (USE_FIND_PACKAGE_FOR_OSL  ON)
  endif ()
  
@@ -397,11 +377,10 @@ index d3295330e..eba01af2c 100644
  option (USE_STATIC_OIIO     "Use static OpenImageIO libraries"          ON)
  option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
  
-@@ -67,24 +66,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
- set (CMAKE_CXX_EXTENSIONS OFF)
+@@ -68,24 +67,6 @@
  
  
--#--------------------------------------------------------------------------------------------------
+ #--------------------------------------------------------------------------------------------------
 -# Boost libraries.
 -#--------------------------------------------------------------------------------------------------
 -
@@ -419,10 +398,11 @@ index d3295330e..eba01af2c 100644
 -link_directories (${Boost_LIBRARY_DIRS})
 -
 -
- #--------------------------------------------------------------------------------------------------
+-#--------------------------------------------------------------------------------------------------
  # Find packages.
  #--------------------------------------------------------------------------------------------------
-@@ -148,7 +129,6 @@ set_target_properties (sphereobject PROPERTIES PREFIX "")
+ 
+@@ -148,7 +129,6 @@
  
  target_link_libraries (sphereobject
      ${APPLESEED_LIBRARIES}
@@ -430,11 +410,10 @@ index d3295330e..eba01af2c 100644
      ${IMATH_LIBRARIES}
      ${OPENEXR_LIBRARIES}
  )
-diff --git a/src/appleseed.bench/CMakeLists.txt b/src/appleseed.bench/CMakeLists.txt
-index 6af2d9704..b90380417 100644
---- a/src/appleseed.bench/CMakeLists.txt
-+++ b/src/appleseed.bench/CMakeLists.txt
-@@ -288,7 +288,6 @@ target_link_libraries (appleseed.bench
+diff -Naur appleseed/src/appleseed.bench/CMakeLists.txt APPLESEED_BLD/src/appleseed.bench/CMakeLists.txt
+--- appleseed/src/appleseed.bench/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.bench/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -288,7 +288,6 @@
      appleseed
      appleseed.common
      appleseed.qtcommon
@@ -442,11 +421,10 @@ index 6af2d9704..b90380417 100644
      Qt5::Core
      Qt5::Concurrent
      Qt5::Network
-diff --git a/src/appleseed.cli/CMakeLists.txt b/src/appleseed.cli/CMakeLists.txt
-index 959bc84e5..98a5ee9db 100644
---- a/src/appleseed.cli/CMakeLists.txt
-+++ b/src/appleseed.cli/CMakeLists.txt
-@@ -95,7 +95,6 @@ target_link_libraries (appleseed.cli
+diff -Naur appleseed/src/appleseed.cli/CMakeLists.txt APPLESEED_BLD/src/appleseed.cli/CMakeLists.txt
+--- appleseed/src/appleseed.cli/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.cli/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -95,7 +95,6 @@
  	Threads::Threads
  	appleseed
  	appleseed.common
@@ -454,11 +432,10 @@ index 959bc84e5..98a5ee9db 100644
  	)
  
  
-diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
-index ad0522bfc..03b6dccd0 100644
---- a/src/appleseed/CMakeLists.txt
-+++ b/src/appleseed/CMakeLists.txt
-@@ -561,7 +561,6 @@ set (foundation_meta_tests_sources
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -561,7 +561,6 @@
      foundation/meta/tests/test_benchmarkaggregator.cpp
      foundation/meta/tests/test_beziercurve.cpp
      foundation/meta/tests/test_bitmask.cpp
@@ -466,7 +443,7 @@ index ad0522bfc..03b6dccd0 100644
      foundation/meta/tests/test_bsp.cpp
      foundation/meta/tests/test_bufferedfile.cpp
      foundation/meta/tests/test_bvh.cpp
-@@ -2381,7 +2380,7 @@ append_custom_preprocessor_definitions (appleseed
+@@ -2381,7 +2380,7 @@
  
  set(APPLESEED_LIBS
  	bcd
@@ -475,10 +452,9 @@ index ad0522bfc..03b6dccd0 100644
  	murmurhash3
  	${CMAKE_DL_LIBS}
  	Threads::Threads
-diff --git a/src/appleseed/foundation/core/thirdparties.cpp b/src/appleseed/foundation/core/thirdparties.cpp
-index 9c3565d3f..dd43a4aa8 100644
---- a/src/appleseed/foundation/core/thirdparties.cpp
-+++ b/src/appleseed/foundation/core/thirdparties.cpp
+diff -Naur appleseed/src/appleseed/foundation/core/thirdparties.cpp APPLESEED_BLD/src/appleseed/foundation/core/thirdparties.cpp
+--- appleseed/src/appleseed/foundation/core/thirdparties.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/core/thirdparties.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -32,9 +32,6 @@
  // appleseed.foundation headers.
  #include "foundation/string/string.h"
@@ -500,7 +476,7 @@ index 9c3565d3f..dd43a4aa8 100644
  // Xerces-C++ headers.
  #include <xercesc/util/XercesVersion.hpp>
  
-@@ -100,7 +101,6 @@ LibraryVersionArray ThirdParties::get_versions()
+@@ -100,7 +101,6 @@
      // Keep entries sorted alphabetically.
  
      versions.push_back(APIStringPair("BCD", BCDVersion));
@@ -508,7 +484,7 @@ index 9c3565d3f..dd43a4aa8 100644
  
  #ifdef APPLESEED_WITH_EMBREE
      versions.push_back(APIStringPair("Embree", RTC_VERSION_STRING));
-@@ -128,6 +128,7 @@ LibraryVersionArray ThirdParties::get_versions()
+@@ -128,6 +128,7 @@
      versions.push_back(APIStringPair("OpenEXR", OPENEXR_VERSION_STRING));
      versions.push_back(APIStringPair("OpenImageIO", OIIO_VERSION_STRING));
      versions.push_back(APIStringPair("OpenShadingLanguage", OSL_LIBRARY_VERSION_STRING));
@@ -516,11 +492,9 @@ index 9c3565d3f..dd43a4aa8 100644
      versions.push_back(APIStringPair("Xerces-C++", XERCES_FULLVERSIONDOT));
      versions.push_back(APIStringPair("zlib", ZLIB_VERSION));
  
-diff --git a/src/appleseed/foundation/meta/tests/test_boost_regex.cpp b/src/appleseed/foundation/meta/tests/test_boost_regex.cpp
-deleted file mode 100644
-index af660aca6..000000000
---- a/src/appleseed/foundation/meta/tests/test_boost_regex.cpp
-+++ /dev/null
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_boost_regex.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_boost_regex.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_boost_regex.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_boost_regex.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -1,53 +0,0 @@
 -
 -//
@@ -575,10 +549,9 @@ index af660aca6..000000000
 -        EXPECT_FALSE(result);
 -    }
 -}
-diff --git a/src/appleseed/foundation/meta/tests/test_utility_filter.cpp b/src/appleseed/foundation/meta/tests/test_utility_filter.cpp
-index df6570929..3673d6471 100644
---- a/src/appleseed/foundation/meta/tests/test_utility_filter.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_utility_filter.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_utility_filter.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_utility_filter.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_utility_filter.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_utility_filter.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -35,6 +35,7 @@
  // Standard headers.
  #include <atomic>
@@ -587,7 +560,7 @@ index df6570929..3673d6471 100644
  
  using namespace foundation;
  
-@@ -111,6 +112,7 @@ TEST_SUITE(Foundation_Utility_Filter_RegExFilter)
+@@ -111,6 +112,7 @@
  
          EXPECT_FALSE(result);
      }
@@ -595,7 +568,7 @@ index df6570929..3673d6471 100644
      TEST_CASE(DefaultPattern_IsInvalid)
      {
          const RegExFilter filter;
-@@ -173,6 +175,32 @@ TEST_SUITE(Foundation_Utility_Filter_RegExFilter)
+@@ -173,8 +175,34 @@
          EXPECT_TRUE(anchors.accepts("a\nb\nc"));
          RegExFilter final_newline("a$");
          EXPECT_TRUE(final_newline.accepts("a\n"));
@@ -604,8 +577,8 @@ index df6570929..3673d6471 100644
 +        EXPECT_TRUE(empty_line.accepts("a\r\n"));
 +        EXPECT_TRUE(anchors.accepts("a\r\nb\r\nc"));
 +        EXPECT_TRUE(anchors.accepts("a\rb\rc"));
-+    }
-+
+     }
+ 
 +    TEST_CASE(FormFeed_IsNotAnAnchorBoundary)
 +    {
 +        const RegExFilter anchors("^b$");
@@ -625,13 +598,14 @@ index df6570929..3673d6471 100644
 +        ASSERT_TRUE(filter.is_valid());
 +        EXPECT_EXCEPTION(std::runtime_error,
 +            filter.accepts("aaaaaaaaaaaaaaaaaaaaaaaaaaaa!"));
-     }
- 
++    }
++
      TEST_CASE(ConcurrentSearches_UseIndependentMatchState)
-diff --git a/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp b/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
-index db16416a6..945ba91fc 100644
---- a/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
-+++ b/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
+     {
+         const RegExFilter filter("(?<=part_)(steel|glass)");
+diff -Naur appleseed/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp APPLESEED_BLD/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp
+--- appleseed/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/benchmark/benchmarkaggregator.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -38,9 +38,6 @@
  #include "foundation/utility/foreach.h"
  #include "foundation/utility/xercesc.h"
@@ -654,7 +628,7 @@ index db16416a6..945ba91fc 100644
  using namespace xercesc;
  namespace bf = std::filesystem;
  
-@@ -85,7 +82,7 @@ struct BenchmarkAggregator::Impl
+@@ -85,7 +82,7 @@
      XercesCContext      m_xerces_context;
      XercesDOMParser     m_xerces_parser;
  
@@ -663,7 +637,7 @@ index db16416a6..945ba91fc 100644
  
      typedef std::map<UniqueID, BenchmarkSeries> SeriesMap;
  
-@@ -258,9 +255,9 @@ bool BenchmarkAggregator::scan_file(const char* path)
+@@ -258,9 +255,9 @@
  
      const std::string filename = bf::path(path).filename().string();
  
@@ -675,10 +649,9 @@ index db16416a6..945ba91fc 100644
          return false;
  
      const std::string date_string = match[1].str();
-diff --git a/src/appleseed/foundation/utility/filter/regexfilter.cpp b/src/appleseed/foundation/utility/filter/regexfilter.cpp
-index 6923babbd..1cb4f429d 100644
---- a/src/appleseed/foundation/utility/filter/regexfilter.cpp
-+++ b/src/appleseed/foundation/utility/filter/regexfilter.cpp
+diff -Naur appleseed/src/appleseed/foundation/utility/filter/regexfilter.cpp APPLESEED_BLD/src/appleseed/foundation/utility/filter/regexfilter.cpp
+--- appleseed/src/appleseed/foundation/utility/filter/regexfilter.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/filter/regexfilter.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -30,31 +30,33 @@
  // Interface header.
  #include "regexfilter.h"
@@ -691,14 +664,14 @@ index 6923babbd..1cb4f429d 100644
  
  // Standard headers.
  #include <cassert>
--
--using namespace boost;
 +#include <cstdint>
 +#include <memory>
 +#include <new>
 +#include <stdexcept>
 +#include <string>
  
+-using namespace boost;
+-
  namespace foundation
  {
  
@@ -721,7 +694,7 @@ index 6923babbd..1cb4f429d 100644
  {
      set_pattern(pattern, case_sensivity);
  }
-@@ -68,31 +70,60 @@ void RegExFilter::set_pattern(const char* pattern, const CaseSensivity case_sens
+@@ -68,31 +70,60 @@
  {
      assert(pattern);
  
@@ -730,20 +703,19 @@ index 6923babbd..1cb4f429d 100644
 -        if (case_sensivity == CaseSensitive)
 -            impl->m_expression.assign(pattern);
 -        else impl->m_expression.assign(pattern, regex_constants::icase);
--
--        impl->m_valid = !impl->m_expression.empty();
--    }
--    catch (const regex_error&)
--    {
--        impl->m_valid = false;
--    }
 +    // Recognize the line endings used in filters on all supported platforms.
 +    const std::unique_ptr<pcre2_compile_context, decltype(&pcre2_compile_context_free)> context(
 +        pcre2_compile_context_create(nullptr), pcre2_compile_context_free);
 +    if (!context)
 +        throw std::bad_alloc();
 +    pcre2_set_newline(context.get(), PCRE2_NEWLINE_ANYCRLF);
-+
+ 
+-        impl->m_valid = !impl->m_expression.empty();
+-    }
+-    catch (const regex_error&)
+-    {
+-        impl->m_valid = false;
+-    }
 +    // Dots span newlines; anchors also recognize the empty line after a final newline.
 +    const std::uint32_t options = PCRE2_DOTALL | PCRE2_MULTILINE | PCRE2_ALT_CIRCUMFLEX
 +        | (case_sensivity == CaseSensitive ? 0 : PCRE2_CASELESS);
@@ -797,11 +769,10 @@ index 6923babbd..1cb4f429d 100644
  }
  
  }   // namespace foundation
-diff --git a/src/appleseed/foundation/utility/filter/regexfilter.h b/src/appleseed/foundation/utility/filter/regexfilter.h
-index ca177829b..f9025928b 100644
---- a/src/appleseed/foundation/utility/filter/regexfilter.h
-+++ b/src/appleseed/foundation/utility/filter/regexfilter.h
-@@ -39,7 +39,11 @@ namespace foundation
+diff -Naur appleseed/src/appleseed/foundation/utility/filter/regexfilter.h APPLESEED_BLD/src/appleseed/foundation/utility/filter/regexfilter.h
+--- appleseed/src/appleseed/foundation/utility/filter/regexfilter.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/filter/regexfilter.h	1970-01-01 00:00:00.000000000 +0000
+@@ -39,7 +39,11 @@
  {
  
  //
@@ -814,10 +785,9 @@ index ca177829b..f9025928b 100644
  //
  
  class APPLESEED_DLLSYMBOL RegExFilter
-diff --git a/src/appleseed/foundation/utility/iesparser.cpp b/src/appleseed/foundation/utility/iesparser.cpp
-index bcfd934e8..d9ee30f40 100644
---- a/src/appleseed/foundation/utility/iesparser.cpp
-+++ b/src/appleseed/foundation/utility/iesparser.cpp
+diff -Naur appleseed/src/appleseed/foundation/utility/iesparser.cpp APPLESEED_BLD/src/appleseed/foundation/utility/iesparser.cpp
+--- appleseed/src/appleseed/foundation/utility/iesparser.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/iesparser.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -33,9 +33,9 @@
  #include "foundation/math/scalar.h"
  #include "foundation/utility/countof.h"
@@ -831,7 +801,7 @@ index bcfd934e8..d9ee30f40 100644
  
  namespace foundation
  {
-@@ -141,7 +141,7 @@ namespace
+@@ -141,7 +141,7 @@
          const std::string& str, std::vector<ValueType>* output)
      {
          std::vector<std::string> tokens;
@@ -840,7 +810,7 @@ index bcfd934e8..d9ee30f40 100644
  
          output->clear();
          output->reserve(tokens.size());
-@@ -307,7 +307,7 @@ void IESParser::read_trimmed_line(std::istream& input_stream)
+@@ -307,7 +307,7 @@
      do
      {
          read_line(input_stream);
@@ -849,7 +819,7 @@ index bcfd934e8..d9ee30f40 100644
      } while (m_ignore_empty_lines && input_stream && m_line.empty());
  }
  
-@@ -446,7 +446,8 @@ void IESParser::parse_tilt_data(std::istream& input_stream)
+@@ -446,7 +446,8 @@
              "The specified number of tilt entries does not match "
              "the actual number of tilt multipliers in the line", m_line_counter);
      }
@@ -859,7 +829,7 @@ index bcfd934e8..d9ee30f40 100644
      {
          throw ParsingException(
              "Error while parsing tilt multipliers: "
-@@ -733,21 +734,21 @@ void IESParser::parse_angles(std::istream& input_stream)
+@@ -733,21 +734,21 @@
  
  bool IESParser::is_keyword_line(const std::string& line)
  {
@@ -888,7 +858,7 @@ index bcfd934e8..d9ee30f40 100644
      {
          throw ParsingException("Keyword is expected", m_line_counter);
      }
-@@ -785,9 +786,9 @@ void IESParser::parse_keyword_line(const std::string& line)
+@@ -785,9 +786,9 @@
  
  void IESParser::parse_tilt_line(const std::string& line)
  {
@@ -901,10 +871,9 @@ index bcfd934e8..d9ee30f40 100644
      {
          throw ParsingException("TILT line is expected", m_line_counter);
      }
-diff --git a/src/appleseed/foundation/utility/iesparser.h b/src/appleseed/foundation/utility/iesparser.h
-index 6c896f0e5..be484be8f 100644
---- a/src/appleseed/foundation/utility/iesparser.h
-+++ b/src/appleseed/foundation/utility/iesparser.h
+diff -Naur appleseed/src/appleseed/foundation/utility/iesparser.h APPLESEED_BLD/src/appleseed/foundation/utility/iesparser.h
+--- appleseed/src/appleseed/foundation/utility/iesparser.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/iesparser.h	1970-01-01 00:00:00.000000000 +0000
 @@ -33,9 +33,6 @@
  #include "foundation/string/string.h"
  #include "foundation/utility/test.h"
@@ -915,7 +884,7 @@ index 6c896f0e5..be484be8f 100644
  // Standard headers.
  #include <string>
  #include <unordered_map>
-@@ -376,7 +373,7 @@ class IESParser
+@@ -376,7 +373,7 @@
      // Read lines, split each line and write the values to the vector,
      // until the total number of values does not exceed the specified size.
      // If number of values in the last parsed line it too large, raise a ParsingException.
@@ -924,7 +893,7 @@ index 6c896f0e5..be484be8f 100644
      // to the value of specified type.
      template <typename ValueType>
      std::vector<ValueType> parse_to_vector(std::istream& input_stream, size_t count)
-@@ -389,7 +386,7 @@ class IESParser
+@@ -389,7 +386,7 @@
              check_empty(input_stream);
  
              std::vector<std::string> tokens;
@@ -933,11 +902,10 @@ index 6c896f0e5..be484be8f 100644
              if (output.size() + tokens.size() > count)
              {
                  const std::string expected_number_of_values = to_string(count - output.size());
-diff --git a/src/tools/animatecamera/CMakeLists.txt b/src/tools/animatecamera/CMakeLists.txt
-index d20ac4e91..40cbb1312 100644
---- a/src/tools/animatecamera/CMakeLists.txt
-+++ b/src/tools/animatecamera/CMakeLists.txt
-@@ -95,7 +95,6 @@ target_link_libraries (animatecamera
+diff -Naur appleseed/src/tools/animatecamera/CMakeLists.txt APPLESEED_BLD/src/tools/animatecamera/CMakeLists.txt
+--- appleseed/src/tools/animatecamera/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/tools/animatecamera/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -95,7 +95,6 @@
  	Threads::Threads
  	appleseed
  	appleseed.common
@@ -945,11 +913,10 @@ index d20ac4e91..40cbb1312 100644
  	)
  
  
-diff --git a/src/tools/convertmeshfile/CMakeLists.txt b/src/tools/convertmeshfile/CMakeLists.txt
-index fbcd62c7d..8a32a9eb2 100644
---- a/src/tools/convertmeshfile/CMakeLists.txt
-+++ b/src/tools/convertmeshfile/CMakeLists.txt
-@@ -92,7 +92,6 @@ target_link_libraries (convertmeshfile
+diff -Naur appleseed/src/tools/convertmeshfile/CMakeLists.txt APPLESEED_BLD/src/tools/convertmeshfile/CMakeLists.txt
+--- appleseed/src/tools/convertmeshfile/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/tools/convertmeshfile/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -92,7 +92,6 @@
  	Threads::Threads
  	appleseed
  	appleseed.common
@@ -957,11 +924,10 @@ index fbcd62c7d..8a32a9eb2 100644
  	)
  
  
-diff --git a/src/tools/dumpmetadata/CMakeLists.txt b/src/tools/dumpmetadata/CMakeLists.txt
-index 736e6ab5e..7222ea22a 100644
---- a/src/tools/dumpmetadata/CMakeLists.txt
-+++ b/src/tools/dumpmetadata/CMakeLists.txt
-@@ -91,7 +91,6 @@ target_link_libraries (dumpmetadata
+diff -Naur appleseed/src/tools/dumpmetadata/CMakeLists.txt APPLESEED_BLD/src/tools/dumpmetadata/CMakeLists.txt
+--- appleseed/src/tools/dumpmetadata/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/tools/dumpmetadata/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -91,7 +91,6 @@
  	Threads::Threads
  	appleseed
  	appleseed.common
@@ -969,11 +935,10 @@ index 736e6ab5e..7222ea22a 100644
  	)
  
  
-diff --git a/src/tools/makefluffy/CMakeLists.txt b/src/tools/makefluffy/CMakeLists.txt
-index aee5bf1f4..6118007e0 100644
---- a/src/tools/makefluffy/CMakeLists.txt
-+++ b/src/tools/makefluffy/CMakeLists.txt
-@@ -91,7 +91,6 @@ target_link_libraries (makefluffy
+diff -Naur appleseed/src/tools/makefluffy/CMakeLists.txt APPLESEED_BLD/src/tools/makefluffy/CMakeLists.txt
+--- appleseed/src/tools/makefluffy/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/tools/makefluffy/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -91,7 +91,6 @@
  	Threads::Threads
  	appleseed
  	appleseed.common
@@ -981,11 +946,10 @@ index aee5bf1f4..6118007e0 100644
  	)
  
  
-diff --git a/src/tools/projecttool/CMakeLists.txt b/src/tools/projecttool/CMakeLists.txt
-index 89c18992d..0283df02b 100644
---- a/src/tools/projecttool/CMakeLists.txt
-+++ b/src/tools/projecttool/CMakeLists.txt
-@@ -92,7 +92,6 @@ target_link_libraries (projecttool
+diff -Naur appleseed/src/tools/projecttool/CMakeLists.txt APPLESEED_BLD/src/tools/projecttool/CMakeLists.txt
+--- appleseed/src/tools/projecttool/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/tools/projecttool/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -92,7 +92,6 @@
  	Threads::Threads
  	appleseed
  	appleseed.common

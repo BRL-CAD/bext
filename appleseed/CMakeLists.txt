@@ -3,13 +3,13 @@ bext_enable(APPLESEED)
 
 if (ENABLE_APPLESEED)
 
-  include("${CMAKE_CURRENT_SOURCE_DIR}/patches/Series.cmake")
+  include("${CMAKE_CURRENT_SOURCE_DIR}/Series.cmake")
   if (MINGW)
     list(APPEND APPLESEED_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/appleseed_mingw_platform.patch")
   endif ()
   git_submodule_init(appleseed CMakeLists.txt
     PATCH_FILES ${APPLESEED_PATCH_FILES}
-    INPUT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/patches/Series.cmake"
+    INPUT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Series.cmake"
     PATCH_COMMAND_VAR APPLESEED_PATCH_COMMAND)
 
   RegisterDeps(APPLESEED)

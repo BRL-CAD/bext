@@ -1,0 +1,1780 @@
+Original Appleseed history
+==========================
+
+Messages below are preserved verbatim, apart from indentation. They are
+provenance for the consolidated patches, not claims that the original
+commit patches apply unchanged to the selected upstream base.
+
+The compatibility baseline includes the combined history through
+b0f1c08e2a1fe95139c994525fb6021f97c7d892. Its net changes are split by
+dependency modules, native build targets, library APIs, shader APIs,
+and support files. Some older changes were already upstream or were
+superseded before that checkpoint.
+
+Commit: 0e6fb83d6898b422906cda8ac25c7f0b83772fc3
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Maurice Didion <mdmaurice.didion@gmail.com>
+Date: 2021-06-14T11:41:27+02:00
+Parents: 1ba62025b5db722e179a2219d8d366c34bfaa342
+Message:
+    correct project modified when crop region changes
+
+    The project will now be marked as modified if a new crop region is defined or if the crop region is cleared.
+
+    The slot slot_project_mofified() of mainwindow.cpp was used as a function since the function creating the crop Area/ render region was already in the same class.
+
+Commit: 95b801bed9e81dbf84ecef7808827a06d7d58834
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: bartus <szczepaniak.bartek+github@gmail.com>
+Date: 2021-07-12T15:59:41+02:00
+Parents: 1ba62025b5db722e179a2219d8d366c34bfaa342
+Message:
+    Update to openexr:3
+
+Commit: 7f246a8b9093d53dac2ee88680b752accaa2c336
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Willem871 <62011295+Willem871@users.noreply.github.com>
+Date: 2021-08-26T17:22:14+02:00
+Parents: 1ba62025b5db722e179a2219d8d366c34bfaa342
+Message:
+    Fix Apple Silicon build
+
+    Only include x86 specific headers and code when APPLESEED_X86 is defined.
+    This fixes builds on Apple Silicon.
+
+Commit: 3c9a2424aa88a6eb06fd8ebbd85673e3da5e1d0b
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-04-22T13:34:28+05:30
+Parents: 8c894f29d023c29b7176f9c9c2de30a842a04813
+Message:
+    update utils.py script to python 3
+
+Commit: 7aafb10ec0afccc831838851db53fe92fe539090
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-04-22T13:57:03+05:30
+Parents: 3c9a2424aa88a6eb06fd8ebbd85673e3da5e1d0b
+Message:
+    change subprocess function
+
+Commit: 6efa3d8f37d18918eec59a6d02355126ba2d3675
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-01T22:22:51+05:30
+Parents: 7aafb10ec0afccc831838851db53fe92fe539090
+Message:
+    update runtestsuite to py3
+
+Commit: 2dcaf7ef8064c75a7abe284049d4d7cf9a817679
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-02T02:52:47+05:30
+Parents: 6efa3d8f37d18918eec59a6d02355126ba2d3675
+Message:
+    replace several next() and map functions
+
+Commit: 8364baf6276292b6db3b941496973ac9672f25a1
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-02T02:56:45+05:30
+Parents: 2dcaf7ef8064c75a7abe284049d4d7cf9a817679
+Message:
+    fix tag err
+
+Commit: ad15f4bf91831b930b10e3af6ebfc50cd71eb95b
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-03T01:36:32+05:30
+Parents: 8364baf6276292b6db3b941496973ac9672f25a1
+Message:
+    update cleanmany and convert many files
+
+Commit: 2e6fe9cb96318e64e647c52344f978fd23341e01
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-03T19:45:09+05:30
+Parents: ad15f4bf91831b930b10e3af6ebfc50cd71eb95b
+Message:
+    rename winreg module and few other python3 updates
+
+Commit: b33ec34045958dd90b75a2d3e21afa994d8ce5a1
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-03T19:45:47+05:30
+Parents: 2e6fe9cb96318e64e647c52344f978fd23341e01
+Message:
+    update to python3
+
+Commit: bf11b3c3402250a3f88e2e9a9249d4a2ab9ede96
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-06T23:16:28+05:30
+Parents: b33ec34045958dd90b75a2d3e21afa994d8ce5a1
+Message:
+    update to python3
+
+Commit: 50fa92ec94d8a5359b22eb655d273eb5e9353be3
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-08T21:13:16+05:30
+Parents: bf11b3c3402250a3f88e2e9a9249d4a2ab9ede96
+Message:
+    finish updating scripts folder to py3
+
+Commit: 062eb5f2c47b9c06901505fcd91eed2eedfadbdb
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-08T21:32:48+05:30
+Parents: 50fa92ec94d8a5359b22eb655d273eb5e9353be3
+Message:
+    update to py3
+
+Commit: b978f4d4f505fbe42e0843d53612ca874160ab1a
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-09T21:27:12+05:30
+Parents: 062eb5f2c47b9c06901505fcd91eed2eedfadbdb
+Message:
+    update to py3
+
+Commit: 205f6b47eb4c3587c0ee6640321d9182908d63f7
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-10T21:11:09+05:30
+Parents: b978f4d4f505fbe42e0843d53612ca874160ab1a
+Message:
+    Update to py3
+
+Commit: 27a304baf7927c6c9d6cf85ee9c6d0707734927b
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-12T20:16:34+05:30
+Parents: 205f6b47eb4c3587c0ee6640321d9182908d63f7
+Message:
+    Update to py3
+
+Commit: ad2d94d1c470d136f296c2281edd3c37b4fbd26f
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: geckguy <gamincon4112003@gmail.com>
+Date: 2023-06-12T20:55:02+05:30
+Parents: 27a304baf7927c6c9d6cf85ee9c6d0707734927b
+Message:
+    Update to py3
+
+Commit: 6536bb324a9e5ad3ef95f18e543ed4ff028ad35e
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: luzpaz <luzpaz@users.noreply.github.com>
+Date: 2023-08-01T21:44:56-04:00
+Parents: 1e60a023d4a77965c867dbd296a71e061238acba
+Message:
+    Fix various typos
+
+    Fixes various user-facing and non-user-facing typos. Found via `codespell -q 3 -S "./src/thirdparty,./src/appleseed/foundation/utility/minizip" -L fo,localy,mis,ot`
+
+Commit: c18cdfa3b1110eb871fb875f7796172af3468a15
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Abhiram <78226909+geckguy@users.noreply.github.com>
+Date: 2023-08-27T13:35:16+05:30
+Parents: ad2d94d1c470d136f296c2281edd3c37b4fbd26f
+Message:
+    Update __init__.py
+
+Commit: f64cae9d2b4228f025b2c9dfa8870f786433d8e7
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Abhiram <78226909+geckguy@users.noreply.github.com>
+Date: 2023-08-27T13:53:30+05:30
+Parents: c18cdfa3b1110eb871fb875f7796172af3468a15
+Message:
+    Update convertmany.py
+
+Commit: 47d716c9e5a3f11c40849ba1bb235128b6cf4474
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Abhiram <78226909+geckguy@users.noreply.github.com>
+Date: 2023-08-27T13:57:09+05:30
+Parents: f64cae9d2b4228f025b2c9dfa8870f786433d8e7
+Message:
+    Update oslextractmeta.py
+
+Commit: cacbf59fa7f7c9d6690215be7f9ca0be18de4f90
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Abhiram <78226909+geckguy@users.noreply.github.com>
+Date: 2023-08-27T14:00:12+05:30
+Parents: 47d716c9e5a3f11c40849ba1bb235128b6cf4474
+Message:
+    Update rendermanager.py
+
+Commit: a31c5bb7ebd74862ff6b2576f170855d2d37e187
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Abhiram <78226909+geckguy@users.noreply.github.com>
+Date: 2023-08-27T14:01:32+05:30
+Parents: cacbf59fa7f7c9d6690215be7f9ca0be18de4f90
+Message:
+    Update rendernode.py
+
+Commit: 63c6e90c778b0a6042e5481dd72c332b3dc62314
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Abhiram <78226909+geckguy@users.noreply.github.com>
+Date: 2023-08-27T14:05:22+05:30
+Parents: a31c5bb7ebd74862ff6b2576f170855d2d37e187
+Message:
+    Update aspaths2json.py
+
+Commit: 9f783f326a41b5c5b57ef5dc80647e818abff8c7
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Abhiram <78226909+geckguy@users.noreply.github.com>
+Date: 2023-08-27T14:07:52+05:30
+Parents: 63c6e90c778b0a6042e5481dd72c332b3dc62314
+Message:
+    Update sortincludes.py
+
+Commit: 632401087dee676e1b1632cc42b81d0f5e51f32e
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:05:31-04:00
+Parents: 1e60a023d4a77965c867dbd296a71e061238acba 95b801bed9e81dbf84ecef7808827a06d7d58834
+Message:
+    Merge pull request #1 from bartoszek/openexr3
+
+    Update to openexr:3
+
+Commit: b7eaedcab195cf7293dca379c980fa775aeb3900
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:10:21-04:00
+Parents: 632401087dee676e1b1632cc42b81d0f5e51f32e 0e6fb83d6898b422906cda8ac25c7f0b83772fc3
+Message:
+    Merge pull request #2 from Saarli/#1788-Defining_crop_region_with_mouse_doesn't_mark_project_as_modified
+
+    correct project modified when crop region changes
+
+Commit: 2cfedb6c7c3abbb45c02871edf40864def6c00cd
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:11:26-04:00
+Parents: b7eaedcab195cf7293dca379c980fa775aeb3900 7f246a8b9093d53dac2ee88680b752accaa2c336
+Message:
+    Merge pull request #3 from Willem871/master
+
+    Fix Apple Silicon build
+
+Commit: 2be0559147b89d90d2900bfb9dcfa294b97aec81
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:13:00-04:00
+Parents: 2cfedb6c7c3abbb45c02871edf40864def6c00cd 9f783f326a41b5c5b57ef5dc80647e818abff8c7
+Message:
+    Merge pull request #4 from geckguy/master
+
+    Update to Python3
+
+Commit: b55b972f99083b22c6934afc7d6dc6fb99474d69
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:16:21-04:00
+Parents: 2be0559147b89d90d2900bfb9dcfa294b97aec81
+Message:
+    Remove .vs directory
+
+Commit: 4cda9d2a44718a7ae80a371a7916305df2d3b7d4
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:18:09-04:00
+Parents: 1e60a023d4a77965c867dbd296a71e061238acba 6536bb324a9e5ad3ef95f18e543ed4ff028ad35e
+Message:
+    Merge pull request #5 from luzpaz/typos
+
+    Fix various typos
+
+Commit: f65378ef1ae2d87058ed6501d7f3502730dc1cdf
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:19:56-04:00
+Parents: b55b972f99083b22c6934afc7d6dc6fb99474d69 4cda9d2a44718a7ae80a371a7916305df2d3b7d4
+Message:
+    Merge branch 'typos'
+
+Commit: 839dd2597385997f30df668cfb5d47cecad8e3b1
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:24:46-04:00
+Parents: f65378ef1ae2d87058ed6501d7f3502730dc1cdf
+Message:
+    Update Find* files to the latest versions from other projects.
+
+Commit: bed3319cd69121b5d6e85ff707efe88af3d58088
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:28:56-04:00
+Parents: 839dd2597385997f30df668cfb5d47cecad8e3b1
+Message:
+    Newer dependencies need higher C++ standard - bump to 14
+
+Commit: 68d5b2c31c4f96b01c294779125cb66041c91ac8
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T21:41:43-04:00
+Parents: bed3319cd69121b5d6e85ff707efe88af3d58088
+Message:
+    Compile fixes
+
+Commit: 582f60b027d164b8ce9f05b8485cbac3226faf90
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-15T22:07:21-04:00
+Parents: 68d5b2c31c4f96b01c294779125cb66041c91ac8
+Message:
+    Need to look for the tools - we copy them into the sandbox
+
+Commit: 9c621bb310e0beff8d97a48b417d31b10663e423
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-16T10:22:03-04:00
+Parents: 582f60b027d164b8ce9f05b8485cbac3226faf90
+Message:
+    Adjustments to CMake files
+
+Commit: dfde079ef15fdf7a3dfe6f24cab0d9758715a846
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-16T14:02:37-04:00
+Parents: 9c621bb310e0beff8d97a48b417d31b10663e423
+Message:
+    Adjustments to get closer to building - denoiser+bsd still isn't linking right, and some shaders aren't compiling
+
+Commit: b09fa161683f8420a992c6c3a1049ab377f55e2e
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-16T14:11:28-04:00
+Parents: dfde079ef15fdf7a3dfe6f24cab0d9758715a846
+Message:
+    Add extension include to get osl shaders building
+
+Commit: 81a353dca01a46d43202e1e6c8e967bc740adc98
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-18T10:34:25-04:00
+Parents: b09fa161683f8420a992c6c3a1049ab377f55e2e
+Message:
+    Use new find_package targets.  This gets us a build on Linux, although it is untested as yet.
+
+Commit: bbe45ab7766c2c2aed8e426f48932653086ff1d1
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-19T23:44:10-04:00
+Parents: 81a353dca01a46d43202e1e6c8e967bc740adc98
+Message:
+    Try doing things the new way with Boost
+
+Commit: 7651e4686cd096fa09eb36a5401b0c600be390a7
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-25T14:25:11-04:00
+Parents: bbe45ab7766c2c2aed8e426f48932653086ff1d1
+Message:
+    No using old policies.  If things are broken, fix them, but shift to assuming a modern baseline.
+
+Commit: 2e871177d5bf73db3ea7a877d8411855c9c0cc16
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-25T14:27:59-04:00
+Parents: 7651e4686cd096fa09eb36a5401b0c600be390a7
+Message:
+    Preferably we want find_package to work on Windows as well...
+
+Commit: 9fdccf219fe63651f862f66327588e8742bf0fc1
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-25T20:28:00-04:00
+Parents: 2e871177d5bf73db3ea7a877d8411855c9c0cc16
+Message:
+    Checkpoint some experimentation with adjusting the Appleseed CMake build logic.
+
+Commit: f65db28ca0ee78d02a3e031ff7964c4c55a1dcfe
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-25T20:44:01-04:00
+Parents: 9fdccf219fe63651f862f66327588e8742bf0fc1
+Message:
+    Use TARGET_FILE for the OpenImageIO tools
+
+Commit: 6163dce8193fc2bb097ca05d62b1b57317b46872
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-25T21:22:30-04:00
+Parents: f65db28ca0ee78d02a3e031ff7964c4c55a1dcfe
+Message:
+    The lz4 config file seems to not work real well - stick to the module for now.
+
+Commit: 4d4e958dc80a3183a1a4b786875a690a773964cf
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-09-29T11:19:26-04:00
+Parents: 6163dce8193fc2bb097ca05d62b1b57317b46872
+Message:
+    For now, this header is not optional.  Will need another solution
+
+Commit: e235595ef15d85ee1a741168ba7e591beef49a34
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: f4alt <christopherjmacgregor@gmail.com>
+Date: 2023-12-04T11:27:45-05:00
+Parents: 4d4e958dc80a3183a1a4b786875a690a773964cf
+Message:
+    remove_directory deprecated 3.17 - use file(REMOVE_RECURSE ..) instead
+
+Commit: 33793a4dedf6591c63c3f98473c2de6f9929912f
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: f4alt <christopherjmacgregor@gmail.com>
+Date: 2023-12-04T11:46:51-05:00
+Parents: e235595ef15d85ee1a741168ba7e591beef49a34
+Message:
+    oslc needs a few different dll's for windows
+
+    rather than manually tracking and copying dll's to sandbox/ just use the
+    fullpath to the installed OSL_COMPILER for generating oso's
+
+Commit: 305d763dc642e80ad2aa40f4aa627f6e53e7e396
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: f4alt <christopherjmacgregor@gmail.com>
+Date: 2023-12-04T11:50:48-05:00
+Parents: 33793a4dedf6591c63c3f98473c2de6f9929912f
+Message:
+    weird use case with boost linking
+
+    on windows BOOST_ALL_DYN_LINK must be supplied, otherwise find_package
+    tries to find 'libboost_...' instead of 'boost_...'
+
+Commit: 32042842b05d17cc640978369e7cf39b97d8083d
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: f4alt <christopherjmacgregor@gmail.com>
+Date: 2023-12-04T11:52:18-05:00
+Parents: 305d763dc642e80ad2aa40f4aa627f6e53e7e396
+Message:
+    cleanup Util functions for all platforms
+
+    normalize path's using file(TO_CMAKE_PATH ..)
+    and use universal cmake -E cmds
+
+Commit: 2225578aa0705f01b00372096b261ba504fc6219
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: f4alt <christopherjmacgregor@gmail.com>
+Date: 2023-12-04T13:16:40-05:00
+Parents: 32042842b05d17cc640978369e7cf39b97d8083d
+Message:
+    help windows link osl libraries
+
+    windows set_target_properties needs both IMPORTED_LOCATION and
+    IMPORTED_IMPLIB for shared libraries
+
+Commit: bcbed60d1cdb8df3501eca227db9865cfb62303d
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: f4alt <christopherjmacgregor@gmail.com>
+Date: 2023-12-04T17:06:45-05:00
+Parents: 2225578aa0705f01b00372096b261ba504fc6219
+Message:
+    need to include sandbox/shaders for stdosl.h and oslutil.h
+
+Commit: e58f5094a68558ee0cdabb4726d4240656406046
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2023-12-21T14:38:54-05:00
+Parents: bcbed60d1cdb8df3501eca227db9865cfb62303d
+Message:
+    For some reason the targets aren't working with the latest OSL...
+
+Commit: b5d57a6dacb7b143aaeea991a960b8da44810bfa
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2024-03-26T22:58:10-04:00
+Parents: e58f5094a68558ee0cdabb4726d4240656406046
+Message:
+    Avoid compilation error (may not be proper fix)
+
+    Compiler was complaining about these assignments:
+    error: writing 1 byte into a region of size 0 [-Werror=stringop-overflow=]
+
+    Check before writing avoids the warning, but that may just be a symptom
+    of some other issue - needs a more careful look.
+
+Commit: a19d542c45f5f53ca2cb4d6799e1617ff5b68e93
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2024-06-20T18:48:15-04:00
+Parents: b5d57a6dacb7b143aaeea991a960b8da44810bfa
+Message:
+    Add a TODO file
+
+Commit: 05e66fd424c1311c52362247cff92b945ecf2021
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2024-06-26T16:40:56-04:00
+Parents: a19d542c45f5f53ca2cb4d6799e1617ff5b68e93
+Message:
+    Tweaks for building with latest bext versions of deps
+
+Commit: 96e5b6d6145ded4727120cee8fa3d25a6d469e8c
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T11:46:52Z
+Parents: 05e66fd424c1311c52362247cff92b945ecf2021 c4ba82893febd711befb194f905e955d3ee143a3
+Message:
+    Merge upstream master into brlcad
+
+    Reconcile upstream changes with the existing dependency build
+    integration. Preserve the fork build layout while adopting C++17,
+    updated OSL callbacks, PLY input, and optional StatMC support.
+
+Commit: b0f1c08e2a1fe95139c994525fb6021f97c7d892
+Patches: appleseed_dependency_modules.patch, appleseed_native_build_targets.patch, appleseed_library_api_compatibility.patch, appleseed_shader_api_compatibility.patch, appleseed_support_files.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T11:47:00Z
+Parents: 96e5b6d6145ded4727120cee8fa3d25a6d469e8c
+Message:
+    Update Appleseed for current image and shading libraries
+
+    Use shared ownership for OpenImageIO texture systems and update type
+    descriptors and renderer callbacks for current OpenImageIO and OSL APIs.
+
+    Find Happly explicitly and compile shaders against the standard headers
+    supplied by the selected OSL compiler. Preserve SIMD half support by
+    including Imath before OpenImageIO.
+
+Commit: 16d7146aaaa93a54866f9e96953fba42ca6226f9
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T11:47:08Z
+Parents: b0f1c08e2a1fe95139c994525fb6021f97c7d892
+Message:
+    Write byte conversions regardless of destination contents
+
+    Remove guards that read the destination byte before assigning converted
+    values. Zero or uninitialized destinations must not suppress conversion.
+
+    Add regression coverage for integer and floating point source formats.
+    The selected image and renderer tests pass, including the EXR pixel
+    round trip.
+
+Commit: 59742e3a447afbdda04a9988e03f8ce61f0f66ad
+Patches: appleseed_procedural_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T19:39:24Z
+Parents: 16d7146aaaa93a54866f9e96953fba42ca6226f9
+Message:
+    Preserve procedural hit inputs and pass normals to refinement
+
+    Store procedural normals and material slots as primary intersection
+    data, and reconstruct world-space normals and UVs when caches are
+    invalidated. Copies and side changes must not discard the values needed
+    to shade procedural surfaces.
+
+    Pass the original object-space geometric normal to the procedural
+    refinement callback so adapters can offset the selected surface without
+    reshooting geometry. Update built-in objects to the new signature.
+
+    Add regressions for uncached copies, cached back-face assignment, side
+    changes, and refinement under nonuniform object transforms. All 31
+    renderer test suites pass: 241 cases and 4649 assertions.
+
+Commit: 0dad2e786b3563280fe80839dbee922762562747
+Patches: appleseed_procedural_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T19:55:23Z
+Parents: 59742e3a447afbdda04a9988e03f8ce61f0f66ad
+Message:
+    Release transform ownership when rebuilding assembly trees
+
+    Keep transform-owning assembly items in their existing vector instead of
+    copying them into raw BVH leaf storage without destruction. Handle empty
+    leaves before indexing the vector and report its actual item storage
+    size.
+
+    Make transform-sequence copy assignment replace existing storage safely
+    and preserve self-assignment. Delegate copy construction to an
+    initialized state so partial allocation failures can release acquired
+    storage.
+
+    Add prepared-sequence assignment checks. All 31 renderer suites pass,
+    including empty-scene tracer cases. Valgrind reports no lost allocations
+    or memory errors for the intersection and transform suites.
+
+Commit: fd330c09c5576b063f803aa9409c62c300e2e428
+Patches: appleseed_shader_area_index.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T20:27:47Z
+Parents: 0dad2e786b3563280fe80839dbee922762562747
+Message:
+    Keep OSL surface-area lookups read-only during rendering
+
+    Return zero for shapes without a registered surface area instead of
+    inserting a missing entry into the shared map from shader execution.
+    Concurrent emissive shading of custom procedural objects could corrupt
+    that map and crash rendering.
+
+    The multi-worker art UV diagnostic reproduces the failure with an
+    emissive OSL shader on librt geometry and passes after the fix. All 31
+    renderer suites also pass.
+
+Commit: bfa681890662bddedc3a16f0e6e93df6c927c93d
+Patches: appleseed_procedural_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T21:20:26Z
+Parents: fd330c09c5576b063f803aa9409c62c300e2e428
+Message:
+    Initialize sampled procedural surface points consistently
+
+    Retain cache flags instead of replacing them and assign both surface
+    tangents independently.  Initialize normal derivatives and material
+    slot, and preserve object-space primary normals and a coherent hit
+    distance so copied points can reconstruct position, orientation, and UV
+    coordinates.
+
+    Use the normal side handling shared with traced hits, and construct an
+    orthonormal shading basis even when supplied UV tangents are skewed.
+
+    Regression cases reproduce invalid points and normals, lost tangents,
+    and incorrect copied back faces before the fix.  All 31 renderer suites
+    pass (245 cases, 4671 assertions), and focused memory checking reports
+    no errors or lost allocations.
+
+Commit: 34ebfbea7e025451feb5d4acd04973e45c962fd5
+Patches: appleseed_procedural_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T21:43:33Z
+Parents: bfa681890662bddedc3a16f0e6e93df6c927c93d
+Message:
+    Release disk and rectangle storage on destruction
+
+    Both procedural object classes allocate private implementation storage
+    but relied on implicit destructors that did not release it.  Add
+    explicit virtual destructors so release() and deletion through Object
+    both free that storage.
+
+    Focused native-surface tests exposed 120 bytes lost across three object
+    instances before the fix.  The same memory check now reports no errors
+    or lost allocations.
+
+Commit: b7eb39ba7a74142f5c39dc5e40acdb32c9e526b3
+Patches: appleseed_procedural_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T21:45:06Z
+Parents: 34ebfbea7e025451feb5d4acd04973e45c962fd5
+Message:
+    Preserve procedural surface derivatives through shading
+
+    Carry optional object-space position and unit-normal derivatives from
+    intersection results into shading points and preserve them through
+    copies and side changes.  Include normalization when transforming normal
+    derivatives under nonuniform scale.
+
+    Use the geometric plane for procedural ray footprints and retain double
+    precision in the shared UV solve until final conversion.  Missing or
+    singular mappings yield zero UV derivatives with an independent shading
+    basis fallback.  Supply analytic mappings for native spheres,
+    rectangles, and disks, and retain sampled-point derivatives through
+    cache rebuilds.
+
+    Regressions compare transformed normal derivatives to finite differences
+    and check copied hits, back faces, known UV offsets, singular mappings,
+    reused points, and extreme scales with analytic inverses.  All 31
+    renderer suites pass (256 cases, 4733 assertions); focused memory
+    validation has no errors or lost allocations.
+
+Commit: 42daa5a7f44bfe73d11e270f4f3f668e63adf416
+Patches: appleseed_osl_input_contracts.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T22:44:11Z
+Parents: b7eb39ba7a74142f5c39dc5e40acdb32c9e526b3
+Message:
+    Reject empty OSL parameter values and preserve string whitespace rules
+
+    Check for an empty token list before reading the parameter type,
+    avoiding an invalid iterator dereference.  Trim the typed value
+    consistently so a leading blank cannot shift the string payload into its
+    type prefix. Derive the payload offset from the parsed prefix instead of
+    a constant.
+
+    Cover empty input, whitespace-only input, and leading whitespace before
+    a string containing a project path with spaces.
+
+Commit: 914b2d39b7af6baffe9f60802e4ad5f0788f1c4d
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T23:05:13Z
+Parents: 42daa5a7f44bfe73d11e270f4f3f668e63adf416
+Message:
+    Initialize scalar weights used by emission closure sampling
+
+    Store each emission weight in the scalar-weight array consumed by the
+    shared PDF calculation.  Writing the PDF array directly was overwritten
+    by that calculation, which read uninitialized data instead.
+
+    Check normalized probabilities and closure selection for unequal
+    weights, plus single, empty, and zero-weight emission.  Poison object
+    storage to make missing initialization fail deterministically.  All 32
+    renderer suites and focused memory checks pass.
+
+Commit: 229ff44566b2a6cbc09424a985931354e51064f1
+Patches: appleseed_osl_input_contracts.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T00:31:36Z
+Parents: 914b2d39b7af6baffe9f60802e4ad5f0788f1c4d
+Message:
+    Add opt-in project-rooted OSL texture lookup
+
+    Resolve relative texture filenames against the project root before OIIO
+    can search the caller directory. Apply the same policy to cached
+    handles, dynamic lookups, environments, and metadata queries. Preserve
+    explicit absolute filenames and the default native search behavior.
+
+    Cover collisions, missing assets, bound handles, UDIM patterns, Unicode
+    filenames, and invalid root configurations. All 271 renderer unit cases
+    pass; the focused suite has no Valgrind errors or lost blocks.
+
+Commit: 95103f35f6116d2220f1d4e54699e99026dfaee6
+Patches: appleseed_osl_input_contracts.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T00:34:58Z
+Parents: 229ff44566b2a6cbc09424a985931354e51064f1
+Message:
+    Match shader queries to the OSL execution search policy
+
+    Resolve compiled shader files before querying metadata. With configured
+    search directories, exclude the implicit caller-directory lookup that
+    OSLQuery otherwise performs. Preserve absolute filenames and default
+    lookup when no search directories are configured.
+
+    A conflicting caller-directory shader previously supplied the wrong
+    material interface in art. Both new collision renders now match their
+    reference exactly, and all 271 renderer unit cases pass.
+
+Commit: a6de73dd0b5de70f00392898a0ce2319ec3b2dae
+Patches: appleseed_bump_and_texture_nodes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T00:51:33Z
+Parents: 95103f35f6116d2220f1d4e54699e99026dfaee6
+Message:
+    Preserve input normals when bump perturbation is disabled
+
+    Initialize the bump node output from its normalized surface-normal input
+    before taking zero-value, zero-depth, or zero-weight early returns.
+    Previously those paths returned the global normal and discarded upstream
+    normal-map nodes.
+
+    Native chained-normal art regressions now match their upstream reference
+    on spheres and flat and smooth BOTs. All 271 renderer unit cases pass.
+
+Commit: 906000ae3cb604ba4a78e35c97547ca6e0268029
+Patches: appleseed_bump_and_texture_nodes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T01:11:22Z
+Parents: a6de73dd0b5de70f00392898a0ce2319ec3b2dae
+Message:
+    Perturb input bump normals with surface gradients
+
+    Replace geometric-normal reconstruction with a surface-gradient
+    perturbation that retains smooth and previously mapped input normals.
+    Preserve constant-height identity and evaluate zero-valued heights when
+    their derivatives are nonzero.
+
+    Scale position derivatives and the resulting normal before normalization
+    to avoid overflow and underflow when units change. Degenerate footprints
+    retain the input normal; signed depth and height saturation remain
+    supported.
+
+    Independent art diagnostics match analytic affine and sphere-chart
+    references, including four scales from 1e-25 to 1e25. All eight focused
+    art and geometry regressions and 271 renderer cases pass.
+
+Commit: 06475a125411a7a5502d01edd2e99736f4c1cbf4
+Patches: appleseed_shader_resources.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T01:16:04Z
+Parents: 906000ae3cb604ba4a78e35c97547ca6e0268029
+Message:
+    Deploy generated OSL extensions with shader helpers
+
+    Make the generated extension header a dependency of the shader target
+    and deploy it under include/appleseed, matching helper-header includes
+    and the installed shader namespace. Previously its copy command had no
+    dependent target and the installed SDK lacked the header.
+
+    The shader target now generates the missing file and installs it. A
+    native bump control compiles with only installed OSL and Appleseed
+    headers, without generated build-tree include paths.
+
+Commit: 4ef210e6063e59e64a0e8c7838120fef8c1cf0b1
+Patches: appleseed_bump_and_texture_nodes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T02:02:49Z
+Parents: 06475a125411a7a5502d01edd2e99736f4c1cbf4
+Message:
+    Honor normal-map chart orientation and input frames
+
+    Orient tangent-space V using the supplied bitangent and project U onto
+    the input normal plane. This corrects authored UV handedness and
+    supports normals supplied by upstream nodes.
+
+    Share safe direction normalization across bump and normal-map paths.
+    Preserve float-unit vectors through repeated nodes and retain the input
+    normal for zero, cancelling, or unusable mapped directions. A missing
+    bitangent keeps the legacy fixed-cross orientation.
+
+    Independent art references cover native primitive charts, flat and
+    smooth BOTs, UV mirrors, channel controls, chained normals, and extreme-
+    scale or degenerate frames. All nine focused regressions and 271
+    renderer cases pass; a chained render has no Valgrind errors or lost
+    blocks.
+
+Commit: a37acc2016cceeb120cb346fa8a67d69b6360384
+Patches: appleseed_bump_and_texture_nodes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T02:34:08Z
+Parents: 4ef210e6063e59e64a0e8c7838120fef8c1cf0b1
+Message:
+    Report native texture failures and honor explicit fills
+
+    Fail missing named textures by default and expose an explicit opt-in
+    fill mode. Initialize color, alpha, and raw scalar fill outputs so empty
+    filenames and handled failures honor the configured defaults.
+
+    Share scalar and RGB sampling, inspect lookup errors before publishing
+    sampled outputs, and preserve single-channel replication. Keep existing
+    color conversion behavior separate.
+
+    Native art error/fill regressions and 271 renderer cases pass. Raw
+    normal and height maps match their minified references on a BOT and
+    sphere; zero-width controls differ visibly.
+
+Commit: 9d297efd14e2e296813828768ea39c3ad953fe40
+Patches: appleseed_bump_and_texture_nodes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T03:08:08Z
+Parents: a37acc2016cceeb120cb346fa8a67d69b6360384
+Message:
+    Reuse texture color decoding and correct transfer breakpoints
+
+    Reuse the shared color-management helper for native texture decoding.
+    The duplicated selection used comparison operators where assignments
+    were intended, leaving five transfer modes black.  Reject unsupported
+    integer selections before indexing the transfer list.
+
+    Use the linear breakpoint when encoding Rec.709 and the encoded
+    breakpoint when decoding Rec.2020.  Keep transfer values consistent with
+    the public helper functions.
+
+    All eight native transfers and both corrected helpers pass numerical
+    checks through art.  All 271 renderer unit tests pass.
+
+Commit: 3f9e298dae1ecc15b7dd0599d8a0b5be9d17f6be
+Patches: appleseed_optional_and_unused_wave.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T03:58:31Z
+Parents: 9d297efd14e2e296813828768ea39c3ad953fe40
+Message:
+    Use C++17 optional storage for shader query caches
+
+    Replace the only direct Boost.Optional use with std::optional inside the
+    private shader-query implementation. Preserve lazy dictionary
+    construction and explicitly reset the shader metadata cache when opening
+    a new shader.
+
+    Cover cached dictionary reuse, reopening shaders with different metadata
+    and parameter counts, and recovery after a failed bytecode open. The
+    tests pass before and after the migration without filesystem fixtures.
+
+    All 274 renderer cases and twelve focused art and geometry regressions
+    pass. Valgrind reports no errors or definite or indirect leaks in the
+    shader-query cache lifecycle tests.
+
+Commit: 7f4e7d94b4bee77593440d280aa9e1f2c55caa31
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T04:35:03Z
+Parents: 3f9e298dae1ecc15b7dd0599d8a0b5be9d17f6be
+Message:
+    Fail CLI unit tests when cases throw exceptions
+
+    Use the suite failure count to determine unit-test status. Unexpected
+    exceptions fail test cases without incrementing assertion failures, so
+    checking assertions alone returned success for failed suites.
+
+    Confirmed that the shared-library suite with three exception failures
+    and zero assertion failures now exits with status 1 instead of 0.
+
+Commit: 48dc588ee2d6e32c45164cf5619b716bda2ee482
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T04:40:50Z
+Parents: 7f4e7d94b4bee77593440d280aa9e1f2c55caa31
+Message:
+    Use the FreeBSD system library in loader tests
+
+    Load libc.so.7 and resolve printf on FreeBSD. The Linux libdl fixture
+    caused three cases to throw before the symbol checks could run.
+
+    All 1,595 foundation and renderer cases now pass. Loader and shader-
+    query lifecycle tests also pass Valgrind with no errors or definite or
+    indirect leaks.
+
+Commit: 0ee533a86125cf4f6b4a738f550a3f03e15618b6
+Patches: appleseed_optional_and_unused_wave.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T04:40:51Z
+Parents: 48dc588ee2d6e32c45164cf5619b716bda2ee482
+Message:
+    Drop the unused Boost Wave dependency
+
+    Remove Wave from Boost discovery and drop stale library hints from the
+    Linux CI configurations. No renderer source uses the component.
+
+    The rebuilt renderer no longer loads Boost.Wave or Boost.Serialization.
+    All 1,595 foundation and renderer cases and twelve focused art and
+    geometry regressions pass.
+
+Commit: 1070b0852e4286822b19571ab215f9657132085c
+Patches: appleseed_lru_cache_index.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T04:52:59Z
+Parents: 0ee533a86125cf4f6b4a738f550a3f03e15618b6
+Message:
+    Cover LRU cache collisions, eviction, and allocator ownership
+
+    Exercise recency updates, unload refusal, index growth, stable element
+    addresses, and clearing before replacing the hash index implementation.
+
+Commit: 2dd925a426f8ebda4cfe9bf82bbc1fa72c09bc2b
+Patches: appleseed_lru_cache_index.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T05:00:47Z
+Parents: 1070b0852e4286822b19571ab215f9657132085c
+Message:
+    Use the standard unordered map for the LRU cache index
+
+    Keep list-backed element storage, the caller's hasher and allocator, and
+    existing eviction behavior. Regression coverage verifies collisions,
+    recency, unload refusal, index growth, and allocator ownership against
+    both container implementations.
+
+Commit: 76d4beff43c055153e467c132335510ba5a86489
+Patches: appleseed_shader_area_index.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T05:02:39Z
+Parents: 2dd925a426f8ebda4cfe9bf82bbc1fa72c09bc2b
+Message:
+    Cover shader group area registration and lookup
+
+    Register emitting shader areas through the light sampler with a real OSL
+    shader group. Verify both instance identities, absent pairs,
+    replacement, and preservation of entries while the area index grows.
+
+Commit: 5e3d54845fa5c93f75a306b9297bea31e37cec42
+Patches: appleseed_shader_area_index.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T05:06:44Z
+Parents: 76d4beff43c055153e467c132335510ba5a86489
+Message:
+    Use the standard unordered map for shader group areas
+
+    Hash both assembly and object instance identities with standard pointer
+    hashers and the existing foundation hash combiner. Preserve const lookup
+    and absent-area behavior. The area registration tests pass with both
+    container implementations, as do all Foundation and Renderer suites.
+
+Commit: 702a9c17048f4fbf407a8acbedd367c936089c6f
+Patches: appleseed_filesystem.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T05:29:43Z
+Parents: 5e3d54845fa5c93f75a306b9297bea31e37cec42
+Message:
+    Cover filesystem paths and ZIP modification times
+
+    Verify relative path splitting, missing path tails, symlink resolution,
+    and archive modification timestamps before replacing the filesystem
+    backend. Use independent filesystem setup for the new path and ZIP
+    fixtures.
+
+Commit: 411dad89f0408abd288fe35ce502f297e9b72b7b
+Patches: appleseed_filesystem.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T05:32:02Z
+Parents: 702a9c17048f4fbf407a8acbedd367c936089c6f
+Message:
+    Use native file metadata for ZIP calendar timestamps
+
+    Keep archive dates independent of filesystem clock epochs. Read file
+    modification times through native metadata, convert local time without
+    shared static storage, and report metadata or calendar conversion errors
+    explicitly. ZIP contents and timestamp regression tests pass.
+
+Commit: 450d6a401b9f096e2546e9be8ed684839394ce52
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T06:30:12Z
+Parents: 411dad89f0408abd288fe35ce502f297e9b72b7b
+Message:
+    Reject missing installation roots without dereferencing null
+
+    The root-path API returns null when an installation layout cannot be
+    located. Check that result directly rather than passing it to a string
+    helper that assumes a valid pointer. An isolated CLI copy now reports
+    the installation error and exits instead of crashing.
+
+Commit: d33511b58c888a83af0a729adaeb979698c81adc
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T06:30:12Z
+Parents: 450d6a401b9f096e2546e9be8ed684839394ce52
+Message:
+    Use the configured Eigen headers in the denoiser tool
+
+    Stop placing the old vendored Eigen directory ahead of the configured
+    dependency. Inherit the Eigen headers supplied by bcd so the tool and
+    library agree. The optional tools build and install successfully.
+
+Commit: 4c20e9a8688f61c40920b3b70a2c697f9dc63a15
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T06:30:12Z
+Parents: d33511b58c888a83af0a729adaeb979698c81adc
+Message:
+    Build C++ SDK examples with the required C++17 standard
+
+    Use CMake standard selection on all platforms instead of Unix-only C++11
+    flags. Drop obsolete Boost Filesystem compatibility definitions.
+
+    The installed helloworld consumer configures, links, renders a
+    nonconstant image, and writes its project against the installed SDK.
+
+Commit: aa19527251a68ed0d0c209ad3d5678ad8e25a09f
+Patches: appleseed_filesystem.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T06:30:13Z
+Parents: 4c20e9a8688f61c40920b3b70a2c697f9dc63a15
+Message:
+    Replace Boost filesystem operations with the C++17 library
+
+    Migrate library helpers, frontends, and tools to standard paths and
+    error codes. Use native directory ranges rather than Boost iterator
+    wrappers. Preserve executable-directory formatting and stop
+    installation-root traversal when a path is its own parent.
+
+    Move path compatibility probes into the Foundation suites and verify
+    their returned values. All Foundation and Renderer tests pass, along
+    with the path and ZIP checks under Valgrind.
+
+Commit: 1b18651f047553b007832dff292a748bde7b28e0
+Patches: appleseed_filesystem.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T06:30:13Z
+Parents: aa19527251a68ed0d0c209ad3d5678ad8e25a09f
+Message:
+    Drop obsolete Boost filesystem and system build requirements
+
+    Remove direct component requests and filesystem-only compiler flags.
+    Update cached-library hints and use the still-required thread library as
+    the bootstrap installation marker. The migrated library and CLI no
+    longer load Boost Filesystem.
+
+Commit: af65817e75ad3a1365c4ae7e48ea60e2ff5f0013
+Patches: appleseed_atomics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T06:58:54Z
+Parents: 1b18651f047553b007832dff292a748bde7b28e0
+Message:
+    Cover atomic operations and concurrent renderer counters
+
+    Exercise old-value returns, wraparound, compare/exchange, concurrent
+    integer and float updates, flag publication and snapshot copies, unique
+    identifiers, and bounded sample reservations. Share a private worker
+    launcher that joins tasks safely when launching or running work fails.
+    All cases pass against the Boost implementation.
+
+Commit: 5ee671942e01c824c7070fb1f63257e35fb2e633
+Patches: appleseed_atomics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:36:54Z
+Parents: af65817e75ad3a1365c4ae7e48ea60e2ff5f0013
+Message:
+    Check allocation alignment for SIMD-sized and explicit buffers
+
+    Tiny malloc size classes may have less than 16-byte alignment. Limit the
+    malloc expectation to allocations large enough for a SIMD object, and
+    exercise explicit aligned allocations down to one byte at several
+    alignments.
+
+Commit: 56d19498d33b087833d28320e466dc2d3f3818c6
+Patches: appleseed_atomics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:36:55Z
+Parents: 5ee671942e01c824c7070fb1f63257e35fb2e633
+Message:
+    Initialize scalar values in the STL allocator testbed
+
+    Value-initialize test elements before copying them through allocators
+    and containers. Uninitialized scalar and pointer values give optimized
+    builds undefined behavior rather than a useful allocation test.
+
+Commit: 517d1335a1b56ae6db7b20ceb7d8a6bf5d750871
+Patches: appleseed_atomics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:36:55Z
+Parents: 56d19498d33b087833d28320e466dc2d3f3818c6
+Message:
+    Initialize accumulation-buffer sample counts with standard atomics
+
+    Initialize the shared count in the base class so global accumulation
+    buffers start at zero before clear is called. Cover the constructor
+    contract and give the counter standard atomic storage.
+
+Commit: 924697235c7a193e28ca21bc93c0ed40d791b7f0
+Patches: appleseed_atomics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:36:55Z
+Parents: 517d1335a1b56ae6db7b20ceb7d8a6bf5d750871
+Message:
+    Use standard atomics for renderer counters and thread flags
+
+    Replace object-owned Boost atomics in rendering, denoising, identifiers,
+    and Qt renderer controllers. Preserve snapshot copying of thread flags
+    with explicit atomic loads and stores. Keep sequentially consistent
+    ordering.
+
+Commit: fe509724d2a3c9f46302047b3c9c203b679f6b1f
+Patches: appleseed_atomics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:36:55Z
+Parents: 924697235c7a193e28ca21bc93c0ed40d791b7f0
+Message:
+    Replace Boost interprocess atomics with native buffer operations
+
+    Use Interlocked operations on Windows and compiler atomic builtins on
+    GNU-compatible platforms for existing pixel and lease storage. Preserve
+    observed-value returns and sequential consistency without fabricating
+    standard atomic objects over raw memory.
+
+    Load floating-point accumulator values atomically before compare-
+    exchange retries. Cover nonfinite additions as well as concurrent
+    updates.
+
+Commit: 3a2c390a323f9b592f6cdd7bba1819cf869718f3
+Patches: appleseed_atomics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:36:55Z
+Parents: fe509724d2a3c9f46302047b3c9c203b679f6b1f
+Message:
+    Drop the direct Boost atomic build requirement
+
+    The renderer now uses standard object atomics and native raw-buffer
+    primitives. Boost.Thread still brings Boost.Atomic transitively until
+    threading is migrated.
+
+Commit: 17cf42a2275cde665834e2af4d5d90181d2a61c3
+Patches: appleseed_threads.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:41:21Z
+Parents: 3a2c390a323f9b592f6cdd7bba1819cf869718f3
+Message:
+    Cover lock ownership and paused worker restart behavior
+
+    Exercise concurrent spinlock updates and reader/writer publication.
+    Pause a gated worker, stop it, and restart it repeatedly without timing-
+    dependent sleeps. All cases pass against the current Boost
+    implementation.
+
+Commit: d1589c479b5fd4a1d0bcb86b09b8987b090c0a74
+Patches: appleseed_threads.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:42:12Z
+Parents: 17cf42a2275cde665834e2af4d5d90181d2a61c3
+Message:
+    Synchronize paused-worker stop notifications with the wait predicate
+
+    Set the abort flag and clear the pause flag while holding the pause
+    mutex before notifying the worker. This closes the gap between testing
+    the pause predicate and entering the condition-variable wait. The worker
+    stop/restart and job tests pass.
+
+Commit: d3b0b675ddad7f274046e7cb93dbee05cbae4e43
+Patches: appleseed_threads.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:04:16Z
+Parents: d1589c479b5fd4a1d0bcb86b09b8987b090c0a74
+Message:
+    Use standard mutexes for renderer services and callbacks
+
+    Move logging, lazy objects, XML lifetime management, memory tracking,
+    texture access, plugin storage, light recording, and callback queues to
+    standard mutexes and lock guards. Use standard thread identifiers in log
+    messages and include each required standard header explicitly.
+
+Commit: 36f53332d57c7d2f338396db810488c78e43b8f7
+Patches: appleseed_threads.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:04:16Z
+Parents: d3b0b675ddad7f274046e7cb93dbee05cbae4e43
+Message:
+    Use standard threads and condition variables for job workers
+
+    Retain job ownership, abort predicates, pause behavior, and joining on
+    stop. Use unique locks for condition-variable waits and lock guards for
+    other queue operations. Remove unused Boost namespace imports.
+
+Commit: 3b7aaf52d73d40fe69498839e8ea032c85403e27
+Patches: appleseed_threads.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:04:16Z
+Parents: 36f53332d57c7d2f338396db810488c78e43b8f7
+Message:
+    Use standard threads and timed shared locks in frame rendering
+
+    Migrate pass management, progressive statistics, and display threads
+    while retaining their explicit joins. Use a standard shared timed mutex
+    for the global accumulation buffer so lock acquisition remains
+    abortible.
+
+Commit: db130459d1b22c79e9cbbe9c3358100b3cc9e43e
+Patches: appleseed_threads.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:04:16Z
+Parents: 3b7aaf52d73d40fe69498839e8ea032c85403e27
+Message:
+    Remove Boost from platform threading primitives
+
+    Implement spinlock ownership with an atomic flag and acquire/release
+    ordering. Use a standard mutex for reader/writer coordination, standard
+    sleeps and yields, and standard hardware-concurrency queries. All
+    threading callers now include their standard facilities directly.
+
+Commit: a6b6495b1310869d47d36a96e8b130d404967bc5
+Patches: appleseed_threads.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:04:16Z
+Parents: db130459d1b22c79e9cbbe9c3358100b3cc9e43e
+Message:
+    Drop Boost thread and chrono build requirements
+
+    Threading now uses the C++17 standard library. Keep the existing
+    explicit Threads target and retain only the remaining DateTime and Regex
+    component requirements.
+
+Commit: d6fe2722bf197116edaa09690cb48decdd50e2d7
+Patches: appleseed_chrono.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:11:33Z
+Parents: a6b6495b1310869d47d36a96e8b130d404967bc5
+Message:
+    Cover legacy UTC timestamp formats and benchmark precision
+
+    Check compact, extended log, and readable tooltip timestamps with
+    microsecond precision. Cover the legacy calendar endpoints, leap day,
+    Unix epoch, and the preceding microsecond. Verify benchmark dates retain
+    their fractional component. All fixtures pass against Boost.DateTime.
+
+Commit: 2408897fe9606cdfdba30d37e6975b851e6ace37
+Patches: appleseed_chrono.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:37:04Z
+Parents: d6fe2722bf197116edaa09690cb48decdd50e2d7
+Message:
+    Add chrono UTC timestamps with checked calendar conversion
+
+    Provide microsecond timestamps, strict compact parsing, and legacy
+    compact, extended, and readable formats across years 1400-9999. Keep
+    conversion independent of timezone and native clock resolution, bound
+    arithmetic before conversion, and preserve output on parse failure.
+    Check known epoch counts and invalid input alongside legacy format
+    fixtures.
+
+Commit: 969b58ee4790fc01fe524a99ae224d081236b509
+Patches: appleseed_chrono.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:37:04Z
+Parents: 2408897fe9606cdfdba30d37e6975b851e6ace37
+Message:
+    Use chrono timestamps for benchmark history and tooltips
+
+    Store timestamps directly, initialize empty data points, and preserve
+    ordering before the Unix epoch. Retain legacy filename and tooltip text
+    while rejecting invalid calendar dates during directory scans. Keep
+    signed microseconds in chart metadata and exercise mixed valid and
+    invalid history files.
+
+Commit: cc8ae4844c29de5d8f21a6994c71b78312666ced
+Patches: appleseed_chrono.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:37:04Z
+Parents: 969b58ee4790fc01fe524a99ae224d081236b509
+Message:
+    Format logger UTC timestamps with chrono
+
+    Use the system clock at microsecond precision and the shared extended
+    timestamp formatter. Preserve the existing UTC suffix and log header
+    layout without Boost.DateTime.
+
+Commit: d9eb3f14d1cacfe898967a7364dfe36e82be3a7e
+Patches: appleseed_chrono.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:37:04Z
+Parents: cc8ae4844c29de5d8f21a6994c71b78312666ced
+Message:
+    Remove unused Boost date and duration adapters
+
+    All timestamp consumers now use chrono. Delete the old Boost-only
+    conversion adapters and their library-specific tests; calendar
+    formatting, parsing, and benchmark compatibility remain covered by the
+    timestamp tests.
+
+Commit: fbe7baba67a475fd8c8c660cb011394894d661cc
+Patches: appleseed_chrono.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:37:05Z
+Parents: d9eb3f14d1cacfe898967a7364dfe36e82be3a7e
+Message:
+    Drop the Boost DateTime build requirement
+
+    The renderer no longer uses Boost.DateTime. Retain only Regex in the
+    component requirements while the remaining header dependencies are
+    migrated.
+
+Commit: bcbe6e394a97c56430c75c18d5acc9c6f09af2b9
+Patches: appleseed_denoiser_workers.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:49:05Z
+Parents: fbe7baba67a475fd8c8c660cb011394894d661cc
+Message:
+    Cover Perl filters, IES whitespace, and denoiser output
+
+    Preserve advanced filter syntax, newline defaults, invalid-pattern
+    recovery, case sensitivity, and concurrent searches. Exercise all ASCII
+    whitespace in IES tokenization and verify native single-worker denoising
+    visits each pixel of a constant image. The baseline cases pass with the
+    current Boost helpers.
+
+Commit: e61476f5266dea45b1e00c094eb237ff02e3c1fe
+Patches: appleseed_regex_and_build.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:51:06Z
+Parents: bcbe6e394a97c56430c75c18d5acc9c6f09af2b9
+Message:
+    Use standard helpers for IES whitespace and range checks
+
+    Reuse the existing whitespace tokenization and trimming helpers and
+    standard any_of. Remove Boost.Algorithm from the parser header and
+    correct the documented conversion exception. The IES fixtures and all
+    ASCII whitespace cases pass.
+
+Commit: 3215046202bb27c5b75f38c7e50ea15db51f9ba9
+Patches: appleseed_denoiser_workers.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:51:06Z
+Parents: e61476f5266dea45b1e00c094eb237ff02e3c1fe
+Message:
+    Launch denoiser workers without Boost Bind
+
+    Forward worker arguments directly through the standard thread
+    constructor and reference wrappers. Remove the obsolete compiler
+    workaround and intermediate thread move. The native single-worker
+    denoiser output regression passes.
+
+Commit: 7dabe2a6201cd2a5e86c9db4ea2f1ea2efaa2736
+Patches: appleseed_denoiser_workers.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T09:00:08Z
+Parents: 3215046202bb27c5b75f38c7e50ea15db51f9ba9
+Message:
+    Cover all pixels and synchronize denoiser cancellation
+
+    Distribute remainder pixels across workers, bound worker counts to
+    available work, and retain at least one worker for automatic detection.
+    Reject invalid inputs and crops before allocating worker data. Join
+    launched workers if a later launch fails, use an atomic cancellation
+    flag, and avoid invalid strip iterators on short images. The previously
+    failing worker regressions and instrumented cancellation check pass.
+
+Commit: a3940e7b72af0aff887079194176383e989b0a3b
+Patches: appleseed_denoiser_workers.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T09:17:31Z
+Parents: 7dabe2a6201cd2a5e86c9db4ea2f1ea2efaa2736
+Message:
+    Synchronize denoising patch marks between workers
+
+    Replace the shared boolean image with owned atomic flags. Use relaxed
+    ordering for advisory skip hints because output pixels remain private to
+    each worker until aggregation. Centralize flag indexing and cover
+    overlapping patches and callback cancellation. Instrumented native
+    denoising passes after suppressing a libthr allocator report reproduced
+    in a standalone thread-only program.
+
+Commit: 811bfa1f81806ffc6db729429b283f642ab0599a
+Patches: appleseed_regex_and_build.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T09:28:51Z
+Parents: a3940e7b72af0aff887079194176383e989b0a3b
+Message:
+    Use standard regex for fixed internal patterns
+
+    Replace Boost.Regex in benchmark filenames and IES line parsing with
+    C++17 regular expressions. These fixed patterns do not require Perl
+    extensions; public user-supplied filters are handled separately.
+
+Commit: 3dcd281ccd8088829219a2a435af7fac8b68c373
+Patches: appleseed_regex_and_build.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T09:52:50Z
+Parents: 811bfa1f81806ffc6db729429b283f642ab0599a
+Message:
+    Remove Boost from renderer filters and core builds
+
+    Use PCRE2 for public Perl-style filters, keeping patterns compiled once
+    and allocating independent match state for concurrent searches. Preserve
+    common newline defaults and document engine-specific differences. Raise
+    match resource errors instead of silently rejecting names.
+
+    Keep Boost discovery and Windows definitions only for optional Python
+    bindings. Remove redundant core, tool, and example linkage and replace
+    Boost-specific tests with coverage at the filter interface.
+
+    Validation: 1,663 unit cases and 392,530 assertions passed with Boost
+    discovery disabled. No Boost headers occur in 646 active compiled
+    targets. Installed SDK consumers and sample rendering passed; standalone
+    lifecycle and concurrency checks passed under address,
+    undefined-behavior, and thread sanitizers.
+
+    ThreadSanitizer checks suppress the independently reproduced libthr
+    allocator report in __thr_calloc.
+
+Commit: 54cb995716aef68fc3dec3a4da00e84709e5ee02
+Patches: appleseed_shader_resources.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T10:25:45Z
+Parents: 3dcd281ccd8088829219a2a435af7fac8b68c373
+Message:
+    Stage standard shader headers from the selected OSL package
+
+    Copy stdosl.h and oslutil.h from the selected OSL package into the
+    sandbox and installed shader assets. Remove the stale bundled standard
+    headers, including their obsolete implicit extension include.
+
+    After binary path cleanup, OSL can discover the sandbox standard library
+    instead of the original installation prefix. The old header then failed
+    to find as_osl_extensions.h during runtime compilation. Make the
+    existing shader-group tests compile explicitly through the staged header
+    so the packaging defect is visible before finalization too.
+
+    Validation: all 1,663 unit cases and 392,530 assertions pass after SDK
+    finalization and removal of retired Boost artifacts. The selected modern
+    helper headers preserve the utility functions and explicit Appleseed
+    extension namespace.
+
+Commit: 3c5b35f8597e858792f56d64fd65a85c1887b32e
+Patches: appleseed_struetype.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T12:12:06Z
+Parents: 54cb995716aef68fc3dec3a4da00e84709e5ee02
+Message:
+    Replace vendored stb_truetype with bounded struetype
+
+    Consume the shared header through STRUETYPE_ROOT and initialize embedded
+    fonts with their actual byte lengths. Let the bounded backend allocate
+    glyph bitmaps and clip coordinates before narrowing them for image
+    access. Reject invalid font sizes, line spacing, and text origins
+    deliberately.
+
+    Keep pixel-height sizing, kerning, and single-byte text conventions. Add
+    seven regression cases for built-in and custom fonts, metrics, paragraph
+    layout, premultiplied coverage, clipping, and invalid inputs.
+
+Commit: 87a899d89508f7fceaac013f04fde5fc21a5ee19
+Patches: appleseed_procedural_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T13:35:54Z
+Parents: 1778030f63d4dc4f161c1a9c3f40d459c0ff5128
+Message:
+    Preserve procedural hits from offset secondary rays
+
+    Procedural child rays can begin at an offset parent point.
+    Reconstructing their hits from the original ray origin moves exit points
+    inside closed objects and causes repeated self-intersections.
+
+    Keep the actual object-space hit as primary intersection data, including
+    copied and side-flipped shading points and sampled surfaces. Compare
+    nearest hits in the original world ray parameter and refine subsequent
+    offsets from the preserved point.
+
+    A transformed slab regression reproduces the displaced hit and failed
+    escape before the fix. The complete renderer suite passes 203 suites,
+    1675 cases, and 466329 assertions. Rebuild consumers against the updated
+    ShadingPoint layout.
+
+Commit: 976e6832d8d4d8e091bc7d48fef19981453307b8
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T14:18:41Z
+Parents: 87a899d89508f7fceaac013f04fde5fc21a5ee19
+Message:
+    Report missing developer fixtures without aborting
+
+    Installed SDKs may omit developer test and benchmark directories. Catch
+    filesystem failures from these actions and return a failed status with
+    an actionable diagnostic instead of terminating on an uncaught
+    exception. Propagate benchmark failures through the CLI status as well.
+
+    Installed-consumer checks reproduce both aborts before the fix and
+    verify exit status one afterwards. Developer unit execution still
+    passes.
+
+Commit: ea337eb8b1d5691028bfc7f5037a161172858e22
+Patches: appleseed_core_and_developer_fixes.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-13T22:28:03Z
+Parents: dc53a3886063df679e476ef283e6bf88a6471b87
+Message:
+    Export installed image color conversion helpers
+
+    Mark the image format query and the RGB/sRGB tile and image conversion
+    functions with the shared-library API visibility macro. These helpers
+    are already installed headers, but were unavailable to external SDK
+    consumers in hidden-visibility builds.
+
+    This lets rendering integrations use the same conversion path as
+    Frame::write_main_image instead of maintaining a second implementation.
+
+Commit: c25ce97173473cc2cf243c361390eed22c442575
+Patches: appleseed_shader_resources.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T17:48:47Z
+Parents: e0b82328cc065af035dc2fbae0ecf9e1b3c97d8b
+Message:
+    Preserve executable tools and staged install paths
+
+    Install command-line scripts and OSL tools as programs. Create autosave
+    directories using the actual install prefix and DESTDIR, including paths
+    containing spaces.
+
+Commit: d701b91608f66f7d8eb9907daa79166f451e04a5
+Patches: appleseed_shader_resources.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T17:48:47Z
+Parents: c25ce97173473cc2cf243c361390eed22c442575
+Message:
+    Build complete shader resources in the build tree
+
+    Make compiled shaders explicit target dependencies, retain generated
+    outputs across configuration, and install the complete shader library
+    from the build tree. Remove the empty sandbox-preparation target and its
+    disabled command.
+
+Commit: 9a4f748199f593831f8e4dfd32d147ce76e6a2c6
+Patch: 06
+Author: Christopher Sean Morrison <brlcad@gmail.com>
+Date: 2026-05-11T11:59:15-04:00
+Parents: f2f561a7013e0ccfc20cc7d3ed94cde189ba5c81
+Message:
+    patch appleseed to use our newer openexr (plus a minor code fix)
+
+Commit: 7e35512c44f7d40edf0b93e892c63a37b256b059
+Patch: 06
+Author: Christopher Sean Morrison <brlcad@gmail.com>
+Date: 2026-07-13T01:39:14-04:00
+Parents: 7ebceffe7991211ce5592bd65838b10d18ca0e1b
+Message:
+    try harder to ensure openexr and imath are passed forward
+
+Commit: c565aa23d44412b2bdd345586561e5924aa8e28b
+Patch: 06
+Author: Christopher Sean Morrison <brlcad@gmail.com>
+Date: 2026-07-13T21:02:19-04:00
+Parents: 7d0e799891674b70968505533af8d74065cef52a
+Message:
+    boost continues to be a pita, and undoubtedly more work needed here, but this gets us fully going on windows again.  needed to force vc145 with vs2026 (which means probably no good for 2022/2019 now) because boost header awareness only goes to 143.  also needed to poke OSL for config mode builds.
+
+Commit: f50169703cbfb6affa1d9ba608eee353c25ff552
+Patch: 06
+Author: Christopher Sean Morrison <brlcad@gmail.com>
+Date: 2026-07-22T21:23:12-04:00
+Parents: f5b44b800b1995861ec1befffe42be37f7263c5c
+Message:
+    finally fixed the memory corruption on windows, and update OSL colorspace.
+
+    appleseed was doing an alligned alloc inside the DLL but that meant we'd end up with new/delete mismatches (particularly with STL but really anything that allocates) when appleseed is embedded or calls into a plugin (like our BRL-CAD plugin).  this was particularly challenging for any data passing in/out of the dll, so workaround here is to stick with standard malloc/free.
+
+Commit: baf3038cd19e595e129e8d80d4c060ed6271f8ab
+Patch: 06
+Author: Christopher Sean Morrison <brlcad@gmail.com>
+Date: 2026-07-25T10:34:15-04:00
+Parents: 52011c5dcf262afe69c5c133585a457005a133a3
+Message:
+    needs to be the module to work with cmake_find_package_prefer_config
+
+Commit: 102fb01d20d101ce36b495541f4bd6a938e97bf0
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-10-29T13:56:13Z
+Parents: 70952d9eba780e093067e615177f77958ec81346
+Message:
+    Detect the Boost MSVC toolset used by appleseed
+
+    Derive BOOST_LIB_TOOLSET from the imported Boost atomic library instead of hard-coding vc145.
+
+Commit: db0be869fe4c9bab83c1ba55fb1e17b386bc39a4
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-10-30T16:54:50Z
+Parents: 93ebd56747eacf8f575b519429cdfb9ed29fde96
+Message:
+    Build fixes for FreeBSD
+
+    Most are platform adjustments, but OIDN's lack of FreeBSD topology
+    discovery may warrant a closer look.
+
+Commit: 409bc667e4860de4bd86d6cebdd2fcf477b4aaee
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-05T07:04:48-05:00
+Parents: 8fd3f6765212e2611f18e187ec30e047b0ae3f37
+Message:
+    Build Appleseed with IntelLLVM feature and aliasing settings
+
+    Supply the required C++14 feature declarations when the deprecated
+    compiler-detection module encounters IntelLLVM. Relax alias analysis for
+    vector headers that index adjacent struct members as arrays.
+
+    Validated the Intel build, 185 math test cases with 591 assertions, and
+    a downstream art render.
+
+Commit: e988e4f9de0c63fb535abe8f3082945b8c9b2579
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-11T11:47:33Z
+Parents: 1ca6692da4174cfde569b873b1874beb3297146e
+Message:
+    Modernize the Appleseed dependency stack
+
+    Update the image, color, shading, compiler, and XML dependency pins.
+    Split Imath from OpenEXR and add local Robin Map and Happly snapshots.
+
+    Use current dependency options and package targets, remove obsolete
+    patches, and limit the interim Boost build to required components. Keep
+    TBB and Embree available.
+
+    Build and exercise the renderer with system LLVM 21. The bundled LLVM 23
+    pin and its compression compatibility patch have focused validation; the
+    full bundled compiler build remains outstanding.
+
+Commit: b9fa159c114bc143efb1ddf09168630aa64647f7
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T04:42:00Z
+Parents: 63e3a0d0fd57dc6a741ac609059be87c4afe25ea
+Message:
+    Pin Wave-free Appleseed and trim bundled Boost requests
+
+    Drop Wave and the explicit Optional entry from the bundled Boost
+    selection. Pin the renderer dependency cleanup, unit-test exit-status
+    correction, and portable loader tests.
+
+    Refresh bundled patch contexts against the current fork. Both patches
+    replay without fuzz and reproduce the validated build inputs, including
+    the intended linear OSL working space.
+
+    The reduced Boost selection compiles. All 1,595 foundation and renderer
+    cases and twelve focused art regressions pass. Runtime inspection
+    confirms that art and Appleseed no longer load Wave or Serialization.
+
+Commit: 15e8666fd049217af70a51f728296f2cfc4fe657
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T06:36:02Z
+Parents: 9f13feeecd0bb6a1e65080c5aea13c1ddef142de
+Message:
+    Pin standard-filesystem Appleseed and reduce Boost requests
+
+    Update to the C++17 filesystem migration, ZIP timestamp coverage, safe
+    installation-root handling, and modern SDK examples. Include the
+    optional denoiser Eigen include fix.
+
+    Remove direct filesystem, system, and range requests from bundled Boost.
+    Refresh the integration patch context for the reduced requirements. The
+    reduced Boost graph builds without filesystem targets.
+
+    All Foundation and Renderer unit tests and art regressions pass. Native
+    tools and the installed C++ SDK consumer build and run successfully.
+
+Commit: c672e721d2fe6d61713b0594fbfa838f6bfd419b
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T07:37:12Z
+Parents: 15e8666fd049217af70a51f728296f2cfc4fe657
+Message:
+    Use standard atomics in the Appleseed renderer
+
+    Update the renderer to use standard atomics for owned counters and
+    native operations for raw buffer storage. Remove direct Boost.Atomic and
+    Boost.Interprocess component requests; Boost.Thread still brings Atomic
+    transitively.
+
+    Preserve the MSVC Boost.Atomic import-library workaround while Thread
+    needs it. Validate the full renderer unit suite, concurrent operations
+    under ThreadSanitizer, installed SDK rendering, and art regressions.
+
+Commit: 3000bcb63982ccba6b846d4ab377ddabe5147965
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T08:04:39Z
+Parents: c672e721d2fe6d61713b0594fbfa838f6bfd419b
+Message:
+    Use the renderer with standard C++17 threading
+
+    Use standard threading throughout the renderer and drop direct Thread,
+    Chrono, and SmartPtr component requests. Remove the obsolete MSVC Atomic
+    import-library workaround and refresh its patch context.
+
+    A clean build of the reduced Boost component list succeeds. The
+    installed renderer and art no longer load Boost.Thread, Chrono, or
+    Atomic. Full renderer unit tests, instrumented concurrency checks,
+    installed SDK renders, progressive light tracing, and art regressions
+    pass.
+
+Commit: be92714759f0ce0cc776dcb245253d3ead8ba554
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T09:17:33Z
+Parents: c6ae9180fc28153507aa9fede038d9ad4d9511c2
+Message:
+    Reduce Boost helpers and fix denoiser worker coverage
+
+    Pin standard IES helpers and denoiser thread forwarding, removing direct
+    Boost.Algorithm and Bind component requests. Retire the obsolete
+    denoiser move patch now that threads are constructed in place.
+
+    Include fixes for skipped remainder pixels, excessive worker counts,
+    cancellation synchronization, worker lifetime, and shared patch marks.
+    Validate the full renderer unit suite, native denoiser concurrency, the
+    reduced Boost component build, and art regressions. Perl regex behavior
+    remains covered for the next migration.
+
+Commit: 09cdf1cd56833c4c2edd6e3d577ddd6703db4f9f
+Patch: 06
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T09:54:50Z
+Parents: be92714759f0ce0cc776dcb245253d3ead8ba554
+Message:
+    Replace the art stack Boost package with local PCRE2
+
+    Add a minimal PCRE2 10.49 local-source wrapper for Appleseed filters.
+    Build only the 8-bit shared library without JIT, record the upstream
+    release commit, and install its legal notice. Keep the source untracked
+    until a BRL-CAD mirror is independently verified.
+
+    Pin the fixed-pattern standard regex and public-filter PCRE2 migrations.
+    Remove the unused Boost wrapper, gitlink, dependency edge, and remap
+    example. Optional Python bindings still need external Boost and remain
+    disabled in this stack.
+
+    Validation: fresh wrapper build and install, staged dependency metadata,
+    14 selection tests, seven metadata tests, full Appleseed unit suite, and
+    installed SDK consumers passed.
+
+    All 12 art and geometry regressions passed against the installed
+    candidate.

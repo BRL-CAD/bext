@@ -1,22 +1,7 @@
-Subject: [PATCH 12/50] Use native atomics and standard renderer counters
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: af65817e75ad3a1365c4ae7e48ea60e2ff5f0013
-Original-Commit: 5ee671942e01c824c7070fb1f63257e35fb2e633
-Original-Commit: 56d19498d33b087833d28320e466dc2d3f3818c6
-Original-Commit: 517d1335a1b56ae6db7b20ceb7d8a6bf5d750871
-Original-Commit: 924697235c7a193e28ca21bc93c0ed40d791b7f0
-Original-Commit: fe509724d2a3c9f46302047b3c9c203b679f6b1f
-Original-Commit: 3a2c390a323f9b592f6cdd7bba1819cf869718f3
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c29556c59..53b2e7a9b 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -248,7 +248,7 @@ set(Boost_MULTITHREADED TRUE)
+diff -Naur appleseed/CMakeLists.txt APPLESEED_BLD/CMakeLists.txt
+--- appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -248,7 +248,7 @@
  if (USE_STATIC_BOOST)
    set(Boost_USE_STATIC_LIBS TRUE)
  endif ()
@@ -25,10 +10,9 @@ index c29556c59..53b2e7a9b 100644
  add_definitions(-DBOOST_ALL_DYN_LINK)
  include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories(${Boost_LIBRARY_DIRS})
-diff --git a/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h b/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h
-index d3b47ffaf..e55d4e89c 100644
---- a/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h
-+++ b/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h
+diff -Naur appleseed/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h APPLESEED_BLD/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h
+--- appleseed/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.bench/mainwindow/rendering/qtrenderercontroller.h	1970-01-01 00:00:00.000000000 +0000
 @@ -32,12 +32,12 @@
  // appleseed.renderer headers.
  #include "renderer/api/rendering.h"
@@ -45,7 +29,7 @@ index d3b47ffaf..e55d4e89c 100644
  namespace appleseed {
  namespace bench {
  
-@@ -88,7 +88,7 @@ class QtRendererController
+@@ -88,7 +88,7 @@
      void signal_frame_end();
  
    private:
@@ -54,10 +38,9 @@ index d3b47ffaf..e55d4e89c 100644
  };
  
  }   // namespace bench
-diff --git a/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h b/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h
-index 6cbae1c83..8c6cb805b 100644
---- a/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h
-+++ b/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h
+diff -Naur appleseed/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h APPLESEED_BLD/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h
+--- appleseed/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.studio/mainwindow/rendering/qtrenderercontroller.h	1970-01-01 00:00:00.000000000 +0000
 @@ -32,12 +32,12 @@
  // appleseed.renderer headers.
  #include "renderer/api/rendering.h"
@@ -74,7 +57,7 @@ index 6cbae1c83..8c6cb805b 100644
  namespace appleseed {
  namespace studio {
  
-@@ -88,7 +88,7 @@ class QtRendererController
+@@ -88,7 +88,7 @@
      void signal_frame_end();
  
    private:
@@ -83,11 +66,10 @@ index 6cbae1c83..8c6cb805b 100644
  };
  
  }   // namespace studio
-diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
-index 256b9fe7e..d83c8bffb 100644
---- a/src/appleseed/CMakeLists.txt
-+++ b/src/appleseed/CMakeLists.txt
-@@ -549,11 +549,13 @@ source_group ("foundation\\meta\\benchmarks" FILES
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -549,11 +549,13 @@
  )
  
  set (foundation_meta_tests_sources
@@ -101,11 +83,9 @@ index 256b9fe7e..d83c8bffb 100644
      foundation/meta/tests/test_attributeset.cpp
      foundation/meta/tests/test_autoreleaseptr.cpp
      foundation/meta/tests/test_benchmarkaggregator.cpp
-diff --git a/src/appleseed/foundation/meta/tests/concurrenttest.hpp b/src/appleseed/foundation/meta/tests/concurrenttest.hpp
-new file mode 100644
-index 000000000..844757081
---- /dev/null
-+++ b/src/appleseed/foundation/meta/tests/concurrenttest.hpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/concurrenttest.hpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/concurrenttest.hpp
+--- appleseed/src/appleseed/foundation/meta/tests/concurrenttest.hpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/concurrenttest.hpp	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,63 @@
 +
 +//
@@ -170,11 +150,9 @@ index 000000000..844757081
 +    }
 +}
 +}
-diff --git a/src/appleseed/foundation/meta/tests/test_atomic.cpp b/src/appleseed/foundation/meta/tests/test_atomic.cpp
-new file mode 100644
-index 000000000..8038936b6
---- /dev/null
-+++ b/src/appleseed/foundation/meta/tests/test_atomic.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_atomic.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_atomic.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_atomic.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_atomic.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,202 @@
 +
 +//
@@ -378,11 +356,10 @@ index 000000000..8038936b6
 +        EXPECT_TRUE(std::adjacent_find(identifiers.begin(), identifiers.end()) == identifiers.end());
 +    }
 +}
-diff --git a/src/appleseed/foundation/meta/tests/test_memory.cpp b/src/appleseed/foundation/meta/tests/test_memory.cpp
-index cdd80cc89..54fdd0118 100644
---- a/src/appleseed/foundation/meta/tests/test_memory.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_memory.cpp
-@@ -135,18 +135,19 @@ TEST_SUITE(Foundation_Utility_Memory)
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_memory.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_memory.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_memory.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_memory.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -135,18 +135,19 @@
  
  #ifdef APPLESEED_USE_SSE
  
@@ -404,7 +381,7 @@ index cdd80cc89..54fdd0118 100644
              pointers[i] = malloc(alloc_size);
              aligned = aligned && is_aligned(pointers[i], 16);
          }
-@@ -159,6 +160,23 @@ TEST_SUITE(Foundation_Utility_Memory)
+@@ -159,6 +160,23 @@
  
  #endif
  
@@ -428,11 +405,10 @@ index cdd80cc89..54fdd0118 100644
      TEST_CASE(EnsureMinimumSize_GivenEmptyVector_ResizesVectorByInsertingDefaultValue)
      {
          std::vector<int> v;
-diff --git a/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp b/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp
-index a867084c7..62a3cef30 100644
---- a/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp
-@@ -633,7 +633,7 @@ TEST_SUITE(StlAllocatorTestbed)
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_stlallocatortestbed.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -633,7 +633,7 @@
          typename Allocator::difference_type dt;
          typename Allocator::pointer         p;
          typename Allocator::const_pointer   cp;
@@ -441,7 +417,7 @@ index a867084c7..62a3cef30 100644
          typename Allocator::reference       r = v;   // Note: must be initialized
          typename Allocator::const_reference cr = v;  // Note: must be initialized
  
-@@ -722,7 +722,7 @@ TEST_SUITE(StlAllocatorTestbed)
+@@ -722,7 +722,7 @@
      {
          // Typedefs
          typename Allocator::pointer         p = nullptr;
@@ -450,7 +426,7 @@ index a867084c7..62a3cef30 100644
          typename Allocator::reference       r = v;   // Note: must be initialized
          typename Allocator::const_reference cr = v;  // Note: must be initialized
  
-@@ -1240,7 +1240,7 @@ TEST_SUITE(StlAllocatorTestbed)
+@@ -1240,7 +1240,7 @@
          VStack v1( Policy< Allocator >::template GetDefaultAdapter< VStack, Vector >( a ) );
          VStack v2( Policy< Allocator >::template GetCopiedAdapter< VStack, Vector >( a ) );
  
@@ -459,10 +435,9 @@ index a867084c7..62a3cef30 100644
  
          // Test deque stacks
          TestStack< typename Allocator::value_type >( v, a, d1 );
-diff --git a/src/appleseed/foundation/platform/atomic.h b/src/appleseed/foundation/platform/atomic.h
-index 385d80bfc..9cdb46e65 100644
---- a/src/appleseed/foundation/platform/atomic.h
-+++ b/src/appleseed/foundation/platform/atomic.h
+diff -Naur appleseed/src/appleseed/foundation/platform/atomic.h APPLESEED_BLD/src/appleseed/foundation/platform/atomic.h
+--- appleseed/src/appleseed/foundation/platform/atomic.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/atomic.h	1970-01-01 00:00:00.000000000 +0000
 @@ -36,10 +36,6 @@
  #include "foundation/utility/casts.h"
  #include "foundation/memory/memory.h"
@@ -474,7 +449,7 @@ index 385d80bfc..9cdb46e65 100644
  // Standard headers.
  #include <cassert>
  #include <cstdint>
-@@ -58,12 +54,14 @@ void atomic_write(
+@@ -58,12 +54,14 @@
      volatile std::uint32_t*     ptr,
      const std::uint32_t         value);
  
@@ -489,7 +464,7 @@ index 385d80bfc..9cdb46e65 100644
  std::uint32_t atomic_cas(
      volatile std::uint32_t*     ptr,
      const std::uint32_t         expected_value,
-@@ -78,29 +76,64 @@ void atomic_add(
+@@ -78,29 +76,64 @@
  // Implementation.
  //
  
@@ -558,7 +533,7 @@ index 385d80bfc..9cdb46e65 100644
  }
  
  APPLESEED_FORCE_INLINE std::uint32_t atomic_cas(
-@@ -108,10 +141,13 @@ APPLESEED_FORCE_INLINE std::uint32_t atomic_cas(
+@@ -108,10 +141,13 @@
      const std::uint32_t         expected_value,
      const std::uint32_t         new_value)
  {
@@ -575,7 +550,7 @@ index 385d80bfc..9cdb46e65 100644
  #else
      #error Unsupported platform.
  #endif
-@@ -121,11 +157,12 @@ APPLESEED_FORCE_INLINE void atomic_add(
+@@ -121,11 +157,12 @@
      volatile float*             ptr,
      const float                 operand)
  {
@@ -591,7 +566,7 @@ index 385d80bfc..9cdb46e65 100644
      while (true)
      {
          const float value = binary_cast<float>(expected);
-@@ -135,6 +172,20 @@ APPLESEED_FORCE_INLINE void atomic_add(
+@@ -135,6 +172,20 @@
              return;
          expected = actual;
      }
@@ -612,10 +587,9 @@ index 385d80bfc..9cdb46e65 100644
  }
  
  }   // namespace foundation
-diff --git a/src/appleseed/foundation/platform/thread.h b/src/appleseed/foundation/platform/thread.h
-index 78ebf40a4..5c048db92 100644
---- a/src/appleseed/foundation/platform/thread.h
-+++ b/src/appleseed/foundation/platform/thread.h
+diff -Naur appleseed/src/appleseed/foundation/platform/thread.h APPLESEED_BLD/src/appleseed/foundation/platform/thread.h
+--- appleseed/src/appleseed/foundation/platform/thread.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/thread.h	1970-01-01 00:00:00.000000000 +0000
 @@ -31,7 +31,6 @@
  
  // appleseed.foundation headers.
@@ -632,7 +606,7 @@ index 78ebf40a4..5c048db92 100644
  #include <cstdint>
  
  // Forward declarations.
-@@ -155,7 +155,7 @@ class ReadWriteLock
+@@ -155,7 +155,7 @@
      };
  
    private:
@@ -641,7 +615,7 @@ index 78ebf40a4..5c048db92 100644
      boost::mutex                    m_mutex;
  };
  
-@@ -275,6 +275,8 @@ class APPLESEED_DLLSYMBOL ThreadFlag
+@@ -275,6 +275,8 @@
    public:
      // Constructor, clears the flag.
      ThreadFlag();
@@ -650,7 +624,7 @@ index 78ebf40a4..5c048db92 100644
  
      // Clear the flag.
      void clear();
-@@ -287,7 +289,7 @@ class APPLESEED_DLLSYMBOL ThreadFlag
+@@ -287,7 +289,7 @@
      bool is_set() const;
  
    private:
@@ -659,15 +633,15 @@ index 78ebf40a4..5c048db92 100644
  };
  
  
-@@ -428,23 +430,34 @@ inline ReadWriteLock<WaitPolicy>::ScopedWriteLock::~ScopedWriteLock()
+@@ -428,23 +430,34 @@
  //
  
  inline ThreadFlag::ThreadFlag()
 +  : m_flag(0)
  {
 -    clear();
-+}
-+
+ }
+ 
 +inline ThreadFlag::ThreadFlag(const ThreadFlag& rhs)
 +  : m_flag(rhs.m_flag.load())
 +{
@@ -677,8 +651,8 @@ index 78ebf40a4..5c048db92 100644
 +{
 +    m_flag.store(rhs.m_flag.load());
 +    return *this;
- }
- 
++}
++
  inline void ThreadFlag::clear()
  {
 -    atomic_write(&m_flag, 0);
@@ -698,10 +672,9 @@ index 78ebf40a4..5c048db92 100644
  }
  
  inline bool ThreadFlag::is_set() const
-diff --git a/src/appleseed/foundation/utility/uid.cpp b/src/appleseed/foundation/utility/uid.cpp
-index 3305e73d7..768230e31 100644
---- a/src/appleseed/foundation/utility/uid.cpp
-+++ b/src/appleseed/foundation/utility/uid.cpp
+diff -Naur appleseed/src/appleseed/foundation/utility/uid.cpp APPLESEED_BLD/src/appleseed/foundation/utility/uid.cpp
+--- appleseed/src/appleseed/foundation/utility/uid.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/uid.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -30,15 +30,15 @@
  // Interface header.
  #include "uid.h"
@@ -721,10 +694,9 @@ index 3305e73d7..768230e31 100644
      return next_uid++;
  }
  
-diff --git a/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp b/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp
-index 189685030..fb46c4422 100644
---- a/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp
-+++ b/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -52,9 +52,9 @@
  
  // Standard headers.
@@ -736,7 +708,7 @@ index 189685030..fb46c4422 100644
  using namespace foundation;
  
  namespace renderer
-@@ -105,7 +105,7 @@ LocalSampleAccumulationBuffer::LocalSampleAccumulationBuffer(
+@@ -105,7 +105,7 @@
          level_height = std::max(level_height / 2, MinSize);
      }
  
@@ -745,10 +717,9 @@ index 189685030..fb46c4422 100644
  
      clear();
  }
-diff --git a/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h b/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h
-index 9b2737557..de94042de 100644
---- a/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h
-+++ b/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/localsampleaccumulationbuffer.h	1970-01-01 00:00:00.000000000 +0000
 @@ -35,10 +35,10 @@
  // appleseed.foundation headers.
  #include "foundation/math/aabb.h"
@@ -761,7 +732,7 @@ index 9b2737557..de94042de 100644
  #include <cstddef>
  #include <cstdint>
  #include <vector>
-@@ -98,8 +98,8 @@ class LocalSampleAccumulationBuffer
+@@ -98,8 +98,8 @@
      std::vector<foundation::AccumulatorTile*>   m_levels;
      std::vector<foundation::AccumulatorTile*>   m_read_levels;
      std::vector<foundation::Vector2f>           m_level_scales;
@@ -772,10 +743,9 @@ index 9b2737557..de94042de 100644
  };
  
  }   // namespace renderer
-diff --git a/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h b/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h
-index 5538d38d4..13d6ab0fe 100644
---- a/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h
-+++ b/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/progressive/samplecounter.h	1970-01-01 00:00:00.000000000 +0000
 @@ -31,9 +31,9 @@
  
  // appleseed.foundation headers.
@@ -787,7 +757,7 @@ index 5538d38d4..13d6ab0fe 100644
  #include <cstdint>
  
  namespace renderer
-@@ -57,7 +57,7 @@ class SampleCounter
+@@ -57,7 +57,7 @@
  
    private:
      const std::uint64_t             m_max_sample_count;
@@ -796,10 +766,9 @@ index 5538d38d4..13d6ab0fe 100644
  };
  
  }   // namespace renderer
-diff --git a/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h b/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h
-index f87ba5be8..7013881b2 100644
---- a/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h
-+++ b/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/sampleaccumulationbuffer.h	1970-01-01 00:00:00.000000000 +0000
 @@ -31,9 +31,9 @@
  
  // appleseed.foundation headers.
@@ -811,7 +780,7 @@ index f87ba5be8..7013881b2 100644
  #include <cstddef>
  #include <cstdint>
  
-@@ -70,7 +70,7 @@ class SampleAccumulationBuffer
+@@ -70,7 +70,7 @@
          foundation::IAbortSwitch&   abort_switch) = 0;
  
    protected:
@@ -820,10 +789,9 @@ index f87ba5be8..7013881b2 100644
  };
  
  
-diff --git a/src/appleseed/renderer/meta/tests/test_samplecounter.cpp b/src/appleseed/renderer/meta/tests/test_samplecounter.cpp
-index c7b693f1e..5b5631828 100644
---- a/src/appleseed/renderer/meta/tests/test_samplecounter.cpp
-+++ b/src/appleseed/renderer/meta/tests/test_samplecounter.cpp
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_samplecounter.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_samplecounter.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_samplecounter.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_samplecounter.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -29,10 +29,17 @@
  
  // appleseed.renderer headers.
@@ -842,7 +810,7 @@ index c7b693f1e..5b5631828 100644
  using namespace renderer;
  
  TEST_SUITE(Renderer_Kernel_Rendering_Progressive_SampleCounter)
-@@ -83,3 +90,35 @@ TEST_SUITE(Renderer_Kernel_Rendering_Progressive_SampleCounter)
+@@ -83,3 +90,35 @@
          EXPECT_EQ(0, sample_counter.reserve(3));
      }
  }
@@ -878,10 +846,9 @@ index c7b693f1e..5b5631828 100644
 +        EXPECT_EQ(0, buffer.get_sample_count());
 +    }
 +}
-diff --git a/src/thirdparty/bcd/bcd/Denoiser.cpp b/src/thirdparty/bcd/bcd/Denoiser.cpp
-index 109ec87b4..82b774801 100644
---- a/src/thirdparty/bcd/bcd/Denoiser.cpp
-+++ b/src/thirdparty/bcd/bcd/Denoiser.cpp
+diff -Naur appleseed/src/thirdparty/bcd/bcd/Denoiser.cpp APPLESEED_BLD/src/thirdparty/bcd/bcd/Denoiser.cpp
+--- appleseed/src/thirdparty/bcd/bcd/Denoiser.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/thirdparty/bcd/bcd/Denoiser.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -16,11 +16,11 @@
  #include "Utils.h"
  
@@ -895,7 +862,7 @@ index 109ec87b4..82b774801 100644
  #include <cassert>
  #include <chrono>
  #include <cmath>
-@@ -90,8 +90,7 @@ bool Denoiser::denoise()
+@@ -90,8 +90,7 @@
      m_isCenterOfAlreadyDenoisedPatchImage.resize(m_width, m_height, 1);
      m_isCenterOfAlreadyDenoisedPatchImage.fill(false);
  
@@ -905,7 +872,7 @@ index 109ec87b4..82b774801 100644
  
      bool abortRequested = false;
  
-@@ -160,7 +159,7 @@ void Denoiser::doDenoise(
+@@ -160,7 +159,7 @@
      vector<PixelPosition>::const_iterator  i_pixelBegin,
      vector<PixelPosition>::const_iterator  i_pixelEnd,
      const size_t                           i_totalNbOfPixels,
@@ -914,10 +881,9 @@ index 109ec87b4..82b774801 100644
      const size_t                           i_threadIndex,
      bool&                                  i_abortRequested)
  {
-diff --git a/src/thirdparty/bcd/bcd/Denoiser.h b/src/thirdparty/bcd/bcd/Denoiser.h
-index 36671c3f2..eca366669 100644
---- a/src/thirdparty/bcd/bcd/Denoiser.h
-+++ b/src/thirdparty/bcd/bcd/Denoiser.h
+diff -Naur appleseed/src/thirdparty/bcd/bcd/Denoiser.h APPLESEED_BLD/src/thirdparty/bcd/bcd/Denoiser.h
+--- appleseed/src/thirdparty/bcd/bcd/Denoiser.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/thirdparty/bcd/bcd/Denoiser.h	1970-01-01 00:00:00.000000000 +0000
 @@ -17,10 +17,8 @@
  #include "DeepImage.h"
  #include "IDenoiser.h"
@@ -930,7 +896,7 @@ index 36671c3f2..eca366669 100644
  #include <memory>
  #include <vector>
  
-@@ -87,7 +85,7 @@ class Denoiser
+@@ -87,7 +85,7 @@
          std::vector<PixelPosition>::const_iterator  i_pixelBegin,
          std::vector<PixelPosition>::const_iterator  i_pixelEnd,
          const std::size_t                           i_totalNbOfPixels,
@@ -939,10 +905,9 @@ index 36671c3f2..eca366669 100644
          const std::size_t                           i_threadIndex,
          bool&                                       i_abortRequested);
  
-diff --git a/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp b/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp
-index 00f78483c..df6add465 100644
---- a/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp
-+++ b/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp
+diff -Naur appleseed/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp APPLESEED_BLD/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp
+--- appleseed/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/thirdparty/bcd/bcd/MultiscaleDenoiser.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -18,9 +18,6 @@
  #include "MultiscaleDenoiser.h"
  #include "Utils.h"

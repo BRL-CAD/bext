@@ -1,40 +1,25 @@
-Subject: [PATCH 07/50] Harden core helpers and export image conversion
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: 16d7146aaaa93a54866f9e96953fba42ca6226f9
-Original-Commit: 914b2d39b7af6baffe9f60802e4ad5f0788f1c4d
-Original-Commit: 7f4e7d94b4bee77593440d280aa9e1f2c55caa31
-Original-Commit: 48dc588ee2d6e32c45164cf5619b716bda2ee482
-Original-Commit: 450d6a401b9f096e2546e9be8ed684839394ce52
-Original-Commit: d33511b58c888a83af0a729adaeb979698c81adc
-Original-Commit: 4c20e9a8688f61c40920b3b70a2c697f9dc63a15
-Original-Commit: 976e6832d8d4d8e091bc7d48fef19981453307b8
-Original-Commit: ea337eb8b1d5691028bfc7f5037a161172858e22
-
-diff --git a/sandbox/examples/cpp/alembicassembly/CMakeLists.txt b/sandbox/examples/cpp/alembicassembly/CMakeLists.txt
-index 959ce6e98..30af4122f 100644
---- a/sandbox/examples/cpp/alembicassembly/CMakeLists.txt
-+++ b/sandbox/examples/cpp/alembicassembly/CMakeLists.txt
-@@ -62,12 +62,9 @@ option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
+diff -Naur appleseed/sandbox/examples/cpp/alembicassembly/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/alembicassembly/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/alembicassembly/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/alembicassembly/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -62,14 +62,11 @@
  # Compile flags.
  #--------------------------------------------------------------------------------------------------
  
 -if (UNIX)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
--
--    # Remove when C++11 support improves.
--    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
--endif ()
 +set (CMAKE_CXX_STANDARD 17)
 +set (CMAKE_CXX_STANDARD_REQUIRED ON)
 +set (CMAKE_CXX_EXTENSIONS OFF)
  
+-    # Remove when C++11 support improves.
+-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+-endif ()
  
+-
  #--------------------------------------------------------------------------------------------------
-@@ -84,14 +81,6 @@ set (BOOST_NEEDED_LIBS )
+ # Boost libraries.
+ #--------------------------------------------------------------------------------------------------
+@@ -84,14 +81,6 @@
  
  find_package (Boost 1.61 REQUIRED ${BOOST_NEEDED_LIBS})
  
@@ -49,27 +34,28 @@ index 959ce6e98..30af4122f 100644
  include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories (${Boost_LIBRARY_DIRS})
  
-diff --git a/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt b/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt
-index 4670492f8..55fdf9a0a 100644
---- a/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt
-+++ b/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt
-@@ -62,12 +62,9 @@ option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
+diff -Naur appleseed/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/distancefieldobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -62,14 +62,11 @@
  # Compile flags.
  #--------------------------------------------------------------------------------------------------
  
 -if (UNIX)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
--
--    # Remove when C++11 support improves.
--    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
--endif ()
 +set (CMAKE_CXX_STANDARD 17)
 +set (CMAKE_CXX_STANDARD_REQUIRED ON)
 +set (CMAKE_CXX_EXTENSIONS OFF)
  
+-    # Remove when C++11 support improves.
+-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+-endif ()
  
+-
  #--------------------------------------------------------------------------------------------------
-@@ -84,14 +81,6 @@ set (BOOST_NEEDED_LIBS )
+ # Boost libraries.
+ #--------------------------------------------------------------------------------------------------
+@@ -84,14 +81,6 @@
  
  find_package (Boost 1.61 REQUIRED ${BOOST_NEEDED_LIBS})
  
@@ -84,27 +70,28 @@ index 4670492f8..55fdf9a0a 100644
  include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories (${Boost_LIBRARY_DIRS})
  
-diff --git a/sandbox/examples/cpp/heightfield/CMakeLists.txt b/sandbox/examples/cpp/heightfield/CMakeLists.txt
-index 0a7d01cf2..95210964a 100644
---- a/sandbox/examples/cpp/heightfield/CMakeLists.txt
-+++ b/sandbox/examples/cpp/heightfield/CMakeLists.txt
-@@ -63,12 +63,9 @@ option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
+diff -Naur appleseed/sandbox/examples/cpp/heightfield/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/heightfield/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/heightfield/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/heightfield/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -63,14 +63,11 @@
  # Compile flags.
  #--------------------------------------------------------------------------------------------------
  
 -if (UNIX)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
--
--    # Remove when C++11 support improves.
--    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
--endif ()
 +set (CMAKE_CXX_STANDARD 17)
 +set (CMAKE_CXX_STANDARD_REQUIRED ON)
 +set (CMAKE_CXX_EXTENSIONS OFF)
  
+-    # Remove when C++11 support improves.
+-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+-endif ()
  
+-
  #--------------------------------------------------------------------------------------------------
-@@ -85,14 +82,6 @@ set (BOOST_NEEDED_LIBS system)
+ # Boost libraries.
+ #--------------------------------------------------------------------------------------------------
+@@ -85,14 +82,6 @@
  
  find_package (Boost 1.61 REQUIRED ${BOOST_NEEDED_LIBS})
  
@@ -119,27 +106,28 @@ index 0a7d01cf2..95210964a 100644
  include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories (${Boost_LIBRARY_DIRS})
  
-diff --git a/sandbox/examples/cpp/helloworld/CMakeLists.txt b/sandbox/examples/cpp/helloworld/CMakeLists.txt
-index 75b0bc2d3..9393b6a94 100644
---- a/sandbox/examples/cpp/helloworld/CMakeLists.txt
-+++ b/sandbox/examples/cpp/helloworld/CMakeLists.txt
-@@ -63,12 +63,9 @@ option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
+diff -Naur appleseed/sandbox/examples/cpp/helloworld/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/helloworld/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/helloworld/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/helloworld/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -63,14 +63,11 @@
  # Compile flags.
  #--------------------------------------------------------------------------------------------------
  
 -if (UNIX)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
--
--    # Remove when C++11 support improves.
--    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
--endif ()
 +set (CMAKE_CXX_STANDARD 17)
 +set (CMAKE_CXX_STANDARD_REQUIRED ON)
 +set (CMAKE_CXX_EXTENSIONS OFF)
  
+-    # Remove when C++11 support improves.
+-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+-endif ()
  
+-
  #--------------------------------------------------------------------------------------------------
-@@ -85,14 +82,6 @@ set (BOOST_NEEDED_LIBS system)
+ # Boost libraries.
+ #--------------------------------------------------------------------------------------------------
+@@ -85,14 +82,6 @@
  
  find_package (Boost 1.61 REQUIRED ${BOOST_NEEDED_LIBS})
  
@@ -154,27 +142,28 @@ index 75b0bc2d3..9393b6a94 100644
  include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories (${Boost_LIBRARY_DIRS})
  
-diff --git a/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt b/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt
-index 53bed3a18..a5f8f21b2 100644
---- a/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt
-+++ b/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt
-@@ -62,12 +62,9 @@ option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
+diff -Naur appleseed/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/infiniteplaneobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -62,14 +62,11 @@
  # Compile flags.
  #--------------------------------------------------------------------------------------------------
  
 -if (UNIX)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
--
--    # Remove when C++11 support improves.
--    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
--endif ()
 +set (CMAKE_CXX_STANDARD 17)
 +set (CMAKE_CXX_STANDARD_REQUIRED ON)
 +set (CMAKE_CXX_EXTENSIONS OFF)
  
+-    # Remove when C++11 support improves.
+-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+-endif ()
  
+-
  #--------------------------------------------------------------------------------------------------
-@@ -84,14 +81,6 @@ set (BOOST_NEEDED_LIBS )
+ # Boost libraries.
+ #--------------------------------------------------------------------------------------------------
+@@ -84,14 +81,6 @@
  
  find_package (Boost 1.61 REQUIRED ${BOOST_NEEDED_LIBS})
  
@@ -189,47 +178,49 @@ index 53bed3a18..a5f8f21b2 100644
  include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories (${Boost_LIBRARY_DIRS})
  
-diff --git a/sandbox/examples/cpp/proceduraltexture/CMakeLists.txt b/sandbox/examples/cpp/proceduraltexture/CMakeLists.txt
-index 60a161044..369229bfe 100644
---- a/sandbox/examples/cpp/proceduraltexture/CMakeLists.txt
-+++ b/sandbox/examples/cpp/proceduraltexture/CMakeLists.txt
-@@ -58,12 +58,9 @@ option (USE_STATIC_OIIO     "Use static OpenImageIO libraries"          ON)
+diff -Naur appleseed/sandbox/examples/cpp/proceduraltexture/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/proceduraltexture/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/proceduraltexture/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/proceduraltexture/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -58,14 +58,11 @@
  # Compile flags.
  #--------------------------------------------------------------------------------------------------
  
 -if (UNIX)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
--
--    # Remove when C++11 support improves.
--    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
--endif ()
 +set (CMAKE_CXX_STANDARD 17)
 +set (CMAKE_CXX_STANDARD_REQUIRED ON)
 +set (CMAKE_CXX_EXTENSIONS OFF)
  
+-    # Remove when C++11 support improves.
+-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+-endif ()
  
+-
  #--------------------------------------------------------------------------------------------------
-diff --git a/sandbox/examples/cpp/sphereflake/CMakeLists.txt b/sandbox/examples/cpp/sphereflake/CMakeLists.txt
-index f262cdbe4..9a42878f6 100644
---- a/sandbox/examples/cpp/sphereflake/CMakeLists.txt
-+++ b/sandbox/examples/cpp/sphereflake/CMakeLists.txt
-@@ -62,12 +62,9 @@ option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
+ # Find packages.
+ #--------------------------------------------------------------------------------------------------
+diff -Naur appleseed/sandbox/examples/cpp/sphereflake/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/sphereflake/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/sphereflake/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/sphereflake/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -62,14 +62,11 @@
  # Compile flags.
  #--------------------------------------------------------------------------------------------------
  
 -if (UNIX)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
--
--    # Remove when C++11 support improves.
--    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
--endif ()
 +set (CMAKE_CXX_STANDARD 17)
 +set (CMAKE_CXX_STANDARD_REQUIRED ON)
 +set (CMAKE_CXX_EXTENSIONS OFF)
  
+-    # Remove when C++11 support improves.
+-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+-endif ()
  
+-
  #--------------------------------------------------------------------------------------------------
-@@ -84,14 +81,6 @@ set (BOOST_NEEDED_LIBS )
+ # Boost libraries.
+ #--------------------------------------------------------------------------------------------------
+@@ -84,14 +81,6 @@
  
  find_package (Boost 1.61 REQUIRED ${BOOST_NEEDED_LIBS})
  
@@ -244,27 +235,28 @@ index f262cdbe4..9a42878f6 100644
  include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories (${Boost_LIBRARY_DIRS})
  
-diff --git a/sandbox/examples/cpp/sphereobject/CMakeLists.txt b/sandbox/examples/cpp/sphereobject/CMakeLists.txt
-index b30418454..d3295330e 100644
---- a/sandbox/examples/cpp/sphereobject/CMakeLists.txt
-+++ b/sandbox/examples/cpp/sphereobject/CMakeLists.txt
-@@ -62,12 +62,9 @@ option (USE_STATIC_OSL      "Use static OpenShadingLanguage libraries"  ON)
+diff -Naur appleseed/sandbox/examples/cpp/sphereobject/CMakeLists.txt APPLESEED_BLD/sandbox/examples/cpp/sphereobject/CMakeLists.txt
+--- appleseed/sandbox/examples/cpp/sphereobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/sandbox/examples/cpp/sphereobject/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -62,14 +62,11 @@
  # Compile flags.
  #--------------------------------------------------------------------------------------------------
  
 -if (UNIX)
 -    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
--
--    # Remove when C++11 support improves.
--    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
--endif ()
 +set (CMAKE_CXX_STANDARD 17)
 +set (CMAKE_CXX_STANDARD_REQUIRED ON)
 +set (CMAKE_CXX_EXTENSIONS OFF)
  
+-    # Remove when C++11 support improves.
+-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+-endif ()
  
+-
  #--------------------------------------------------------------------------------------------------
-@@ -84,14 +81,6 @@ set (BOOST_NEEDED_LIBS )
+ # Boost libraries.
+ #--------------------------------------------------------------------------------------------------
+@@ -84,14 +81,6 @@
  
  find_package (Boost 1.61 REQUIRED ${BOOST_NEEDED_LIBS})
  
@@ -279,11 +271,10 @@ index b30418454..d3295330e 100644
  include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
  link_directories (${Boost_LIBRARY_DIRS})
  
-diff --git a/src/appleseed.cli/main.cpp b/src/appleseed.cli/main.cpp
-index 1b23f7f19..443996d97 100644
---- a/src/appleseed.cli/main.cpp
-+++ b/src/appleseed.cli/main.cpp
-@@ -184,10 +184,10 @@ namespace
+diff -Naur appleseed/src/appleseed.cli/main.cpp APPLESEED_BLD/src/appleseed.cli/main.cpp
+--- appleseed/src/appleseed.cli/main.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.cli/main.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -184,10 +184,10 @@
          // Restore the current directory.
          bf::current_path(old_current_path);
  
@@ -296,7 +287,7 @@ index 1b23f7f19..443996d97 100644
      {
          // Configure the renderer's logger: mute all log messages except warnings and errors.
          SaveLogFormatterConfig save_global_logger_config(global_logger());
-@@ -248,6 +248,7 @@ namespace
+@@ -248,6 +248,7 @@
  
          // Print results.
          print_unit_benchmark_result(result);
@@ -304,14 +295,15 @@ index 1b23f7f19..443996d97 100644
      }
  
      void apply_rendering_settings_command_line_options(ParamArray& params)
-@@ -766,13 +767,19 @@ int main(int argc, char* argv[])
+@@ -765,14 +766,20 @@
+     global_logger().initialize_from(g_logger);
  
      bool success = true;
- 
+-
 -    // Run unit tests.
 -    if (g_cl.m_run_unit_tests.is_set())
 -        success = success && run_unit_tests();
--
+ 
 -    // Run unit benchmarks.
 -    if (g_cl.m_run_unit_benchmarks.is_set())
 -        run_unit_benchmarks();
@@ -331,11 +323,10 @@ index 1b23f7f19..443996d97 100644
  
      // Render the specified project.
      if (!g_cl.m_filename.values().empty())
-diff --git a/src/appleseed.common/application/application.cpp b/src/appleseed.common/application/application.cpp
-index e02de5e84..ccd91cc34 100644
---- a/src/appleseed.common/application/application.cpp
-+++ b/src/appleseed.common/application/application.cpp
-@@ -58,7 +58,7 @@ namespace common {
+diff -Naur appleseed/src/appleseed.common/application/application.cpp APPLESEED_BLD/src/appleseed.common/application/application.cpp
+--- appleseed/src/appleseed.common/application/application.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.common/application/application.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -58,7 +58,7 @@
  
  bool Application::is_correctly_installed()
  {
@@ -344,11 +335,10 @@ index e02de5e84..ccd91cc34 100644
  }
  
  void Application::check_installation(Logger& logger)
-diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
-index 71c926591..9134e2573 100644
---- a/src/appleseed/CMakeLists.txt
-+++ b/src/appleseed/CMakeLists.txt
-@@ -1508,6 +1508,7 @@ set (renderer_meta_tests_sources
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -1508,6 +1508,7 @@
      renderer/meta/tests/test_backwardlightsampler.cpp
      renderer/meta/tests/test_containers.cpp
      renderer/meta/tests/test_dynamicspectrum.cpp
@@ -356,11 +346,10 @@ index 71c926591..9134e2573 100644
      renderer/meta/tests/test_energycompensation.cpp
      renderer/meta/tests/test_entitymap.cpp
      renderer/meta/tests/test_entityvector.cpp
-diff --git a/src/appleseed/foundation/image/conversion.h b/src/appleseed/foundation/image/conversion.h
-index 047813dcf..a1d083415 100644
---- a/src/appleseed/foundation/image/conversion.h
-+++ b/src/appleseed/foundation/image/conversion.h
-@@ -39,14 +39,14 @@ namespace foundation
+diff -Naur appleseed/src/appleseed/foundation/image/conversion.h APPLESEED_BLD/src/appleseed/foundation/image/conversion.h
+--- appleseed/src/appleseed/foundation/image/conversion.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/image/conversion.h	1970-01-01 00:00:00.000000000 +0000
+@@ -39,14 +39,14 @@
  {
  
  // Return true if a given path references a linear, high dynamic range image file format such as OpenEXR or HDR.
@@ -380,11 +369,10 @@ index 047813dcf..a1d083415 100644
 +APPLESEED_DLLSYMBOL void convert_linear_rgb_to_srgb(Image& image);
  
  }   // namespace foundation
-diff --git a/src/appleseed/foundation/image/pixel.h b/src/appleseed/foundation/image/pixel.h
-index b5df983f6..6d615628e 100644
---- a/src/appleseed/foundation/image/pixel.h
-+++ b/src/appleseed/foundation/image/pixel.h
-@@ -736,7 +736,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+diff -Naur appleseed/src/appleseed/foundation/image/pixel.h APPLESEED_BLD/src/appleseed/foundation/image/pixel.h
+--- appleseed/src/appleseed/foundation/image/pixel.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/image/pixel.h	1970-01-01 00:00:00.000000000 +0000
+@@ -736,7 +736,7 @@
              const std::uint16_t* it = reinterpret_cast<const std::uint16_t*>(src_begin);
              for (; it < reinterpret_cast<const std::uint16_t*>(src_end); it += src_stride)
              {
@@ -393,7 +381,7 @@ index b5df983f6..6d615628e 100644
                  dest += dest_stride;
              }
          }
-@@ -747,7 +747,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+@@ -747,7 +747,7 @@
              const std::uint32_t* it = reinterpret_cast<const std::uint32_t*>(src_begin);
              for (; it < reinterpret_cast<const std::uint32_t*>(src_end); it += src_stride)
              {
@@ -402,7 +390,7 @@ index b5df983f6..6d615628e 100644
                  dest += dest_stride;
              }
          }
-@@ -771,7 +771,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+@@ -771,7 +771,7 @@
              for (; it < reinterpret_cast<const float*>(src_end); it += src_stride)
              {
                  const float val = clamp(*it * 256.0f, 0.0f, 255.0f);
@@ -411,7 +399,7 @@ index b5df983f6..6d615628e 100644
                  dest += dest_stride;
              }
          }
-@@ -783,7 +783,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+@@ -783,7 +783,7 @@
              for (; it < reinterpret_cast<const double*>(src_end); it += src_stride)
              {
                  const double val = clamp(*it * 256.0, 0.0, 255.0);
@@ -420,10 +408,9 @@ index b5df983f6..6d615628e 100644
                  dest += dest_stride;
              }
          }
-diff --git a/src/appleseed/foundation/meta/tests/test_pixel.cpp b/src/appleseed/foundation/meta/tests/test_pixel.cpp
-index 8d05c6973..b91813ee9 100644
---- a/src/appleseed/foundation/meta/tests/test_pixel.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_pixel.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_pixel.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_pixel.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_pixel.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_pixel.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -34,11 +34,28 @@
  
  // Standard headers.
@@ -453,11 +440,10 @@ index 8d05c6973..b91813ee9 100644
      TEST_CASE(ConvertToFormat_HalfToUInt32)
      {
          const Half input = 1.0f;
-diff --git a/src/appleseed/foundation/meta/tests/test_sharedlibrary.cpp b/src/appleseed/foundation/meta/tests/test_sharedlibrary.cpp
-index 875d86c92..d1f455606 100644
---- a/src/appleseed/foundation/meta/tests/test_sharedlibrary.cpp
-+++ b/src/appleseed/foundation/meta/tests/test_sharedlibrary.cpp
-@@ -41,6 +41,9 @@ TEST_SUITE(Foundation_Platform_SharedLibrary)
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_sharedlibrary.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_sharedlibrary.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_sharedlibrary.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_sharedlibrary.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -41,6 +41,9 @@
  #elif defined __APPLE__
      const char* TestLibraryName = "libc.dylib";
      const char* TestSymbolName = "printf";
@@ -467,11 +453,10 @@ index 875d86c92..d1f455606 100644
  #else
      const char* TestLibraryName = "libdl.so.2";
      const char* TestSymbolName = "dlopen";
-diff --git a/src/appleseed/renderer/kernel/shading/closures.cpp b/src/appleseed/renderer/kernel/shading/closures.cpp
-index af52c5745..72c021d6d 100644
---- a/src/appleseed/renderer/kernel/shading/closures.cpp
-+++ b/src/appleseed/renderer/kernel/shading/closures.cpp
-@@ -2720,7 +2720,7 @@ InputValues* CompositeEmissionClosure::add_closure(
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/closures.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.cpp
+--- appleseed/src/appleseed/renderer/kernel/shading/closures.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -2720,7 +2720,7 @@
  
      m_closure_types[m_closure_count] = closure_type;
      m_weights[m_closure_count].set(weight, g_std_lighting_conditions, Spectrum::Reflectance);
@@ -480,11 +465,9 @@ index af52c5745..72c021d6d 100644
  
      InputValues* values = arena.allocate<InputValues>();
      m_input_values[m_closure_count] = values;
-diff --git a/src/appleseed/renderer/meta/tests/test_emissionclosure.cpp b/src/appleseed/renderer/meta/tests/test_emissionclosure.cpp
-new file mode 100644
-index 000000000..8a8583e98
---- /dev/null
-+++ b/src/appleseed/renderer/meta/tests/test_emissionclosure.cpp
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_emissionclosure.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_emissionclosure.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_emissionclosure.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_emissionclosure.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,110 @@
 +
 +//
@@ -596,11 +579,10 @@ index 000000000..8a8583e98
 +        EXPECT_EQ(0, empty.get_closure_count());
 +    }
 +}
-diff --git a/src/tools/denoiser/CMakeLists.txt b/src/tools/denoiser/CMakeLists.txt
-index 3d796f6ab..d96bb36ce 100644
---- a/src/tools/denoiser/CMakeLists.txt
-+++ b/src/tools/denoiser/CMakeLists.txt
-@@ -72,7 +72,6 @@ endif ()
+diff -Naur appleseed/src/tools/denoiser/CMakeLists.txt APPLESEED_BLD/src/tools/denoiser/CMakeLists.txt
+--- appleseed/src/tools/denoiser/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/tools/denoiser/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -72,7 +72,6 @@
  include_directories (
      .
      ../../thirdparty/bcd

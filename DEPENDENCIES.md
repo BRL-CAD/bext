@@ -10,13 +10,18 @@ local copy unless `ENABLE_ALL=ON` or `ENABLE_<pkg>=ON` is used.
 For some BRL-CAD-related packages, `BRLCAD_COMPONENTS` can narrow the final
 selection further.
 
-happly, PCRE2, robin-map, and struetype are pinned to BRL-CAD mirrors.
-Appleseed uses PCRE2's 8-bit library for Perl-style name filters.
-OpenImageIO uses the bounded struetype font backend.
+happly, PCRE2, robin-map, and struetype are pinned to BRL-CAD mirrors. Appleseed
+uses PCRE2's 8-bit library without its JIT to preserve Perl-style name filters.
+The header-only struetype package supplies the same bounded font parser to
+BRL-CAD, OpenImageIO, and Appleseed. OpenImageIO's FreeType backend remains
+optional; this stack selects struetype.
 
-The bundled Appleseed core renderer uses the official upstream source
-with an ordered [compatibility patch series](appleseed/patches/README).
-Its optional Boost.Python bindings are disabled.
+The art stack no longer uses Boost. Appleseed's optional Python bindings still
+require externally supplied Boost; bext leaves those bindings disabled.
+
+Appleseed uses the official upstream source with an ordered
+[patch series](appleseed/README). Its bootstrap and Boost groups
+can be applied without the later art rendering enhancements.
 
 # Output types
 

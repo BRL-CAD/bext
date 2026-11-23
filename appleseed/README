@@ -1,0 +1,54 @@
+Appleseed patch series
+======================
+
+Upstream: https://github.com/appleseedhq/appleseed
+Base: c4ba82893febd711befb194f905e955d3ee143a3
+
+Patches use diff -Naur format and descriptive filenames. Series.cmake
+declares their application order. HISTORY preserves the original
+downstream messages and maps them to the available patches.
+
+The bootstrap and boost groups form the CORE compatibility prefix.
+They adapt bundled dependencies and toolchains, replace core Boost
+facilities with C++17 and PCRE2, and stage modern OSL resources.
+Optional Python bindings still require externally supplied Boost.
+
+APPLESEED_PATCH_STAGE=CORE selects the compatibility prefix. The
+default ART stage also applies the available rendering enhancements
+listed below. ART patches are cumulative and may depend on earlier
+topics. Invalid stage names are rejected.
+
+Review topics
+-------------
+
+appleseed_dependency_modules.patch: Dependency modules
+appleseed_native_build_targets.patch: Native build targets
+appleseed_library_api_compatibility.patch: Library api compatibility
+appleseed_shader_api_compatibility.patch: Shader api compatibility
+appleseed_support_files.patch: Support files
+appleseed_platform_and_bundled_libraries.patch: Support bundled libraries and
+  platform toolchains
+appleseed_core_and_developer_fixes.patch: Harden core helpers and export image
+  conversion
+appleseed_optional_and_unused_wave.patch: Use standard optional caches and
+  drop unused Wave
+appleseed_lru_cache_index.patch: Use standard containers for the LRU cache
+  index
+appleseed_shader_area_index.patch: Use a read-only standard shader
+  surface-area index
+appleseed_filesystem.patch: Use C++17 filesystem and native file timestamps
+appleseed_atomics.patch: Use native atomics and standard renderer counters
+appleseed_threads.patch: Use standard locks, threads and condition variables
+appleseed_chrono.patch: Use chrono timestamps and remove DateTime adapters
+appleseed_denoiser_workers.patch: Remove Bind and synchronize denoiser workers
+appleseed_regex_and_build.patch: Use standard helpers and PCRE2 without core
+  Boost
+appleseed_shader_resources.patch: Stage complete shader resources and
+  executable tools
+appleseed_procedural_surfaces.patch: Preserve procedural hit data, derivatives
+  and ownership
+appleseed_osl_input_contracts.patch: Validate OSL inputs and align query
+  search policy
+appleseed_bump_and_texture_nodes.patch: Preserve bump frames and correct
+  texture decoding
+appleseed_struetype.patch: Replace vendored font code with bounded struetype

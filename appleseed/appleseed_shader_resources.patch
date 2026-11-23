@@ -1,19 +1,7 @@
-Subject: [PATCH 17/50] Stage complete shader resources and executable tools
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: 06475a125411a7a5502d01edd2e99736f4c1cbf4
-Original-Commit: 54cb995716aef68fc3dec3a4da00e84709e5ee02
-Original-Commit: c25ce97173473cc2cf243c361390eed22c442575
-Original-Commit: d701b91608f66f7d8eb9907daa79166f451e04a5
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 87185de1c..b4c92c2d5 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -655,14 +655,14 @@ install(
+diff -Naur appleseed/CMakeLists.txt APPLESEED_BLD/CMakeLists.txt
+--- appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -655,14 +655,14 @@
    sandbox/docs
    sandbox/icons
    sandbox/settings
@@ -30,7 +18,7 @@ index 87185de1c..b4c92c2d5 100644
    scripts/cleanmany.py
    scripts/convertmany.py
    scripts/rendermanager.py
-@@ -684,8 +684,7 @@ install(
+@@ -684,8 +684,7 @@
    )
  
  install(
@@ -40,27 +28,28 @@ index 87185de1c..b4c92c2d5 100644
    )
  
  if (INSTALL_HEADERS)
-diff --git a/src/appleseed.shaders/CMakeLists.txt b/src/appleseed.shaders/CMakeLists.txt
-index 2f900f092..6320b6664 100644
---- a/src/appleseed.shaders/CMakeLists.txt
-+++ b/src/appleseed.shaders/CMakeLists.txt
-@@ -45,12 +45,6 @@ set (standard_osl_headers
+diff -Naur appleseed/src/appleseed.shaders/CMakeLists.txt APPLESEED_BLD/src/appleseed.shaders/CMakeLists.txt
+--- appleseed/src/appleseed.shaders/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -44,12 +44,6 @@
+ set (standard_osl_headers
      oslutil.h
      stdosl.h
- )
+-)
 -list (APPEND osl_headers
 -    ${standard_osl_headers}
 -)
 -source_group ("" FILES
 -    ${standard_osl_headers}
--)
- 
- set (include_appleseed_color_sources
-     include/appleseed/color/as_chromatic_adaptation.h
-@@ -336,28 +330,6 @@ source_group ("src\\appleseed" FILES
  )
  
- 
+ set (include_appleseed_color_sources
+@@ -334,30 +328,8 @@
+ source_group ("src\\appleseed" FILES
+     ${src_appleseed_sources}
+ )
+-
+-
 -#--------------------------------------------------------------------------------------------------
 -# Target: Prepare the sandbox.
 -#--------------------------------------------------------------------------------------------------
@@ -75,18 +64,18 @@ index 2f900f092..6320b6664 100644
 -
 -# Delete any existing sandbox/shaders/ files and directories
 -file(REMOVE_RECURSE ${PROJECT_SOURCE_DIR}/sandbox/shaders/)
--
+ 
 -# Copy the OSL compiler to sandbox/bin/.
 -#add_custom_command (
 -#	TARGET prepare_sandbox
 -#	COMMAND ${CMAKE_COMMAND} -E copy ${OSL_COMPILER} ${PROJECT_SOURCE_DIR}/sandbox/bin/
 -#	)
--
+ 
 -
  #--------------------------------------------------------------------------------------------------
  # Target: Compile shaders and deploy header files to sandbox.
  #--------------------------------------------------------------------------------------------------
-@@ -365,9 +337,13 @@ file(REMOVE_RECURSE ${PROJECT_SOURCE_DIR}/sandbox/shaders/)
+@@ -365,9 +337,13 @@
  # Build lists of absolute paths to OSL header files, in the sources and in the sandbox.
  foreach (osl_header ${osl_headers})
      list (APPEND abs_osl_headers_sources ${PROJECT_SOURCE_DIR}/src/appleseed.shaders/${osl_header})
@@ -101,7 +90,7 @@ index 2f900f092..6320b6664 100644
  # Compile OSL shaders into the sandbox.
  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
  	set (OSLC_OPTIONS -O0 -DDEBUG)
-@@ -382,6 +358,7 @@ find_path(OSL_STANDARD_SHADER_INCLUDE_DIR
+@@ -382,6 +358,7 @@
      PATH_SUFFIXES share/OSL/shaders
      REQUIRED)
  
@@ -109,7 +98,7 @@ index 2f900f092..6320b6664 100644
  foreach (osl_source ${osl_sources})
      # Build the .oso destination file name.
      get_filename_component (osl_source_we ${osl_source} NAME_WE)
-@@ -389,15 +366,16 @@ foreach (osl_source ${osl_sources})
+@@ -389,15 +366,16 @@
  
      # Build the sandbox destination directory.
      get_filename_component (osl_dir ${osl_source} PATH)
@@ -128,7 +117,7 @@ index 2f900f092..6320b6664 100644
  				-I"${PROJECT_BINARY_DIR}/include"
  				-I"${PROJECT_BINARY_DIR}/include/appleseed"
              -o "${oso_dir}/${oso_filename}" "${PROJECT_SOURCE_DIR}/src/appleseed.shaders/${osl_source}"
-@@ -407,35 +385,46 @@ foreach (osl_source ${osl_sources})
+@@ -407,35 +385,46 @@
      )
  endforeach ()
  
@@ -188,11 +177,9 @@ index 2f900f092..6320b6664 100644
  set_target_progress_message (appleseed.shaders "Compiling OSL shaders...")
 -
 -add_dependencies (appleseed.shaders prepare_sandbox)
-diff --git a/src/appleseed.shaders/oslutil.h b/src/appleseed.shaders/oslutil.h
-deleted file mode 100644
-index 32bd0316f..000000000
---- a/src/appleseed.shaders/oslutil.h
-+++ /dev/null
+diff -Naur appleseed/src/appleseed.shaders/oslutil.h APPLESEED_BLD/src/appleseed.shaders/oslutil.h
+--- appleseed/src/appleseed.shaders/oslutil.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/oslutil.h	1970-01-01 00:00:00.000000000 +0000
 @@ -1,135 +0,0 @@
 -/////////////////////////////////////////////////////////////////////////////
 -// Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.  All Rights Reserved.
@@ -329,11 +316,9 @@ index 32bd0316f..000000000
 -
 -
 -#endif /* OSLUTIL_H */
-diff --git a/src/appleseed.shaders/stdosl.h b/src/appleseed.shaders/stdosl.h
-deleted file mode 100644
-index 42316fd70..000000000
---- a/src/appleseed.shaders/stdosl.h
-+++ /dev/null
+diff -Naur appleseed/src/appleseed.shaders/stdosl.h APPLESEED_BLD/src/appleseed.shaders/stdosl.h
+--- appleseed/src/appleseed.shaders/stdosl.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/stdosl.h	1970-01-01 00:00:00.000000000 +0000
 @@ -1,661 +0,0 @@
 -/////////////////////////////////////////////////////////////////////////////
 -// Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.  All Rights Reserved.
@@ -996,11 +981,10 @@ index 42316fd70..000000000
 -#undef PERCOMP2F
 -
 -#endif /* STDOSL_H */
-diff --git a/src/appleseed/renderer/meta/tests/test_shadergroup.cpp b/src/appleseed/renderer/meta/tests/test_shadergroup.cpp
-index 744d49c2a..df22dd119 100644
---- a/src/appleseed/renderer/meta/tests/test_shadergroup.cpp
-+++ b/src/appleseed/renderer/meta/tests/test_shadergroup.cpp
-@@ -137,7 +137,8 @@ TEST_SUITE(Renderer_Modeling_ShaderGroup)
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_shadergroup.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shadergroup.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -137,7 +137,8 @@
  
          bool initialize()
          {

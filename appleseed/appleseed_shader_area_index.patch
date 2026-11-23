@@ -1,18 +1,7 @@
-Subject: [PATCH 10/50] Use a read-only standard shader surface-area index
-
-Consolidate the related implementation, regression tests, and build
-updates listed below. Full original messages and authorship are retained
-in HISTORY.
-
-Original-Commit: fd330c09c5576b063f803aa9409c62c300e2e428
-Original-Commit: 76d4beff43c055153e467c132335510ba5a86489
-Original-Commit: 5e3d54845fa5c93f75a306b9297bea31e37cec42
-
-diff --git a/src/appleseed/CMakeLists.txt b/src/appleseed/CMakeLists.txt
-index 95011d517..1d7b69da5 100644
---- a/src/appleseed/CMakeLists.txt
-+++ b/src/appleseed/CMakeLists.txt
-@@ -1529,6 +1529,7 @@ set (renderer_meta_tests_sources
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -1529,6 +1529,7 @@
      renderer/meta/tests/test_samplecounthistory.cpp
      renderer/meta/tests/test_samplegeneratorjob.cpp
      renderer/meta/tests/test_scene.cpp
@@ -20,11 +9,9 @@ index 95011d517..1d7b69da5 100644
      renderer/meta/tests/test_shaderparamparser.cpp
      renderer/meta/tests/test_shaderquery.cpp
      renderer/meta/tests/test_shadingresult.cpp
-diff --git a/src/appleseed/renderer/meta/tests/test_shadergroup.cpp b/src/appleseed/renderer/meta/tests/test_shadergroup.cpp
-new file mode 100644
-index 000000000..744d49c2a
---- /dev/null
-+++ b/src/appleseed/renderer/meta/tests/test_shadergroup.cpp
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_shadergroup.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shadergroup.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,198 @@
 +
 +//
@@ -224,10 +211,9 @@ index 000000000..744d49c2a
 +        }
 +    }
 +}
-diff --git a/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp b/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp
-index 894d25a23..574a1e28d 100644
---- a/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp
-+++ b/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -38,16 +38,16 @@
  #include "renderer/utility/paramarray.h"
  
@@ -248,12 +234,12 @@ index 894d25a23..574a1e28d 100644
  #include <utility>
  
  using namespace foundation;
-@@ -87,12 +87,23 @@ namespace
+@@ -87,12 +87,23 @@
  struct ShaderGroup::Impl
  {
      typedef std::pair<const AssemblyInstance*, const ObjectInstance*> SurfaceAreaKey;
 -    typedef boost::unordered_map<SurfaceAreaKey, float>          SurfaceAreaMap;
-+
+ 
 +    struct SurfaceAreaKeyHasher
 +    {
 +        size_t operator()(const SurfaceAreaKey& key) const noexcept
@@ -265,7 +251,7 @@ index 894d25a23..574a1e28d 100644
 +    };
 +
 +    typedef std::unordered_map<SurfaceAreaKey, float, SurfaceAreaKeyHasher> SurfaceAreaMap;
- 
++
      ShaderContainer             m_shaders;
      ShaderConnectionContainer   m_connections;
      mutable OSL::ShaderGroupRef m_shader_group_ref;
@@ -274,7 +260,7 @@ index 894d25a23..574a1e28d 100644
  };
  
  ShaderGroup::ShaderGroup(const char* name)
-@@ -289,7 +300,11 @@ float ShaderGroup::get_surface_area(
+@@ -289,7 +300,11 @@
      const ObjectInstance*   object_instance) const
  {
      assert(has_emission());

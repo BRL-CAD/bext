@@ -1,16 +1,7 @@
-Subject: [PATCH 03/50] Library api compatibility
-
-Carry the dependency-compatible baseline over the actual upstream
-source. This patch contains one reviewable part of the combined
-historical changes; full original messages are retained in HISTORY.
-
-Original-Commits: See the compatibility-baseline entries in HISTORY.
-
-diff --git a/src/appleseed.studio/mainwindow/mainwindow.cpp b/src/appleseed.studio/mainwindow/mainwindow.cpp
-index 9f311289d..abc4f5a0c 100644
---- a/src/appleseed.studio/mainwindow/mainwindow.cpp
-+++ b/src/appleseed.studio/mainwindow/mainwindow.cpp
-@@ -1918,6 +1918,8 @@ void MainWindow::slot_clear_render_region()
+diff -Naur appleseed/src/appleseed.studio/mainwindow/mainwindow.cpp APPLESEED_BLD/src/appleseed.studio/mainwindow/mainwindow.cpp
+--- appleseed/src/appleseed.studio/mainwindow/mainwindow.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.studio/mainwindow/mainwindow.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -1918,6 +1918,8 @@
      else clear_render_region_action->operator()(*m_project_manager.get_project());
  
      m_rendering_manager.reinitialize_rendering();
@@ -19,7 +10,7 @@ index 9f311289d..abc4f5a0c 100644
  }
  
  void MainWindow::slot_set_render_region(const QRect& rect)
-@@ -1937,6 +1939,8 @@ void MainWindow::slot_set_render_region(const QRect& rect)
+@@ -1937,6 +1939,8 @@
          m_rendering_manager.schedule(std::move(set_render_region_action));
          m_rendering_manager.reinitialize_rendering();
      }
@@ -28,11 +19,10 @@ index 9f311289d..abc4f5a0c 100644
  }
  
  void MainWindow::slot_render_widget_context_menu(const QPoint& point)
-diff --git a/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp b/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp
-index 5a334bfe3..24730e23c 100644
---- a/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp
-+++ b/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp
-@@ -370,9 +370,7 @@ void GenericProgressiveImageFileReader::read_tile(
+diff -Naur appleseed/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp APPLESEED_BLD/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp
+--- appleseed/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/image/genericprogressiveimagefilereader.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -370,9 +370,7 @@
              impl->open();
          }
  
@@ -43,11 +33,10 @@ index 5a334bfe3..24730e23c 100644
                  impl->m_input->spec().format,
                  output_tile->get_storage()))
              throw ExceptionIOError(impl->m_input->geterror().c_str());
-diff --git a/src/appleseed/foundation/image/image.h b/src/appleseed/foundation/image/image.h
-index e0f1ed348..ebe69346e 100644
---- a/src/appleseed/foundation/image/image.h
-+++ b/src/appleseed/foundation/image/image.h
-@@ -106,7 +106,7 @@ class APPLESEED_DLLSYMBOL Image
+diff -Naur appleseed/src/appleseed/foundation/image/image.h APPLESEED_BLD/src/appleseed/foundation/image/image.h
+--- appleseed/src/appleseed/foundation/image/image.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/image/image.h	1970-01-01 00:00:00.000000000 +0000
+@@ -106,7 +106,7 @@
          const size_t        tile_x,
          const size_t        tile_y) const override;
  
@@ -56,11 +45,10 @@ index e0f1ed348..ebe69346e 100644
      // If a tile already exists at the given coordinates, it gets replaced.
      void set_tile(
          const size_t        tile_x,
-diff --git a/src/appleseed/foundation/image/pixel.h b/src/appleseed/foundation/image/pixel.h
-index 6d615628e..b5df983f6 100644
---- a/src/appleseed/foundation/image/pixel.h
-+++ b/src/appleseed/foundation/image/pixel.h
-@@ -736,7 +736,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+diff -Naur appleseed/src/appleseed/foundation/image/pixel.h APPLESEED_BLD/src/appleseed/foundation/image/pixel.h
+--- appleseed/src/appleseed/foundation/image/pixel.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/image/pixel.h	1970-01-01 00:00:00.000000000 +0000
+@@ -736,7 +736,7 @@
              const std::uint16_t* it = reinterpret_cast<const std::uint16_t*>(src_begin);
              for (; it < reinterpret_cast<const std::uint16_t*>(src_end); it += src_stride)
              {
@@ -69,7 +57,7 @@ index 6d615628e..b5df983f6 100644
                  dest += dest_stride;
              }
          }
-@@ -747,7 +747,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+@@ -747,7 +747,7 @@
              const std::uint32_t* it = reinterpret_cast<const std::uint32_t*>(src_begin);
              for (; it < reinterpret_cast<const std::uint32_t*>(src_end); it += src_stride)
              {
@@ -78,7 +66,7 @@ index 6d615628e..b5df983f6 100644
                  dest += dest_stride;
              }
          }
-@@ -771,7 +771,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+@@ -771,7 +771,7 @@
              for (; it < reinterpret_cast<const float*>(src_end); it += src_stride)
              {
                  const float val = clamp(*it * 256.0f, 0.0f, 255.0f);
@@ -87,7 +75,7 @@ index 6d615628e..b5df983f6 100644
                  dest += dest_stride;
              }
          }
-@@ -783,7 +783,7 @@ inline void Pixel::convert_from_format<std::uint8_t>(
+@@ -783,7 +783,7 @@
              for (; it < reinterpret_cast<const double*>(src_end); it += src_stride)
              {
                  const double val = clamp(*it * 256.0, 0.0, 255.0);
@@ -96,10 +84,9 @@ index 6d615628e..b5df983f6 100644
                  dest += dest_stride;
              }
          }
-diff --git a/src/appleseed/foundation/meshio/plymeshfilereader.cpp b/src/appleseed/foundation/meshio/plymeshfilereader.cpp
-index f1526ccc2..b6d6d0f68 100644
---- a/src/appleseed/foundation/meshio/plymeshfilereader.cpp
-+++ b/src/appleseed/foundation/meshio/plymeshfilereader.cpp
+diff -Naur appleseed/src/appleseed/foundation/meshio/plymeshfilereader.cpp APPLESEED_BLD/src/appleseed/foundation/meshio/plymeshfilereader.cpp
+--- appleseed/src/appleseed/foundation/meshio/plymeshfilereader.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meshio/plymeshfilereader.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -36,7 +36,11 @@
  #include "foundation/memory/memory.h"
  #include "foundation/meshio/imeshbuilder.h"
@@ -112,10 +99,9 @@ index f1526ccc2..b6d6d0f68 100644
  #include <cstring>
  #include <map>
  #include <utility>
-diff --git a/src/appleseed/foundation/meshio/plymeshfilereader.h b/src/appleseed/foundation/meshio/plymeshfilereader.h
-index 74bf7b0ec..47f2b3214 100644
---- a/src/appleseed/foundation/meshio/plymeshfilereader.h
-+++ b/src/appleseed/foundation/meshio/plymeshfilereader.h
+diff -Naur appleseed/src/appleseed/foundation/meshio/plymeshfilereader.h APPLESEED_BLD/src/appleseed/foundation/meshio/plymeshfilereader.h
+--- appleseed/src/appleseed/foundation/meshio/plymeshfilereader.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meshio/plymeshfilereader.h	1970-01-01 00:00:00.000000000 +0000
 @@ -34,14 +34,13 @@
  #include "foundation/meshio/imeshfilereader.h"
  #include "foundation/platform/compiler.h"
@@ -133,10 +119,9 @@ index 74bf7b0ec..47f2b3214 100644
  namespace foundation    { class IMeshBuilder; }
  
  namespace foundation
-diff --git a/src/appleseed/foundation/platform/_beginoiioheaders.h b/src/appleseed/foundation/platform/_beginoiioheaders.h
-index b4afff8e6..887cb4f62 100644
---- a/src/appleseed/foundation/platform/_beginoiioheaders.h
-+++ b/src/appleseed/foundation/platform/_beginoiioheaders.h
+diff -Naur appleseed/src/appleseed/foundation/platform/_beginoiioheaders.h APPLESEED_BLD/src/appleseed/foundation/platform/_beginoiioheaders.h
+--- appleseed/src/appleseed/foundation/platform/_beginoiioheaders.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/_beginoiioheaders.h	1970-01-01 00:00:00.000000000 +0000
 @@ -37,3 +37,6 @@
  #endif
  
@@ -144,10 +129,9 @@ index b4afff8e6..887cb4f62 100644
 +
 +// OIIO selects its SIMD half overloads on first inclusion.
 +#include <Imath/half.h>
-diff --git a/src/appleseed/foundation/platform/system.cpp b/src/appleseed/foundation/platform/system.cpp
-index 20c841d0b..0cbed320a 100644
---- a/src/appleseed/foundation/platform/system.cpp
-+++ b/src/appleseed/foundation/platform/system.cpp
+diff -Naur appleseed/src/appleseed/foundation/platform/system.cpp APPLESEED_BLD/src/appleseed/foundation/platform/system.cpp
+--- appleseed/src/appleseed/foundation/platform/system.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/platform/system.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -71,7 +71,9 @@
      #include <sys/param.h>
      #include <sys/sysctl.h>
@@ -158,7 +142,7 @@ index 20c841d0b..0cbed320a 100644
  
  // Linux.
  #elif defined __linux__
-@@ -285,6 +287,7 @@ std::uint64_t System::get_peak_process_virtual_memory_size()
+@@ -285,6 +287,7 @@
  
  namespace
  {
@@ -166,7 +150,7 @@ index 20c841d0b..0cbed320a 100644
      // EAX is set to the value of `index`. Results are returned in `cpuinfo`:
      //   cpuinfo[0] == EAX
      //   cpuinfo[1] == EBX
-@@ -307,6 +310,7 @@ namespace
+@@ -307,6 +310,7 @@
          __asm__ __volatile__("xgetbv" : "=a"(eax), "=d"(edx) : "c"(index));
          return (static_cast<std::uint64_t>(edx) << 32) | eax;
      }
@@ -174,11 +158,10 @@ index 20c841d0b..0cbed320a 100644
  
      std::size_t get_system_value(const char* name)
      {
-diff --git a/src/appleseed/foundation/utility/job/jobqueue.h b/src/appleseed/foundation/utility/job/jobqueue.h
-index 7db9a8e3c..0321c9f71 100644
---- a/src/appleseed/foundation/utility/job/jobqueue.h
-+++ b/src/appleseed/foundation/utility/job/jobqueue.h
-@@ -98,7 +98,7 @@ class APPLESEED_DLLSYMBOL JobQueue
+diff -Naur appleseed/src/appleseed/foundation/utility/job/jobqueue.h APPLESEED_BLD/src/appleseed/foundation/utility/job/jobqueue.h
+--- appleseed/src/appleseed/foundation/utility/job/jobqueue.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/job/jobqueue.h	1970-01-01 00:00:00.000000000 +0000
+@@ -98,7 +98,7 @@
      // Return the number of scheduled and running jobs in the job queue.
      size_t get_total_job_count() const;
  
@@ -187,11 +170,10 @@ index 7db9a8e3c..0321c9f71 100644
      // to the job queue if and only if transfer_ownership is true.
      void schedule(IJob* job, const bool transfer_ownership = true);
  
-diff --git a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp b/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
-index 831093583..b93bb2fd8 100644
---- a/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
-+++ b/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
-@@ -77,13 +77,13 @@ CPURenderDevice::CPURenderDevice(
+diff -Naur appleseed/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp APPLESEED_BLD/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp
+--- appleseed/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/device/cpu/cpurenderdevice.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -77,13 +77,13 @@
      m_renderer_services =
          new RendererServices(
              project,
@@ -207,7 +189,7 @@ index 831093583..b93bb2fd8 100644
              m_error_handler);
      m_shading_system->attribute("lockgeom", 1);
      m_shading_system->attribute("colorspace", "sRGB"); // TODO: is this really correct? Note: this attribute does not need to be set for Appleseed to render. (If not set, produces identical (looking) results.)
-@@ -119,7 +119,7 @@ CPURenderDevice::~CPURenderDevice()
+@@ -119,7 +119,7 @@
      RENDERER_LOG_DEBUG("%s", modified_stats.c_str());
  
      RENDERER_LOG_DEBUG("destroying oiio texture system...");
@@ -216,10 +198,9 @@ index 831093583..b93bb2fd8 100644
      delete m_error_handler;
  
      // Print texture store performance statistics.
-diff --git a/src/appleseed/renderer/device/cpu/cpurenderdevice.h b/src/appleseed/renderer/device/cpu/cpurenderdevice.h
-index f295e9c4c..2610bd3bf 100644
---- a/src/appleseed/renderer/device/cpu/cpurenderdevice.h
-+++ b/src/appleseed/renderer/device/cpu/cpurenderdevice.h
+diff -Naur appleseed/src/appleseed/renderer/device/cpu/cpurenderdevice.h APPLESEED_BLD/src/appleseed/renderer/device/cpu/cpurenderdevice.h
+--- appleseed/src/appleseed/renderer/device/cpu/cpurenderdevice.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/device/cpu/cpurenderdevice.h	1970-01-01 00:00:00.000000000 +0000
 @@ -28,6 +28,8 @@
  
  #pragma once
@@ -237,7 +218,7 @@ index f295e9c4c..2610bd3bf 100644
  namespace renderer      { class OSLShadingSystem; }
  namespace renderer      { class RendererComponents; }
  namespace renderer      { class RendererServices; }
-@@ -95,7 +96,7 @@ class CPURenderDevice
+@@ -95,7 +96,7 @@
    private:
      CPURenderContext                                m_context;
      OIIOErrorHandler*                               m_error_handler;
@@ -246,11 +227,10 @@ index f295e9c4c..2610bd3bf 100644
      RendererServices*                               m_renderer_services;
      OSLShadingSystem*                               m_shading_system;
      foundation::auto_release_ptr<ShaderCompiler>    m_osl_compiler;
-diff --git a/src/appleseed/renderer/device/renderdevicebase.cpp b/src/appleseed/renderer/device/renderdevicebase.cpp
-index 822b1f903..1f53809fc 100644
---- a/src/appleseed/renderer/device/renderdevicebase.cpp
-+++ b/src/appleseed/renderer/device/renderdevicebase.cpp
-@@ -113,7 +113,7 @@ IRendererController::Status RenderDeviceBase::wait_for_event(
+diff -Naur appleseed/src/appleseed/renderer/device/renderdevicebase.cpp APPLESEED_BLD/src/appleseed/renderer/device/renderdevicebase.cpp
+--- appleseed/src/appleseed/renderer/device/renderdevicebase.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/device/renderdevicebase.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -113,7 +113,7 @@
          }
  
          renderer_controller.on_progress();
@@ -259,11 +239,10 @@ index 822b1f903..1f53809fc 100644
      }
  }
  
-diff --git a/src/appleseed/renderer/kernel/intersection/embreescene.cpp b/src/appleseed/renderer/kernel/intersection/embreescene.cpp
-index fd14ca0af..6ba311666 100644
---- a/src/appleseed/renderer/kernel/intersection/embreescene.cpp
-+++ b/src/appleseed/renderer/kernel/intersection/embreescene.cpp
-@@ -194,7 +194,7 @@ namespace
+diff -Naur appleseed/src/appleseed/renderer/kernel/intersection/embreescene.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/intersection/embreescene.cpp
+--- appleseed/src/appleseed/renderer/kernel/intersection/embreescene.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/intersection/embreescene.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -194,7 +194,7 @@
          // Calculate exponent-adaptive offset.
          // Note: float is represented in memory
          // as 1 sign bit, 8 exponent bits and 23 mantissa bits.
@@ -272,11 +251,10 @@ index fd14ca0af..6ba311666 100644
          // Mantissa of constructed float will overlap no more than 11 last bits of
          // origin components due to exponent shift.
          // Mantissa of constructed float is just a
-diff --git a/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp b/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
-index 06e8ce70f..7859b1509 100644
---- a/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
-+++ b/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
-@@ -63,7 +63,7 @@ Dictionary BackwardLightSampler::get_params_metadata()
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -63,7 +63,7 @@
              .insert("values", "cdf|lighttree")
              .insert("default", "cdf")
              .insert("label", "Light Sampler")
@@ -285,7 +263,7 @@ index 06e8ce70f..7859b1509 100644
              .insert(
                  "options",
                  Dictionary()
-@@ -178,7 +178,7 @@ BackwardLightSampler::BackwardLightSampler(
+@@ -178,7 +178,7 @@
      }
      else
      {
@@ -294,10 +272,9 @@ index 06e8ce70f..7859b1509 100644
          if (m_emitting_shapes_cdf.valid())
              m_emitting_shapes_cdf.prepare();
  
-diff --git a/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h b/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h
-index 0cc13e668..6ef951fe6 100644
---- a/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h
-+++ b/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.h	1970-01-01 00:00:00.000000000 +0000
 @@ -29,6 +29,8 @@
  
  #pragma once
@@ -315,10 +292,9 @@ index 0cc13e668..6ef951fe6 100644
  namespace renderer  { class OSLShadingSystem; }
  namespace renderer  { class Project; }
  namespace renderer  { class SampleAccumulationBuffer; }
-diff --git a/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h b/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h
-index 3743810c5..95529d21f 100644
---- a/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h
-+++ b/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmpasscallback.h	1970-01-01 00:00:00.000000000 +0000
 @@ -29,6 +29,8 @@
  
  #pragma once
@@ -328,7 +304,7 @@ index 3743810c5..95529d21f 100644
  // appleseed.renderer headers.
  #include "renderer/kernel/lighting/sppm/sppmimporton.h"
  #include "renderer/kernel/lighting/sppm/sppmimportonmap.h"
-@@ -55,7 +57,6 @@ namespace foundation    { class JobQueue; }
+@@ -55,7 +57,6 @@
  namespace renderer      { class Frame; }
  namespace renderer      { class ForwardLightSampler; }
  namespace renderer      { class IShadingResultFrameBufferFactory; }
@@ -336,10 +312,9 @@ index 3743810c5..95529d21f 100644
  namespace renderer      { class OSLShadingSystem; }
  namespace renderer      { class Scene; }
  namespace renderer      { class TextureStore; }
-diff --git a/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h b/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h
-index ebba749e8..5998010a7 100644
---- a/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h
-+++ b/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.h	1970-01-01 00:00:00.000000000 +0000
 @@ -29,6 +29,8 @@
  
  #pragma once
@@ -349,7 +324,7 @@ index ebba749e8..5998010a7 100644
  // appleseed.renderer headers.
  #include "renderer/kernel/lighting/sppm/sppmparameters.h"
  
-@@ -44,7 +46,6 @@ namespace foundation    { class IAbortSwitch; }
+@@ -44,7 +46,6 @@
  namespace foundation    { class JobQueue; }
  namespace renderer      { class ForwardLightSampler; }
  namespace renderer      { class LightTargetArray; }
@@ -357,11 +332,10 @@ index ebba749e8..5998010a7 100644
  namespace renderer      { class OSLShadingSystem; }
  namespace renderer      { class Scene; }
  namespace renderer      { class SPPMImportonMap; }
-diff --git a/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h b/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h
-index 410ac1e5b..0e9ddbbfa 100644
---- a/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h
-+++ b/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h
-@@ -60,7 +60,7 @@ class PixelSampler
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/pixelsampler.h	1970-01-01 00:00:00.000000000 +0000
+@@ -60,7 +60,7 @@
      // Compute the position of a pixel sample and optionally the initial instance
      // number of the corresponding sampling context, given the integer coordinates
      // of the subpixel grid cell containing the sample. The coordinates of the
@@ -370,11 +344,10 @@ index 410ac1e5b..0e9ddbbfa 100644
      // (https://github.com/appleseedhq/appleseed/wiki/Terminology).
      void sample(
          const int               sx,
-diff --git a/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp b/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp
-index 389b3d909..384c16863 100644
---- a/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp
-+++ b/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp
-@@ -167,7 +167,7 @@ namespace
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -167,7 +167,7 @@
                  1);
  
              float pixel_red_channel;
@@ -383,7 +356,7 @@ index 389b3d909..384c16863 100644
  
              const size_t sample_count =
                  round<size_t>(
-@@ -322,7 +322,7 @@ bool TextureControlledPixelRendererFactory::load_texture(const std::string& text
+@@ -322,7 +322,7 @@
  {
      // Create a new dedicated ImageCache instead of using the global ImageCache.
      // This is to prevent errors during ImageBuf access if the file behind tex_path was overwritten on disk.
@@ -392,10 +365,9 @@ index 389b3d909..384c16863 100644
      std::unique_ptr<ImageBuf> texture(new ImageBuf(texture_path, 0, 0, image_cache));
  
      // Force the read to immediately do the entire disk I/O for the file.
-diff --git a/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h b/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h
-index 6be1322ce..932e2e37a 100644
---- a/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h
-+++ b/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.h	1970-01-01 00:00:00.000000000 +0000
 @@ -29,6 +29,8 @@
  
  #pragma once
@@ -413,11 +385,10 @@ index 6be1322ce..932e2e37a 100644
  namespace renderer  { class OSLShadingSystem; }
  namespace renderer  { class Scene; }
  namespace renderer  { class ShadingEngine; }
-diff --git a/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp b/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp
-index efa020eab..1ada61caf 100644
---- a/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp
-+++ b/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp
-@@ -96,7 +96,7 @@ void TileJob::execute(const size_t thread_index)
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/tilejob.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -96,7 +96,7 @@
      // case of 3ds Max and Maya, updating the UI (e.g. displaying rendered tiles) can only
      // be done from a specific thread: the "main thread" or "UI thread".
      //
@@ -426,10 +397,9 @@ index efa020eab..1ada61caf 100644
      // of `MasterRenderer` instead of a tile callback _factory_. `MasterRenderer` then wraps
      // this single tile callback into a `SerialTileCallback` whose sole purpose is to push
      // updates to a `SerialRendererController`, which in turn stores them into a local queue.
-diff --git a/src/appleseed/renderer/kernel/rendering/renderercomponents.h b/src/appleseed/renderer/kernel/rendering/renderercomponents.h
-index c90e167c3..4b3ff65ad 100644
---- a/src/appleseed/renderer/kernel/rendering/renderercomponents.h
-+++ b/src/appleseed/renderer/kernel/rendering/renderercomponents.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/renderercomponents.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/renderercomponents.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/renderercomponents.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/renderercomponents.h	1970-01-01 00:00:00.000000000 +0000
 @@ -28,6 +28,8 @@
  
  #pragma once
@@ -439,7 +409,7 @@ index c90e167c3..4b3ff65ad 100644
  // appleseed.renderer headers.
  #include "renderer/kernel/lighting/backwardlightsampler.h"
  #include "renderer/kernel/lighting/forwardlightsampler.h"
-@@ -52,7 +54,6 @@ namespace foundation    { class IAbortSwitch; }
+@@ -52,7 +54,6 @@
  namespace renderer      { class Frame; }
  namespace renderer      { class IFrameRenderer; }
  namespace renderer      { class ITileCallbackFactory; }
@@ -447,11 +417,10 @@ index c90e167c3..4b3ff65ad 100644
  namespace renderer      { class OnFrameBeginRecorder; }
  namespace renderer      { class OnRenderBeginRecorder; }
  namespace renderer      { class OSLShadingSystem; }
-diff --git a/src/appleseed/renderer/kernel/rendering/rendererservices.cpp b/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
-index acd56a896..77ccf920f 100644
---- a/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
-+++ b/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
-@@ -528,19 +528,19 @@ bool RendererServices::getmessage(
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -528,19 +528,19 @@
      {
          if (source == g_trace_ustr)
          {
@@ -478,7 +447,7 @@ index acd56a896..77ccf920f 100644
                  reinterpret_cast<float*>(val)[0] = trace_data->m_v;
              else
                  return false;
-@@ -623,7 +623,7 @@ bool RendererServices::get_userdata(
+@@ -623,7 +623,7 @@
  
  IMPLEMENT_ATTR_GETTER(object_instance_id)
  {
@@ -487,7 +456,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -641,7 +641,7 @@ IMPLEMENT_ATTR_GETTER(object_instance_id)
+@@ -641,7 +641,7 @@
  
  IMPLEMENT_ATTR_GETTER(object_instance_index)
  {
@@ -496,7 +465,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -659,7 +659,7 @@ IMPLEMENT_ATTR_GETTER(object_instance_index)
+@@ -659,7 +659,7 @@
  
  IMPLEMENT_ATTR_GETTER(assembly_instance_id)
  {
@@ -505,7 +474,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -677,7 +677,7 @@ IMPLEMENT_ATTR_GETTER(assembly_instance_id)
+@@ -677,7 +677,7 @@
  
  IMPLEMENT_ATTR_GETTER(assembly_instance_name)
  {
@@ -514,7 +483,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -699,7 +699,7 @@ IMPLEMENT_ATTR_GETTER(assembly_instance_name)
+@@ -699,7 +699,7 @@
  
  IMPLEMENT_ATTR_GETTER(assembly_name)
  {
@@ -523,7 +492,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -721,7 +721,7 @@ IMPLEMENT_ATTR_GETTER(assembly_name)
+@@ -721,7 +721,7 @@
  
  IMPLEMENT_ATTR_GETTER(object_instance_name)
  {
@@ -532,7 +501,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -743,7 +743,7 @@ IMPLEMENT_ATTR_GETTER(object_instance_name)
+@@ -743,7 +743,7 @@
  
  IMPLEMENT_ATTR_GETTER(object_name)
  {
@@ -541,7 +510,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -781,7 +781,7 @@ IMPLEMENT_ATTR_GETTER(camera_resolution)
+@@ -781,7 +781,7 @@
  
  IMPLEMENT_ATTR_GETTER(camera_projection)
  {
@@ -550,7 +519,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<OIIO::ustring*>(val)[0] = m_cam_projection_str;
          return true;
-@@ -797,7 +797,7 @@ IMPLEMENT_ATTR_GETTER(camera_fov)
+@@ -797,7 +797,7 @@
  
  IMPLEMENT_ATTR_GETTER(camera_pixelaspect)
  {
@@ -559,7 +528,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<float*>(val)[0] = 1.0f;
  
-@@ -828,7 +828,7 @@ IMPLEMENT_ATTR_GETTER(camera_clip)
+@@ -828,7 +828,7 @@
  
  IMPLEMENT_ATTR_GETTER(camera_clip_near)
  {
@@ -568,7 +537,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<float*>(val)[0] = 0.0f;
  
-@@ -843,7 +843,7 @@ IMPLEMENT_ATTR_GETTER(camera_clip_near)
+@@ -843,7 +843,7 @@
  
  IMPLEMENT_ATTR_GETTER(camera_clip_far)
  {
@@ -577,7 +546,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<float*>(val)[0] = std::numeric_limits<float>::max();
  
-@@ -874,7 +874,7 @@ IMPLEMENT_ATTR_GETTER(camera_shutter)
+@@ -874,7 +874,7 @@
  
  IMPLEMENT_ATTR_GETTER(camera_shutter_open)
  {
@@ -586,7 +555,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<float*>(val)[0] = m_shutter[0];
  
-@@ -889,7 +889,7 @@ IMPLEMENT_ATTR_GETTER(camera_shutter_open)
+@@ -889,7 +889,7 @@
  
  IMPLEMENT_ATTR_GETTER(camera_shutter_close)
  {
@@ -595,7 +564,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<float*>(val)[0] = m_shutter[1];
  
-@@ -923,7 +923,7 @@ IMPLEMENT_ATTR_GETTER(camera_screen_window)
+@@ -923,7 +923,7 @@
  
  IMPLEMENT_ATTR_GETTER(ray_depth)
  {
@@ -604,7 +573,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -940,7 +940,7 @@ IMPLEMENT_ATTR_GETTER(ray_depth)
+@@ -940,7 +940,7 @@
  
  IMPLEMENT_ATTR_GETTER(ray_length)
  {
@@ -613,7 +582,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -957,7 +957,7 @@ IMPLEMENT_ATTR_GETTER(ray_length)
+@@ -957,7 +957,7 @@
  
  IMPLEMENT_ATTR_GETTER(ray_ior)
  {
@@ -622,7 +591,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -974,7 +974,7 @@ IMPLEMENT_ATTR_GETTER(ray_ior)
+@@ -974,7 +974,7 @@
  
  IMPLEMENT_ATTR_GETTER(ray_has_differentials)
  {
@@ -631,7 +600,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -991,7 +991,7 @@ IMPLEMENT_ATTR_GETTER(ray_has_differentials)
+@@ -991,7 +991,7 @@
  
  IMPLEMENT_ATTR_GETTER(surface_shader_diffuse)
  {
@@ -640,7 +609,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point = reinterpret_cast<const ShadingPoint*>(sg->renderstate);
          reinterpret_cast<float*>(val)[0] = shading_point->m_surface_shader_diffuse[0];
-@@ -1009,7 +1009,7 @@ IMPLEMENT_ATTR_GETTER(surface_shader_diffuse)
+@@ -1009,7 +1009,7 @@
  
  IMPLEMENT_ATTR_GETTER(surface_shader_glossy)
  {
@@ -649,7 +618,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point = reinterpret_cast<const ShadingPoint*>(sg->renderstate);
          reinterpret_cast<float*>(val)[0] = shading_point->m_surface_shader_glossy[0];
-@@ -1027,7 +1027,7 @@ IMPLEMENT_ATTR_GETTER(surface_shader_glossy)
+@@ -1027,7 +1027,7 @@
  
  IMPLEMENT_ATTR_GETTER(surface_shader_emission)
  {
@@ -658,7 +627,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point = reinterpret_cast<const ShadingPoint*>(sg->renderstate);
          reinterpret_cast<float*>(val)[0] = shading_point->m_surface_shader_emission[0];
-@@ -1045,7 +1045,7 @@ IMPLEMENT_ATTR_GETTER(surface_shader_emission)
+@@ -1045,7 +1045,7 @@
  
  IMPLEMENT_ATTR_GETTER(appleseed_version_major)
  {
@@ -667,7 +636,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<int*>(val)[0] = APPLESEED_VERSION_MAJOR;
  
-@@ -1060,7 +1060,7 @@ IMPLEMENT_ATTR_GETTER(appleseed_version_major)
+@@ -1060,7 +1060,7 @@
  
  IMPLEMENT_ATTR_GETTER(appleseed_version_minor)
  {
@@ -676,7 +645,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<int*>(val)[0] = APPLESEED_VERSION_MINOR;
  
-@@ -1075,7 +1075,7 @@ IMPLEMENT_ATTR_GETTER(appleseed_version_minor)
+@@ -1075,7 +1075,7 @@
  
  IMPLEMENT_ATTR_GETTER(appleseed_version_patch)
  {
@@ -685,7 +654,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<int*>(val)[0] = APPLESEED_VERSION_PATCH;
  
-@@ -1090,7 +1090,7 @@ IMPLEMENT_ATTR_GETTER(appleseed_version_patch)
+@@ -1090,7 +1090,7 @@
  
  IMPLEMENT_ATTR_GETTER(appleseed_version)
  {
@@ -694,7 +663,7 @@ index acd56a896..77ccf920f 100644
      {
          reinterpret_cast<int*>(val)[0] = APPLESEED_VERSION;
  
-@@ -1115,7 +1115,7 @@ IMPLEMENT_ATTR_GETTER(appleseed_version)
+@@ -1115,7 +1115,7 @@
  
  IMPLEMENT_USER_DATA_GETTER(tn)
  {
@@ -703,7 +672,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -1136,7 +1136,7 @@ IMPLEMENT_USER_DATA_GETTER(tn)
+@@ -1136,7 +1136,7 @@
  
  IMPLEMENT_USER_DATA_GETTER(bn)
  {
@@ -712,7 +681,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -1166,7 +1166,7 @@ IMPLEMENT_USER_DATA_GETTER(bn)
+@@ -1166,7 +1166,7 @@
  
  IMPLEMENT_USER_DATA_GETTER(dndu)
  {
@@ -721,7 +690,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -1187,7 +1187,7 @@ IMPLEMENT_USER_DATA_GETTER(dndu)
+@@ -1187,7 +1187,7 @@
  
  IMPLEMENT_USER_DATA_GETTER(dndv)
  {
@@ -730,7 +699,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -1208,7 +1208,7 @@ IMPLEMENT_USER_DATA_GETTER(dndv)
+@@ -1208,7 +1208,7 @@
  
  IMPLEMENT_USER_DATA_GETTER(vertex_color)
  {
@@ -739,7 +708,7 @@ index acd56a896..77ccf920f 100644
      {
          const ShadingPoint* shading_point =
              reinterpret_cast<const ShadingPoint*>(sg->renderstate);
-@@ -1233,7 +1233,7 @@ void RendererServices::clear_derivatives(
+@@ -1233,7 +1233,7 @@
      const OIIO::TypeDesc&       type,
      void*                       val)
  {
@@ -748,10 +717,9 @@ index acd56a896..77ccf920f 100644
          memset(reinterpret_cast<char*>(val) + type.size(), 0, 2 * type.size());
  }
  
-diff --git a/src/appleseed/renderer/kernel/shading/oslshadingsystem.h b/src/appleseed/renderer/kernel/shading/oslshadingsystem.h
-index 480a4bdc0..f4557a62d 100644
---- a/src/appleseed/renderer/kernel/shading/oslshadingsystem.h
-+++ b/src/appleseed/renderer/kernel/shading/oslshadingsystem.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/oslshadingsystem.h APPLESEED_BLD/src/appleseed/renderer/kernel/shading/oslshadingsystem.h
+--- appleseed/src/appleseed/renderer/kernel/shading/oslshadingsystem.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/oslshadingsystem.h	1970-01-01 00:00:00.000000000 +0000
 @@ -28,6 +28,8 @@
  
  #pragma once
@@ -769,10 +737,9 @@ index 480a4bdc0..f4557a62d 100644
  namespace renderer { class RendererServices; }
  
  namespace renderer
-diff --git a/src/appleseed/renderer/kernel/shading/shadingcontext.h b/src/appleseed/renderer/kernel/shading/shadingcontext.h
-index a150262c0..16a5b0fab 100644
---- a/src/appleseed/renderer/kernel/shading/shadingcontext.h
-+++ b/src/appleseed/renderer/kernel/shading/shadingcontext.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/shadingcontext.h APPLESEED_BLD/src/appleseed/renderer/kernel/shading/shadingcontext.h
+--- appleseed/src/appleseed/renderer/kernel/shading/shadingcontext.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/shadingcontext.h	1970-01-01 00:00:00.000000000 +0000
 @@ -29,6 +29,8 @@
  
  #pragma once
@@ -790,11 +757,10 @@ index a150262c0..16a5b0fab 100644
  namespace renderer      { class OSLShadingSystem; }
  namespace renderer      { class ShadingPoint; }
  namespace renderer      { class TextureCache; }
-diff --git a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
-index 2cff645bf..d2dec6b48 100644
---- a/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
-+++ b/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
-@@ -818,7 +818,7 @@ void ShadingPoint::compute_shading_basis() const
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/shadingpoint.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+--- appleseed/src/appleseed/renderer/kernel/shading/shadingpoint.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/shadingpoint.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -818,7 +818,7 @@
  
      if (m_primitive_type == PrimitiveCurve3)
      {
@@ -803,10 +769,9 @@ index 2cff645bf..d2dec6b48 100644
          // todo: add flag to differentiate curves from hair.
          const Vector3d x = normalize(get_dpdu(0));
          const Vector3d sn_curve = get_original_shading_normal();
-diff --git a/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp b/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp
-index dbfc031ec..6ba116687 100644
---- a/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp
-+++ b/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp
+--- appleseed/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -32,15 +32,9 @@
  namespace renderer
  {
@@ -816,19 +781,18 @@ index dbfc031ec..6ba116687 100644
  {
 -    OIIO::TextureSystem::destroy(
 -        reinterpret_cast<OIIO::TextureSystem*>(this));
--}
--
--OIIOTextureSystem* OIIOTextureSystemFactory::create(const bool shared)
--{
--    return reinterpret_cast<OIIOTextureSystem*>(OIIO::TextureSystem::create(shared));
 +    return OIIO::TextureSystem::create(shared);
  }
  
+-OIIOTextureSystem* OIIOTextureSystemFactory::create(const bool shared)
+-{
+-    return reinterpret_cast<OIIOTextureSystem*>(OIIO::TextureSystem::create(shared));
+-}
+-
  }   // namespace renderer
-diff --git a/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h b/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h
-index 3713f8309..6d4a43fbf 100644
---- a/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h
-+++ b/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h
+diff -Naur appleseed/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h APPLESEED_BLD/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h
+--- appleseed/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/texturing/oiiotexturesystem.h	1970-01-01 00:00:00.000000000 +0000
 @@ -28,6 +28,8 @@
  
  #pragma once
@@ -847,13 +811,13 @@ index 3713f8309..6d4a43fbf 100644
 -{
 -  public:
 -    void release();
--
++using OIIOTextureSystem = OIIO::TextureSystem;
+ 
 -  private:
 -    // Needed by gcc 8.
 -    void operator delete(void*) {}
 -};
-+using OIIOTextureSystem = OIIO::TextureSystem;
- 
+-
  class OIIOTextureSystemFactory
  {
    public:
@@ -862,11 +826,10 @@ index 3713f8309..6d4a43fbf 100644
  };
  
  }   // namespace renderer
-diff --git a/src/appleseed/renderer/meta/tests/test_environmentedf.cpp b/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
-index 6f9f0bd4f..1517d94e5 100644
---- a/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
-+++ b/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
-@@ -185,8 +185,7 @@ TEST_SUITE(Renderer_Modeling_EnvironmentEDF)
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_environmentedf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_environmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_environmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -185,8 +185,7 @@
            : m_texture_store(Base::m_scene)
            , m_texture_cache(m_texture_store)
            , m_texture_system(
@@ -876,11 +839,10 @@ index 6f9f0bd4f..1517d94e5 100644
            , m_renderer_services(Base::m_project, *m_texture_system)
            , m_shading_system(
                  OSLShadingSystemFactory::create(&m_renderer_services, m_texture_system.get()),
-diff --git a/src/appleseed/renderer/meta/tests/test_tracer.cpp b/src/appleseed/renderer/meta/tests/test_tracer.cpp
-index 10c252cfc..ee1a28a0b 100644
---- a/src/appleseed/renderer/meta/tests/test_tracer.cpp
-+++ b/src/appleseed/renderer/meta/tests/test_tracer.cpp
-@@ -233,11 +233,10 @@ TEST_SUITE(Renderer_Kernel_Lighting_Tracer)
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_tracer.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_tracer.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_tracer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_tracer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -233,11 +233,10 @@
            , m_texture_cache(m_texture_store)
            , m_intersector(m_trace_context, m_texture_cache)
            , m_texture_system(
@@ -894,11 +856,10 @@ index 10c252cfc..ee1a28a0b 100644
            , m_shading_system(
                  OSLShadingSystemFactory::create(&m_renderer_services, m_texture_system.get()),
                  [](OSLShadingSystem* object) { object->release(); })
-diff --git a/src/appleseed/renderer/meta/tests/test_volume.cpp b/src/appleseed/renderer/meta/tests/test_volume.cpp
-index 07e8572be..4c3f4ed12 100644
---- a/src/appleseed/renderer/meta/tests/test_volume.cpp
-+++ b/src/appleseed/renderer/meta/tests/test_volume.cpp
-@@ -93,8 +93,7 @@ TEST_SUITE(Renderer_Modeling_Volume)
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_volume.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_volume.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_volume.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_volume.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -93,8 +93,7 @@
            , m_texture_store(base.m_scene)
            , m_texture_cache(m_texture_store)
            , m_texture_system(
@@ -908,11 +869,10 @@ index 07e8572be..4c3f4ed12 100644
            , m_renderer_services(base.m_project, *m_texture_system)
            , m_shading_system(
                OSLShadingSystemFactory::create(&m_renderer_services, m_texture_system.get()),
-diff --git a/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp b/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
-index e756c1fb9..e86b7925d 100644
---- a/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
-+++ b/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
-@@ -117,7 +117,7 @@ namespace
+diff -Naur appleseed/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
+--- appleseed/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -117,7 +117,7 @@
          ~MultiChannelExrFileWriter() override
          {
  #if OIIO_VERSION < 20000
@@ -921,11 +881,10 @@ index e756c1fb9..e86b7925d 100644
              if (m_writer != nullptr)
                  OIIO::ImageOutput::destroy(m_writer);
  #endif
-diff --git a/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp b/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp
-index 5a9568c5a..a7e4c7dc7 100644
---- a/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp
-+++ b/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp
-@@ -483,7 +483,7 @@ void SeparableBSSRDF::do_evaluate(
+diff -Naur appleseed/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bssrdf/separablebssrdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -483,7 +483,7 @@
          return;
      }
  
@@ -934,11 +893,10 @@ index 5a9568c5a..a7e4c7dc7 100644
      const float square_radius =
          static_cast<float>(
              square_norm(outgoing_point.get_point() - incoming_point.get_point()));
-diff --git a/src/appleseed/renderer/modeling/camera/multilenscamera.cpp b/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
-index eaeedb7a7..12b36b806 100644
---- a/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
-+++ b/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
-@@ -604,7 +604,7 @@ class MultiLensCamera
+diff -Naur appleseed/src/appleseed/renderer/modeling/camera/multilenscamera.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/camera/multilenscamera.cpp
+--- appleseed/src/appleseed/renderer/modeling/camera/multilenscamera.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/camera/multilenscamera.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -604,7 +604,7 @@
                      return true;
                  }
  
@@ -947,7 +905,7 @@ index eaeedb7a7..12b36b806 100644
                  pmin = Vector3d(0, 0, m_last_z); // center of the rear lens
                  pmax = Vector3d(0.5 * m_lens_container.back().diameter, 0, m_last_z); // marginal point of the rear lens
              }
-@@ -936,7 +936,7 @@ class MultiLensCamera
+@@ -936,7 +936,7 @@
          //
  
          // Comments are preceded by a # and can stand on their own line or at the end of a line.
@@ -956,11 +914,10 @@ index eaeedb7a7..12b36b806 100644
          // Lens elements have to be space separated values of the format:
          // radius    thickness    ior    aperture
          bool read_lens_file(const Project& project, double factor)
-diff --git a/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp b/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp
-index c55cb2d12..26f8697d1 100644
---- a/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp
-+++ b/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp
-@@ -126,7 +126,7 @@ namespace
+diff -Naur appleseed/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp
+--- appleseed/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/oslenvironmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -126,7 +126,7 @@
              const Vector3f local_outgoing =
                  Vector3f::make_unit_vector(cos_theta, sin_theta, cos_phi, sin_phi);
  
@@ -969,7 +926,7 @@ index c55cb2d12..26f8697d1 100644
              payload = m_osl_shadergroup_exec.execute_background(*m_shader_group, local_outgoing);
  
              importance = luminance(payload);
-@@ -396,9 +396,9 @@ namespace
+@@ -396,9 +396,9 @@
              m_probability_scale = texel_count / (2.0f * PiSquare<float>());
  
              // Create OSL shading system.
@@ -981,11 +938,10 @@ index c55cb2d12..26f8697d1 100644
              auto_release_ptr<OSLShadingSystem> osl_shading_system(
                  OSLShadingSystemFactory().create(
                      &renderer_services,
-diff --git a/src/appleseed/renderer/modeling/frame/frame.cpp b/src/appleseed/renderer/modeling/frame/frame.cpp
-index bd01d80f7..4b9496564 100644
---- a/src/appleseed/renderer/modeling/frame/frame.cpp
-+++ b/src/appleseed/renderer/modeling/frame/frame.cpp
-@@ -765,7 +765,7 @@ namespace
+diff -Naur appleseed/src/appleseed/renderer/modeling/frame/frame.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/frame/frame.cpp
+--- appleseed/src/appleseed/renderer/modeling/frame/frame.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/frame/frame.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -765,7 +765,7 @@
          const ImageAttributes& exr_attributes = std::get<2>(checkpoint_props[0]);
          const std::string initial_layer_name = std::get<0>(checkpoint_props[0]);
  
@@ -994,11 +950,10 @@ index bd01d80f7..4b9496564 100644
          if (!exr_attributes.exist("appleseed:LastPass"))
          {
              RENDERER_LOG_ERROR("incorrect checkpoint: some attributes are missing.");
-diff --git a/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp b/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp
-index 7b29f52c5..282a8dca8 100644
---- a/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp
-+++ b/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp
-@@ -123,8 +123,8 @@ void ResampleX2Applier::apply(
+diff -Naur appleseed/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp
+--- appleseed/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/postprocessingstage/effect/resamplex2applier.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -123,8 +123,8 @@
          static_cast<float>(m_src_height - 1) / (dst_height - 1));
  
      // Note: using "dst / 2 == m_src" instead of "dst == m_src * 2" when upsampling accounts for
@@ -1009,11 +964,10 @@ index 7b29f52c5..282a8dca8 100644
      assert(
          m_mode == SamplingMode::DOUBLE
          ? dst_width / 2 == m_src_width && dst_height / 2 == m_src_height    // scale x2 with bilinear filtering
-diff --git a/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp b/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp
-index ae4755468..55a426112 100644
---- a/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp
-+++ b/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp
-@@ -108,8 +108,8 @@ namespace
+diff -Naur appleseed/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp
+--- appleseed/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/postprocessingstage/renderstamppostprocessingstage.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -108,8 +108,8 @@
  
              m_format_string = m_params.get_optional("format_string", DefaultFormatString, context);
              m_scale_factor = m_params.get_optional("scale_factor", DefaultScaleFactor, context);
@@ -1024,7 +978,7 @@ index ae4755468..55a426112 100644
  
              return true;
          }
-@@ -179,7 +179,7 @@ namespace
+@@ -179,7 +179,7 @@
              ImageBufAlgo::resize(scaled_unpremult_icon, unpremult_icon, "mitchell", filter_width, roi);
              ImageBufAlgo::premult(scaled_premult_icon, scaled_unpremult_icon, ROI::All());
              std::unique_ptr<float[]> pixels(new float[roi.width() * roi.height() * roi.nchannels()]);
@@ -1033,11 +987,10 @@ index ae4755468..55a426112 100644
  
              // Blit the appleseed logo.
              Drawing::blit_bitmap(
-diff --git a/src/appleseed/renderer/modeling/project/projectfileupdater.cpp b/src/appleseed/renderer/modeling/project/projectfileupdater.cpp
-index aed2d4d39..b225bad25 100644
---- a/src/appleseed/renderer/modeling/project/projectfileupdater.cpp
-+++ b/src/appleseed/renderer/modeling/project/projectfileupdater.cpp
-@@ -1884,7 +1884,7 @@ namespace
+diff -Naur appleseed/src/appleseed/renderer/modeling/project/projectfileupdater.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/project/projectfileupdater.cpp
+--- appleseed/src/appleseed/renderer/modeling/project/projectfileupdater.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/project/projectfileupdater.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -1884,7 +1884,7 @@
  
                      move_if_exist(root, "passes", gfr, "passes");
  
@@ -1046,11 +999,10 @@ index aed2d4d39..b225bad25 100644
                      if (gfr.empty())
                          root.dictionaries().remove("generic_frame_renderer");
                  }
-diff --git a/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp b/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp
-index aadb4e029..61c695054 100644
---- a/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp
-+++ b/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp
-@@ -89,9 +89,9 @@ const void* ShaderParam::get_value() const
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderparam.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -89,9 +89,9 @@
          return &impl->m_float_array_value.front();
      if (!impl->m_int_array_value.empty())
          return &impl->m_int_array_value.front();
@@ -1062,7 +1014,7 @@ index aadb4e029..61c695054 100644
          return &impl->m_string_value;
  
      // All the other param types use the float storage.
-@@ -128,21 +128,21 @@ std::string ShaderParam::get_value_as_string() const
+@@ -128,21 +128,21 @@
      }
      else
      {
@@ -1092,7 +1044,7 @@ index aadb4e029..61c695054 100644
          {
              ss << "matrix";
              for (size_t i = 0; i < 16; ++i)
-@@ -160,7 +160,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_int_param(
+@@ -160,7 +160,7 @@
      const int           value)
  {
      auto_release_ptr<ShaderParam> p(new ShaderParam(name));
@@ -1101,7 +1053,7 @@ index aadb4e029..61c695054 100644
      p->impl->m_int_value = value;
      return p;
  }
-@@ -180,7 +180,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_float_param(
+@@ -180,7 +180,7 @@
      const float         value)
  {
      auto_release_ptr<ShaderParam> p(new ShaderParam(name));
@@ -1110,7 +1062,7 @@ index aadb4e029..61c695054 100644
      p->impl->m_float_value[0] = value;
      return p;
  }
-@@ -202,7 +202,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_vector_param(
+@@ -202,7 +202,7 @@
      const float         vz)
  {
      auto_release_ptr<ShaderParam> p(new ShaderParam(name));
@@ -1119,7 +1071,7 @@ index aadb4e029..61c695054 100644
      p->impl->m_float_value[0] = vx;
      p->impl->m_float_value[1] = vy;
      p->impl->m_float_value[2] = vz;
-@@ -231,7 +231,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_normal_param(
+@@ -231,7 +231,7 @@
      const float         nz)
  {
      auto_release_ptr<ShaderParam> p(new ShaderParam(name));
@@ -1128,7 +1080,7 @@ index aadb4e029..61c695054 100644
      p->impl->m_float_value[0] = nx;
      p->impl->m_float_value[1] = ny;
      p->impl->m_float_value[2] = nz;
-@@ -260,7 +260,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_point_param(
+@@ -260,7 +260,7 @@
      const float         vz)
  {
      auto_release_ptr<ShaderParam> p(new ShaderParam(name));
@@ -1137,7 +1089,7 @@ index aadb4e029..61c695054 100644
      p->impl->m_float_value[0] = vx;
      p->impl->m_float_value[1] = vy;
      p->impl->m_float_value[2] = vz;
-@@ -289,7 +289,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_color_param(
+@@ -289,7 +289,7 @@
      const float         vz)
  {
      auto_release_ptr<ShaderParam> p(new ShaderParam(name));
@@ -1146,7 +1098,7 @@ index aadb4e029..61c695054 100644
      p->impl->m_float_value[0] = vx;
      p->impl->m_float_value[1] = vy;
      p->impl->m_float_value[2] = vz;
-@@ -316,7 +316,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_matrix_param(
+@@ -316,7 +316,7 @@
      const float*        values)
  {
      auto_release_ptr<ShaderParam> p(new ShaderParam(name));
@@ -1155,7 +1107,7 @@ index aadb4e029..61c695054 100644
      memcpy(p->impl->m_float_value, values, sizeof(float) * 16);
      return p;
  }
-@@ -341,7 +341,7 @@ auto_release_ptr<ShaderParam> ShaderParam::create_string_param(
+@@ -341,7 +341,7 @@
      const char*         value)
  {
      auto_release_ptr<ShaderParam> p(new ShaderParam(name));
@@ -1164,11 +1116,10 @@ index aadb4e029..61c695054 100644
      p->impl->m_string_storage = value;
      p->impl->m_string_value = p->impl->m_string_storage.c_str();
      return p;
-diff --git a/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp b/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
-index 08394bc7a..97dbcae99 100644
---- a/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
-+++ b/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
-@@ -71,17 +71,17 @@ struct ShaderQuery::Impl
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shaderquery.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -71,17 +71,17 @@
          const char*                     value_key,
          Dictionary&                     dictionary)
      {
@@ -1193,7 +1144,7 @@ index 08394bc7a..97dbcae99 100644
          {
              dictionary.insert(
                  value_key,
-@@ -123,7 +123,7 @@ struct ShaderQuery::Impl
+@@ -123,7 +123,7 @@
          if (is_array)
          {
              // Special float[2] cases (maya, UVs, etc).
@@ -1202,10 +1153,9 @@ index 08394bc7a..97dbcae99 100644
              {
                  dictionary.insert(
                      "default",
-diff --git a/src/thirdparty/bcd/bcd/ImageIO.cpp b/src/thirdparty/bcd/bcd/ImageIO.cpp
-index afb350ca6..62721f39b 100644
---- a/src/thirdparty/bcd/bcd/ImageIO.cpp
-+++ b/src/thirdparty/bcd/bcd/ImageIO.cpp
+diff -Naur appleseed/src/thirdparty/bcd/bcd/ImageIO.cpp APPLESEED_BLD/src/thirdparty/bcd/bcd/ImageIO.cpp
+--- appleseed/src/thirdparty/bcd/bcd/ImageIO.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/thirdparty/bcd/bcd/ImageIO.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -13,6 +13,7 @@
  // BCD headers.
  #include "DeepImage.h"
