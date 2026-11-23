@@ -1,0 +1,57 @@
+diff -Naur oiio/src/libOpenImageIO/color_ocio.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/color_ocio.cpp
+--- oiio/src/libOpenImageIO/color_ocio.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/color_ocio.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -3261,6 +3261,8 @@
+                        const ColorConfig* colorconfig, ROI roi, int nthreads)
+ {
+     OIIO::pvt::LoggedTimer logtime("IBA::ociolook");
++    if (!colorconfig)
++        colorconfig = &ColorConfig::default_colorconfig();
+     if (from.empty() || from == "current") {
+         auto linearspace = colorconfig->resolve("scene_linear");
+         from = src.spec().get_string_attribute("oiio:Colorspace", linearspace);
+@@ -3275,8 +3277,6 @@
+     }
+     ColorProcessorHandle processor;
+     {
+-        if (!colorconfig)
+-            colorconfig = &ColorConfig::default_colorconfig();
+         processor = colorconfig->createLookTransform(looks,
+                                                      colorconfig->resolve(from),
+                                                      colorconfig->resolve(to),
+diff -Naur oiio/src/libOpenImageIO/color_test.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/color_test.cpp
+--- oiio/src/libOpenImageIO/color_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/color_test.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -182,6 +182,24 @@
+ 
+ 
+ static void
++test_ociolook_default_config()
++{
++    ImageBuf src(ImageSpec(1, 1, 3, TypeFloat));
++    src.specmod().set_colorspace("lin_rec709_scene");
++    const float pixel[] = { .25f, .5f, .75f };
++    src.setpixel(0, 0, pixel);
++    ImageBuf dst;
++    OIIO_CHECK_ASSERT(
++        ImageBufAlgo::ociolook(dst, src, "", "current", "current"));
++    float actual[3];
++    dst.getpixel(0, 0, actual);
++    for (size_t c = 0; c < std::size(pixel); ++c)
++        OIIO_CHECK_EQUAL_THRESH(actual[c], pixel[c], 1e-5f);
++}
++
++
++
++static void
+ test_colorspace_interop_metadata()
+ {
+     ImageSpec spec;
+@@ -606,6 +624,7 @@
+     test_linear_display_cicp();
+     test_colorconvert_preserves_auxiliary_channels();
+     test_colorconvert_updates_gamut_metadata();
++    test_ociolook_default_config();
+     test_colorspace_interop_metadata();
+     test_interop_identities_conversion();
+     test_gamma_pair_conversion();

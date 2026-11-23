@@ -9,6 +9,7 @@ if (ENABLE_OPENIMAGEIO)
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_color_interop_identities.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_color_auxiliary_channels.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_color_gamut_metadata.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_default_look_config.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_test_python_interpreter.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_intel_windows_fp.patch"
     )
