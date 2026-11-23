@@ -103,3 +103,4 @@ appleseed_closure_ior_context.patch: Resolve closure indices in their adjacent
   media
 appleseed_standard_microfacet_transmission.patch: Support standard OSL
   microfacet transmission
+appleseed_emission_range.patch: Keep OSL emission normalization finite

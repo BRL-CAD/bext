@@ -53,6 +53,7 @@ set(APPLESEED_ART_PATCH_FILES
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_standard_microfacet_reflection.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_closure_ior_context.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_standard_microfacet_transmission.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_emission_range.patch"
   )
 
 set(APPLESEED_PATCH_STAGE "ART" CACHE STRING

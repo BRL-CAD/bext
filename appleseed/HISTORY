@@ -2762,6 +2762,25 @@ Message:
     Extend fixed-event differential checks to both distributions and modes,
     including matched indices and both sides of the critical-angle branch.
 
+Commit: 8677bc11c730cb435dbeac86b81a9e9f34a89000
+Patches: appleseed_emission_range.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T10:12:51Z
+Parents: 395a0a4b82c1a8bc0d71cd904f43d60e805fdf76
+Message:
+    Keep OSL emission normalization finite across float weights
+
+    Normalize emission chromaticity and closure selection in double
+    precision. Valid subnormal weights previously overflowed a float
+    reciprocal, while large finite weights could overflow their summed
+    selection weight.
+
+    Add native coverage for subnormal emission sampling, evaluation and
+    light launch, and selection probabilities across the finite float weight
+    range. All 1895 native cases pass. The new cases fail with the old
+    arithmetic; the filtered curved-glass reproduction also passes after the
+    fix.
+
 Commit: 9a4f748199f593831f8e4dfd32d147ce76e6a2c6
 Patch: 06
 Author: Christopher Sean Morrison <brlcad@gmail.com>
