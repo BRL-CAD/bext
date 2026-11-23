@@ -1,0 +1,78 @@
+diff -Naur oiio/src/libOpenImageIO/color_ocio.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/color_ocio.cpp
+--- oiio/src/libOpenImageIO/color_ocio.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/color_ocio.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -3539,6 +3539,12 @@
+     } else {
+         spec.attribute("oiio:ColorSpace", colorspace);
+     }
++
++    // EXR readers prefer an interop identity over the color-space label.
++    // Preserve a matching identity supplied by a reader; discard stale ones
++    // so output can derive the new identity without loading a config here.
++    if (spec.get_string_attribute("colorInteropID") != colorspace)
++        spec.erase_attribute("colorInteropID");
+ 
+     // Clear a bunch of other metadata that might contradict the colorspace,
+     // including some format-specific things that we don't want to propagate
+diff -Naur oiio/src/libOpenImageIO/color_test.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/color_test.cpp
+--- oiio/src/libOpenImageIO/color_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/color_test.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -88,6 +88,13 @@
+     set_colorspace(spec, "srgb_rec709_scene");
+     OIIO_CHECK_ASSERT(spec.find_attribute("Exif:ColorSpace"));
+ 
++    ImageSpec interop_spec;
++    interop_spec.attribute("oiio:ColorSpace", "srgb_rec709_scene");
++    interop_spec.attribute("colorInteropID", "srgb_rec709_scene");
++    interop_spec.set_colorspace("g22_rec709_scene");
++    OIIO_CHECK_ASSERT(!interop_spec.find_attribute("colorInteropID"));
++    OIIO_CHECK_ASSERT(!color_config_loaded());
++
+     // Constructing a config and mapping CICP to an interop ID load nothing.
+     const ColorConfig& config(ColorConfig::default_colorconfig());
+     const int cicp[4] = { 9, 16, 9, 1 };
+@@ -104,6 +111,36 @@
+     // A config that fails to load still says so when first asked.
+     ColorConfig missing("no_such_config.ocio");
+     OIIO_CHECK_ASSERT(missing.has_error());
++}
++
++
++
++static void
++test_colorspace_interop_metadata()
++{
++    ImageSpec spec;
++    spec.attribute("oiio:ColorSpace", "lin_rec709_scene");
++    spec.attribute("colorInteropID", "lin_rec709_scene");
++    spec.set_colorspace("srgb_rec709_scene");
++    OIIO_CHECK_EQUAL(spec.get_string_attribute("oiio:ColorSpace"),
++                     "srgb_rec709_scene");
++    OIIO_CHECK_ASSERT(!spec.find_attribute("colorInteropID"));
++
++    // EXR input supplies its authoritative identity as the new space name.
++    spec.attribute("colorInteropID", "lin_ap1_scene");
++    spec.set_colorspace("lin_ap1_scene");
++    OIIO_CHECK_EQUAL(spec.get_string_attribute("colorInteropID"),
++                     "lin_ap1_scene");
++    spec.set_colorspace("lin_ap1_scene");
++    OIIO_CHECK_EQUAL(spec.get_string_attribute("colorInteropID"),
++                     "lin_ap1_scene");
++
++    spec.set_colorspace("custom_space");
++    OIIO_CHECK_ASSERT(!spec.find_attribute("colorInteropID"));
++    spec.attribute("colorInteropID", "lin_ap1_scene");
++    spec.set_colorspace("");
++    OIIO_CHECK_ASSERT(!spec.find_attribute("oiio:ColorSpace"));
++    OIIO_CHECK_ASSERT(!spec.find_attribute("colorInteropID"));
+ }
+ 
+ 
+@@ -501,6 +538,7 @@
+     test_namespaced_ids();
+     test_Rec709_conversion();
+     test_linear_display_cicp();
++    test_colorspace_interop_metadata();
+     test_interop_identities_conversion();
+     test_gamma_pair_conversion();
+     test_color_space_properties();

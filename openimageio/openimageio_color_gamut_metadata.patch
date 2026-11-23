@@ -1,0 +1,141 @@
+diff -Naur oiio/src/libOpenImageIO/color_ocio.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/color_ocio.cpp
+--- oiio/src/libOpenImageIO/color_ocio.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/color_ocio.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -2918,8 +2918,30 @@
+ //////////////////////////////////////////////////////////////////////////
+ //
+ // Image Processing Implementations
++
++
++static void
++set_converted_colorspace(ImageSpec& spec, string_view colorspace,
++                         const ColorConfig& config)
++{
++    const bool changed = spec.get_string_attribute("oiio:ColorSpace")
++                         != colorspace;
++    config.set_colorspace(spec, colorspace);
++    if (!changed)
++        return;
+ 
++    // Inherited primaries and CICP codes may describe the source gamut.
++    cspan<float> chromaticities = config.get_chromaticities(colorspace);
++    if (!chromaticities.empty())
++        spec.attribute("chromaticities", TypeDesc(TypeDesc::FLOAT, 8),
++                       chromaticities.data());
++    else
++        spec.erase_attribute("chromaticities");
++    spec.erase_attribute("CICP");
++}
+ 
++
++
+ bool
+ ImageBufAlgo::colorconvert(ImageBuf& dst, const ImageBuf& src, string_view from,
+                            string_view to, bool unpremult,
+@@ -2962,7 +2984,7 @@
+         // DBG("done, setting output colorspace to {}\n", to);
+         if (colorconfig->isData(from))
+             to = from;
+-        dst.specmod().set_colorspace(to);
++        set_converted_colorspace(dst.specmod(), to, *colorconfig);
+     }
+     return ok;
+ }
+@@ -3272,7 +3294,7 @@
+     logtime.stop();  // transition to colorconvert
+     bool ok = colorconvert(dst, src, processor.get(), unpremult, roi, nthreads);
+     if (ok)
+-        dst.specmod().set_colorspace(to);
++        set_converted_colorspace(dst.specmod(), to, *colorconfig);
+     return ok;
+ }
+ 
+@@ -3333,7 +3355,8 @@
+     bool ok = colorconvert(dst, src, processor.get(), unpremult, roi, nthreads);
+     if (ok) {
+         if (inverse)
+-            dst.specmod().set_colorspace(colorconfig->resolve(from));
++            set_converted_colorspace(dst.specmod(), colorconfig->resolve(from),
++                                     *colorconfig);
+         else {
+             if (display.empty() || display == "default")
+                 display = colorconfig->getDefaultDisplayName();
+@@ -3341,8 +3364,10 @@
+                 view = colorconfig->getDefaultViewName(display,
+                                                        colorconfig->resolve(
+                                                            from));
+-            dst.specmod().set_colorspace(
+-                colorconfig->getDisplayViewColorSpaceName(display, view));
++            set_converted_colorspace(
++                dst.specmod(),
++                colorconfig->getDisplayViewColorSpaceName(display, view),
++                *colorconfig);
+         }
+     }
+     return ok;
+@@ -3402,8 +3427,10 @@
+         // TODO: Use OCIO to extract InputDescription and OutputDescription CLF
+         // metadata attributes, if present.
+         if (!colorconfig->filepathOnlyMatchesDefaultRule(name))
+-            dst.specmod().set_colorspace(
+-                colorconfig->getColorSpaceFromFilepath(name));
++            set_converted_colorspace(dst.specmod(),
++                                     colorconfig->getColorSpaceFromFilepath(
++                                         name),
++                                     *colorconfig);
+     return ok;
+ }
+ 
+diff -Naur oiio/src/libOpenImageIO/color_test.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/color_test.cpp
+--- oiio/src/libOpenImageIO/color_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/color_test.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -142,6 +142,41 @@
+         for (size_t c = 3; c < std::size(pixel); ++c)
+             OIIO_CHECK_EQUAL(actual[c], pixel[c]);
+     }
++}
++
++
++
++static void
++test_colorconvert_updates_gamut_metadata()
++{
++    const float rec709[] = { .64f, .33f, .30f, .60f, .15f, .06f, .3127f, .329f };
++    const float ap1[] = { .713f, .293f, .165f,   .830f,
++                          .128f, .044f, .32168f, .33767f };
++    const int cicp[]  = { 1, 8, 1, 1 };
++    ImageSpec spec(1, 1, 3, TypeFloat);
++    spec.attribute("oiio:ColorSpace", "lin_rec709_scene");
++    spec.attribute("colorInteropID", "lin_rec709_scene");
++    spec.attribute("chromaticities", TypeDesc(TypeDesc::FLOAT, 8), rec709);
++    spec.attribute("CICP", TypeDesc(TypeDesc::INT, 4), cicp);
++    ImageBuf src(spec);
++    const float pixel[] = { .25f, .5f, .75f };
++    src.setpixel(0, 0, pixel);
++    ImageBuf wide;
++    OIIO_CHECK_ASSERT(
++        ImageBufAlgo::colorconvert(wide, src, "current", "lin_ap1_scene"));
++    const ParamValue* chroma = wide.spec().find_attribute("chromaticities");
++    OIIO_CHECK_ASSERT(chroma && chroma->as_cspan<float>() == cspan<float>(ap1));
++    OIIO_CHECK_ASSERT(!wide.spec().find_attribute("CICP"));
++    ImageBuf back;
++    OIIO_CHECK_ASSERT(
++        ImageBufAlgo::colorconvert(back, wide, "current", "lin_rec709_scene"));
++    chroma = back.spec().find_attribute("chromaticities");
++    OIIO_CHECK_ASSERT(chroma
++                      && chroma->as_cspan<float>() == cspan<float>(rec709));
++    float actual[3];
++    back.getpixel(0, 0, actual);
++    for (size_t c = 0; c < std::size(pixel); ++c)
++        OIIO_CHECK_EQUAL_THRESH(actual[c], pixel[c], 1e-5f);
+ }
+ 
+ 
+@@ -570,6 +605,7 @@
+     test_Rec709_conversion();
+     test_linear_display_cicp();
+     test_colorconvert_preserves_auxiliary_channels();
++    test_colorconvert_updates_gamut_metadata();
+     test_colorspace_interop_metadata();
+     test_interop_identities_conversion();
+     test_gamma_pair_conversion();

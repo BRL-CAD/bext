@@ -1,0 +1,15 @@
+diff -Naur oiio/src/cmake/testing.cmake OPENIMAGEIO_BLD/src/cmake/testing.cmake
+--- oiio/src/cmake/testing.cmake	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/cmake/testing.cmake	1970-01-01 00:00:00.000000000 +0000
+@@ -4,6 +4,11 @@
+ 
+ include (CTest)
+ 
++# Test scripts need an interpreter even when the Python bindings are disabled.
++if (OIIO_BUILD_TESTS AND BUILD_TESTING AND NOT Python3_Interpreter_FOUND)
++    find_package (Python3 REQUIRED COMPONENTS Interpreter)
++endif ()
++
+ # Make a build/platform/testsuite directory, and copy the master runtest.py
+ # there. The rest is up to the tests themselves.
+ file (MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/testsuite")

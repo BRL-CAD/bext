@@ -1,21 +1,7 @@
-From 401f90dca215ee6855fc331ea31a04de1796ac2c Mon Sep 17 00:00:00 2001
-From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
-Date: Thu, 12 Nov 2026 12:12:02 +0000
-Subject: [PATCH] feat: add an optional bounded struetype text backend
-
-Keep FreeType as the default and allow shared struetype headers to
-supply font lookup, metrics, and grayscale glyph coverage. Preserve the
-text layout and compositing interfaces while checking font buffer sizes
-and integer bounds before positioning text and shadows.
-
-Document unhinted rasterization and cover UTF-8 text, family lookup,
-multiline layout, alignment, shadows, invalid fonts, and invalid bounds.
-
-diff --git a/src/cmake/externalpackages.cmake b/src/cmake/externalpackages.cmake
-index 3a24bf06f2352d46054146e24962f81edcd0b245..83c5e1ba33ed91972bc75db6bab12d9d3d668bcf 100644
---- a/src/cmake/externalpackages.cmake
-+++ b/src/cmake/externalpackages.cmake
-@@ -168,9 +168,17 @@ elseif (TARGET PNG::PNG)
+diff -Naur oiio/src/cmake/externalpackages.cmake OPENIMAGEIO_BLD/src/cmake/externalpackages.cmake
+--- oiio/src/cmake/externalpackages.cmake	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/cmake/externalpackages.cmake	1970-01-01 00:00:00.000000000 +0000
+@@ -168,9 +168,17 @@
      set (PNG_TARGET PNG::PNG)
  endif ()
  
@@ -36,11 +22,10 @@ index 3a24bf06f2352d46054146e24962f81edcd0b245..83c5e1ba33ed91972bc75db6bab12d9d
  
  checked_find_package (OpenColorIO REQUIRED
                        VERSION_MIN 2.3
-diff --git a/src/doc/imagebufalgo.md b/src/doc/imagebufalgo.md
-index 52639c79d75ab1af73f310f30a0bce91fe2c87fa..76c43c57cfd22e9cca96378921103e3baf1db597 100644
---- a/src/doc/imagebufalgo.md
-+++ b/src/doc/imagebufalgo.md
-@@ -563,6 +563,15 @@ pre-allocated `dst` nor a non-default ROI.
+diff -Naur oiio/src/doc/imagebufalgo.md OPENIMAGEIO_BLD/src/doc/imagebufalgo.md
+--- oiio/src/doc/imagebufalgo.md	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/doc/imagebufalgo.md	1970-01-01 00:00:00.000000000 +0000
+@@ -563,6 +563,15 @@
  
  ### Drawing text
  
@@ -56,11 +41,10 @@ index 52639c79d75ab1af73f310f30a0bce91fe2c87fa..76c43c57cfd22e9cca96378921103e3b
  :::{doxygenfunction} render_text(ImageBuf &dst, int x, int y, string_view text, int fontsize = 16, string_view fontname = "", cspan<float> textcolor = 1.0f, TextAlignX alignx = TextAlignX::Left, TextAlignY aligny = TextAlignY::Baseline, int shadow = 0, ROI roi = {}, int nthreads = 0)
  :::
  
-diff --git a/src/libOpenImageIO/CMakeLists.txt b/src/libOpenImageIO/CMakeLists.txt
-index b7eaa011cef85a2d587fde8005691efe4a5e7308..3fdeebc7766e3c81f06f21e94b260da735f839aa 100644
---- a/src/libOpenImageIO/CMakeLists.txt
-+++ b/src/libOpenImageIO/CMakeLists.txt
-@@ -43,6 +43,7 @@ set (libOpenImageIO_srcs
+diff -Naur oiio/src/libOpenImageIO/CMakeLists.txt OPENIMAGEIO_BLD/src/libOpenImageIO/CMakeLists.txt
+--- oiio/src/libOpenImageIO/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -43,6 +43,7 @@
                            imagebufalgo_copy.cpp
                            imagebufalgo_deep.cpp
                            imagebufalgo_draw.cpp
@@ -68,7 +52,7 @@ index b7eaa011cef85a2d587fde8005691efe4a5e7308..3fdeebc7766e3c81f06f21e94b260da7
                            imagebufalgo_addsub.cpp
                            imagebufalgo_muldiv.cpp
                            imagebufalgo_mad.cpp
-@@ -287,6 +288,12 @@ if (OIIO_BUILD_TESTS AND BUILD_TESTING)
+@@ -287,6 +288,12 @@
      add_test (unit_imagebufalgo ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/imagebufalgo_test)
      set_tests_properties (unit_imagebufalgo PROPERTIES PROCESSORS 2 COST 60)
  
@@ -81,10 +65,9 @@ index b7eaa011cef85a2d587fde8005691efe4a5e7308..3fdeebc7766e3c81f06f21e94b260da7
      fancy_add_executable (NAME imagespec_test SRC imagespec_test.cpp
                            LINK_LIBRARIES OpenImageIO
                            FOLDER "Unit Tests" NO_INSTALL)
-diff --git a/src/libOpenImageIO/imagebufalgo_draw.cpp b/src/libOpenImageIO/imagebufalgo_draw.cpp
-index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c79ade06e4 100644
---- a/src/libOpenImageIO/imagebufalgo_draw.cpp
-+++ b/src/libOpenImageIO/imagebufalgo_draw.cpp
+diff -Naur oiio/src/libOpenImageIO/imagebufalgo_draw.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/imagebufalgo_draw.cpp
+--- oiio/src/libOpenImageIO/imagebufalgo_draw.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/imagebufalgo_draw.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -23,9 +23,8 @@
  
  #include "imageio_pvt.h"
@@ -97,7 +80,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
  #endif
  
  #if OIIO_GNUC_VERSION >= 80000 /* gcc 8+ */
-@@ -865,8 +864,12 @@ enumerate_fonts()
+@@ -865,8 +864,12 @@
          Filesystem::get_directory_entries(dir, filenames, false);
          for (auto& f : filenames) {
              if (Strutil::iends_with(f, ".ttf") || Strutil::iends_with(f, ".ttc")
@@ -111,7 +94,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
                  std::string fontname
                      = Filesystem::replace_extension(Filesystem::filename(f),
                                                      "");
-@@ -915,46 +918,62 @@ pvt::font_list()
+@@ -915,46 +918,62 @@
  
  
  
@@ -195,10 +178,11 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
  }
  
  
-@@ -966,48 +985,20 @@ init_font_families()
+@@ -965,18 +984,6 @@
+     // skip if already initialized
      if (!s_font_families.empty())
          return;
- 
+-
 -    // If we know FT is broken, don't bother trying again
 -    if (ft_broken)
 -        return;
@@ -210,10 +194,10 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
 -            return;
 -        }
 -    }
--
+ 
      // read available fonts
      std::unordered_set<std::string> font_family_set;
-     std::unordered_map<std::string, std::unordered_set<std::string>>
+@@ -984,31 +991,15 @@
          font_style_set;
      const std::vector<std::string>& font_files = pvt::font_file_list();
      for (const std::string& filename : font_files) {
@@ -236,7 +220,10 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
 -        std::string family = std::string(face->family_name);
 +        std::string family = face.family();
          font_family_set.insert(family);
--
++        std::string style = face.style();
++        if (!style.empty())
++            font_style_set[family].insert(style);
+ 
 -        // Store the font style.
 -        std::string style = face->style_name ? std::string(face->style_name)
 -                                             : std::string();
@@ -244,13 +231,11 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
 -            std::unordered_set<std::string>& styles = font_style_set[family];
 -            styles.insert(style);
 -        }
-+        std::string style = face.style();
-+        if (!style.empty())
-+            font_style_set[family].insert(style);
- 
+-
          // Store the filename. Use the family and style as the key (e.g. "Arial Italic").
          std::string font_name = family;
-@@ -1018,8 +1009,6 @@ init_font_families()
+         if (!style.empty())
+@@ -1018,8 +1009,6 @@
          // Store regular fonts also with the family name only (e.g. "Arial Regular" as "Arial").
          if (style == "Regular")
              s_font_filename_per_family[family] = filename;
@@ -259,7 +244,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
      }
  
      // Sort font families.
-@@ -1047,19 +1036,6 @@ resolve_font(string_view font_, std::string& result)
+@@ -1047,19 +1036,6 @@
  {
      result.clear();
  
@@ -279,7 +264,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
      // Try to find the font.
      enumerate_fonts();
      std::string font = font_;
-@@ -1126,9 +1102,9 @@ ImageBufAlgo::text_size(string_view text, int fontsize, string_view font_)
+@@ -1126,9 +1102,9 @@
  {
      OIIO::pvt::LoggedTimer logtime("IBA::text_size");
      ROI size;
@@ -291,7 +276,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
  
      std::string font;
      bool ok = resolve_font(font_, font);
-@@ -1136,26 +1112,15 @@ ImageBufAlgo::text_size(string_view text, int fontsize, string_view font_)
+@@ -1136,26 +1112,15 @@
          return size;
      }
  
@@ -301,17 +286,17 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
 -    if (error) {
 -        return size;  // couldn't open the face
 -    }
--
++    FontFace face;
++    if (!face.load(font) || !face.set_size(fontsize))
++        return size;
+ 
 -    error = FT_Set_Pixel_Sizes(face /*handle*/, 0 /*width*/,
 -                               fontsize /*height*/);
 -    if (error) {
 -        FT_Done_Face(face);
 -        return size;  // couldn't set the character size
 -    }
-+    FontFace face;
-+    if (!face.load(font) || !face.set_size(fontsize))
-+        return size;
- 
+-
      std::vector<uint32_t> utext;
      utext.reserve(text.size());
      Strutil::utf8_to_unicode(text, utext);
@@ -321,7 +306,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
  #endif
  
      return size;  // Font rendering not supported
-@@ -1176,9 +1141,9 @@ ImageBufAlgo::render_text(ImageBuf& R, int x, int y, string_view text,
+@@ -1176,9 +1141,9 @@
          return false;
      }
  
@@ -333,7 +318,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
  
      std::string font;
      bool ok = resolve_font(font_, font);
-@@ -1188,23 +1153,12 @@ ImageBufAlgo::render_text(ImageBuf& R, int x, int y, string_view text,
+@@ -1188,23 +1153,12 @@
          return false;
      }
  
@@ -343,25 +328,25 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
 -    if (error) {
 -        R.errorfmt("Could not set font face to \"{}\"", font);
 -        return false;  // couldn't open the face
--    }
--
--    error = FT_Set_Pixel_Sizes(face /*handle*/, 0 /*width*/,
--                               fontsize /*height*/);
--    if (error) {
--        FT_Done_Face(face);
--        R.errorfmt("Could not set font size to {}", fontsize);
--        return false;  // couldn't set the character size
 +    FontFace face;
 +    if (!face.load(font) || !face.set_size(fontsize)) {
 +        R.errorfmt("Could not use font \"{}\": {}", font, face.error());
 +        return false;
      }
  
+-    error = FT_Set_Pixel_Sizes(face /*handle*/, 0 /*width*/,
+-                               fontsize /*height*/);
+-    if (error) {
+-        FT_Done_Face(face);
+-        R.errorfmt("Could not set font size to {}", fontsize);
+-        return false;  // couldn't set the character size
+-    }
+-
 -    FT_GlyphSlot slot = face->glyph;  // a small shortcut
      int nchannels(R.nchannels());
      IBA_FIX_PERCHAN_LEN_DEF(textcolor, nchannels);
  
-@@ -1227,62 +1181,85 @@ ImageBufAlgo::render_text(ImageBuf& R, int x, int y, string_view text,
+@@ -1227,62 +1181,85 @@
      Strutil::utf8_to_unicode(text, utext);
  
      // Compute the size that the text will render as, into an ROI
@@ -397,14 +382,13 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
 +        pen_y -= textroi.yend;
      if (aligny == TextAlignY::Center)
 -        y -= (textroi.height() / 2 + textroi.ybegin);
--
++        pen_y -= int64_t(textroi.height() / 2) + textroi.ybegin;
+ 
 -    // Pad bounds for shadowing
 -    textroi.xbegin += x - shadow;
 -    textroi.xend += x + shadow;
 -    textroi.ybegin += y - shadow;
 -    textroi.yend += y + shadow;
-+        pen_y -= int64_t(textroi.height() / 2) + textroi.ybegin;
-+
 +    const int64_t left   = textroi.xbegin + pen_x - shadow;
 +    const int64_t right  = textroi.xend + pen_x + shadow;
 +    const int64_t top    = textroi.ybegin + pen_y - shadow;
@@ -481,7 +465,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
      }
  
      // Generate the alpha image -- if drop shadow is requested, dilate,
-@@ -1313,11 +1290,10 @@ ImageBufAlgo::render_text(ImageBuf& R, int x, int y, string_view text,
+@@ -1313,11 +1290,10 @@
          R.setpixel(r.x(), r.y(), pixelcolor);
      }
  
@@ -494,7 +478,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
      return false;  // Font rendering not supported
  #endif
  }
-@@ -1330,8 +1306,8 @@ OIIO_NAMESPACE_BEGIN
+@@ -1330,8 +1306,8 @@
  const std::vector<std::string>&
  pvt::font_family_list()
  {
@@ -505,7 +489,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
      init_font_families();
  #endif
      return s_font_families;
-@@ -1341,8 +1317,8 @@ pvt::font_family_list()
+@@ -1341,8 +1317,8 @@
  const std::vector<std::string>
  pvt::font_style_list(string_view family)
  {
@@ -516,7 +500,7 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
      init_font_families();
  #endif
      auto it = s_font_styles.find(family);
-@@ -1359,8 +1335,8 @@ pvt::font_filename(string_view family, string_view style)
+@@ -1359,8 +1335,8 @@
      if (family.empty())
          return std::string();
  
@@ -527,11 +511,9 @@ index 8afe0fc7076adf09ce2450c026444682bc1c57fa..07ae3d774eb8dadfe6b5932c2b57d9c7
      init_font_families();
  #endif
  
-diff --git a/src/libOpenImageIO/imagebufalgo_font.h b/src/libOpenImageIO/imagebufalgo_font.h
-new file mode 100644
-index 0000000000000000000000000000000000000000..84ca1ac3e9e7730323dc5b92fbcd28f0065ebe81
---- /dev/null
-+++ b/src/libOpenImageIO/imagebufalgo_font.h
+diff -Naur oiio/src/libOpenImageIO/imagebufalgo_font.h OPENIMAGEIO_BLD/src/libOpenImageIO/imagebufalgo_font.h
+--- oiio/src/libOpenImageIO/imagebufalgo_font.h	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/imagebufalgo_font.h	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,236 @@
 +// Copyright Contributors to the OpenImageIO project.
 +// SPDX-License-Identifier: Apache-2.0
@@ -769,11 +751,9 @@ index 0000000000000000000000000000000000000000..84ca1ac3e9e7730323dc5b92fbcd28f0
 +
 +}  // namespace
 +OIIO_NAMESPACE_END
-diff --git a/src/libOpenImageIO/imagebufalgo_font_test.cpp b/src/libOpenImageIO/imagebufalgo_font_test.cpp
-new file mode 100644
-index 0000000000000000000000000000000000000000..d24b32f39aebea3ce7d15083a270b4f2c22229d9
---- /dev/null
-+++ b/src/libOpenImageIO/imagebufalgo_font_test.cpp
+diff -Naur oiio/src/libOpenImageIO/imagebufalgo_font_test.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/imagebufalgo_font_test.cpp
+--- oiio/src/libOpenImageIO/imagebufalgo_font_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/imagebufalgo_font_test.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,170 @@
 +// Copyright Contributors to the OpenImageIO project.
 +// SPDX-License-Identifier: Apache-2.0

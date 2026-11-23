@@ -1,0 +1,68 @@
+diff -Naur oiio/src/libOpenImageIO/color_ocio.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/color_ocio.cpp
+--- oiio/src/libOpenImageIO/color_ocio.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/color_ocio.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -3093,7 +3093,7 @@
+                         r.rerange(roi.xbegin, roi.xend, j, j + 1, k, k + 1);
+                         for (; !r.done(); ++r, ++a)
+                             for (int c = channelsToCopy; c < roi.chend; ++c)
+-                                r[c] = 0.5 + 10 * a[c];
++                                r[c] = a[c];
+                     }
+                 }
+             }
+diff -Naur oiio/src/libOpenImageIO/color_test.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/color_test.cpp
+--- oiio/src/libOpenImageIO/color_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/color_test.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -12,6 +12,8 @@
+ #include <OpenImageIO/benchmark.h>
+ #include <OpenImageIO/color.h>
+ #include <OpenImageIO/filesystem.h>
++#include <OpenImageIO/imagebuf.h>
++#include <OpenImageIO/imagebufalgo.h>
+ #include <OpenImageIO/simd.h>
+ #include <OpenImageIO/strutil.h>
+ #include <OpenImageIO/timer.h>
+@@ -111,6 +113,35 @@
+     // A config that fails to load still says so when first asked.
+     ColorConfig missing("no_such_config.ocio");
+     OIIO_CHECK_ASSERT(missing.has_error());
++}
++
++
++
++static void
++test_colorconvert_preserves_auxiliary_channels()
++{
++    const float pixel[] = { 0.25f, 0.5f, 0.75f, 0.5f, -2.0f, 0.125f, 32.0f };
++    ImageBuf src(
++        ImageSpec(1, 1, static_cast<int>(std::size(pixel)), TypeFloat));
++    src.setpixel(0, 0, pixel);
++    for (bool unpremult : { false, true }) {
++        ImageBuf dst;
++        OIIO_CHECK_ASSERT(
++            ImageBufAlgo::colorconvert(dst, src, "lin_rec709_scene",
++                                       "srgb_rec709_scene", unpremult));
++        float actual[std::size(pixel)];
++        dst.getpixel(0, 0, actual);
++        // Apply the sRGB OETF to unassociated RGB before premultiplying.
++        for (size_t c = 0; c < 3; ++c) {
++            const float linear   = unpremult ? pixel[c] / pixel[3] : pixel[c];
++            const float encoded  = 1.055f * std::pow(linear, 1.0f / 2.4f)
++                                   - 0.055f;
++            const float expected = unpremult ? encoded * pixel[3] : encoded;
++            OIIO_CHECK_EQUAL_THRESH(actual[c], expected, 1e-5f);
++        }
++        for (size_t c = 3; c < std::size(pixel); ++c)
++            OIIO_CHECK_EQUAL(actual[c], pixel[c]);
++    }
+ }
+ 
+ 
+@@ -538,6 +569,7 @@
+     test_namespaced_ids();
+     test_Rec709_conversion();
+     test_linear_display_cicp();
++    test_colorconvert_preserves_auxiliary_channels();
+     test_colorspace_interop_metadata();
+     test_interop_identities_conversion();
+     test_gamma_pair_conversion();

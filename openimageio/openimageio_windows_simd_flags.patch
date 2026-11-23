@@ -1,7 +1,7 @@
-diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
---- a/src/cmake/compiler.cmake
-+++ b/src/cmake/compiler.cmake
-@@ -393,6 +393,17 @@
+diff -Naur oiio/src/cmake/compiler.cmake OPENIMAGEIO_BLD/src/cmake/compiler.cmake
+--- oiio/src/cmake/compiler.cmake	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/cmake/compiler.cmake	1970-01-01 00:00:00.000000000 +0000
+@@ -397,6 +397,17 @@
      endif ()
  endif ()
  
@@ -19,7 +19,7 @@ diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
  set (SIMD_COMPILE_FLAGS "")
  message (STATUS "Compiling with SIMD level ${USE_SIMD}")
  if (NOT USE_SIMD STREQUAL "")
-@@ -411,7 +422,7 @@
+@@ -415,7 +426,7 @@
                  if (_simd_skip_x86)
                      continue ()
                  endif ()
@@ -28,7 +28,7 @@ diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
                      # The SSE levels are handled unconditionally below. Here we
                      # only need to track the highest /arch: level requested.
                      if (feature STREQUAL "avx" AND _highest_msvc_arch LESS 1)
-@@ -424,7 +435,7 @@
+@@ -428,7 +439,7 @@
                          set(_highest_msvc_arch 3)
                      endif ()
                  else ()
@@ -37,7 +37,7 @@ diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
                  endif ()
                  if (feature STREQUAL "fma" AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
                      # If fma is requested, for numerical accuracy sake, turn it
-@@ -451,13 +462,13 @@
+@@ -455,13 +466,13 @@
                  endif ()
              else ()
                  # Unrecognized token: pass it through the way we always have.
@@ -54,7 +54,7 @@ diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
              # MSVC makes every intrinsic through AVX2 available regardless of
              # the /arch: setting, and it never predefines the __SSE*__ macros
              # that simd.h keys off. Since all x86-64 hardware is SSE4.2 or
-@@ -466,7 +477,7 @@
+@@ -470,7 +481,7 @@
          endif ()
  
          # Only add a single /arch flag representing the highest level of support.
@@ -63,7 +63,7 @@ diff --git a/src/cmake/compiler.cmake b/src/cmake/compiler.cmake
              if (_highest_msvc_arch EQUAL 1)
                  list (APPEND SIMD_COMPILE_FLAGS "/arch:AVX")
              endif ()
-@@ -487,6 +498,8 @@
+@@ -491,6 +502,8 @@
  unset (_simd_x86_xarch)
  unset (_simd_arm_xarch)
  unset (_simd_skip_x86)

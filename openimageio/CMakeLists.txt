@@ -4,14 +4,17 @@ bext_enable(OPENIMAGEIO)
 if (ENABLE_OPENIMAGEIO)
 
   set(OPENIMAGEIO_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0001-terminal-dimensions.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0002-struetype-font-backend.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0007-test-python-interpreter.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0009-intel-windows-fp.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_terminal_dimensions.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_struetype_font_backend.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_color_interop_identities.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_color_auxiliary_channels.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_color_gamut_metadata.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_test_python_interpreter.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_intel_windows_fp.patch"
     )
   if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "^(Clang|IntelLLVM)$")
     list(APPEND OPENIMAGEIO_PATCH_FILES
-      "${CMAKE_CURRENT_SOURCE_DIR}/patches/0010-windows-simd-flags.patch")
+      "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_windows_simd_flags.patch")
   endif ()
   git_submodule_init(oiio CMakeLists.txt
     PATCH_FILES ${OPENIMAGEIO_PATCH_FILES}
