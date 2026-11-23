@@ -1,0 +1,144 @@
+diff -Naur appleseed/src/appleseed/renderer/modeling/surfaceshader/nprsurfaceshaderhelper.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/surfaceshader/nprsurfaceshaderhelper.cpp
+--- appleseed/src/appleseed/renderer/modeling/surfaceshader/nprsurfaceshaderhelper.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/surfaceshader/nprsurfaceshaderhelper.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -38,6 +38,7 @@
+ #include "renderer/kernel/shading/shadingcontext.h"
+ #include "renderer/kernel/shading/shadingpoint.h"
+ #include "renderer/modeling/material/material.h"
++#include "renderer/modeling/scene/scene.h"
+ #include "renderer/modeling/shadergroup/shadergroup.h"
+ 
+ // appleseed.foundation headers.
+@@ -45,14 +46,74 @@
+ #include "foundation/memory/arena.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <cmath>
+ #include <limits>
++#include <stdexcept>
+ 
+ using namespace foundation;
+ 
+ namespace renderer
+ {
++
++namespace
++{
++    // Follow the visible layer without treating translucent foreground covers
++    // as opaque boundaries of a different object behind them.
++    void trace_contour_ray(
++        const ShadingContext&       shading_context,
++        const ShadingPoint&         reference,
++        ShadingRay                  ray,
++        ShadingPoint&               point)
++    {
++        // Transforming and reconstructing hits can lose several position ULPs,
++        // especially when a short ray starts at large model coordinates.
++        const double ProgressRoundingSteps = 32.0;
++        const double coordinate_scale = norm(ray.m_org) + norm(reference.get_point()) +
++            reference.get_scene().get_render_data().m_safe_diameter;
++        const double progress_epsilon = ProgressRoundingSteps *
++            std::numeric_limits<double>::epsilon() * coordinate_scale;
++
++        for (size_t iteration = 0; iteration < shading_context.get_max_iterations(); ++iteration)
++        {
++            point.clear();
++            shading_context.get_intersector().trace(ray, point);
++            if (!point.hit_surface())
++                return;
++
++            if (&point.get_object_instance() == &reference.get_object_instance() &&
++                &point.get_assembly_instance() == &reference.get_assembly_instance())
++                return;
++
++            const Material* material = point.get_material();
++            if (material == nullptr)
++                return;
++
++            const Material::RenderData& data = material->get_render_data();
++            Alpha alpha = point.get_alpha();
++            if (data.m_shader_group && data.m_shader_group->has_transparency())
++            {
++                Alpha osl_alpha;
++                shading_context.execute_osl_transparency(*data.m_shader_group, point, osl_alpha);
++                alpha *= osl_alpha;
++            }
++            if (data.m_bsdf == nullptr && data.m_bssrdf == nullptr && data.m_volume != nullptr)
++                alpha[0] = 0.0f;
++            if (alpha[0] >= 1.0f)
++                return;
++
++            // Keep one parameterization while advancing past foreground hits.
++            // Moving to an unoffset hit can cycle between coincident covers.
++            ray.m_tmin = std::nextafter(
++                std::max(ray.m_tmin, point.get_distance()) + progress_epsilon,
++                std::numeric_limits<double>::max());
++        }
+ 
++        throw std::runtime_error("reached intersection limit while tracing an NPR contour ray");
++    }
++}
++
++
+ void NPRSurfaceShaderHelper::evaluate(
+     SamplingContext&            sampling_context,
+     const ShadingContext&       shading_context,
+@@ -164,15 +225,27 @@
+     const CompositeNPRClosure&  c,
+     const size_t                closure_index)
+ {
+-    const Intersector& intersector = shading_context.get_intersector();
+-
+     const Vector3d& p = shading_point.get_point();
+     const Vector3d& n = shading_point.get_shading_normal();
+     const ShadingRay& original_ray = shading_point.get_ray();
+ 
++    if (!original_ray.m_has_differentials)
++        return Color4f(0.0f);
++
+     const Vector3d& I = original_ray.m_dir;
+-    const Vector3d dIdx = normalize(original_ray.m_rx_dir - I);
+-    const Basis3d basis(-I, dIdx);
++    // Orthographic cameras copy the direction exactly. A tolerance would
++    // misclassify perspective differentials at very narrow fields of view.
++    const bool parallel_rays =
++        square_norm(original_ray.m_rx_dir - I) <= 0.0 &&
++        square_norm(original_ray.m_ry_dir - I) <= 0.0;
++
++    // Orthographic differentials move the origin rather than the direction.
++    const Vector3d tangent = parallel_rays
++        ? original_ray.m_rx_org - original_ray.m_org
++        : original_ray.m_rx_dir - I;
++    if (!(square_norm(tangent) > 0.0))
++        return Color4f(0.0f);
++    const Basis3d basis(-I, normalize(tangent));
+ 
+     // Construct the contour ray.
+     ShadingRay ray;
+@@ -217,13 +290,20 @@
+             const double x = std::sin(angle);
+             const double y = std::cos(angle);
+ 
+-            const Vector3d pp =
++            const Vector3d offset =
+                 (radius * x * basis.get_tangent_u()) +
+-                (radius * y * basis.get_tangent_v()) + p;
+-            ray.m_dir = normalize(pp - ray.m_org);
++                (radius * y * basis.get_tangent_v());
++            if (parallel_rays)
++            {
++                ray.m_org = original_ray.m_org + offset;
++                ray.m_dir = I;
++            }
++            else
++            {
++                ray.m_dir = normalize(p + offset - ray.m_org);
++            }
+ 
+-            other_shading_point.clear();
+-            intersector.trace(ray, other_shading_point);
++            trace_contour_ray(shading_context, shading_point, ray, other_shading_point);
+ 
+             if (!is_same_object(values->m_features, shading_point, other_shading_point))
+                 ++discontinuity_samples;

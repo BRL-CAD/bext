@@ -60,3 +60,5 @@ appleseed_coat_closures.patch: Correct coat interfaces and expose the glossy
 appleseed_panorama_and_image_helpers.patch: Correct panorama filtering, depth
   and image helpers
 appleseed_cancellation.patch: Honor cancellation during samples and job waits
+appleseed_npr_contours.patch: Support orthographic contours through
+  translucent covers

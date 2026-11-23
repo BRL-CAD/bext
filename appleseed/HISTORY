@@ -1780,6 +1780,31 @@ Message:
     Test hits, misses, independent color alpha, and invariance to origin
     shifts using procedural geometry.
 
+Commit: 152ac74a2df53ff4d54d56857af1b495a3f486e9
+Patches: appleseed_npr_contours.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:52Z
+Parents: f2c53675e70103124031e779f40c2b8380c7fbd5
+Message:
+    Support orthographic NPR contours
+
+    Use ray-origin differentials for parallel camera stencils and preserve
+    angular differentials for perspective cameras, including narrow fields
+    of view. Skip contour evaluation when no usable footprint is available.
+
+Commit: 2ffb81acdba5d89640a9c6b6ef37d87665a0568c
+Patches: appleseed_npr_contours.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:52Z
+Parents: 152ac74a2df53ff4d54d56857af1b495a3f486e9
+Message:
+    Trace NPR contours through translucent foreground covers
+
+    Compare the visible inner layer rather than its translucent foreground.
+    Advance clipped stencil rays past reconstruction roundoff at large model
+    coordinates and terminate clearly if the intersection budget is
+    exhausted.
+
 Commit: c25ce97173473cc2cf243c361390eed22c442575
 Patches: appleseed_shader_resources.patch
 Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
