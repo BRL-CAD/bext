@@ -9,6 +9,7 @@ if (ENABLE_OSL)
     "${CMAKE_CURRENT_SOURCE_DIR}/osl_bsdl_macros.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/osl_freebsd_obj_reader.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/osl_native_closure_callbacks.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/osl_atan2_derivatives.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/osl_public_header_exports.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/osl.patch"
     )

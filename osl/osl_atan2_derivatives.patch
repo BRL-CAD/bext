@@ -1,0 +1,150 @@
+diff -Naur OpenShadingLanguage/src/include/OSL/dual.h OSL_BLD/src/include/OSL/dual.h
+--- OpenShadingLanguage/src/include/OSL/dual.h	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/include/OSL/dual.h	1970-01-01 00:00:00.000000000 +0000
+@@ -1010,8 +1010,8 @@
+     return dualfunc (a, f, df);
+ }
+ 
+-// f(x,y) = atan2(y,x); f'(x) =  y x' / (x^2 + y^2),
+-//                      f'(y) = -x y' / (x^2 + y^2)
++// f(x,y) = atan2(y,x); df/dx = -y / (x^2 + y^2),
++//                      df/dy =  x / (x^2 + y^2)
+ // reference:  http://en.wikipedia.org/wiki/Atan2
+ // (above link has other formulations)
+ template<class T, int P>
+@@ -1019,7 +1019,7 @@
+ {
+     T atan2xy = std::atan2 (y.val(), x.val());
+     T denom = (x.val() == T(0) && y.val() == T(0)) ? T(0) : T(1) / (x.val()*x.val() + y.val()*y.val());
+-    return dualfunc (y, x, atan2xy, -x.val()*denom, y.val()*denom);
++    return dualfunc (y, x, atan2xy, x.val()*denom, -y.val()*denom);
+ }
+ 
+ template<class T, int P>
+@@ -1027,7 +1027,7 @@
+ {
+     T atan2xy = OIIO::fast_atan2(y.val(), x.val());
+     T denom = (x.val() == 0 && y.val() == 0) ? 0.0f : 1.0f / (x.val() * x.val() + y.val() * y.val());
+-    return dualfunc (y, x, atan2xy, -x.val()*denom, y.val()*denom);
++    return dualfunc (y, x, atan2xy, x.val()*denom, -y.val()*denom);
+ }
+ 
+ // f(x) = log(a), f'(x) = 1/x
+diff -Naur OpenShadingLanguage/src/liboslexec/dual_test.cpp OSL_BLD/src/liboslexec/dual_test.cpp
+--- OpenShadingLanguage/src/liboslexec/dual_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/dual_test.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -94,7 +94,45 @@
+ 
+ 
+ 
++// Check both atan2 arguments against wrapped central differences so that
++// the negative-x branch cut does not turn a small angle change into 2*pi.
++template<class T>
+ void
++test_atan2_derivs()
++{
++    const T coordinates[] = { T(-2), T(-0.5), T(0), T(0.5), T(2) };
++    const double epsilon = 1e-5;
++    const double period  = 2 * std::acos(-1.0);
++    const T tolerance    = T(2e-5);
++    for (T x : coordinates) {
++        for (T y : coordinates) {
++            const Dual<T, 2> xd(x, T(1), T(0));
++            const Dual<T, 2> yd(y, T(0), T(1));
++            const auto exact = OSL::atan2(yd, xd);
++            const auto fast  = OSL::fast_atan2(yd, xd);
++            double dx = 0, dy = 0;
++            // The singular origin deliberately returns zero derivatives.
++            if (x != T(0) || y != T(0)) {
++                dx = std::remainder(std::atan2(double(y), double(x) + epsilon)
++                                        - std::atan2(double(y), double(x) - epsilon),
++                                    period) / (2 * epsilon);
++                dy = std::remainder(std::atan2(double(y) + epsilon, double(x))
++                                        - std::atan2(double(y) - epsilon, double(x)),
++                                    period) / (2 * epsilon);
++            }
++            OIIO_CHECK_EQUAL_THRESH(std::atan2(y, x), exact.val(), tolerance);
++            OIIO_CHECK_EQUAL_THRESH(std::atan2(y, x), fast.val(), tolerance);
++            OIIO_CHECK_EQUAL_THRESH(T(dx), exact.dx(), tolerance);
++            OIIO_CHECK_EQUAL_THRESH(T(dy), exact.dy(), tolerance);
++            OIIO_CHECK_EQUAL_THRESH(T(dx), fast.dx(), tolerance);
++            OIIO_CHECK_EQUAL_THRESH(T(dy), fast.dy(), tolerance);
++        }
++    }
++}
++
++
++
++void
+ test_metaprogramming()
+ {
+     // Does is_Dual<> correctly discern duals from non-duals?
+@@ -123,6 +161,8 @@
+     test_metaprogramming();
+     test_derivs1();
+     test_derivs2();
++    test_atan2_derivs<float>();
++    test_atan2_derivs<double>();
+ 
+     // Some benchmarking
+     std::cout << "\nBenchmarks:\n";
+diff -Naur OpenShadingLanguage/testsuite/derivs/ref/out.icc.txt OSL_BLD/testsuite/derivs/ref/out.icc.txt
+--- OpenShadingLanguage/testsuite/derivs/ref/out.icc.txt	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/testsuite/derivs/ref/out.icc.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -144,7 +144,7 @@
+ 
+ atan: a = atan(u); a = 0.7854, Dx(a) = 0.5, Dy(a) = 0
+ 
+-atan2: a = atan2(u,v) at (1,0); a = 1.571, Dx(a) = 0, Dy(a) = 1
++atan2: a = atan2(u,v) at (1,0); a = 1.571, Dx(a) = 0, Dy(a) = -1
+ 
+ degrees: a = degrees(u); a = 57.3, Dx(a) = 57.3, Dy(a) = 0
+ 
+@@ -251,7 +251,7 @@
+ 
+ atan: a = atan(u); a = 0, Dx(a) = 1, Dy(a) = 0
+ 
+-atan2: a = atan2(u,v) at (0,1); a = 0, Dx(a) = -1, Dy(a) = 0
++atan2: a = atan2(u,v) at (0,1); a = 0, Dx(a) = 1, Dy(a) = 0
+ 
+ degrees: a = degrees(u); a = 0, Dx(a) = 57.3, Dy(a) = 0
+ 
+@@ -358,7 +358,7 @@
+ 
+ atan: a = atan(u); a = 0.7854, Dx(a) = 0.5, Dy(a) = 0
+ 
+-atan2: a = atan2(u,v) at (1,1); a = 0.7854, Dx(a) = -0.5, Dy(a) = 0.5
++atan2: a = atan2(u,v) at (1,1); a = 0.7854, Dx(a) = 0.5, Dy(a) = -0.5
+ 
+ degrees: a = degrees(u); a = 57.3, Dx(a) = 57.3, Dy(a) = 0
+ 
+diff -Naur OpenShadingLanguage/testsuite/derivs/ref/out.txt OSL_BLD/testsuite/derivs/ref/out.txt
+--- OpenShadingLanguage/testsuite/derivs/ref/out.txt	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/testsuite/derivs/ref/out.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -144,7 +144,7 @@
+ 
+ atan: a = atan(u); a = 0.7854, Dx(a) = 0.5, Dy(a) = 0
+ 
+-atan2: a = atan2(u,v) at (1,0); a = 1.571, Dx(a) = 0, Dy(a) = 1
++atan2: a = atan2(u,v) at (1,0); a = 1.571, Dx(a) = 0, Dy(a) = -1
+ 
+ degrees: a = degrees(u); a = 57.3, Dx(a) = 57.3, Dy(a) = 0
+ 
+@@ -251,7 +251,7 @@
+ 
+ atan: a = atan(u); a = 0, Dx(a) = 1, Dy(a) = 0
+ 
+-atan2: a = atan2(u,v) at (0,1); a = 0, Dx(a) = -1, Dy(a) = 0
++atan2: a = atan2(u,v) at (0,1); a = 0, Dx(a) = 1, Dy(a) = 0
+ 
+ degrees: a = degrees(u); a = 0, Dx(a) = 57.3, Dy(a) = 0
+ 
+@@ -358,7 +358,7 @@
+ 
+ atan: a = atan(u); a = 0.7854, Dx(a) = 0.5, Dy(a) = 0
+ 
+-atan2: a = atan2(u,v) at (1,1); a = 0.7854, Dx(a) = -0.5, Dy(a) = 0.5
++atan2: a = atan2(u,v) at (1,1); a = 0.7854, Dx(a) = 0.5, Dy(a) = -0.5
+ 
+ degrees: a = degrees(u); a = 57.3, Dx(a) = 57.3, Dy(a) = 0
+ 
