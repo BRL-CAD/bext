@@ -551,6 +551,10 @@ add_project(robin-map GROUPS "APPLESEED")
 # https://github.com/oneapi-src/oneTBB
 add_project(onetbb GROUPS "APPLESEED;OSPRAY;BRLCAD")
 
+# pugixml - a light-weight C++ XML processing library
+# https://pugixml.org/
+add_project(pugixml GROUPS "BRLCAD;APPLESEED")
+
 # OpenImageIO - reading and writing images, aimed at VFX studios
 # https://github.com/OpenImageIO/oiio
 add_project(openimageio GROUPS "APPLESEED")
@@ -600,10 +604,6 @@ add_project(openvdb GROUPS "BRLCAD")
 # tinygltf - tiny glTF library(loader/saver)
 # https://github.com/syoyo/tinygltf
 add_project(tinygltf GROUPS "BRLCAD")
-
-# pugixml - a light-weight C++ XML processing library
-# https://pugixml.org/
-add_project(pugixml GROUPS "BRLCAD;APPLESEED")
 
 # Open Asset Import Library - library for supporting I/O for a number of
 # Geometry file formats
