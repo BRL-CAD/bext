@@ -86,3 +86,7 @@ appleseed_volume_numerics.patch: Stabilize thin-media sampling and panorama
   densities
 appleseed_volume_environment.patch: Integrate environment light through hidden
   boundaries
+appleseed_directional_emission.patch: Evaluate directional emission in its
+  optical context
+appleseed_coincident_covers.patch: Resolve real surfaces behind invisible
+  covers

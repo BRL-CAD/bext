@@ -2350,6 +2350,73 @@ Message:
     cancelled passes. Test queue ownership, cancellation without a queue
     event, and running-job retirement.
 
+Commit: 11c7e021f2d68dcfe6dd7b660c787c34061f17cb
+Patches: appleseed_directional_emission.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T11:48:11Z
+Parents: 8de1a00ffcebd8398a23265a17db5c589fddbe5a
+Message:
+    Evaluate OSL emission in the sampled light direction
+
+    Use a cosine proposal independent of provisional emission weights and
+    reevaluate the shader at the sampled direction. Sum weighted emission
+    closures, including when the initial normal direction is dark.
+
+    Preserve hit geometry, optical state and visible path metadata. Launch
+    emitted light with its own ray type, zero path length and depth, and no
+    inherited camera footprint.
+
+    Test directional flux, closure sums, empty output, position, shading
+    frames, path metadata, footprints and ray types.
+
+Commit: e38050f85e37e317ed0adee4430061177345a4a9
+Patches: appleseed_directional_emission.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T12:48:37Z
+Parents: 11c7e021f2d68dcfe6dd7b660c787c34061f17cb
+Message:
+    Initialize physical optical media before OSL emission
+
+    Choose the emission direction before running the launch shader and
+    reuse its prepared ray for transport.  Shader medium queries and the
+    propagated ray now share the same stochastic IOR choices and time.
+
+    Route SPPM, light tracing and BDPT surface launches through the same
+    contract.  Check vacuum, glass, mixed IORs and launch metadata.
+
+Commit: d84b1a65865e060f1eb3574be54743d2a53d502d
+Patches: appleseed_directional_emission.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T13:08:43Z
+Parents: e38050f85e37e317ed0adee4430061177345a4a9
+Message:
+    Preserve optical context for sampled OSL light evaluation
+
+    Carry the visibility endpoint state into surface and volume light
+    sampling.  Preserve already selected media and IORs instead of
+    evaluating the emitter on an empty synthetic ray.
+
+    Coverage cutouts no longer introduce fictitious unit-index media.
+    Check probe and full tracing, endpoint media and high-priority
+    cutouts with native regressions.
+
+Commit: 64fb83ad7a991008a49d43b11e88f40d4fc2fa02
+Patches: appleseed_coincident_covers.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T14:57:53Z
+Parents: d84b1a65865e060f1eb3574be54743d2a53d502d
+Message:
+    Resolve the real surface behind invisible coincident covers
+
+    Classify transparent first hits before choosing a shared optical
+    interface owner.  Select the visible glass, volume or opaque surface
+    when an invisible cover is returned first, retaining the correct
+    incident and transmitted media.
+
+    Reject partially covered optical contacts consistently instead of
+    silently skipping the dielectric.  Test forced cover-first entry,
+    exit, opaque ownership and ambiguous coverage.
+
 Commit: 9a4f748199f593831f8e4dfd32d147ce76e6a2c6
 Patch: 06
 Author: Christopher Sean Morrison <brlcad@gmail.com>

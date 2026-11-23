@@ -44,6 +44,8 @@ set(APPLESEED_ART_PATCH_FILES
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_image_output.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_volume_numerics.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_volume_environment.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_directional_emission.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_coincident_covers.patch"
   )
 
 set(APPLESEED_PATCH_STAGE "ART" CACHE STRING
