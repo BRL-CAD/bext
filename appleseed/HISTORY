@@ -1999,6 +1999,176 @@ Message:
     Keep scene queries available without a surface, guard object queries,
     and identify orthographic cameras. Add native attribute tests.
 
+Commit: f318cc58ee883f334cb755cf4d0f9f9dc30a7235
+Patches: appleseed_emitter_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T20:20:39Z
+Parents: a372d199afd120e0813b0dd21cd6ec1c86abca1d
+Message:
+    Match sampled emission hits to native surface attributes
+
+    Share native sphere, rectangle and disk UV and derivative evaluation
+    with sampled light hits. Preserve primary normals, material slots,
+    curvature and ray time through manufactured hits and copies. Treat
+    light-sample directions as outgoing and use the actual direct-light
+    connection for OSL emission. Qualify traced surface parity, sidedness,
+    native attributes and parallel disk rays.
+
+Commit: d464699648332d64310377b22b5fa4c72c6f2ca9
+Patches: appleseed_emitter_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T20:20:39Z
+Parents: f318cc58ee883f334cb755cf4d0f9f9dc30a7235
+Message:
+    Preserve analytic emitter transforms, bounds and area
+
+    Compose emitter transforms in object-to-assembly order. Compute
+    rectangle and disk area from transformed axes, support affine disks, and
+    initialize analytic emitter bounds and centroids. Exercise the actual
+    light collector, sheared planar geometry, density, time and traced
+    sample agreement.
+
+Commit: 78473985a14f48aeb2ec31a9ce8287fb9b106ba1
+Patches: appleseed_emitter_surfaces.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:34Z
+Parents: d464699648332d64310377b22b5fa4c72c6f2ca9
+Message:
+    Distinguish emitting surface sides in light sampling
+
+    Preserve the emitting side and full assembly instance identity in
+    emitter lookup. Evaluate forward and backward light densities for the
+    actual hit side, including analytic surfaces. Match the light-class
+    mixture used by forward sampling. Test unequal front/back importance,
+    one-sided emission, flipped normals and large instance identifiers.
+
+Commit: 9d567b22b265835c5d12267f5b3c4d54495be8ae
+Patches: appleseed_emitter_geometry.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:34Z
+Parents: 78473985a14f48aeb2ec31a9ce8287fb9b106ba1
+Message:
+    Preserve hierarchical transforms in OSL emitter shading
+
+    Retain the accumulated assembly transform sequence when manufacturing
+    emitter hits. Share sequence storage across shapes in an assembly
+    instead of copying a matrix per triangle. Compose OSL object-to-world
+    transforms in hierarchy order and recognize single-key static
+    transforms. Check sampled attributes through nested assemblies and
+    independently verify forward and inverse coordinate mappings.
+
+Commit: 34b91f6b3e0e093a3810d7fd9540fe351a20edc9
+Patches: appleseed_emitter_geometry.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:35Z
+Parents: 9d567b22b265835c5d12267f5b3c4d54495be8ae
+Message:
+    Preserve ray parameters for procedural intersections
+
+    Account for nonunit directions when projecting procedural hits onto
+    world rays. Float-generated emission directions can otherwise report a
+    hit behind the current lower bound and prevent initial medium discovery
+    from terminating. Check that advancing beyond a hit with a float-
+    promoted direction cannot rediscover that surface.
+
+Commit: 8580b094e9bd24fc684ac194e083b8ccd2bb303b
+Patches: appleseed_emitter_geometry.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:35Z
+Parents: 34b91f6b3e0e093a3810d7fd9540fe351a20edc9
+Message:
+    Use the outward light normal for bidirectional connections
+
+    Keep the initial light vertex normal in the emission hemisphere used by
+    geometry terms and light densities. Reversing it rejects valid camera
+    connections and makes a diffuse sphere lighting reference severely too
+    dark.
+
+Commit: 6aa0a0a4aa6886b32e35fe132462cd8c6909226f
+Patches: appleseed_weighted_emitters.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:35Z
+Parents: 8580b094e9bd24fc684ac194e083b8ccd2bb303b
+Message:
+    Define weighted procedural emitter samples
+
+    Expose a procedural surface sampling contract with explicit null
+    attempts, a known reference intensity and a separate estimator weight.
+    Preserve native surface attributes when constructing light hits. Convert
+    object-space reference intensities with the affine area Jacobian and
+    validate sampled geometry and weights before transport.
+
+Commit: 80432783291b097ff06e54290f5d4009d8c634fd
+Patches: appleseed_weighted_emitters.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:35Z
+Parents: 6aa0a0a4aa6886b32e35fe132462cd8c6909226f
+Message:
+    Collect weighted emitters with consistent reference densities
+
+    Collect static procedural emitters, estimate their area for selection
+    and OSL metadata, and pass additional sampling dimensions through the
+    forward and backward samplers. Evaluate the same geometric reference
+    intensity for sampled and traced hits. Use the CDF sampler for OSL or
+    weighted emitters that the light tree cannot represent. Check null
+    draws, normalization, affine geometry and native shading attributes.
+
+Commit: 84bcac9a679f3a1070f674f8b47069a5412c6ca3
+Patches: appleseed_weighted_emitters.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:35Z
+Parents: 80432783291b097ff06e54290f5d4009d8c634fd
+Message:
+    Apply procedural emitter weights throughout light transport
+
+    Retain null attempts and multiply contributions by the separate surface
+    estimator weight in direct, photon, light-tracing and bidirectional
+    transport. Keep reference intensities in the complementary MIS weights.
+    Isolate extra sample dimensions from active batches and preserve a
+    volume distance proposal when its auxiliary surface draw misses.
+
+Commit: 6c6cdbae4c7a10aa5d5cec04a0066656fb096fd7
+Patches: appleseed_emitter_mis.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:35Z
+Parents: 84bcac9a679f3a1070f674f8b47069a5412c6ca3
+Message:
+    Preserve physical scattering origins in emitter MIS
+
+    Compute emitter density conversions from the physical scattering point
+    to the light hit. Transparent and volume boundaries can restart tracing
+    without creating a scattering event. Preserve the last BSDF or volume
+    scatter position through those boundaries, and use the material sampler
+    position for direct phase-function paths. Add a regression
+    distinguishing the complete segment from its shortened final trace.
+
+Commit: db520e73b838a96140132f647cdc823194dcf59c
+Patches: appleseed_emitter_mis.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:35Z
+Parents: 6c6cdbae4c7a10aa5d5cec04a0066656fb096fd7
+Message:
+    Keep equiangular light guides finite near the ray
+
+    Compute perpendicular guide heights with a double cross product to avoid
+    subtractive cancellation near the volume ray. Use positive surrogate
+    heights for null or exactly collinear guides and report genuinely
+    degenerate inputs explicitly. Keep all proposals normalized without
+    discarding null sampling attempts.
+
+Commit: ade080f2d5cfd1987063a61308e1145be37fc3d3
+Patches: appleseed_emitter_mis.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T01:44:35Z
+Parents: db520e73b838a96140132f647cdc823194dcf59c
+Message:
+    Report unavailable procedural emitter sampling explicitly
+
+    Warn when an emitting procedural object does not supply a fixed surface
+    sampler. Keep the existing zero-reference contract and retain camera-
+    visible emission while making the unavailable direct-light and photon
+    paths clear.
+
 Commit: 8de1a00ffcebd8398a23265a17db5c589fddbe5a
 Patches: appleseed_cancellation.patch
 Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>

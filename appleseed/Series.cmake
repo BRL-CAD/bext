@@ -36,6 +36,10 @@ set(APPLESEED_ART_PATCH_FILES
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_boundary_ownership.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_physical_ray_origins.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_osl_object_data.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_emitter_surfaces.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_emitter_geometry.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_weighted_emitters.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_emitter_mis.patch"
   )
 
 set(APPLESEED_PATCH_STAGE "ART" CACHE STRING

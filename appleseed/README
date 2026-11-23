@@ -70,3 +70,11 @@ appleseed_physical_ray_origins.patch: Preserve physical origins through
   procedural boundaries
 appleseed_osl_object_data.patch: Keep trace messages current and expose typed
   object data
+appleseed_emitter_surfaces.patch: Preserve sampled emitter attributes,
+  transforms and sides
+appleseed_emitter_geometry.patch: Preserve hierarchical emitter geometry and
+  ray parameters
+appleseed_weighted_emitters.patch: Propagate procedural emitter weights and
+  densities
+appleseed_emitter_mis.patch: Use physical origins and finite guides for
+  emitter MIS

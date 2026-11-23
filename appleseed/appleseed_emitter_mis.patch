@@ -1,0 +1,175 @@
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -304,7 +304,9 @@
+         return;
+ 
+     // Compute the square distance between the light sample and the shading point.
+-    const double square_distance = square(light_shading_point.get_distance());
++    // Transparent and volume boundaries can restart the traced ray.
++    const double square_distance = square_norm(
++        light_shading_point.get_point() - m_material_sampler.get_point());
+ 
+     // Don't use this sample if we're closer than the light near start value.
+     if (square_distance < square(edf->get_light_near_start()))
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -556,7 +556,13 @@
+         {
+             const double reference_area = procedural->get_surface_sampling_reference_area();
+             if (reference_area == 0.0)
++            {
++                RENDERER_LOG_WARNING(
++                    "procedural emitter '%s' has no surface sampler; "
++                    "explicit light sampling and photon emission are unavailable.",
++                    object.get_name());
+                 continue;
++            }
+             if (!(reference_area > 0.0) || !std::isfinite(reference_area)
+                 || procedural->get_material_slot_count() != 1 || transform_sequence.size() > 1)
+                 throw std::runtime_error("Invalid or moving procedural emitter '" + std::string(object.get_name()) + "'");
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/pathtracer.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/pathtracer.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/pathtracer.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/pathtracer.h	1970-01-01 00:00:00.000000000 +0000
+@@ -725,6 +725,7 @@
+         return false;
+ 
+     // Save the scattering properties for MIS at light-emitting vertices.
++    vertex.m_prev_point = vertex.get_point();
+     vertex.m_prev_mode = sample.get_mode();
+     vertex.m_prev_prob = sample.get_probability();
+ 
+@@ -949,6 +950,7 @@
+                 incoming);
+ 
+         // Save the scattering properties for MIS at light-emitting vertices.
++        vertex.m_prev_point = volume_ray.m_org + static_cast<double>(distance_sample) * volume_ray.m_dir;
+         vertex.m_prev_mode = ScatteringMode::Volume;
+         vertex.m_prev_prob = pdf;
+ 
+@@ -961,7 +963,7 @@
+ 
+         // Continue the ray in in-scattered direction.
+         ShadingRay next_ray(
+-            volume_ray.m_org + static_cast<double>(distance_sample) * volume_ray.m_dir,
++            vertex.m_prev_point,
+             foundation::improve_normalization<2>(foundation::Vector3d(incoming)),
+             volume_ray.m_time,
+             volume_ray.m_flags,
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/pathvertex.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/pathvertex.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/pathvertex.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/pathvertex.h	1970-01-01 00:00:00.000000000 +0000
+@@ -85,6 +85,8 @@
+     const void*                 m_volume_data;
+ 
+     // Properties of the scattering event leading to this vertex.
++    // Its physical origin survives skipped alpha and volume boundaries.
++    foundation::Vector3d        m_prev_point;
+     ScatteringMode::Mode        m_prev_mode;
+     float                       m_prev_prob;
+ 
+@@ -123,6 +125,7 @@
+ 
+ inline PathVertex::PathVertex(SamplingContext& sampling_context)
+   : m_sampling_context(sampling_context)
++  , m_prev_point(0.0)
+ {
+ }
+ 
+@@ -173,8 +176,8 @@
+     assert(m_prev_prob > 0.0f);
+ 
+     // Veach: 8.2.2.2 eq. 8.10.
+-    const double d = m_shading_point->get_distance();
+-    const float g = static_cast<float>(m_cos_on / (d * d));
++    const double square_distance = foundation::square_norm(get_point() - m_prev_point);
++    const float g = static_cast<float>(m_cos_on / square_distance);
+     return m_prev_prob * g;
+ }
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -46,6 +46,7 @@
+ // Standard headers.
+ #include <cassert>
+ #include <cmath>
++#include <stdexcept>
+ 
+ using namespace foundation;
+ 
+@@ -89,17 +90,23 @@
+                 emission_position = light_sample.m_valid
+                     ? light_sample.m_point : light_sample.m_shape->get_centroid();
+ 
+-            // Direction from the ray origin to the light center.
+-            const Vector3f origin_to_light(emission_position - volume_ray.m_org);
++            const Vector3d origin_to_light(emission_position - volume_ray.m_org);
++            m_origin_to_projection = static_cast<float>(dot(origin_to_light, volume_ray.m_dir));
+ 
+-            // Signed distance from the ray origin
+-            // to the light projection onto the ray.
+-            m_origin_to_projection = dot(origin_to_light, Vector3f(volume_ray.m_dir));
+-
+-            // Distance from the projection point to the light center (height).
+-            m_projection_to_light = light_sample.m_valid
+-                ? std::sqrt(square_norm(origin_to_light) - square(m_origin_to_projection))
+-                : static_cast<float>(0.5 * norm(light_sample.m_shape->get_bbox().extent()));
++            // A cross product avoids cancellation when the guide is nearly
++            // on the ray. A normalized proposal may use a positive surrogate
++            // height for a null draw or an exactly collinear source.
++            double height = norm(cross(origin_to_light, volume_ray.m_dir));
++            if (!light_sample.m_valid || !(height > 0.0))
++            {
++                height = light_sample.m_shape
++                    ? 0.5 * norm(light_sample.m_shape->get_bbox().extent())
++                    : norm(origin_to_light);
++            }
++            m_projection_to_light = static_cast<float>(height);
++            if (!(m_projection_to_light > 0.0f) || !std::isfinite(m_projection_to_light)
++                || !std::isfinite(m_origin_to_projection))
++                throw std::runtime_error("Degenerate equiangular light guide");
+ 
+             m_ray_length = static_cast<float>(volume_ray.get_length());
+ 
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_intersector.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_intersector.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_intersector.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_intersector.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -46,6 +46,7 @@
+ #include "renderer/kernel/lighting/backwardlightsampler.h"
+ #include "renderer/kernel/lighting/lighttypes.h"
+ #include "renderer/kernel/lighting/lightsample.h"
++#include "renderer/kernel/lighting/pathvertex.h"
+ #include "renderer/kernel/intersection/tracecontext.h"
+ #include "renderer/kernel/shading/shadingpoint.h"
+ #include "renderer/kernel/shading/shadingray.h"
+@@ -916,6 +917,28 @@
+         EXPECT_FALSE(m_intersector.trace(ray, beyond));
+     }
+ 
++    TEST_CASE_F(LightHitMIS_PreservesPhysicalOriginAcrossSkippedSurfaces, ProceduralFixture)
++    {
++        ShadingRay ray = ray_to_plane(false);
++        const Vector3d physical_origin = ray.m_org;
++        const double physical_distance = 2.0 * norm(world_vector(NormalProbeObject::normal()));
++        // Model a transparent boundary three quarters along the segment.
++        ray.m_org += 0.75 * physical_distance * ray.m_dir;
++        ShadingPoint hit;
++        ASSERT_TRUE(m_intersector.trace(ray, hit));
++        EXPECT_FEQ_EPS(0.25 * physical_distance, hit.get_distance(), 1.0e-10);
++        SamplingContext::RNGType rng;
++        SamplingContext sampling(rng, SamplingContext::QMCMode, 0);
++        PathVertex vertex(sampling);
++        vertex.m_shading_point = &hit;
++        vertex.m_prev_point = physical_origin;
++        vertex.m_prev_mode = ScatteringMode::Diffuse;
++        vertex.m_prev_prob = 0.25f;
++        vertex.m_cos_on = 0.6;
++        const float expected = static_cast<float>(0.15 / square(physical_distance));
++        EXPECT_FEQ_EPS(expected, vertex.get_bsdf_prob_area(), 1.0e-9f);
++    }
++
+     TEST_CASE(WeightedEmitters_PreserveNullAttemptsAndReferenceDensity)
+     {
+         Fixture<false, WeightedEmitterScene> fixture;

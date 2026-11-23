@@ -1,0 +1,1283 @@
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/backwardlightsampler.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -40,6 +40,7 @@
+ #include "renderer/modeling/scene/scene.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <cassert>
+ #include <string>
+ 
+@@ -93,69 +94,41 @@
+ 
+     RENDERER_LOG_INFO("collecting light emitters...");
+ 
+-    // Collect all non-physical lights and separate them according to their
+-    // compatibility with the LightTree.
+-    collect_non_physical_lights(
+-        scene.assembly_instances(),
+-        TransformSequence(),
+-        [&](const NonPhysicalLightInfo& light_info)
++    collect_non_physical_lights(scene.assembly_instances(), TransformSequence(),
++        [&](const NonPhysicalLightInfo& info)
+         {
+-            if (m_use_light_tree
+-                && ((light_info.m_light->get_flags() & Light::LightTreeCompatible) != 0))
+-            {
+-                // Insert into light tree compatible lights.
+-                m_light_tree_lights.push_back(light_info);
+-            }
++            if (m_use_light_tree && (info.m_light->get_flags() & Light::LightTreeCompatible) != 0)
++                m_light_tree_lights.push_back(info);
+             else
+-            {
+-                // Insert into non-physical lights to be evaluated using a CDF.
+-                const size_t light_index = m_non_physical_lights.size();
+-                m_non_physical_lights.push_back(light_info);
+-
+-                // Insert the light into the CDF.
+-                // todo: compute importance.
+-                float importance = 1.0f;
+-                importance *= light_info.m_light->get_uncached_importance_multiplier();
+-                m_non_physical_lights_cdf.insert(light_index, importance);
+-            }
++                insert_non_physical_light(info);
+         });
+-    m_non_physical_light_count = m_non_physical_lights.size();
+-
+-    // Collect all light-emitting shapes.
+-    collect_emitting_shapes(
+-        scene.assembly_instances(),
+-        TransformSequence(),
+-        [&](
+-            const Material* material,
+-            const float     area,
+-            const size_t    emitting_shape_index)
++    collect_emitting_shapes(scene.assembly_instances(), TransformSequence(),
++        [&](const Material* material, const float area, const size_t index)
+         {
+-            if (m_use_light_tree)
+-            {
+-                // Only accept this shape if its material has an EDF.
+-                // This excludes shapes with light-emitting OSL materials
+-                // since these are not handled by the light tree yet.
+-                return material->get_uncached_edf() != nullptr;
+-            }
+-            else
+-            {
+-                // Retrieve the EDF and get the importance multiplier.
+-                float importance_multiplier = 1.0f;
+-                if (const EDF* edf = material->get_uncached_edf())
+-                    importance_multiplier = edf->get_uncached_importance_multiplier();
+-
+-                // Compute the probability density of this shape.
+-                const float shape_importance = m_params.m_importance_sampling ? area : 1.0f;
+-                const float shape_prob = shape_importance * importance_multiplier;
+-
+-                // Insert the light-emitting shape into the CDF.
+-                m_emitting_shapes_cdf.insert(emitting_shape_index, shape_prob);
+-
+-                // Accept this shape.
+-                return true;
+-            }
++            if (!m_use_light_tree)
++                insert_emitting_shape_cdf(material, area, index);
++            return true;
+         });
+ 
++    // The tree cannot evaluate OSL or weighted procedural emission. Fall back
++    // for the complete set rather than silently dropping incompatible lights.
++    if (m_use_light_tree && std::any_of(m_emitting_shapes.begin(), m_emitting_shapes.end(),
++        [](const EmittingShape& shape)
++        {
++            return shape.get_shape_type() == EmittingShape::ProceduralShape
++                || shape.get_material()->get_uncached_edf() == nullptr;
++        }))
++    {
++        RENDERER_LOG_WARNING("using the CDF light sampler for OSL or procedural emitters.");
++        m_use_light_tree = false;
++        for (const NonPhysicalLightInfo& info : m_light_tree_lights)
++            insert_non_physical_light(info);
++        m_light_tree_lights.clear();
++        for (size_t i = 0; i < m_emitting_shapes.size(); ++i)
++            insert_emitting_shape_cdf(m_emitting_shapes[i].get_material(), m_emitting_shapes[i].get_area(), i);
++    }
++    m_non_physical_light_count = m_non_physical_lights.size();
++
+     // Build the hash table of emitting shapes.
+     build_emitting_shape_hash_table();
+ 
+@@ -201,7 +174,8 @@
+     const ShadingRay::Time&             time,
+     const Vector3f&                     s,
+     const ShadingPoint&                 shading_point,
+-    LightSample&                        light_sample) const
++    LightSample&                        light_sample,
++    SamplingContext*                    sampling_context) const
+ {
+     if (m_use_light_tree)
+     {
+@@ -210,7 +184,8 @@
+             time,
+             s,
+             shading_point,
+-            light_sample);
++            light_sample,
++            sampling_context);
+     }
+     else
+     {
+@@ -218,7 +193,8 @@
+         sample_emitting_shapes(
+             time,
+             s,
+-            light_sample);
++            light_sample,
++            sampling_context);
+     }
+ }
+ 
+@@ -244,7 +220,7 @@
+             ? m_light_tree->evaluate_node_pdf(
+                 surface_shading_point,
+                 shape->m_light_tree_node_index)
+-            : shape->evaluate_pdf_uniform();
++            : shape->evaluate_sampling_density(light_shading_point);
+ 
+     assert(shape_probability >= 0.0f);
+ 
+@@ -255,7 +231,8 @@
+     const ShadingRay::Time&             time,
+     const Vector3f&                     s,
+     const ShadingPoint&                 shading_point,
+-    LightSample&                        light_sample) const
++    LightSample&                        light_sample,
++    SamplingContext*                    sampling_context) const
+ {
+     assert(has_lightset());
+ 
+@@ -273,7 +250,11 @@
+     {
+         // Fetch the light.
+         const NonPhysicalLightInfo& light_info = m_light_tree_lights[light_index];
++        light_sample.m_shape = nullptr;
+         light_sample.m_light = light_info.m_light;
++        light_sample.m_valid = true;
++        light_sample.m_estimator_weight = 1.0f;
++        light_sample.m_time = time;
+ 
+         // Evaluate and store the transform of the light.
+         light_sample.m_light_transform =
+@@ -291,11 +272,12 @@
+             Vector2f(s[1], s[2]),
+             light_index,
+             light_prob,
+-            light_sample);
++            light_sample,
++            sampling_context);
+     }
+ 
+     assert(light_sample.m_light || light_sample.m_shape);
+-    assert(light_sample.m_probability > 0.0f);
++    assert(!light_sample.m_valid || light_sample.m_probability > 0.0f);
+ }
+ 
+ }   // namespace renderer
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/backwardlightsampler.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/backwardlightsampler.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/backwardlightsampler.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/backwardlightsampler.h	1970-01-01 00:00:00.000000000 +0000
+@@ -83,7 +83,8 @@
+         const ShadingRay::Time&             time,
+         const foundation::Vector3f&         s,
+         const ShadingPoint&                 shading_point,
+-        LightSample&                        light_sample) const;
++        LightSample&                        light_sample,
++        SamplingContext*                    sampling_context = nullptr) const;
+ 
+     // Compute the probability density in area measure of a given light sample.
+     // Shading points are located on the light (emitting shape) hit by the
+@@ -101,7 +102,8 @@
+         const ShadingRay::Time&             time,
+         const foundation::Vector3f&         s,
+         const ShadingPoint&                 shading_point,
+-        LightSample&                        light_sample) const;
++        LightSample&                        light_sample,
++        SamplingContext*                    sampling_context) const;
+ };
+ 
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/bdpt/bdptlightingengine.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -491,7 +491,10 @@
+                     m_shutter_open_begin_time,
+                     m_shutter_close_end_time),
+                 Vector3f(s[1], s[2], s[3]),
+-                light_sample);
++                light_sample,
++                &sampling_context);
++            if (!light_sample.m_valid)
++                return 0;
+ 
+             return
+                 light_sample.m_shape != nullptr
+@@ -551,7 +554,7 @@
+                 edf_prob);
+ 
+             // Compute the initial particle weight.
+-            Spectrum initial_flux = edf_value / light_sample.m_probability;
++            Spectrum initial_flux = edf_value * (light_sample.m_estimator_weight / light_sample.m_probability);
+ 
+             // Make a shading point that will be used to avoid self-intersections with the light sample.
+             ShadingPoint parent_shading_point;
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/directlightingintegrator.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -165,19 +165,25 @@
+ 
+         for (size_t i = 0, e = m_light_sample_count; i < e; ++i)
+         {
+-            // Sample the light set.
++            // Extra procedural dimensions and contribution draws must not
++            // split the parent while its three-dimensional batch is active.
++            const Vector3f s = sampling_context.next2<Vector3f>();
++            SamplingContext light_sampling_context = sampling_context.split(0, 0);
+             LightSample sample;
+             m_light_sampler.sample_lightset(
+                 m_time,
+-                sampling_context.next2<Vector3f>(),
++                s,
+                 m_material_sampler.get_shading_point(),
+-                sample);
++                sample,
++                &light_sampling_context);
++            if (!sample.m_valid)
++                continue;
+ 
+             // Add the contribution of the chosen light.
+             if (sample.m_shape)
+             {
+                 add_emitting_shape_sample_contribution(
+-                    sampling_context,
++                    light_sampling_context,
+                     sample,
+                     mis_heuristic,
+                     outgoing,
+@@ -187,7 +193,7 @@
+             else
+             {
+                 add_non_physical_light_sample_contribution(
+-                    sampling_context,
++                    light_sampling_context,
+                     sample,
+                     outgoing,
+                     lightset_radiance,
+@@ -459,7 +465,7 @@
+ 
+     // Add the contribution of this sample to the illumination.
+     edf_value *= transmission;
+-    edf_value *= (mis_weight * g) / (sample.m_probability * contribution_prob);
++    edf_value *= (sample.m_estimator_weight * mis_weight * g) / (sample.m_probability * contribution_prob);
+     madd(radiance, material_value, edf_value);
+ 
+     // Record light path event.
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/forwardlightsampler.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/forwardlightsampler.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/forwardlightsampler.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/forwardlightsampler.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -58,46 +58,13 @@
+ {
+     RENDERER_LOG_INFO("collecting light emitters...");
+ 
+-    // Collect all non-physical lights.
+-    collect_non_physical_lights(
+-        scene.assembly_instances(),
+-        TransformSequence(),
+-        [&](const NonPhysicalLightInfo& light_info)
+-        {
+-            // Insert into non-physical lights to be evaluated using a CDF.
+-            const size_t light_index = m_non_physical_lights.size();
+-            m_non_physical_lights.push_back(light_info);
+-
+-            // Insert the light into the CDF.
+-            // todo: compute importance.
+-            float importance = 1.0f;
+-            importance *= light_info.m_light->get_uncached_importance_multiplier();
+-            m_non_physical_lights_cdf.insert(light_index, importance);
+-        });
++    collect_non_physical_lights(scene.assembly_instances(), TransformSequence(),
++        [&](const NonPhysicalLightInfo& info) { insert_non_physical_light(info); });
+     m_non_physical_light_count = m_non_physical_lights.size();
+-
+-    // Collect all light-emitting shapes.
+-    collect_emitting_shapes(
+-        scene.assembly_instances(),
+-        TransformSequence(),
+-        [&](
+-            const Material* material,
+-            const float     area,
+-            const size_t    emitting_shape_index)
++    collect_emitting_shapes(scene.assembly_instances(), TransformSequence(),
++        [&](const Material* material, const float area, const size_t index)
+         {
+-            // Retrieve the EDF and get the importance multiplier.
+-            float importance_multiplier = 1.0f;
+-            if (const EDF* edf = material->get_uncached_edf())
+-                importance_multiplier = edf->get_uncached_importance_multiplier();
+-
+-            // Compute the probability density of this shape.
+-            const float shape_importance = m_params.m_importance_sampling ? area : 1.0f;
+-            const float shape_prob = shape_importance * importance_multiplier;
+-
+-            // Insert the light-emitting shape into the CDF.
+-            m_emitting_shapes_cdf.insert(emitting_shape_index, shape_prob);
+-
+-            // Accept this shape.
++            insert_emitting_shape_cdf(material, area, index);
+             return true;
+         });
+ 
+@@ -125,7 +92,8 @@
+ void ForwardLightSampler::sample(
+     const ShadingRay::Time&             time,
+     const Vector3f&                     s,
+-    LightSample&                        light_sample) const
++    LightSample&                        light_sample,
++    SamplingContext*                    sampling_context) const
+ {
+     assert(m_non_physical_lights_cdf.valid() || m_emitting_shapes_cdf.valid());
+ 
+@@ -145,14 +113,15 @@
+                 sample_emitting_shapes(
+                     time,
+                     Vector3f((s[0] - 0.5f) * 2.0f, s[1], s[2]),
+-                    light_sample);
++                    light_sample,
++                    sampling_context);
+             }
+ 
+             light_sample.m_probability *= 0.5f;
+         }
+         else sample_non_physical_lights(time, s, light_sample);
+     }
+-    else sample_emitting_shapes(time, s, light_sample);
++    else sample_emitting_shapes(time, s, light_sample, sampling_context);
+ }
+ 
+ float ForwardLightSampler::evaluate_pdf(const ShadingPoint& light_shading_point) const
+@@ -171,7 +140,7 @@
+     const EmittingShape* shape = *shape_ptr;
+     // sample() chooses the two emitter classes with equal probability.
+     const float shape_set_probability = m_non_physical_lights_cdf.valid() ? 0.5f : 1.0f;
+-    return shape_set_probability * shape->evaluate_pdf_uniform();
++    return shape_set_probability * shape->evaluate_sampling_density(light_shading_point);
+ }
+ 
+ void ForwardLightSampler::sample_non_physical_lights(
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/forwardlightsampler.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/forwardlightsampler.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/forwardlightsampler.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/forwardlightsampler.h	1970-01-01 00:00:00.000000000 +0000
+@@ -69,7 +69,8 @@
+     void sample(
+         const ShadingRay::Time&         time,
+         const foundation::Vector3f&     s,
+-        LightSample&                    light_sample) const;
++        LightSample&                    light_sample,
++        SamplingContext*                sampling_context = nullptr) const;
+ 
+     float evaluate_pdf(
+         const ShadingPoint&             light_shading_point) const;
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lightsample.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightsample.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/lightsample.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightsample.h	1970-01-01 00:00:00.000000000 +0000
+@@ -32,6 +32,7 @@
+ // appleseed.renderer headers.
+ #include "renderer/kernel/lighting/lighttypes.h"
+ #include "renderer/kernel/shading/shadingray.h"
++#include "renderer/modeling/object/proceduralobject.h"
+ 
+ // appleseed.foundation headers.
+ #include "foundation/containers/hashtable.h"
+@@ -112,7 +113,12 @@
+ 
+     // Data common to all sample types.
+     ShadingRay::Time             m_time;
+-    float                       m_probability;                  // probability density of this sample
++    // For weighted procedural samples this is a reference area density,
++    // shared with MIS evaluation, not the selected point's marginal PDF.
++    float                       m_probability;
++    float                       m_estimator_weight;
++    bool                        m_valid;
++    ProceduralObject::IntersectionResult m_surface_attributes;
+ 
+     // Construct the incoming hit for an outgoing direction from the emitter.
+     void make_shading_point(
+@@ -175,6 +181,9 @@
+   : m_shape(nullptr)
+   , m_light(nullptr)
+   , m_time(ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f))
++  , m_probability(0.0f)
++  , m_estimator_weight(1.0f)
++  , m_valid(false)
+ {
+ }
+ 
+@@ -183,14 +192,15 @@
+     const foundation::Vector3d& outgoing,
+     const Intersector&          intersector) const
+ {
+-    assert(m_shape && !m_light);
++    assert(m_valid && m_shape && !m_light);
+ 
+     m_shape->make_shading_point(
+         shading_point,
+         ShadingRay(m_point, -foundation::normalize(outgoing), 0.0, 0.0,
+             m_time, VisibilityFlags::CameraRay, 0),
+         m_param_coords,
+-        intersector);
++        intersector,
++        m_shape->get_shape_type() == EmittingShape::ProceduralShape ? &m_surface_attributes : nullptr);
+ }
+ 
+ }   // namespace renderer
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightsamplerbase.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -46,6 +46,9 @@
+ #include "foundation/containers/dictionary.h"
+ #include "foundation/math/sampling/mappings.h"
+ 
++#include <cmath>
++#include <stdexcept>
++
+ using namespace foundation;
+ 
+ namespace renderer
+@@ -67,6 +70,10 @@
+     LightSample&                        light_sample,
+     const float                         light_prob) const
+ {
++    light_sample.m_shape = nullptr;
++    light_sample.m_valid = true;
++    light_sample.m_estimator_weight = 1.0f;
++    light_sample.m_time = time;
+     // Fetch the light.
+     const NonPhysicalLightInfo& light_info = m_non_physical_lights[light_index];
+     light_sample.m_light = light_info.m_light;
+@@ -78,7 +85,7 @@
+ 
+     // Store the probability density of this light.
+     light_sample.m_probability = light_prob;
+-    assert(light_sample.m_probability > 0.0f);
++    assert(!light_sample.m_valid || light_sample.m_probability > 0.0f);
+ }
+ 
+ Dictionary LightSamplerBase::get_params_metadata()
+@@ -94,6 +101,20 @@
+             .insert("help", "Enable Importance Sampling"));
+ 
+     return metadata;
++}
++
++void LightSamplerBase::insert_non_physical_light(const NonPhysicalLightInfo& info)
++{
++    const size_t index = m_non_physical_lights.size();
++    m_non_physical_lights.push_back(info);
++    m_non_physical_lights_cdf.insert(index, info.m_light->get_uncached_importance_multiplier());
++}
++
++void LightSamplerBase::insert_emitting_shape_cdf(const Material* material, const float area, const size_t index)
++{
++    const EDF* edf = material->get_uncached_edf();
++    const float multiplier = edf ? edf->get_uncached_importance_multiplier() : 1.0f;
++    m_emitting_shapes_cdf.insert(index, (m_params.m_importance_sampling ? area : 1.0f) * multiplier);
+ }
+ 
+ void LightSamplerBase::build_emitting_shape_hash_table()
+@@ -531,11 +552,53 @@
+                 object_area += emitting_shape.m_area;
+             }
+         }
+-        else
++        else if (const auto* procedural = dynamic_cast<const ProceduralObject*>(&object))
+         {
+-            // Skip curves and other object types.
+-            continue;
++            const double reference_area = procedural->get_surface_sampling_reference_area();
++            if (reference_area == 0.0)
++                continue;
++            if (!(reference_area > 0.0) || !std::isfinite(reference_area)
++                || procedural->get_material_slot_count() != 1 || transform_sequence.size() > 1)
++                throw std::runtime_error("Invalid or moving procedural emitter '" + std::string(object.get_name()) + "'");
++
++            const AABB3d bbox = global_transform.to_parent(AABB3d(object.compute_local_bbox()));
++            // Area is estimated for importance and power metadata only. The
++            // known reference density, not this estimate, weights transport.
++            EmittingShape probe = EmittingShape::create_procedural_shape(
++                &assembly_instance, object_instance_index, nullptr, 1.0, reference_area, bbox, false);
++            probe.m_assembly_instance_transform = &transform_sequence;
++            constexpr size_t SurfaceAreaSampleCount = 65536;
++            SamplingContext::RNGType rng;
++            SamplingContext sampling(rng, SamplingContext::QMCMode, 2, SurfaceAreaSampleCount);
++            double area_sum = 0.0;
++            for (size_t i = 0; i < SurfaceAreaSampleCount; ++i)
++            {
++                const Vector2f s = sampling.next2<Vector2f>();
++                SamplingContext child = sampling.split(0, 0);
++                LightSample sample;
++                probe.sample(s, 1.0f, sample, &child);
++                if (sample.m_valid)
++                    area_sum += sample.m_estimator_weight / static_cast<double>(sample.m_probability);
++            }
++            const double area = area_sum / SurfaceAreaSampleCount;
++            if (!(area > 0.0) || !std::isfinite(static_cast<float>(area)))
++                throw std::runtime_error("Cannot estimate procedural emitter area for '" + std::string(object.get_name()) + "'");
++            for (size_t side = 0; side < 2; ++side)
++            {
++                const MaterialArray& materials = side == 0 ? front_materials : back_materials;
++                const Material* material = materials.empty() ? nullptr : materials[0];
++                if (!material || !material->has_emission()
++                    || !shape_handling(material, static_cast<float>(area), m_emitting_shapes.size()))
++                    continue;
++                EmittingShape shape = EmittingShape::create_procedural_shape(
++                    &assembly_instance, object_instance_index, material, area, reference_area, bbox, side != 0);
++                shape.estimate_flux();
++                m_emitting_shapes.push_back(shape);
++                object_area += static_cast<float>(area);
++            }
+         }
++        else
++            continue;
+ 
+         store_object_area_in_shadergroups(
+             &assembly_instance,
+@@ -625,24 +688,26 @@
+     const Vector2f&                     s,
+     const size_t                        shape_index,
+     const float                         shape_prob,
+-    LightSample&                        light_sample) const
++    LightSample&                        light_sample,
++    SamplingContext*                    sampling_context) const
+ {
+     // Fetch the emitting shape.
+     const EmittingShape& emitting_shape = m_emitting_shapes[shape_index];
+ 
+-    // Uniformly sample the surface of the shape.
++    // Sample the surface, retaining null draws and estimator weights.
+     light_sample.m_light = nullptr;
+     light_sample.m_time = time;
+-    emitting_shape.sample_uniform(s, shape_prob, light_sample);
++    emitting_shape.sample(s, shape_prob, light_sample, sampling_context);
+ 
+     assert(light_sample.m_shape);
+-    assert(light_sample.m_probability > 0.0f);
++    assert(!light_sample.m_valid || light_sample.m_probability > 0.0f);
+ }
+ 
+ void LightSamplerBase::sample_emitting_shapes(
+     const ShadingRay::Time&             time,
+     const Vector3f&                     s,
+-    LightSample&                        light_sample) const
++    LightSample&                        light_sample,
++    SamplingContext*                    sampling_context) const
+ {
+     assert(m_emitting_shapes_cdf.valid());
+ 
+@@ -652,13 +717,13 @@
+     const float emitter_prob = result.second;
+     const EmittingShape& emitting_shape = m_emitting_shapes[emitter_index];
+ 
+-    // Uniformly sample the surface of the shape.
++    // Sample the surface, retaining null draws and estimator weights.
+     light_sample.m_light = nullptr;
+     light_sample.m_time = time;
+-    emitting_shape.sample_uniform(Vector2f(s[1], s[2]), emitter_prob, light_sample);
++    emitting_shape.sample(Vector2f(s[1], s[2]), emitter_prob, light_sample, sampling_context);
+ 
+     assert(light_sample.m_shape);
+-    assert(light_sample.m_probability > 0.0f);
++    assert(!light_sample.m_valid || light_sample.m_probability > 0.0f);
+ }
+ 
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lightsamplerbase.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightsamplerbase.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/lightsamplerbase.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lightsamplerbase.h	1970-01-01 00:00:00.000000000 +0000
+@@ -107,6 +107,9 @@
+     // Return metadata for parameters common to all light samplers.
+     static foundation::Dictionary get_params_metadata();
+ 
++    void insert_non_physical_light(const NonPhysicalLightInfo& light_info);
++    void insert_emitting_shape_cdf(const Material* material, const float area, const size_t index);
++
+     // Constructor.
+     explicit LightSamplerBase(const ParamArray& params);
+ 
+@@ -150,13 +153,15 @@
+         const foundation::Vector2f&         s,
+         const size_t                        shape_index,
+         const float                         shape_prob,
+-        LightSample&                        light_sample) const;
++        LightSample&                        light_sample,
++        SamplingContext*                    sampling_context) const;
+ 
+     // Sample the set of emitting shapes.
+     void sample_emitting_shapes(
+         const ShadingRay::Time&             time,
+         const foundation::Vector3f&         s,
+-        LightSample&                        light_sample) const;
++        LightSample&                        light_sample,
++        SamplingContext*                    sampling_context) const;
+ };
+ 
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lighttracing/lighttracingsamplegenerator.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -608,7 +608,10 @@
+                     m_shutter_open_begin_time,
+                     m_shutter_close_end_time),
+                 Vector3f(s[1], s[2], s[3]),
+-                light_sample);
++                light_sample,
++                &sampling_context);
++            if (!light_sample.m_valid)
++                return 0;
+ 
+             return
+                 light_sample.m_shape
+@@ -662,7 +665,7 @@
+             // Compute the initial particle weight.
+             Spectrum initial_flux = edf_value;
+             initial_flux *=
+-                dot(emission_direction, Vector3f(light_sample.m_shading_normal)) /
++                light_sample.m_estimator_weight * dot(emission_direction, Vector3f(light_sample.m_shading_normal)) /
+                 (light_sample.m_probability * edf_prob);
+ 
+             // Make a shading point that will be used to avoid self-intersections with the light sample.
+@@ -711,7 +714,7 @@
+ 
+             // Handle the light vertex separately.
+             Spectrum light_particle_flux = edf_value;           // todo: only works for diffuse EDF? What we need is the light exitance
+-            light_particle_flux /= light_sample.m_probability;
++            light_particle_flux *= light_sample.m_estimator_weight / light_sample.m_probability;
+             path_visitor.visit_area_light_vertex(
+                 light_sample,
+                 light_particle_flux,
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lighttypes.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lighttypes.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/lighttypes.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lighttypes.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -32,6 +32,7 @@
+ // appleseed.renderer headers.
+ #include "renderer/kernel/intersection/intersector.h"
+ #include "renderer/kernel/lighting/lightsample.h"
++#include "renderer/kernel/shading/shadingpoint.h"
+ #include "renderer/modeling/object/diskobject.h"
+ #include "renderer/modeling/object/rectangleobject.h"
+ #include "renderer/modeling/object/sphereobject.h"
+@@ -48,12 +49,30 @@
+ 
+ // Standard headers.
+ #include <cstdint>
++#include <stdexcept>
+ 
+ using namespace foundation;
+ 
+ namespace renderer
+ {
+ 
++namespace
++{
++    // Affine area Jacobian for a unit object-space geometric normal.
++    double compute_surface_area_scale(
++        const Transformd& transform,
++        const Vector3d& normal)
++    {
++        const Vector3d x = transform.vector_to_parent(Vector3d(1.0, 0.0, 0.0));
++        const Vector3d y = transform.vector_to_parent(Vector3d(0.0, 1.0, 0.0));
++        const Vector3d z = transform.vector_to_parent(Vector3d(0.0, 0.0, 1.0));
++        const double scale = std::abs(dot(x, cross(y, z))) * norm(transform.normal_to_parent(normal));
++        if (!(scale > 0.0) || !std::isfinite(scale))
++            throw std::runtime_error("Invalid transform for procedural surface sampling");
++        return scale;
++    }
++}
++
+ //
+ // EmittingShape class implementation.
+ //
+@@ -237,8 +256,13 @@
+     const float                 shape_prob,
+     LightSample&                light_sample) const
+ {
++    if (get_shape_type() == ProceduralShape)
++        throw std::runtime_error("Weighted procedural emitters require sample()");
+     // Store a pointer to the emitting shape.
+     light_sample.m_shape = this;
++    light_sample.m_light = nullptr;
++    light_sample.m_valid = true;
++    light_sample.m_estimator_weight = 1.0f;
+ 
+     switch (get_shape_type())
+     {
+@@ -336,7 +360,8 @@
+     ShadingPoint&               shading_point,
+     const ShadingRay&           ray,
+     const Vector2f&             param_coords,
+-    const Intersector&          intersector) const
++    const Intersector&          intersector,
++    const ProceduralObject::IntersectionResult* supplied_attributes) const
+ {
+     const AssemblyInstance* instance = get_assembly_instance();
+     const TransformSequence& sequence = m_assembly_instance_transform
+@@ -354,6 +379,14 @@
+     const ObjectInstance* object_instance = instance->get_assembly().object_instances()
+         .get_by_index(get_object_instance_index());
+     const Object& object = object_instance->get_object();
++    if (get_shape_type() == ProceduralShape)
++    {
++        assert(supplied_attributes);
++        intersector.make_procedural_surface_shading_point(shading_point, ray,
++            instance, transform, get_object_instance_index(), get_primitive_index(),
++            ray.m_org, *supplied_attributes, &sequence);
++        return;
++    }
+     const Vector3d point = object_instance->get_transform().point_to_local(
+         transform.point_to_local(ray.m_org));
+     ProceduralObject::IntersectionResult attributes = {};
+@@ -375,8 +408,121 @@
+     intersector.make_procedural_surface_shading_point(shading_point, ray,
+         instance, transform, get_object_instance_index(), get_primitive_index(),
+         ray.m_org, attributes, &sequence);
++}
++
++EmittingShape EmittingShape::create_procedural_shape(
++    const AssemblyInstance* assembly_instance,
++    const size_t object_instance_index,
++    const Material* material,
++    const double area,
++    const double reference_area,
++    const AABB3d& bbox,
++    const bool back_side)
++{
++    EmittingShape shape(ProceduralShape, assembly_instance, object_instance_index, 0, material);
++    shape.m_geom.m_procedural.m_reference_area = reference_area;
++    shape.m_area = static_cast<float>(area);
++    shape.m_rcp_area = 1.0f / shape.m_area;
++    shape.m_bbox = bbox;
++    shape.m_centroid = bbox.center();
++    shape.m_back_side = back_side;
++    return shape;
++}
++
++Transformd EmittingShape::get_object_to_world_transform() const
++{
++    const AssemblyInstance* instance = get_assembly_instance();
++    const ObjectInstance* object_instance = instance->get_assembly().object_instances()
++        .get_by_index(get_object_instance_index());
++    const TransformSequence& sequence = m_assembly_instance_transform
++        ? *m_assembly_instance_transform : instance->transform_sequence();
++    return object_instance->get_transform() * sequence.get_earliest_transform();
++}
++
++void EmittingShape::sample(
++    const Vector2f& s,
++    const float shape_prob,
++    LightSample& light_sample,
++    SamplingContext* sampling_context) const
++{
++    if (get_shape_type() != ProceduralShape)
++    {
++        sample_uniform(s, shape_prob, light_sample);
++        return;
++    }
++    if (!sampling_context)
++        throw std::runtime_error("Procedural emitter sampling requires a sampling context");
++
++    light_sample.m_shape = this;
++    light_sample.m_light = nullptr;
++    light_sample.m_valid = false;
++    light_sample.m_estimator_weight = 0.0f;
++    light_sample.m_probability = 0.0f;
++    sampling_context->split_in_place(3, 1);
++    const Vector3d extra = sampling_context->next2<Vector3d>();
++    const double variates[ProceduralObject::SurfaceSampleDimensions] = {s[0], s[1], extra[0], extra[1], extra[2]};
++    const ObjectInstance* instance = get_assembly_instance()->get_assembly().object_instances()
++        .get_by_index(get_object_instance_index());
++    const auto& object = static_cast<const ProceduralObject&>(instance->get_object());
++    ProceduralObject::SurfaceSample sample = {};
++    if (!object.sample_surface(variates, sample))
++        return;
++
++    const auto& attributes = sample.m_attributes;
++    const double NormalLengthTolerance = 1.0e-6;
++    if (!(sample.m_estimator_weight > 0.0) || !std::isfinite(sample.m_estimator_weight)
++        || attributes.m_material_slot != 0
++        || std::abs(square_norm(attributes.m_geometric_normal) - 1.0) > NormalLengthTolerance
++        || std::abs(square_norm(attributes.m_shading_normal) - 1.0) > NormalLengthTolerance)
++        throw std::runtime_error("Invalid procedural emitter surface sample");
++    for (size_t i = 0; i < 3; ++i)
++    {
++        if (!std::isfinite(sample.m_point[i]) || !std::isfinite(attributes.m_geometric_normal[i])
++            || !std::isfinite(attributes.m_shading_normal[i]))
++            throw std::runtime_error("Nonfinite procedural emitter surface sample");
++        if (attributes.m_derivatives.m_valid
++            && (!std::isfinite(attributes.m_derivatives.m_dpdu[i]) || !std::isfinite(attributes.m_derivatives.m_dpdv[i])
++                || !std::isfinite(attributes.m_derivatives.m_dndu[i]) || !std::isfinite(attributes.m_derivatives.m_dndv[i])))
++            throw std::runtime_error("Nonfinite procedural emitter surface derivatives");
++    }
++    for (size_t i = 0; i < 2; ++i)
++        if (!std::isfinite(attributes.m_uv[i]))
++            throw std::runtime_error("Nonfinite procedural emitter surface coordinates");
++    const Transformd transform = get_object_to_world_transform();
++    const double scale = compute_surface_area_scale(transform, attributes.m_geometric_normal);
++    light_sample.m_probability = static_cast<float>(shape_prob / (m_geom.m_procedural.m_reference_area * scale));
++    light_sample.m_estimator_weight = static_cast<float>(sample.m_estimator_weight);
++    if (!(light_sample.m_probability > 0.0f) || !std::isfinite(light_sample.m_probability)
++        || !(light_sample.m_estimator_weight > 0.0f) || !std::isfinite(light_sample.m_estimator_weight))
++        throw std::runtime_error("Procedural emitter sampling weight is outside renderer range");
++    const double orientation = m_back_side != instance->must_flip_normals() ? -1.0 : 1.0;
++    light_sample.m_point = transform.point_to_parent(sample.m_point);
++    light_sample.m_geometric_normal = orientation * normalize(transform.normal_to_parent(attributes.m_geometric_normal));
++    light_sample.m_shading_normal = orientation * normalize(transform.normal_to_parent(attributes.m_shading_normal));
++    light_sample.m_param_coords = attributes.m_uv;
++    light_sample.m_surface_attributes = attributes;
++    for (size_t i = 0; i < 3; ++i)
++        if (!std::isfinite(light_sample.m_point[i]) || !std::isfinite(light_sample.m_geometric_normal[i])
++            || !std::isfinite(light_sample.m_shading_normal[i]))
++            throw std::runtime_error("Nonfinite transformed procedural emitter surface sample");
++    light_sample.m_valid = true;
+ }
+ 
++float EmittingShape::evaluate_sampling_density(const ShadingPoint& shading_point) const
++{
++    if (get_shape_type() != ProceduralShape)
++        return evaluate_pdf_uniform();
++    if (m_shape_prob == 0.0f)
++        return 0.0f;
++    const Transformd transform = get_object_to_world_transform();
++    const Vector3d normal = normalize(transform.normal_to_local(shading_point.get_geometric_normal()));
++    const double scale = compute_surface_area_scale(transform, normal);
++    const float density = static_cast<float>(m_shape_prob / (m_geom.m_procedural.m_reference_area * scale));
++    if (!(density > 0.0f) || !std::isfinite(density))
++        throw std::runtime_error("Procedural emitter reference density is outside renderer range");
++    return density;
++}
++
+ void EmittingShape::estimate_flux()
+ {
+     // todo:
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/lighttypes.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lighttypes.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/lighttypes.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/lighttypes.h	1970-01-01 00:00:00.000000000 +0000
+@@ -30,6 +30,8 @@
+ 
+ // appleseed.renderer headers.
+ #include "renderer/kernel/intersection/intersectionsettings.h"
++#include "renderer/global/globaltypes.h"
++#include "renderer/modeling/object/proceduralobject.h"
+ #include "renderer/utility/transformsequence.h"
+ 
+ // appleseed.foundation headers.
+@@ -84,7 +86,8 @@
+         TriangleShape = 0,
+         RectangleShape,
+         SphereShape,
+-        DiskShape
++        DiskShape,
++        ProceduralShape
+     };
+ 
+     static EmittingShape create_triangle_shape(
+@@ -129,6 +132,15 @@
+         const foundation::Vector3d& x,
+         const foundation::Vector3d& y);
+ 
++    static EmittingShape create_procedural_shape(
++        const AssemblyInstance*     assembly_instance,
++        const size_t                object_instance_index,
++        const Material*             material,
++        const double                area,
++        const double                reference_area,
++        const foundation::AABB3d&   bbox,
++        const bool                  back_side);
++
+     ShapeType get_shape_type() const;
+ 
+     const AssemblyInstance* get_assembly_instance() const;
+@@ -155,14 +167,24 @@
+         const foundation::Vector2f& s,
+         const float                 shape_prob,
+         LightSample&                light_sample) const;
++
++    // Procedural draws carry an independent estimator weight. Their reference
++    // density is also used by the complementary material-sampling estimator.
++    void sample(
++        const foundation::Vector2f& s,
++        const float                 shape_prob,
++        LightSample&                light_sample,
++        SamplingContext*            sampling_context) const;
+ 
+     float evaluate_pdf_uniform() const;
++    float evaluate_sampling_density(const ShadingPoint& shading_point) const;
+ 
+     void make_shading_point(
+         ShadingPoint&               shading_point,
+         const ShadingRay&           ray,
+         const foundation::Vector2f& bary,
+-        const Intersector&          intersector) const;
++        const Intersector&          intersector,
++        const ProceduralObject::IntersectionResult* attributes = nullptr) const;
+ 
+     // Estimate average and maximum radiant flux emitted by this shape.
+     void estimate_flux();
+@@ -206,12 +228,18 @@
+         foundation::Vector3d    m_x, m_y;               // world space x and y axes
+     };
+ 
++    struct Procedural
++    {
++        double                      m_reference_area;
++    };
++
+     union Geom
+     {
+         Triangle    m_triangle;
+         Rectangle   m_rectangle;
+         Sphere      m_sphere;
+         Disk        m_disk;
++        Procedural  m_procedural;
+     };
+ 
+     typedef foundation::stamped_ptr<const AssemblyInstance> AssemblyInstanceAndType;
+@@ -233,6 +261,8 @@
+     foundation::AABB3d          m_bbox;
+     foundation::Vector3d        m_centroid;
+ 
++    foundation::Transformd get_object_to_world_transform() const;
++
+     // Constructor.
+     EmittingShape(
+         const ShapeType             shape_type,
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -364,8 +364,11 @@
+                     m_shutter_open_begin_time,
+                     m_shutter_close_end_time),
+                 Vector3f(light_sample_s[1], light_sample_s[2], light_sample_s[3]),
+-                light_sample);
++                light_sample,
++                &sampling_context);
+ 
++            if (!light_sample.m_valid)
++                return;
+             if (light_sample.m_shape)
+             {
+                 trace_emitting_shape_photon(
+@@ -429,7 +432,7 @@
+             // Compute the initial particle weight.
+             Spectrum initial_flux = edf_value;
+             initial_flux *=
+-                dot(emission_direction, Vector3f(light_sample.m_shading_normal)) /
++                light_sample.m_estimator_weight * dot(emission_direction, Vector3f(light_sample.m_shading_normal)) /
+                 (light_sample.m_probability * edf_prob * m_params.m_light_photon_count);
+ 
+             // Make a shading point that will be used to avoid self-intersections with the light sample.
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/volumelightingintegrator.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -82,7 +82,12 @@
+                     probability);
+             }
+             else
+-                emission_position = light_sample.m_point;
++                // The position guides a normalized distance proposal; a null
++                // surface draw must not remove that proposal's contribution.
++                // Its bounds supply a positive guide height below, including
++                // when the centroid lies directly on the volume ray.
++                emission_position = light_sample.m_valid
++                    ? light_sample.m_point : light_sample.m_shape->get_centroid();
+ 
+             // Direction from the ray origin to the light center.
+             const Vector3f origin_to_light(emission_position - volume_ray.m_org);
+@@ -92,8 +97,9 @@
+             m_origin_to_projection = dot(origin_to_light, Vector3f(volume_ray.m_dir));
+ 
+             // Distance from the projection point to the light center (height).
+-            m_projection_to_light =
+-                std::sqrt(square_norm(origin_to_light) - square(m_origin_to_projection));
++            m_projection_to_light = light_sample.m_valid
++                ? std::sqrt(square_norm(origin_to_light) - square(m_origin_to_projection))
++                : static_cast<float>(0.5 * norm(light_sample.m_shape->get_bbox().extent()));
+ 
+             m_ray_length = static_cast<float>(volume_ray.get_length());
+ 
+@@ -418,20 +424,22 @@
+ 
+         for (size_t i = 0; i < m_distance_sample_count; ++i)
+         {
+-            // Sample the light set.
++            const Vector3f s = child_sampling_context.next2<Vector3f>();
++            SamplingContext light_sampling_context = child_sampling_context.split(0, 0);
+             LightSample light_sample;
+             m_light_sampler.sample_lightset(
+                 m_time,
+-                child_sampling_context.next2<Vector3f>(),
++                s,
+                 m_shading_point,
+-                light_sample);
++                light_sample,
++                &light_sampling_context);
+ 
+             for (size_t j = 0; j < m_light_sample_count; ++j)
+             {
+                 add_single_distance_sample_contribution(
+                     &light_sample,
+                     extinction_coef,
+-                    sampling_context,
++                    light_sampling_context,
+                     mis_heuristic,
+                     radiance,
+                     false);
+@@ -442,7 +450,7 @@
+                 add_single_distance_sample_contribution(
+                     &light_sample,
+                     extinction_coef,
+-                    sampling_context,
++                    light_sampling_context,
+                     mis_heuristic,
+                     radiance,
+                     true);
+@@ -562,7 +570,10 @@
+             m_time,
+             sampling_context.next2<Vector3f>(),
+             m_shading_point,
+-            light_sample);
++            light_sample,
++            &sampling_context);
++        if (!light_sample.m_valid)
++            return;
+ 
+         integrator.add_emitting_shape_sample_contribution(
+             sampling_context,
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_intersector.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_intersector.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_intersector.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_intersector.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -75,6 +75,7 @@
+ #include "foundation/math/matrix.h"
+ #include "foundation/math/intersection/raydisk.h"
+ #include "foundation/math/scalar.h"
++#include "foundation/math/sampling/mappings.h"
+ #include "foundation/math/transform.h"
+ #include "foundation/math/vector.h"
+ #include "foundation/memory/autoreleaseptr.h"
+@@ -843,7 +844,60 @@
+             }
+         }
+     }
++
++    class WeightedSphereObject : public ProceduralObject
++    {
++      public:
++        WeightedSphereObject()
++          : ProceduralObject("object", ParamArray())
++          , m_sphere(SphereObjectFactory().create("native_sphere", ParamArray()))
++        {
++        }
++        void release() override { delete this; }
++        const char* get_model() const override { return "weighted_sphere"; }
++        GAABB3 compute_local_bbox() const override { return native().compute_local_bbox(); }
++        size_t get_material_slot_count() const override { return 1; }
++        const char* get_material_slot(size_t) const override { return "default"; }
++        void intersect(const ShadingRay& ray, IntersectionResult& hit) const override { native().intersect(ray, hit); }
++        bool intersect(const ShadingRay& ray) const override { return native().intersect(ray); }
++        void refine_and_offset(const Ray3d& ray, const Vector3d& n, Vector3d& front, Vector3d& back, Vector3d& offset) const override
++        { native().refine_and_offset(ray, n, front, back, offset); }
++        double get_surface_sampling_reference_area() const override { return 1.5 * FourPi<double>(); }
++        bool sample_surface(const double s[SurfaceSampleDimensions], SurfaceSample& result) const override
++        {
++            // Match a sphere's Crofton estimator: one third of draws hit,
++            // two crossings per hit, reference area 1.5 times physical area.
++            if (s[0] < 2.0 / 3.0)
++                return false;
++            SurfaceSample sample = {};
++            sample.m_point = sample_sphere_uniform(Vector2d(s[1], s[2]));
++            native().get_surface_attributes(sample.m_point, sample.m_attributes);
++            sample.m_estimator_weight = 2.0;
++            result = sample;
++            return true;
++        }
++      private:
++        auto_release_ptr<Object> m_sphere;
++        const SphereObject& native() const { return static_cast<const SphereObject&>(*m_sphere); }
++    };
+ 
++    struct WeightedEmitterScene : EmitterScene<SphereObjectFactory>
++    {
++        explicit WeightedEmitterScene(const Matrix4d& scale = Matrix4d::make_scaling(Vector3d(2.0)))
++          : EmitterScene<SphereObjectFactory>(scale)
++        {
++            auto* assembly = m_scene.assemblies().get_by_name("assembly");
++            assembly->objects().remove(assembly->objects().get_by_name("object"));
++            auto_release_ptr<Object> object(new WeightedSphereObject());
++            m_analytic = static_cast<ProceduralObject*>(object.get());
++            assembly->objects().insert(object);
++        }
++    };
++    struct AffineWeightedEmitterScene : WeightedEmitterScene
++    {
++        AffineWeightedEmitterScene() : WeightedEmitterScene(affine_emitter_scale()) {}
++    };
++
+     TEST_CASE_F(ProceduralHitDistance_PreservesFloatDirectionParameter, ProceduralFixture)
+     {
+         ShadingRay ray = ray_to_plane(false);
+@@ -862,6 +916,89 @@
+         EXPECT_FALSE(m_intersector.trace(ray, beyond));
+     }
+ 
++    TEST_CASE(WeightedEmitters_PreserveNullAttemptsAndReferenceDensity)
++    {
++        Fixture<false, WeightedEmitterScene> fixture;
++        ForwardLightSampler sampler(fixture.m_scene);
++        ASSERT_TRUE(sampler.has_lights());
++        const double WorldArea = FourPi<double>() * 9.0;
++        const double ReferenceArea = 1.5 * WorldArea;
++        const size_t SampleCount = 8192;
++        const auto time = ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f);
++        for (const auto mode : {SamplingContext::QMCMode, SamplingContext::RNGMode})
++        {
++            SamplingContext::RNGType rng;
++            SamplingContext sampling(rng, mode, 3, SampleCount);
++            size_t successes = 0, misses = 0;
++            double area_sum = 0.0;
++            LightSample sample;
++            for (size_t i = 0; i < SampleCount; ++i)
++            {
++                const Vector3f s = sampling.next2<Vector3f>();
++                SamplingContext child = sampling.split(0, 0);
++                sampler.sample(time, s, sample, &child);
++                ASSERT_TRUE(sample.m_shape != nullptr);
++                if (!sample.m_valid)
++                {
++                    ++misses;
++                    EXPECT_FEQ(0.0f, sample.m_probability);
++                    EXPECT_FEQ(0.0f, sample.m_estimator_weight);
++                    continue;
++                }
++                ++successes;
++                EXPECT_FEQ(2.0f, sample.m_estimator_weight);
++                EXPECT_FEQ_EPS(static_cast<float>(1.0 / ReferenceArea), sample.m_probability, 1.0e-9f);
++                area_sum += sample.m_estimator_weight / sample.m_probability;
++            }
++            EXPECT_TRUE(successes > SampleCount / 4 && successes < SampleCount / 2);
++            EXPECT_TRUE(misses > successes);
++            EXPECT_FEQ_EPS(WorldArea, area_sum / SampleCount, 0.05 * WorldArea);
++        }
++    }
++
++    TEST_CASE(WeightedEmitters_AffineDensityAndNativeAttributesMatchTracedHits)
++    {
++        Fixture<false, AffineWeightedEmitterScene> fixture;
++        ForwardLightSampler sampler(fixture.m_scene);
++        // A requested tree must retain weighted emitters via the CDF fallback.
++        BackwardLightSampler backward(fixture.m_scene, ParamArray().insert("algorithm", "lighttree"));
++        ASSERT_TRUE(backward.has_lightset());
++        const auto time = ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f);
++        const auto* object_instance = fixture.m_scene.assemblies().get_by_name("assembly")->object_instances().get_by_index(0);
++        const Transformd global = object_instance->get_transform() * fixture.m_assembly_transform;
++        SamplingContext::RNGType rng;
++        SamplingContext sampling(rng, SamplingContext::QMCMode, 3, 128);
++        size_t successes = 0;
++        for (size_t i = 0; i < 128; ++i)
++        {
++            const Vector3f s = sampling.next2<Vector3f>();
++            SamplingContext child = sampling.split(0, 0);
++            LightSample sample;
++            sampler.sample(time, s, sample, &child);
++            if (!sample.m_valid)
++                continue;
++            ++successes;
++            const Basis3d basis(sample.m_surface_attributes.m_geometric_normal);
++            const double jacobian = norm(cross(global.vector_to_parent(basis.get_tangent_u()),
++                global.vector_to_parent(basis.get_tangent_v())));
++            const double reference_area = fixture.m_analytic->get_surface_sampling_reference_area();
++            EXPECT_FEQ_EPS(static_cast<float>(1.0 / (reference_area * jacobian)), sample.m_probability, 1.0e-9f);
++            ShadingPoint traced, sampled;
++            const ShadingRay ray(sample.m_point + 0.1 * sample.m_geometric_normal, -sample.m_geometric_normal,
++                time, VisibilityFlags::CameraRay, 0);
++            ASSERT_TRUE(fixture.m_intersector.trace(ray, traced));
++            sample.make_shading_point(sampled, sample.m_geometric_normal, fixture.m_intersector);
++            EXPECT_FEQ_EPS(traced.get_point(), sampled.get_point(), 1.0e-9);
++            EXPECT_FEQ_EPS(traced.get_uv(0), sampled.get_uv(0), 1.0e-6f);
++            EXPECT_FEQ_EPS(traced.get_shading_normal(), sampled.get_shading_normal(), 1.0e-9);
++            EXPECT_FEQ_EPS(traced.get_dpdu(0), sampled.get_dpdu(0), 1.0e-9);
++            EXPECT_FEQ_EPS(traced.get_dndu(0), sampled.get_dndu(0), 1.0e-9);
++            EXPECT_FEQ_EPS(sample.m_probability, sampler.evaluate_pdf(traced), 1.0e-9f);
++            EXPECT_FEQ_EPS(sample.m_probability, backward.evaluate_pdf(traced, traced), 1.0e-9f);
++        }
++        EXPECT_TRUE(successes > 0);
++    }
++
+     TEST_CASE(DiskIntersection_ParallelMissPreservesOutputsAndAcceptsNonunitRays)
+     {
+         double distance = -1.0, u = -1.0, v = -1.0;
+diff -Naur appleseed/src/appleseed/renderer/modeling/object/proceduralobject.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/object/proceduralobject.cpp
+--- appleseed/src/appleseed/renderer/modeling/object/proceduralobject.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/object/proceduralobject.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -43,4 +43,14 @@
+ {
+ }
+ 
++double ProceduralObject::get_surface_sampling_reference_area() const
++{
++    return 0.0;
++}
++
++bool ProceduralObject::sample_surface(const double[], SurfaceSample&) const
++{
++    return false;
++}
++
+ }   // namespace renderer
+diff -Naur appleseed/src/appleseed/renderer/modeling/object/proceduralobject.h APPLESEED_BLD/src/appleseed/renderer/modeling/object/proceduralobject.h
+--- appleseed/src/appleseed/renderer/modeling/object/proceduralobject.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/object/proceduralobject.h	1970-01-01 00:00:00.000000000 +0000
+@@ -39,6 +39,7 @@
+ #include "main/dllsymbol.h"
+ 
+ // Standard headers.
++#include <cstddef>
+ #include <cstdint>
+ 
+ // Forward declarations.
+@@ -79,6 +80,28 @@
+         SurfaceDerivatives          m_derivatives;
+     };
+ 
++    static constexpr size_t SurfaceSampleDimensions = 5;
++
++    struct SurfaceSample
++    {
++        foundation::Vector3d        m_point;
++        IntersectionResult          m_attributes;
++        double                      m_estimator_weight;
++    };
++
++    // Zero means this object does not provide a surface sampler. A positive,
++    // finite K defines the reference area density 1/K; it is not the actual
++    // surface area. Sampling must satisfy E[weight*f(point)]=integral(f*dA)/K,
++    // including missed attempts as zero. Errors must throw rather than miss.
++    virtual double get_surface_sampling_reference_area() const;
++
++    // Supply five independent variates in [0,1). Return false for a null draw,
++    // preserving the output. Successful attributes use the ordinary native
++    // object-space mapping, unflipped normals and material slot zero.
++    virtual bool sample_surface(
++        const double                variates[SurfaceSampleDimensions],
++        SurfaceSample&              sample) const;
++
+     // Compute the intersection between a ray expressed in object space and
+     // the surface of this object and return detailed intersection results.
+     virtual void intersect(
