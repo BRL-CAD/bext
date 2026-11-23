@@ -32,6 +32,10 @@ set(APPLESEED_ART_PATCH_FILES
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_panorama_and_image_helpers.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_cancellation.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_npr_contours.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_primary_media.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_boundary_ownership.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_physical_ray_origins.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_osl_object_data.patch"
   )
 
 set(APPLESEED_PATCH_STAGE "ART" CACHE STRING

@@ -1,0 +1,612 @@
+diff -Naur appleseed/src/appleseed/renderer/kernel/intersection/intersector.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/intersection/intersector.cpp
+--- appleseed/src/appleseed/renderer/kernel/intersection/intersector.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/intersection/intersector.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -34,8 +34,12 @@
+ #include "renderer/global/globallogger.h"
+ #include "renderer/kernel/intersection/assemblytree.h"
+ #include "renderer/kernel/intersection/tracecontext.h"
++#include "renderer/kernel/shading/shadingcontext.h"
+ #include "renderer/kernel/shading/shadingray.h"
++#include "renderer/modeling/bsdf/bsdf.h"
++#include "renderer/modeling/material/material.h"
+ #include "renderer/modeling/scene/assemblyinstance.h"
++#include "renderer/modeling/scene/objectinstance.h"
+ #include "renderer/modeling/scene/scene.h"
+ 
+ // appleseed.foundation headers.
+@@ -54,7 +58,11 @@
+ #include <cstdint>
+ #include <limits>
+ #include <memory>
++#include <set>
++#include <stdexcept>
+ #include <string>
++#include <utility>
++#include <vector>
+ 
+ using namespace foundation;
+ 
+@@ -130,6 +138,68 @@
+     const ShadingPoint*                 parent_shading_point) const
+ {
+     return do_trace(ray, shading_point, parent_shading_point, false);
++}
++
++void Intersector::initialize_media(
++    SamplingContext&                    sampling_context,
++    const ShadingContext&               shading_context,
++    ShadingRay&                         ray,
++    const ShadingPoint*                 parent_shading_point) const
++{
++    if (ray.m_medium_count != 0)
++        return;
++
++    ShadingRay query = ray;
++    if (parent_shading_point != nullptr)
++        offset_secondary_ray(query, *parent_shading_point);
++    // Outside scene bounds, no closed optical volume can contain the origin.
++    if (!m_trace_context.get_scene().get_render_data().m_bbox.contains(GVector3(query.m_org)))
++        return;
++
++    // Each closed object's first exit identifies a containing volume.
++    query.m_tmin = 0.0;
++    query.m_tmax = std::numeric_limits<double>::max();
++    query.m_has_differentials = false;
++    std::set<std::pair<UniqueID, UniqueID>> seen;
++    std::vector<ShadingPoint> boundaries;
++    for (size_t iteration = 0; iteration < shading_context.get_max_iterations(); ++iteration)
++    {
++        ShadingPoint point;
++        trace_for_initial_media(query, point);
++        if (!point.hit_surface())
++            return;
++
++        // Every owner of a shared interface needs its own classification.
++        collect_coincident_surfaces(point, boundaries);
++        for (const ShadingPoint& boundary : boundaries)
++        {
++            const ObjectInstance* object = &boundary.get_object_instance();
++            const bool first_boundary = seen.emplace(boundary.get_assembly_instance().get_uid(), object->get_uid()).second;
++            const Material* material = boundary.get_material();
++            if (first_boundary && !boundary.is_entering() && material != nullptr)
++            {
++                const Material::RenderData& data = material->get_render_data();
++                if (data.m_bsdf != nullptr)
++                {
++                    if (data.m_shader_group)
++                        shading_context.execute_osl_shading(*data.m_shader_group, boundary);
++                    const void* inputs = data.m_bsdf->evaluate_inputs(shading_context, boundary);
++                    if (data.m_bsdf->has_interior(inputs))
++                    {
++                        if (ray.m_medium_count == ShadingRay::MaxMediumCount)
++                            throw std::runtime_error("too many initial optical media");
++                        const float ior = data.m_bsdf->sample_ior(sampling_context, inputs);
++                        ShadingRay next;
++                        next.add_medium(ray, object, material, ior);
++                        ray.m_medium_count = 0;
++                        ray.copy_media_from(next);
++                    }
++                }
++            }
++        }
++        advance_past_hit(query, point);
++    }
++    throw std::runtime_error("reached intersection limit while finding initial optical media");
+ }
+ 
+ bool Intersector::trace_for_initial_media(
+@@ -157,7 +227,7 @@
+         std::numeric_limits<double>::max());
+ }
+ 
+-void Intersector::offset_shared_interface_ray(ShadingRay& ray, const ShadingPoint& hit) const
++void Intersector::offset_secondary_ray(ShadingRay& ray, const ShadingPoint& hit) const
+ {
+     // The collector admits hits on either side of the reconstructed point.
+     // Twice its allowance clears the entire group, on the outgoing side.
+diff -Naur appleseed/src/appleseed/renderer/kernel/intersection/intersector.h APPLESEED_BLD/src/appleseed/renderer/kernel/intersection/intersector.h
+--- appleseed/src/appleseed/renderer/kernel/intersection/intersector.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/intersection/intersector.h	1970-01-01 00:00:00.000000000 +0000
+@@ -34,6 +34,7 @@
+ #ifdef APPLESEED_WITH_EMBREE
+ #include "renderer/kernel/intersection/embreescene.h"
+ #endif
++#include "renderer/global/globaltypes.h"
+ #include "renderer/kernel/intersection/intersectionsettings.h"
+ #include "renderer/kernel/intersection/triangletree.h"
+ #include "renderer/kernel/shading/shadingpoint.h"
+@@ -53,6 +54,7 @@
+ // Forward declarations.
+ namespace foundation    { class StatisticsVector; }
+ namespace renderer      { class AssemblyInstance; }
++namespace renderer      { class ShadingContext; }
+ namespace renderer      { class ShadingRay; }
+ namespace renderer      { class TextureCache; }
+ namespace renderer      { class TraceContext; }
+@@ -79,6 +81,15 @@
+         ShadingPoint&                       shading_point,
+         const ShadingPoint*                 parent_shading_point = nullptr) const;
+ 
++    // Discover closed optical media at a physical path origin. An emitter
++    // surface parent selects its outgoing side. Caller arena allocations
++    // remain valid, including when a path tracer retains vertex data.
++    void initialize_media(
++        SamplingContext&                    sampling_context,
++        const ShadingContext&               shading_context,
++        ShadingRay&                         ray,
++        const ShadingPoint*                 parent_shading_point = nullptr) const;
++
+     // Trace a boundary for initial-medium discovery, omitting procedural
+     // objects whose bounds cannot contain the fixed ray origin.
+     bool trace_for_initial_media(
+@@ -95,8 +106,8 @@
+     // roundoff. The hit must use the same origin and direction as the ray.
+     void advance_past_hit(ShadingRay& ray, const ShadingPoint& hit) const;
+ 
+-    // Offset an outgoing world-space ray beyond a resolved shared interface.
+-    void offset_shared_interface_ray(ShadingRay& ray, const ShadingPoint& hit) const;
++    // Offset an outgoing world-space ray beyond a surface and any coincident hits.
++    void offset_secondary_ray(ShadingRay& ray, const ShadingPoint& hit) const;
+ 
+     // Trace a world space probe ray through the scene.
+     bool trace_probe(
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/pathtracer.h APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/pathtracer.h
+--- appleseed/src/appleseed/renderer/kernel/lighting/pathtracer.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/pathtracer.h	1970-01-01 00:00:00.000000000 +0000
+@@ -223,8 +223,11 @@
+     const ShadingPoint*         parent_shading_point,
+     const bool                  clear_arena)
+ {
++    ShadingRay initialized_ray = ray;
++    shading_context.get_intersector().initialize_media(
++        sampling_context, shading_context, initialized_ray, parent_shading_point);
+     ShadingPoint shading_point;
+-    shading_context.get_intersector().trace(ray, shading_point, parent_shading_point);
++    shading_context.get_intersector().trace(initialized_ray, shading_point, parent_shading_point);
+ 
+     return
+         trace(
+@@ -586,10 +589,13 @@
+         }
+ 
+         medium_start = vertex.get_point();
+-        const bool shared_interface =
+-            vertex.m_shading_point->get_optical_interface() == ShadingPoint::OpticalInterface::Surface;
+-        if (shared_interface)
+-            shading_context.get_intersector().offset_shared_interface_ray(next_ray, *vertex.m_shading_point);
++        // Every object at a procedural contact must see the same origin.
++        // A parent-only offset can re-hit a touching neighbor after a bounce.
++        const bool offset_in_world_space =
++            vertex.m_shading_point->get_optical_interface() == ShadingPoint::OpticalInterface::Surface ||
++            vertex.m_shading_point->get_primitive_type() == ShadingPoint::PrimitiveType::PrimitiveProceduralSurface;
++        if (offset_in_world_space)
++            shading_context.get_intersector().offset_secondary_ray(next_ray, *vertex.m_shading_point);
+ 
+         const ShadingRay::Medium* current_medium = next_ray.get_current_medium();
+         if (current_medium != nullptr &&
+@@ -610,7 +616,7 @@
+             shading_context.get_intersector().trace(
+                 next_ray,
+                 *next_shading_point,
+-                shared_interface ? nullptr : vertex.m_shading_point);
++                offset_in_world_space ? nullptr : vertex.m_shading_point);
+         }
+ 
+         // Update the pointers to the shading points.
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/genericsamplerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -47,12 +47,8 @@
+ #include "renderer/kernel/shading/shadingresult.h"
+ #include "renderer/kernel/texturing/oiiotexturesystem.h"
+ #include "renderer/kernel/texturing/texturecache.h"
+-#include "renderer/modeling/bsdf/bsdf.h"
+ #include "renderer/modeling/camera/camera.h"
+ #include "renderer/modeling/frame/frame.h"
+-#include "renderer/modeling/material/material.h"
+-#include "renderer/modeling/scene/assemblyinstance.h"
+-#include "renderer/modeling/scene/objectinstance.h"
+ #include "renderer/modeling/scene/scene.h"
+ 
+ // appleseed.foundation headers.
+@@ -69,11 +65,8 @@
+ #include <cstddef>
+ #include <cstdint>
+ #include <limits>
+-#include <set>
+ #include <stdexcept>
+ #include <string>
+-#include <utility>
+-#include <vector>
+ 
+ // Forward declarations.
+ namespace renderer  { class PixelContext; }
+@@ -195,7 +188,7 @@
+                   return;
+                 }
+ 
+-            initialize_media(sampling_context, primary_ray);
++            m_intersector.initialize_media(sampling_context, m_shading_context, primary_ray);
+ 
+             ShadingPoint shading_points[2];
+             size_t shading_point_index = 0;
+@@ -333,64 +326,6 @@
+         }
+ 
+       private:
+-        void initialize_media(SamplingContext& sampling_context, ShadingRay& primary_ray)
+-        {
+-            // Outside the scene bounds, a camera cannot be in a closed optical volume.
+-            if (primary_ray.m_medium_count != 0 ||
+-                !m_scene.get_render_data().m_bbox.contains(GVector3(primary_ray.m_org)))
+-                return;
+-
+-            // The first boundary of each consistently oriented closed object
+-            // is an exit exactly when the ray origin is inside that object.
+-            ShadingRay query = primary_ray;
+-            query.m_tmin = 0.0;
+-            query.m_tmax = std::numeric_limits<double>::max();
+-            query.m_has_differentials = false;
+-            std::set<std::pair<UniqueID, UniqueID>> seen;
+-            std::vector<ShadingPoint> boundaries;
+-            for (size_t iteration = 0; iteration < m_params.m_max_iterations; ++iteration)
+-            {
+-                ShadingPoint point;
+-                m_intersector.trace_for_initial_media(query, point);
+-                if (!point.hit_surface())
+-                    return;
+-
+-                // Every object at a shared interface needs its own first-boundary
+-                // classification before advancing beyond the coincident group.
+-                m_intersector.collect_coincident_surfaces(point, boundaries);
+-                for (const ShadingPoint& boundary : boundaries)
+-                {
+-                    const ObjectInstance* object = &boundary.get_object_instance();
+-                    const bool first_boundary = seen.emplace(boundary.get_assembly_instance().get_uid(), object->get_uid()).second;
+-                    const Material* material = boundary.get_material();
+-                    if (first_boundary && !boundary.is_entering() && material != nullptr)
+-                    {
+-                        const Material::RenderData& data = material->get_render_data();
+-                        if (data.m_bsdf != nullptr)
+-                        {
+-                            m_arena.clear();
+-                            if (data.m_shader_group)
+-                                m_shading_context.execute_osl_shading(*data.m_shader_group, boundary);
+-                            const void* inputs = data.m_bsdf->evaluate_inputs(m_shading_context, boundary);
+-                            if (data.m_bsdf->has_interior(inputs))
+-                            {
+-                                if (primary_ray.m_medium_count == ShadingRay::MaxMediumCount)
+-                                    throw std::runtime_error("too many initial optical media");
+-                                const float ior = data.m_bsdf->sample_ior(sampling_context, inputs);
+-                                ShadingRay next;
+-                                next.add_medium(primary_ray, object, material, ior);
+-                                primary_ray.m_medium_count = 0;
+-                                primary_ray.copy_media_from(next);
+-                            }
+-                        }
+-                    }
+-                }
+-
+-                m_intersector.advance_past_hit(query, point);
+-            }
+-            throw std::runtime_error("reached intersection limit while finding initial optical media");
+-        }
+-
+         struct Parameters
+         {
+             const float     m_transparency_threshold;
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_glassbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_glassbsdf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_glassbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_glassbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -280,9 +280,114 @@
+             ASSERT_TRUE(radiance_pdf > 0.0f);
+             EXPECT_FEQ_EPS(radiance_pdf, importance_pdf, 1.0e-6f);
+             EXPECT_FEQ_EPS(square(ni / nt), radiance.m_glossy[0] / importance.m_glossy[0], 1.0e-6f);
++        }
++    }
++
++    TEST_CASE_F(RoughGlass_RejectsBackfacingTransmissionMicrofacets, Fixture)
++    {
++        values.m_ior = 1.5f;
++        values.m_precomputed.m_outside_ior = 1.0f;
++        values.m_precomputed.m_reflection_color.set(1.0f);
++        values.m_precomputed.m_reflection_weight = 1.0f;
++        // Both directions lean toward +X. Their generalized half vector
++        // faces the wrong side of one ray, so no transmitting facet exists.
++        for (const float roughness : {0.25f, 0.5f, 0.8f})
++        {
++            values.m_roughness = roughness;
++            for (const bool backfacing : {false, true})
++            {
++                values.m_precomputed.m_backfacing = backfacing;
++                for (const float side : {-1.0f, 1.0f})
++                {
++                    const Vector3f outgoing = normalize(Vector3f(0.9f, side * 0.4f, 0.0f));
++                    const Vector3f incoming = normalize(Vector3f(0.98f, -side * 0.2f, 0.0f));
++                    for (const bool adjoint : {false, true})
++                    {
++                        DirectShadingComponents value;
++                        EXPECT_EQ(0.0f, bsdf->evaluate(&values, adjoint, false, geometry,
++                            outgoing, incoming, ScatteringMode::Glossy, value));
++                        EXPECT_EQ(0.0f, value.m_beauty[0]);
++                        EXPECT_EQ(0.0f, bsdf->evaluate_pdf(&values, adjoint, geometry,
++                            outgoing, incoming, ScatteringMode::Glossy));
++                    }
++                }
++            }
+         }
+     }
+ 
++    TEST_CASE_F(RoughGlass_EvaluatesNormalTransmissionOnBothSides, Fixture)
++    {
++        values.m_ior = 1.5f;
++        values.m_precomputed.m_outside_ior = 1.0f;
++        for (const bool backfacing : {false, true})
++        {
++            values.m_precomputed.m_backfacing = backfacing;
++            for (const float side : {-1.0f, 1.0f})
++            {
++                const Vector3f outgoing(0.0f, side, 0.0f);
++                const Vector3f incoming = -outgoing;
++                for (const bool adjoint : {false, true})
++                {
++                    DirectShadingComponents value;
++                    const float pdf = bsdf->evaluate(&values, adjoint, false, geometry,
++                        outgoing, incoming, ScatteringMode::Glossy, value);
++                    EXPECT_TRUE(value.m_beauty[0] > 0.0f);
++                    EXPECT_TRUE(pdf > 0.0f);
++                    EXPECT_FEQ_EPS(pdf, bsdf->evaluate_pdf(&values, adjoint, geometry,
++                        outgoing, incoming, ScatteringMode::Glossy), 1.0e-6f);
++                }
++            }
++        }
++    }
++
++    TEST_CASE_F(RoughGlass_SamplingAndEvaluationAgree, RefractionFixture)
++    {
++        const size_t SampleCount = 256;
++        const float RelativeTolerance = 0.002f;
++        values.m_precomputed.m_reflection_color.set(1.0f);
++        values.m_precomputed.m_reflection_weight = 1.0f;
++        for (const float roughness : {0.3f, 0.8f})
++        {
++            values.m_roughness = roughness;
++            for (const float anisotropy : {-0.6f, 0.0f, 0.6f})
++            {
++                values.m_anisotropy = anisotropy;
++                for (const bool backfacing : {false, true})
++                {
++                    set_backfacing(backfacing);
++                    for (const float cosine : {0.4f, 1.0f})
++                    {
++                        const Vector3f outgoing(std::sqrt(1.0f - cosine * cosine),
++                            backfacing ? -cosine : cosine, 0.0f);
++                        for (const bool adjoint : {false, true})
++                        {
++                            size_t accepted = 0;
++                            for (size_t i = 0; i < SampleCount; ++i)
++                            {
++                                BSDFSample sample;
++                                bsdf->sample(sampling_context, &values, adjoint, false, geometry,
++                                    Dual3f(outgoing), ScatteringMode::Glossy, sample);
++                                if (sample.get_mode() == ScatteringMode::None)
++                                    continue;
++                                ++accepted;
++                                const Vector3f incoming = sample.m_incoming.get_value();
++                                DirectShadingComponents value;
++                                const float pdf = bsdf->evaluate(&values, adjoint, false, geometry,
++                                    outgoing, incoming, ScatteringMode::Glossy, value);
++                                ASSERT_TRUE(pdf > 0.0f);
++                                EXPECT_FEQ_EPS(1.0f, pdf / sample.get_probability(), RelativeTolerance);
++                                EXPECT_FEQ_EPS(1.0f, value.m_beauty[0] / sample.m_value.m_beauty[0], RelativeTolerance);
++                                EXPECT_FEQ_EPS(pdf, bsdf->evaluate_pdf(&values, adjoint, geometry,
++                                    outgoing, incoming, ScatteringMode::Glossy), 1.0e-6f);
++                            }
++                            EXPECT_TRUE(accepted > 0);
++                        }
++                    }
++                }
++            }
++        }
++    }
++
+     TEST_CASE_F(SmoothGlass_TotalInternalReflectionStaysInside, RefractionFixture)
+     {
+         set_backfacing(true);
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_tracer.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_tracer.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_tracer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_tracer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -49,6 +49,7 @@
+ #include "renderer/modeling/frame/frame.h"
+ #include "renderer/modeling/material/genericmaterial.h"
+ #include "renderer/modeling/object/meshobject.h"
++#include "renderer/modeling/object/sphereobject.h"
+ #include "renderer/modeling/object/triangle.h"
+ #include "renderer/modeling/project/project.h"
+ #include "renderer/modeling/scene/assembly.h"
+@@ -80,6 +81,7 @@
+ #include "foundation/platform/_endoiioheaders.h"
+ 
+ // Standard headers.
++#include <array>
+ #include <cmath>
+ #include <memory>
+ 
+@@ -376,7 +378,136 @@
+         EXPECT_EQ(1, visitor.m_hits);
+         EXPECT_FEQ(Spectrum(std::pow(0.25f, 8.0f / 20.0f)), visitor.m_throughput);
+     }
++
++    struct InitialMediaScene
++      : public SceneBase
++    {
++        static constexpr double Radius = 2.0;
++
++        InitialMediaScene()
++        {
++            m_assembly->bsdfs().insert(GlassBSDFFactory().create(
++                "glass", ParamArray()
++                    .insert("surface_transmittance", "1.0")
++                    .insert("ior", "1.0")
++                    .insert("volume_parameterization", "transmittance")
++                    .insert("volume_transmittance", "0.25")
++                    .insert("volume_transmittance_distance", Radius)));
++            m_assembly->materials().insert(GenericMaterialFactory().create(
++                "medium", ParamArray().insert("bsdf", "glass")));
++            m_assembly->objects().insert(SphereObjectFactory().create(
++                "sphere", ParamArray()));
++            const StringDictionary mapping = StringDictionary().insert("default", "medium");
++            m_assembly->object_instances().insert(ObjectInstanceFactory::create(
++                "sphere_instance", ParamArray(), "sphere",
++                Transformd(Matrix4d::make_scaling(Vector3d(Radius))), mapping, mapping));
++            create_plane_object_instance("terminal", Vector3d(1.0, 0.0, 0.0), "opaque_material");
++        }
+ 
++        static ShadingRay origin_ray()
++        {
++            return ShadingRay(Vector3d(0.0), Vector3d(1.0, 0.0, 0.0),
++                ShadingRay::Time::create_with_normalized_time(0.0f, 0.0f, 1.0f),
++                VisibilityFlags::LightRay, 0);
++        }
++    };
++
++    struct InitialMediaFixture
++      : public Fixture<FixtureParams<InitialMediaScene, false>>
++    {
++        template <bool Adjoint>
++        AbsorptionPathVisitor trace_from_origin()
++        {
++            Xoroshiro128plus rng;
++            SamplingContext sampling_context(rng, SamplingContext::RNGMode);
++            AbsorptionPathVisitor visitor;
++            AbsorptionVolumeVisitor volume_visitor;
++            PathTracer<AbsorptionPathVisitor, AbsorptionVolumeVisitor, Adjoint> tracer(
++                visitor, volume_visitor, 100, 0, 0, 0, 0, 0, false);
++            tracer.trace(sampling_context, m_shading_context, origin_ray());
++            return visitor;
++        }
++    };
++
++    TEST_CASE_F(InitialMedia_PathTraceAttenuatesUnseededOrigin, InitialMediaFixture)
++    {
++        const AbsorptionPathVisitor visitor = trace_from_origin<false>();
++        EXPECT_EQ(1, visitor.m_hits);
++        EXPECT_FEQ(Spectrum(0.5f), visitor.m_throughput);
++    }
++
++    TEST_CASE_F(InitialMedia_AdjointPathAttenuatesUnseededOrigin, InitialMediaFixture)
++    {
++        const AbsorptionPathVisitor visitor = trace_from_origin<true>();
++        EXPECT_EQ(1, visitor.m_hits);
++        EXPECT_FEQ(Spectrum(0.5f), visitor.m_throughput);
++    }
++
++    TEST_CASE_F(InitialMedia_PreservesCallerArenaAndIsIdempotent, InitialMediaFixture)
++    {
++        using RetainedData = std::array<unsigned char, 64>;
++        const unsigned char Sentinel = 0xa5;
++        RetainedData* retained = m_arena.allocate<RetainedData>();
++        retained->fill(Sentinel);
++        Xoroshiro128plus rng;
++        SamplingContext sampling_context(rng, SamplingContext::RNGMode);
++        ShadingRay ray = origin_ray();
++        m_intersector.initialize_media(sampling_context, m_shading_context, ray);
++        m_intersector.initialize_media(sampling_context, m_shading_context, ray);
++        ASSERT_EQ(1, ray.m_medium_count);
++        EXPECT_EQ(m_assembly->object_instances().get_by_name("sphere_instance"), ray.get_current_medium()->m_object_instance);
++        for (const unsigned char value : *retained)
++            EXPECT_EQ(Sentinel, value);
++    }
++
++    TEST_CASE_F(InitialMedia_PreservesSeededMedia, InitialMediaFixture)
++    {
++        Xoroshiro128plus rng;
++        SamplingContext sampling_context(rng, SamplingContext::RNGMode);
++        ShadingRay ray = origin_ray();
++        const ShadingRay source(ray);
++        const float SeededIor = 1.25f;
++        ray.add_medium(source, m_assembly->object_instances().get_by_name("sphere_instance"),
++            m_assembly->materials().get_by_name("medium"), SeededIor);
++        m_intersector.initialize_media(sampling_context, m_shading_context, ray);
++        ASSERT_EQ(1, ray.m_medium_count);
++        EXPECT_FEQ(SeededIor, ray.get_current_medium()->m_ior);
++    }
++
++    TEST_CASE_F(InitialMedia_OutsideVolumeInsideBoundsStaysInAir, InitialMediaFixture)
++    {
++        Xoroshiro128plus rng;
++        SamplingContext sampling_context(rng, SamplingContext::RNGMode);
++        ShadingRay ray = origin_ray();
++        ray.m_org = Vector3d(1.5, 1.5, 0.0);
++        ray.m_dir = Vector3d(-1.0, 0.0, 0.0);
++        ASSERT_TRUE(m_scene.get_render_data().m_bbox.contains(GVector3(ray.m_org)));
++        m_intersector.initialize_media(sampling_context, m_shading_context, ray);
++        EXPECT_EQ(0, ray.m_medium_count);
++    }
++
++    TEST_CASE_F(InitialMedia_EmitterParentSelectsOutgoingSide, InitialMediaFixture)
++    {
++        Xoroshiro128plus rng;
++        SamplingContext sampling_context(rng, SamplingContext::RNGMode);
++        ShadingRay incoming = origin_ray();
++        incoming.m_org = Vector3d(3.0, 0.0, 0.0);
++        incoming.m_dir = Vector3d(-1.0, 0.0, 0.0);
++        ShadingPoint emitter;
++        m_intersector.trace(incoming, emitter);
++        ASSERT_TRUE(emitter.hit_surface());
++        ASSERT_EQ(m_assembly->object_instances().get_by_name("sphere_instance"), &emitter.get_object_instance());
++        for (const bool inward : {false, true})
++        {
++            ShadingRay ray = origin_ray();
++            ray.m_org = emitter.get_point();
++            ray.m_dir = Vector3d(inward ? -1.0 : 1.0, 0.0, 0.0);
++            m_intersector.initialize_media(sampling_context, m_shading_context, ray, &emitter);
++            EXPECT_EQ(inward ? 1 : 0, ray.m_medium_count);
++            EXPECT_EQ(emitter.get_point(), ray.m_org);
++        }
++    }
++
+     struct EmptyScene
+       : public SceneBase
+     {
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -524,6 +524,11 @@
+             {
+                 // Refraction.
+                 const Vector3f m = half_refraction_vector(wo, wi, eta);
++                if (!valid_refraction_microfacet(wo, wi, m))
++                {
++                    value.set(0.0f);
++                    return 0.0f;
++                }
+                 const float cos_wom = dot(wo, m);
+                 const float F = fresnel_reflectance(cos_wom, 1.0f / eta);
+ 
+@@ -620,6 +625,8 @@
+             {
+                 // Refraction.
+                 const Vector3f m = half_refraction_vector(wo, wi, eta);
++                if (!valid_refraction_microfacet(wo, wi, m))
++                    return 0.0f;
+                 const float cos_wom = dot(wo, m);
+                 const float F = fresnel_reflectance(cos_wom, rcp_eta);
+ 
+@@ -770,6 +777,16 @@
+             return h.y < 0.0f ? -h : h;
+         }
+ 
++        static bool valid_refraction_microfacet(
++            const Vector3f&             wo,
++            const Vector3f&             wi,
++            const Vector3f&             m)
++        {
++            // Refraction must cross the facet as well as the macrosurface.
++            // Other half vectors cannot be generated by the Snell sampler.
++            return dot(wo, m) * wo.y > 0.0f && dot(wi, m) * wi.y > 0.0f;
++        }
++
+         static void evaluate_refraction(
+             const float                 eta,
+             const Spectrum&             refraction_color,

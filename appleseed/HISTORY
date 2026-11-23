@@ -1780,6 +1780,22 @@ Message:
     Test hits, misses, independent color alpha, and invariance to origin
     shifts using procedural geometry.
 
+Commit: f2c53675e70103124031e779f40c2b8380c7fbd5
+Patches: appleseed_primary_media.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T02:44:09Z
+Parents: 8fd53e89d11e31cedfbecaf4c823b9725b71f1d2
+Message:
+    Attenuate incoming paths before surface contributions
+
+    Apply medium absorption before the surface visitor, Russian roulette,
+    and bounce termination. Evaluate the medium before the surface shader
+    so absorption cannot leave its closures active for the hit surface.
+
+    Initialize the segment at the incoming ray origin, including explicitly
+    seeded media, and preserve its extent through hidden boundaries. Test
+    terminal hits, bounce limits, adjoint transport, and displaced surfaces.
+
 Commit: 152ac74a2df53ff4d54d56857af1b495a3f486e9
 Patches: appleseed_npr_contours.patch
 Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
@@ -1805,6 +1821,132 @@ Message:
     coordinates and terminate clearly if the intersection budget is
     exhausted.
 
+Commit: 956357a3e2f007a6d3b4698b9eb0e3e4548b77fb
+Patches: appleseed_primary_media.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:53Z
+Parents: 2ffb81acdba5d89640a9c6b6ef37d87665a0568c
+Message:
+    Initialize optical media at primary ray origins
+
+    Discover containing closed optical interiors before shading the first
+    surface. Use procedural bounds to omit unrelated geometry, preserve
+    medium priorities, and reject capacity exhaustion. Share robust ray
+    advancement with NPR contours and check closure and transformed-query
+    behavior.
+
+Commit: 60b92e8200d63399bda813c56b18635a037edf02
+Patches: appleseed_primary_media.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:53Z
+Parents: 956357a3e2f007a6d3b4698b9eb0e3e4548b77fb
+Message:
+    Correct glass radiance and importance transport scaling
+
+    Apply the squared optical index ratio to camera-path radiance and use
+    the adjoint form for importance transport. Correct smooth and rough
+    glass consistently and check both sides against Fresnel and optical-
+    measure references.
+
+Commit: 443270bb23d6833303646dbbb1519d3ed0c7b899
+Patches: appleseed_primary_media.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:54Z
+Parents: 60b92e8200d63399bda813c56b18635a037edf02
+Message:
+    Keep opaque surfaces visible inside higher-priority glass
+
+    Apply priority displacement only to BSDFs with optical interiors.
+    Preserve ordinary diffuse and emissive surfaces inside glass.
+
+Commit: e50c085bcd7f75cd0c7697b5dde9cb2db377900f
+Patches: appleseed_boundary_ownership.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:54Z
+Parents: 443270bb23d6833303646dbbb1519d3ed0c7b899
+Message:
+    Discover optical media across coincident procedural boundaries
+
+    Collect every procedural boundary at the first hit before advancing
+    the discovery ray. Preserve each object identity so a filled shell
+    does not hide its filling during camera-medium initialization.
+
+    Share the existing hit-reconstruction allowance and test transformed
+    entries, exits, nearby distinct surfaces, and empty results.
+
+Commit: deae1819ecc4bc9a8fc62de89994c31685ce6257
+Patches: appleseed_boundary_ownership.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:54Z
+Parents: e50c085bcd7f75cd0c7697b5dde9cb2db377900f
+Message:
+    Retain resolved optical state in shading points
+
+    Provide evaluated transmission queries and inline interface data. Keep
+    resolved optical state across shading point copies and use its exterior
+    index in glass inputs. Test state lifetime and transmission
+    classification.
+
+Commit: 332d4947c0e210d4d44f737b13f428b3c2cfe8c1
+Patches: appleseed_boundary_ownership.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:54Z
+Parents: deae1819ecc4bc9a8fc62de89994c31685ce6257
+Message:
+    Resolve optical boundary ownership before shading
+
+    Classify matching procedural boundaries as one optical event. Use the
+    incident and transmitted medium sets, preserving incoming state on
+    reflection and physical segment origins for absorption.
+
+    Filter displaced boundaries before primary shading and geometry passes,
+    retain native mesh filtering, and fail on primary traversal exhaustion.
+    Reject unsupported shared coverage and ambiguous visible ownership.
+
+Commit: 6cf35b54c018ae9826798fd7b93c4163b55310e4
+Patches: appleseed_physical_ray_origins.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:55Z
+Parents: 332d4947c0e210d4d44f737b13f428b3c2cfe8c1
+Message:
+    Offset procedural bounces consistently at touching surfaces
+
+    Use one world-space outgoing origin for physical procedural bounces.
+    Offsetting only the previous object can re-hit a touching neighbor,
+    adding emission or losing reflected environment light at curved
+    contacts.
+
+    Keep coverage traversal separate so transparent layers remain visible.
+
+Commit: 90e5985f83a53e930e0e37d83b34505ada7972b7
+Patches: appleseed_physical_ray_origins.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T15:01:55Z
+Parents: 6cf35b54c018ae9826798fd7b93c4163b55310e4
+Message:
+    Reject backfacing rough-glass transmission microfacets
+
+    Reject generalized half vectors that put either ray on the wrong side of
+    the transmitting facet. Return zero BSDF value and sampling density for
+    directions that the Snell sampler cannot generate.
+
+    Qualify rejection, valid transmission and sampling/evaluation agreement
+    across roughness, anisotropy, both sides and optical measures.
+
+Commit: e0b82328cc065af035dc2fbae0ecf9e1b3c97d8b
+Patches: appleseed_physical_ray_origins.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T17:48:47Z
+Parents: 90e5985f83a53e930e0e37d83b34505ada7972b7
+Message:
+    Discover optical media at physical path origins
+
+    Share initial-medium discovery between primary camera rays and physical
+    path origins. Include absorption before a photon emitter first exits its
+    containing volume, preserve retained caller data, and classify the
+    outgoing side of a surface parent. Add focused radiance and adjoint
+    transport tests.
+
 Commit: c25ce97173473cc2cf243c361390eed22c442575
 Patches: appleseed_shader_resources.patch
 Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
@@ -1829,6 +1971,33 @@ Message:
     outputs across configuration, and install the complete shader library
     from the build tree. Remove the empty sandbox-preparation target and its
     disabled command.
+
+Commit: 0db6e69964c75c7fcfcfcbbc40b12c9429345104
+Patches: appleseed_osl_object_data.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T19:40:47Z
+Parents: d701b91608f66f7d8eb9907daa79166f451e04a5
+Message:
+    Keep OSL geometry query messages current
+
+    Replace hit state on every trace and reject surface messages after a
+    miss without changing destinations. Reset trace messages for each shader
+    execution, including repeated executions on a shading point. Exercise
+    hit and miss transitions, range limits, typed surface messages,
+    derivatives, and execution lifetime through native tests.
+
+Commit: a372d199afd120e0813b0dd21cd6ec1c86abca1d
+Patches: appleseed_osl_object_data.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T19:40:48Z
+Parents: 0db6e69964c75c7fcfcfcbbc40b12c9429345104
+Message:
+    Support typed object data in OSL shaders
+
+    Expose immutable uniform object data with exact scalar and array types.
+    Use modern OSL string hashes at execution and strings at optimization.
+    Keep scene queries available without a surface, guard object queries,
+    and identify orthographic cameras. Add native attribute tests.
 
 Commit: 8de1a00ffcebd8398a23265a17db5c589fddbe5a
 Patches: appleseed_cancellation.patch

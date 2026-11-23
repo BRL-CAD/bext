@@ -62,3 +62,11 @@ appleseed_panorama_and_image_helpers.patch: Correct panorama filtering, depth
 appleseed_cancellation.patch: Honor cancellation during samples and job waits
 appleseed_npr_contours.patch: Support orthographic contours through
   translucent covers
+appleseed_primary_media.patch: Initialize media and correct glass transport
+  scaling
+appleseed_boundary_ownership.patch: Resolve coincident optical state before
+  shading
+appleseed_physical_ray_origins.patch: Preserve physical origins through
+  procedural boundaries
+appleseed_osl_object_data.patch: Keep trace messages current and expose typed
+  object data

@@ -1,0 +1,772 @@
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -70,6 +70,7 @@
+ 
+     OIIO::ustring g_empty_ustr;
+ 
++    OIIO::ustring g_orthographic_ustr("orthographic");
+     OIIO::ustring g_perspective_ustr("perspective");
+     OIIO::ustring g_spherical_ustr("spherical");
+     OIIO::ustring g_unknown_proj_ustr("unknown");
+@@ -91,6 +92,16 @@
+     OIIO::ustring g_screen_ustr("screen");
+     OIIO::ustring g_shader_ustr("shader");
+     OIIO::ustring g_world_ustr("world");
++
++    bool get_name_attribute(const Entity& entity, const OIIO::TypeDesc type, void* value)
++    {
++        if (type != OIIO::TypeString)
++            return false;
++
++        const auto* name = static_cast<const OIIO::ustring*>(entity.get_name_as_ustring());
++        *static_cast<OIIO::ustringhash*>(value) = OIIO::ustringhash(*name);
++        return true;
++    }
+ }
+ 
+ RendererServices::RendererServices(
+@@ -104,39 +115,39 @@
+   , m_project_rooted_textures(project_rooted_textures)
+ {
+     // Set up attribute getters.
+-    m_global_attr_getters[OIIO::ustringhash("object:object_instance_id")] = &RendererServices::get_attr_object_instance_id;
+-    m_global_attr_getters[OIIO::ustringhash("object:object_instance_index")] = &RendererServices::get_attr_object_instance_index;
+-    m_global_attr_getters[OIIO::ustringhash("object:assembly_instance_id")] = &RendererServices::get_attr_assembly_instance_id;
+-    m_global_attr_getters[OIIO::ustringhash("object:assembly_name")] = &RendererServices::get_attr_assembly_name;
+-    m_global_attr_getters[OIIO::ustringhash("object:assembly_instance_name")] = &RendererServices::get_attr_assembly_instance_name;
+-    m_global_attr_getters[OIIO::ustringhash("object:object_instance_name")] = &RendererServices::get_attr_object_instance_name;
+-    m_global_attr_getters[OIIO::ustringhash("object:object_name")] = &RendererServices::get_attr_object_name;
++    m_global_attr_getters[OIIO::ustringhash("object:object_instance_id")] = {&RendererServices::get_attr_object_instance_id, true};
++    m_global_attr_getters[OIIO::ustringhash("object:object_instance_index")] = {&RendererServices::get_attr_object_instance_index, true};
++    m_global_attr_getters[OIIO::ustringhash("object:assembly_instance_id")] = {&RendererServices::get_attr_assembly_instance_id, true};
++    m_global_attr_getters[OIIO::ustringhash("object:assembly_name")] = {&RendererServices::get_attr_assembly_name, true};
++    m_global_attr_getters[OIIO::ustringhash("object:assembly_instance_name")] = {&RendererServices::get_attr_assembly_instance_name, true};
++    m_global_attr_getters[OIIO::ustringhash("object:object_instance_name")] = {&RendererServices::get_attr_object_instance_name, true};
++    m_global_attr_getters[OIIO::ustringhash("object:object_name")] = {&RendererServices::get_attr_object_name, true};
+ 
+-    m_global_attr_getters[OIIO::ustringhash("camera:resolution")] = &RendererServices::get_attr_camera_resolution;
+-    m_global_attr_getters[OIIO::ustringhash("camera:projection")] = &RendererServices::get_attr_camera_projection;
+-    m_global_attr_getters[OIIO::ustringhash("camera:pixelaspect")] = &RendererServices::get_attr_camera_pixelaspect;
+-    m_global_attr_getters[OIIO::ustringhash("camera:screen_window")] = &RendererServices::get_attr_camera_screen_window;
+-    m_global_attr_getters[OIIO::ustringhash("camera:fov")] = &RendererServices::get_attr_camera_fov;
+-    m_global_attr_getters[OIIO::ustringhash("camera:clip")] = &RendererServices::get_attr_camera_clip;
+-    m_global_attr_getters[OIIO::ustringhash("camera:clip_near")] = &RendererServices::get_attr_camera_clip_near;
+-    m_global_attr_getters[OIIO::ustringhash("camera:clip_far")] = &RendererServices::get_attr_camera_clip_far;
+-    m_global_attr_getters[OIIO::ustringhash("camera:shutter")] = &RendererServices::get_attr_camera_shutter;
+-    m_global_attr_getters[OIIO::ustringhash("camera:shutter_open")] = &RendererServices::get_attr_camera_shutter_open;
+-    m_global_attr_getters[OIIO::ustringhash("camera:shutter_close")] = &RendererServices::get_attr_camera_shutter_close;
++    m_global_attr_getters[OIIO::ustringhash("camera:resolution")] = {&RendererServices::get_attr_camera_resolution, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:projection")] = {&RendererServices::get_attr_camera_projection, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:pixelaspect")] = {&RendererServices::get_attr_camera_pixelaspect, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:screen_window")] = {&RendererServices::get_attr_camera_screen_window, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:fov")] = {&RendererServices::get_attr_camera_fov, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:clip")] = {&RendererServices::get_attr_camera_clip, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:clip_near")] = {&RendererServices::get_attr_camera_clip_near, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:clip_far")] = {&RendererServices::get_attr_camera_clip_far, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:shutter")] = {&RendererServices::get_attr_camera_shutter, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:shutter_open")] = {&RendererServices::get_attr_camera_shutter_open, false};
++    m_global_attr_getters[OIIO::ustringhash("camera:shutter_close")] = {&RendererServices::get_attr_camera_shutter_close, false};
+ 
+-    m_global_attr_getters[OIIO::ustringhash("path:ray_depth")] = &RendererServices::get_attr_ray_depth;
+-    m_global_attr_getters[OIIO::ustringhash("path:ray_length")] = &RendererServices::get_attr_ray_length;
+-    m_global_attr_getters[OIIO::ustringhash("path:ray_ior")] = &RendererServices::get_attr_ray_ior;
+-    m_global_attr_getters[OIIO::ustringhash("path:ray_has_differentials")] = &RendererServices::get_attr_ray_has_differentials;
++    m_global_attr_getters[OIIO::ustringhash("path:ray_depth")] = {&RendererServices::get_attr_ray_depth, true};
++    m_global_attr_getters[OIIO::ustringhash("path:ray_length")] = {&RendererServices::get_attr_ray_length, true};
++    m_global_attr_getters[OIIO::ustringhash("path:ray_ior")] = {&RendererServices::get_attr_ray_ior, true};
++    m_global_attr_getters[OIIO::ustringhash("path:ray_has_differentials")] = {&RendererServices::get_attr_ray_has_differentials, true};
+ 
+-    m_global_attr_getters[OIIO::ustringhash("surface_shader:diffuse")] = &RendererServices::get_attr_surface_shader_diffuse;
+-    m_global_attr_getters[OIIO::ustringhash("surface_shader:glossy")] = &RendererServices::get_attr_surface_shader_glossy;
+-    m_global_attr_getters[OIIO::ustringhash("surface_shader:emission")] = &RendererServices::get_attr_surface_shader_emission;
++    m_global_attr_getters[OIIO::ustringhash("surface_shader:diffuse")] = {&RendererServices::get_attr_surface_shader_diffuse, true};
++    m_global_attr_getters[OIIO::ustringhash("surface_shader:glossy")] = {&RendererServices::get_attr_surface_shader_glossy, true};
++    m_global_attr_getters[OIIO::ustringhash("surface_shader:emission")] = {&RendererServices::get_attr_surface_shader_emission, true};
+ 
+-    m_global_attr_getters[OIIO::ustringhash("appleseed:version_major")] = &RendererServices::get_attr_appleseed_version_major;
+-    m_global_attr_getters[OIIO::ustringhash("appleseed:version_minor")] = &RendererServices::get_attr_appleseed_version_minor;
+-    m_global_attr_getters[OIIO::ustringhash("appleseed:version_patch")] = &RendererServices::get_attr_appleseed_version_patch;
+-    m_global_attr_getters[OIIO::ustringhash("appleseed:version")] = &RendererServices::get_attr_appleseed_version;
++    m_global_attr_getters[OIIO::ustringhash("appleseed:version_major")] = {&RendererServices::get_attr_appleseed_version_major, false};
++    m_global_attr_getters[OIIO::ustringhash("appleseed:version_minor")] = {&RendererServices::get_attr_appleseed_version_minor, false};
++    m_global_attr_getters[OIIO::ustringhash("appleseed:version_patch")] = {&RendererServices::get_attr_appleseed_version_patch, false};
++    m_global_attr_getters[OIIO::ustringhash("appleseed:version")] = {&RendererServices::get_attr_appleseed_version, false};
+ 
+     // Set up user data getters.
+     m_global_user_data_getters[OIIO::ustringhash("Tn")] = &RendererServices::get_user_data_tn;
+@@ -154,6 +165,7 @@
+     if (m_camera)
+     {
+         m_cam_projection_str =
++            strcmp(m_camera->get_model(), "orthographic_camera") == 0 ? g_orthographic_ustr :
+             strcmp(m_camera->get_model(), "pinhole_camera") == 0 ? g_perspective_ustr :
+             strcmp(m_camera->get_model(), "thinlens_camera") == 0 ? g_perspective_ustr :
+             strcmp(m_camera->get_model(), "spherical_camera") == 0 ? g_spherical_ustr :
+@@ -588,10 +600,10 @@
+         reinterpret_cast<ShadingPoint::OSLTraceData*>(sg->tracedata);
+ 
+     trace_data->m_traced = true;
++    trace_data->m_hit = shading_point.hit_surface();
+ 
+-    if (shading_point.hit_surface())
++    if (trace_data->m_hit)
+     {
+-        trace_data->m_hit = true;
+         trace_data->m_P = Imath::V3d(shading_point.get_point());
+         trace_data->m_hit_distance = static_cast<float>(shading_point.get_distance());
+         trace_data->m_N = Imath::V3d(shading_point.get_shading_normal());
+@@ -616,36 +628,34 @@
+     const ShadingPoint::OSLTraceData* trace_data =
+         reinterpret_cast<ShadingPoint::OSLTraceData*>(sg->tracedata);
+ 
+-    if (trace_data->m_traced)
+-    {
+-        if (source == g_trace_ustr)
+-        {
+-            if (name == g_hit_ustr && type == OIIO::TypeInt)
+-                reinterpret_cast<int*>(val)[0] = trace_data->m_hit ? 1 : 0;
+-            else if (name == g_hitdist_ustr && type == OIIO::TypeFloat)
+-                reinterpret_cast<float*>(val)[0] = trace_data->m_hit_distance;
+-            else if (name == g_N_ustr && type == OIIO::TypeNormal)
+-                *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_N;
+-            else if (name == g_Ng_ustr && type == OIIO::TypeNormal)
+-                *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_Ng;
+-            else if (name == g_P_ustr && type == OIIO::TypePoint)
+-                *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_P;
+-            else if (name == g_u_ustr && type == OIIO::TypeFloat)
+-                reinterpret_cast<float*>(val)[0] = trace_data->m_u;
+-            else if (name == g_v_ustr && type == OIIO::TypeFloat)
+-                reinterpret_cast<float*>(val)[0] = trace_data->m_v;
+-            else
+-                return false;
++    if (!trace_data->m_traced || source != g_trace_ustr)
++        return false;
+ 
+-            // For now, set derivatives to zero.
+-            if (derivatives)
+-                memset(reinterpret_cast<char*>(val) + type.size(), 0, 2 * type.size());
++    if (name == g_hit_ustr && type == OIIO::TypeInt)
++        reinterpret_cast<int*>(val)[0] = trace_data->m_hit ? 1 : 0;
++    // A miss has no surface data; leave the destination unchanged.
++    else if (!trace_data->m_hit)
++        return false;
++    else if (name == g_hitdist_ustr && type == OIIO::TypeFloat)
++        reinterpret_cast<float*>(val)[0] = trace_data->m_hit_distance;
++    else if (name == g_N_ustr && type == OIIO::TypeNormal)
++        *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_N;
++    else if (name == g_Ng_ustr && type == OIIO::TypeNormal)
++        *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_Ng;
++    else if (name == g_P_ustr && type == OIIO::TypePoint)
++        *reinterpret_cast<OSL::Vec3*>(val) = trace_data->m_P;
++    else if (name == g_u_ustr && type == OIIO::TypeFloat)
++        reinterpret_cast<float*>(val)[0] = trace_data->m_u;
++    else if (name == g_v_ustr && type == OIIO::TypeFloat)
++        reinterpret_cast<float*>(val)[0] = trace_data->m_v;
++    else
++        return false;
+ 
+-            return true;
+-        }
+-    }
++    // For now, set derivatives to zero.
++    if (derivatives)
++        memset(reinterpret_cast<char*>(val) + type.size(), 0, 2 * type.size());
+ 
+-    return false;
++    return true;
+ }
+ 
+ bool RendererServices::get_attribute(
+@@ -664,8 +674,10 @@
+     AttrGetterMapType::const_iterator i = m_global_attr_getters.find(name);
+     if (i != m_global_attr_getters.end())
+     {
+-        AttrGetterFun getter = i->second;
+-        return (this->*(getter))(sg, derivatives, object, type, name, val);
++        const AttributeGetter& getter = i->second;
++        if (getter.m_requires_shading_point && (!sg || !sg->renderstate))
++            return false;
++        return (this->*(getter.m_function))(sg, derivatives, object, type, name, val);
+     }
+ 
+     // Try user data from the current object.
+@@ -694,6 +706,9 @@
+     OSL::ShaderGlobals*         sg,
+     void*                       val)
+ {
++    if (!sg || !sg->renderstate)
++        return false;
++
+     UserDataGetterMapType::const_iterator i = m_global_user_data_getters.find(name);
+     if (i != m_global_user_data_getters.end())
+     {
+@@ -701,7 +716,27 @@
+         return (this->*(getter))(derivatives, name, type, sg, val);
+     }
+ 
+-    return false;
++    const auto* shading_point = static_cast<const ShadingPoint*>(sg->renderstate);
++    const auto& attributes = shading_point->get_object().get_attributes();
++    const auto value = attributes.find(OIIO::ustring::from_hash(name.hash()), type);
++    if (value == attributes.end() || value->type() != type ||
++        value->nvalues() != 1 || type.is_unsized_array())
++        return false;
++
++    if (type.basetype == OIIO::TypeDesc::STRING)
++    {
++        const auto* strings = static_cast<const OIIO::ustring*>(value->data());
++        auto* output = static_cast<OIIO::ustringhash*>(val);
++        for (size_t index = 0; index < type.numelements(); ++index)
++            output[index] = OIIO::ustringhash(strings[index]);
++    }
++    else
++        memcpy(val, value->data(), type.size());
++
++    if (derivatives)
++        clear_derivatives(type, val);
++
++    return true;
+ }
+ 
+ #define IMPLEMENT_ATTR_GETTER(name)         \
+@@ -769,90 +804,26 @@
+ 
+ IMPLEMENT_ATTR_GETTER(assembly_instance_name)
+ {
+-    if (type == OIIO::TypeString)
+-    {
+-        const ShadingPoint* shading_point =
+-            reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+-
+-        const AssemblyInstance& assembly_instance = shading_point->get_assembly_instance();
+-        const OIIO::ustring* name =
+-            reinterpret_cast<const OIIO::ustring*>(assembly_instance.get_name_as_ustring());
+-
+-        reinterpret_cast<OIIO::ustring*>(val)[0] = *name;
+-
+-        if (derivs)
+-            clear_derivatives(type, val);
+-
+-        return true;
+-    }
+-
+-    return false;
++    const auto* shading_point = static_cast<const ShadingPoint*>(sg->renderstate);
++    return get_name_attribute(shading_point->get_assembly_instance(), type, val);
+ }
+ 
+ IMPLEMENT_ATTR_GETTER(assembly_name)
+ {
+-    if (type == OIIO::TypeString)
+-    {
+-        const ShadingPoint* shading_point =
+-            reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+-
+-        const Assembly& assembly = shading_point->get_assembly();
+-        const OIIO::ustring* name =
+-            reinterpret_cast<const OIIO::ustring*>(assembly.get_name_as_ustring());
+-
+-        reinterpret_cast<OIIO::ustring*>(val)[0] = *name;
+-
+-        if (derivs)
+-            clear_derivatives(type, val);
+-
+-        return true;
+-    }
+-
+-    return false;
++    const auto* shading_point = static_cast<const ShadingPoint*>(sg->renderstate);
++    return get_name_attribute(shading_point->get_assembly(), type, val);
+ }
+ 
+ IMPLEMENT_ATTR_GETTER(object_instance_name)
+ {
+-    if (type == OIIO::TypeString)
+-    {
+-        const ShadingPoint* shading_point =
+-            reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+-
+-        const ObjectInstance& object_instance = shading_point->get_object_instance();
+-        const OIIO::ustring* name =
+-            reinterpret_cast<const OIIO::ustring*>(object_instance.get_name_as_ustring());
+-
+-        reinterpret_cast<OIIO::ustring*>(val)[0] = *name;
+-
+-        if (derivs)
+-            clear_derivatives(type, val);
+-
+-        return true;
+-    }
+-
+-    return false;
++    const auto* shading_point = static_cast<const ShadingPoint*>(sg->renderstate);
++    return get_name_attribute(shading_point->get_object_instance(), type, val);
+ }
+ 
+ IMPLEMENT_ATTR_GETTER(object_name)
+ {
+-    if (type == OIIO::TypeString)
+-    {
+-        const ShadingPoint* shading_point =
+-            reinterpret_cast<const ShadingPoint*>(sg->renderstate);
+-
+-        const Object& object = shading_point->get_object();
+-        const OIIO::ustring* name =
+-            reinterpret_cast<const OIIO::ustring*>(object.get_name_as_ustring());
+-
+-        reinterpret_cast<OIIO::ustring*>(val)[0] = *name;
+-
+-        if (derivs)
+-            clear_derivatives(type, val);
+-
+-        return true;
+-    }
+-
+-    return false;
++    const auto* shading_point = static_cast<const ShadingPoint*>(sg->renderstate);
++    return get_name_attribute(shading_point->get_object(), type, val);
+ }
+ 
+ IMPLEMENT_ATTR_GETTER(camera_resolution)
+@@ -875,7 +846,11 @@
+ {
+     if (type == OIIO::TypeString)
+     {
+-        reinterpret_cast<OIIO::ustring*>(val)[0] = m_cam_projection_str;
++        // OSL optimization uses strings; execution uses string hashes.
++        if (sg)
++            *static_cast<OIIO::ustringhash*>(val) = OIIO::ustringhash(m_cam_projection_str);
++        else
++            *static_cast<OIIO::ustring*>(val) = m_cam_projection_str;
+         return true;
+     }
+ 
+@@ -1325,7 +1300,7 @@
+     const OIIO::TypeDesc&       type,
+     void*                       val)
+ {
+-    if (type != OIIO::TypeString)
++    if (type.basetype != OIIO::TypeDesc::STRING)
+         memset(reinterpret_cast<char*>(val) + type.size(), 0, 2 * type.size());
+ }
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.h	1970-01-01 00:00:00.000000000 +0000
+@@ -305,8 +305,14 @@
+         OIIO::ustringhash           name,
+         void*                       val) const;
+ 
+-    typedef std::unordered_map<OIIO::ustringhash, AttrGetterFun> AttrGetterMapType;
++    struct AttributeGetter
++    {
++        AttrGetterFun m_function;
++        bool m_requires_shading_point;
++    };
+ 
++    typedef std::unordered_map<OIIO::ustringhash, AttributeGetter> AttrGetterMapType;
++
+     typedef bool (RendererServices::*UserDataGetterFun)(
+         bool                        derivatives,
+         OIIO::ustringhash           name,
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/shadingpoint.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/shading/shadingpoint.cpp
+--- appleseed/src/appleseed/renderer/kernel/shading/shadingpoint.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/shadingpoint.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -1135,7 +1135,6 @@
+ 
+         // Opaque state pointers.
+         m_shader_globals.renderstate = const_cast<ShadingPoint*>(this);
+-        m_osl_trace_data = {};
+         m_shader_globals.tracedata = &m_osl_trace_data;
+         m_shader_globals.objdata = nullptr;
+ 
+@@ -1150,6 +1149,9 @@
+ 
+         m_members |= HasOSLShaderGlobals;
+     }
++
++    // Trace messages belong to the current shader execution.
++    m_osl_trace_data = {};
+ 
+     // Always update the ray type flags.
+     m_shader_globals.raytype = static_cast<int>(ray_flags);
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_tracer.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_tracer.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_tracer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_tracer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -35,6 +35,7 @@
+ #include "renderer/kernel/lighting/pathtracer.h"
+ #include "renderer/modeling/bsdf/glassbsdf.h"
+ #include "renderer/kernel/rendering/rendererservices.h"
++#include "renderer/kernel/shading/closures.h"
+ #include "renderer/kernel/shading/oslshadergroupexec.h"
+ #include "renderer/kernel/shading/oslshadingsystem.h"
+ #include "renderer/kernel/shading/shadingcontext.h"
+@@ -57,6 +58,8 @@
+ #include "renderer/modeling/scene/objectinstance.h"
+ #include "renderer/modeling/scene/scene.h"
+ #include "renderer/modeling/scene/visibilityflags.h"
++#include "renderer/modeling/shadergroup/shadercompiler.h"
++#include "renderer/modeling/shadergroup/shadergroup.h"
+ #include "renderer/modeling/surfaceshader/constantsurfaceshader.h"
+ #include "renderer/modeling/surfaceshader/surfaceshader.h"
+ #include "renderer/utility/iostreamop.h"
+@@ -81,6 +84,7 @@
+ #include "foundation/platform/_endoiioheaders.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <array>
+ #include <cmath>
+ #include <memory>
+@@ -505,9 +509,298 @@
+             m_intersector.initialize_media(sampling_context, m_shading_context, ray, &emitter);
+             EXPECT_EQ(inward ? 1 : 0, ray.m_medium_count);
+             EXPECT_EQ(emitter.get_point(), ray.m_org);
++        }
++    }
++
++    struct OSLQueryScene
++      : public SceneBase
++    {
++        OSLQueryScene()
++        {
++            create_plane_object_instance("receiver", Vector3d(0.0), "opaque_material");
++            create_plane_object_instance("near_target", Vector3d(4.0, 0.0, 0.0), "opaque_material");
++            create_plane_object_instance("far_target", Vector3d(8.0, 0.0, 0.0), "opaque_material");
++        }
++    };
++
++    struct OSLQueryFixture
++      : public Fixture<FixtureParams<OSLQueryScene, false>>
++    {
++        static constexpr float DistanceTolerance = 1.0e-4f;
++
++        ShadingPoint                m_parent;
++        ShadingPoint::OSLTraceData   m_trace_data = {};
++        OSL::ShaderGlobals          m_globals = {};
++
++        OSLQueryFixture()
++        {
++            m_project.get_trace_context();
++            m_project.update_trace_context();
++            m_renderer_services.initialize(m_texture_store);
++            m_intersector.trace(
++                ShadingRay(
++                    Vector3d(-1.0, 0.0, 0.0),
++                    Vector3d(1.0, 0.0, 0.0),
++                    ShadingRay::Time(),
++                    VisibilityFlags::CameraRay,
++                    0),
++                m_parent);
++            m_globals.P = Vector3f(m_parent.get_point());
++            m_globals.N = Vector3f(m_parent.get_shading_normal());
++            m_globals.renderstate = &m_parent;
++            m_globals.tracedata = &m_trace_data;
++        }
++
++        bool query(const float mindist, const float maxdist, const float origin = 0.0f)
++        {
++            OSL::RendererServices::TraceOpt options;
++            options.mindist = mindist;
++            options.maxdist = maxdist;
++            const OSL::Vec3 zero(0.0f);
++            return m_renderer_services.trace(
++                options, &m_globals, OSL::Vec3(origin, 0.0f, 0.0f),
++                zero, zero, OSL::Vec3(1.0f, 0.0f, 0.0f), zero, zero);
++        }
++
++        bool message(const char* name, const OIIO::TypeDesc type, void* value, const bool derivatives = false)
++        {
++            return m_renderer_services.getmessage(
++                &m_globals, OIIO::ustringhash("trace"), OIIO::ustringhash(name),
++                type, value, derivatives);
++        }
++    };
++
++    TEST_CASE_F(OSLTrace_MessagesUnavailableBeforeQuery, OSLQueryFixture)
++    {
++        int hit = -1;
++        EXPECT_FALSE(message("hit", OIIO::TypeInt, &hit));
++        EXPECT_EQ(-1, hit);
++        float distance = -1.0f;
++        EXPECT_FALSE(message("hitdist", OIIO::TypeFloat, &distance));
++        EXPECT_FEQ(-1.0f, distance);
++    }
++
++    TEST_CASE_F(OSLTrace_FirstMissHasNoSurfaceMessages, OSLQueryFixture)
++    {
++        ASSERT_FALSE(query(0.0f, 2.0f));
++        int hit = -1;
++        ASSERT_TRUE(message("hit", OIIO::TypeInt, &hit));
++        EXPECT_EQ(0, hit);
++        for (const char* name : {"hitdist", "u", "v"})
++        {
++            float values[3] = {-1.0f, -1.0f, -1.0f};
++            EXPECT_FALSE(message(name, OIIO::TypeFloat, values, true));
++            for (const float value : values)
++                EXPECT_FEQ(-1.0f, value);
+         }
++        for (const char* name : {"P", "N", "Ng"})
++        {
++            OSL::Vec3 values[3] = {OSL::Vec3(-1.0f), OSL::Vec3(-1.0f), OSL::Vec3(-1.0f)};
++            const OIIO::TypeDesc type = name[0] == 'P' ? OIIO::TypePoint : OIIO::TypeNormal;
++            EXPECT_FALSE(message(name, type, values, true));
++            for (const OSL::Vec3& value : values)
++                for (size_t component = 0; component < 3; ++component)
++                    EXPECT_FEQ(-1.0f, value[component]);
++        }
+     }
+ 
++    TEST_CASE_F(OSLTrace_HitThenMissThenHitReplacesMessages, OSLQueryFixture)
++    {
++        ASSERT_TRUE(query(0.0f, 6.0f));
++        float distance = -1.0f;
++        ASSERT_TRUE(message("hitdist", OIIO::TypeFloat, &distance));
++        EXPECT_TRUE(std::abs(distance - 4.0f) < DistanceTolerance);
++        ASSERT_FALSE(query(0.0f, 2.0f));
++        int hit = -1;
++        ASSERT_TRUE(message("hit", OIIO::TypeInt, &hit));
++        EXPECT_EQ(0, hit);
++        EXPECT_FALSE(message("hitdist", OIIO::TypeFloat, &distance));
++        ASSERT_TRUE(query(5.0f, 10.0f));
++        ASSERT_TRUE(message("hit", OIIO::TypeInt, &hit));
++        EXPECT_EQ(1, hit);
++        ASSERT_TRUE(message("hitdist", OIIO::TypeFloat, &distance));
++        EXPECT_TRUE(std::abs(distance - 8.0f) < DistanceTolerance);
++    }
++
++    TEST_CASE_F(OSLTrace_HitMessagesHaveExpectedTypesAndZeroDerivatives, OSLQueryFixture)
++    {
++        ASSERT_TRUE(query(0.0f, 6.0f));
++        float distance[3] = {-1.0f, -1.0f, -1.0f};
++        ASSERT_TRUE(message("hitdist", OIIO::TypeFloat, distance, true));
++        EXPECT_TRUE(std::abs(distance[0] - 4.0f) < DistanceTolerance);
++        EXPECT_FEQ(0.0f, distance[1]);
++        EXPECT_FEQ(0.0f, distance[2]);
++        for (const char* name : {"P", "N", "Ng"})
++        {
++            OSL::Vec3 values[3] = {OSL::Vec3(-1.0f), OSL::Vec3(-1.0f), OSL::Vec3(-1.0f)};
++            const OIIO::TypeDesc type = name[0] == 'P' ? OIIO::TypePoint : OIIO::TypeNormal;
++            ASSERT_TRUE(message(name, type, values, true));
++            EXPECT_FEQ(name[0] == 'P' ? 4.0f : -1.0f, values[0][0]);
++            EXPECT_FEQ(0.0f, values[0][1]);
++            EXPECT_FEQ(0.0f, values[0][2]);
++            for (size_t derivative = 1; derivative < 3; ++derivative)
++                for (size_t component = 0; component < 3; ++component)
++                    EXPECT_FEQ(0.0f, values[derivative][component]);
++        }
++        float sentinel = -1.0f;
++        EXPECT_FALSE(message("hit", OIIO::TypeFloat, &sentinel));
++        EXPECT_FALSE(message("unsupported", OIIO::TypeFloat, &sentinel));
++        EXPECT_FALSE(m_renderer_services.getmessage(
++            &m_globals, OIIO::ustringhash("unsupported"), OIIO::ustringhash("hitdist"),
++            OIIO::TypeFloat, &sentinel, false));
++        EXPECT_FEQ(-1.0f, sentinel);
++    }
++
++    TEST_CASE_F(OSLTrace_NewShaderInvocationClearsPreviousQuery, OSLQueryFixture)
++    {
++        register_closures(*m_shading_system);
++        auto compiler = ShaderCompilerFactory::create("../shaders/stdosl.h");
++        auto_release_ptr<ShaderGroup> group(ShaderGroupFactory::create("query_test"));
++        group->add_source_shader(
++            "surface", "query_test", "surface",
++            "surface query_test() { Ci = diffuse(N); }", ParamArray());
++        ASSERT_TRUE(group->create_optimized_osl_shader_group(*m_shading_system, compiler.get()));
++        for (size_t invocation = 0; invocation < 2; ++invocation)
++        {
++            m_shading_context.execute_osl_shading(*group, m_parent);
++            m_globals = m_parent.get_osl_shader_globals();
++            int hit = -1;
++            EXPECT_FALSE(message("hit", OIIO::TypeInt, &hit));
++            EXPECT_EQ(-1, hit);
++            ASSERT_TRUE(query(0.0f, 6.0f));
++            ASSERT_TRUE(message("hit", OIIO::TypeInt, &hit));
++            EXPECT_EQ(1, hit);
++        }
++    }
++
++    TEST_CASE_F(OSLTrace_DisplacedOriginUsesQueryDistance, OSLQueryFixture)
++    {
++        ASSERT_FALSE(query(0.0f, 2.0f, 1.0f));
++        ASSERT_TRUE(query(0.0f, 6.0f, 1.0f));
++        float distance = -1.0f;
++        ASSERT_TRUE(message("hitdist", OIIO::TypeFloat, &distance));
++        EXPECT_FEQ(3.0f, distance);
++    }
++
++    struct OSLAttributeFixture
++      : public OSLQueryFixture
++    {
++        OSLAttributeFixture()
++        {
++            auto& attributes = m_assembly->objects().get_by_name("plane")->get_attributes();
++            attributes.attribute("test:id", 17);
++            attributes.attribute("test:roughness", 0.25f);
++            attributes.attribute("test:label", "hull");
++            const float color[3] = {0.125f, 0.25f, 0.5f};
++            attributes.attribute("test:color", OIIO::TypeColor, color);
++            const int indices[2] = {3, 7};
++            attributes.attribute("test:indices", OIIO::TypeDesc(OIIO::TypeDesc::INT, 2), indices);
++            const char* labels[2] = {"left", "right"};
++            attributes.attribute("test:labels", OIIO::TypeDesc(OIIO::TypeDesc::STRING, 2), labels);
++            const float varying[2] = {1.0f, 2.0f};
++            attributes.attribute("test:varying", OIIO::TypeFloat, 2, varying);
++        }
++
++        bool attribute(const char* name, const OIIO::TypeDesc type, void* value, const bool derivatives = false)
++        {
++            return m_renderer_services.get_attribute(
++                &m_globals, derivatives, OIIO::ustringhash(), type, OIIO::ustringhash(name), value);
++        }
++    };
++
++    TEST_CASE_F(OSLAttributes_ObjectAndCameraNamesUseRuntimeHashes, OSLAttributeFixture)
++    {
++        const char* names[] = {"object:object_name", "object:object_instance_name",
++            "object:assembly_name", "object:assembly_instance_name", "camera:projection"};
++        const char* expected[] = {"plane", "receiver", "assembly", "assembly_inst", "perspective"};
++        for (size_t index = 0; index < sizeof(names) / sizeof(names[0]); ++index)
++        {
++            const OIIO::ustringhash sentinel("unchanged");
++            OIIO::ustringhash values[3] = {sentinel, sentinel, sentinel};
++            ASSERT_TRUE(attribute(names[index], OIIO::TypeString, values, true));
++            EXPECT_TRUE(values[0] == OIIO::ustringhash(expected[index]));
++            EXPECT_TRUE(values[1] == sentinel);
++            EXPECT_TRUE(values[2] == sentinel);
++        }
++    }
++
++    TEST_CASE_F(OSLAttributes_SceneValuesDoNotRequireASurface, OSLAttributeFixture)
++    {
++        OSL::ShaderGlobals background = {};
++        OIIO::ustringhash projection;
++        ASSERT_TRUE(m_renderer_services.get_attribute(
++            &background, false, OIIO::ustringhash(), OIIO::TypeString,
++            OIIO::ustringhash("camera:projection"), &projection));
++        EXPECT_TRUE(projection == OIIO::ustringhash("perspective"));
++        OIIO::ustring optimized_projection;
++        ASSERT_TRUE(m_renderer_services.get_attribute(
++            nullptr, false, OIIO::ustringhash(), OIIO::TypeString,
++            OIIO::ustringhash("camera:projection"), &optimized_projection));
++        EXPECT_TRUE(optimized_projection == OIIO::ustring("perspective"));
++        EXPECT_FALSE(m_renderer_services.get_attribute(
++            nullptr, false, OIIO::ustringhash(), OIIO::TypeString,
++            OIIO::ustringhash("object:object_name"), &projection));
++    }
++
++    TEST_CASE_F(OSLAttributes_UniformValuesPreserveTypesAndClearDerivatives, OSLAttributeFixture)
++    {
++        int id[3] = {-1, -1, -1};
++        ASSERT_TRUE(attribute("test:id", OIIO::TypeInt, id, true));
++        EXPECT_EQ(17, id[0]);
++        EXPECT_EQ(0, id[1]);
++        EXPECT_EQ(0, id[2]);
++        float roughness[3] = {-1.0f, -1.0f, -1.0f};
++        ASSERT_TRUE(attribute("test:roughness", OIIO::TypeFloat, roughness, true));
++        EXPECT_FEQ(0.25f, roughness[0]);
++        EXPECT_FEQ(0.0f, roughness[1]);
++        EXPECT_FEQ(0.0f, roughness[2]);
++        float color[9];
++        std::fill_n(color, 9, -1.0f);
++        ASSERT_TRUE(attribute("test:color", OIIO::TypeColor, color, true));
++        EXPECT_FEQ(0.125f, color[0]);
++        EXPECT_FEQ(0.25f, color[1]);
++        EXPECT_FEQ(0.5f, color[2]);
++        for (size_t index = 3; index < 9; ++index)
++            EXPECT_FEQ(0.0f, color[index]);
++        int indices[6] = {-1, -1, -1, -1, -1, -1};
++        ASSERT_TRUE(attribute("test:indices", OIIO::TypeDesc(OIIO::TypeDesc::INT, 2), indices, true));
++        EXPECT_EQ(3, indices[0]);
++        EXPECT_EQ(7, indices[1]);
++        for (size_t index = 2; index < 6; ++index)
++            EXPECT_EQ(0, indices[index]);
++    }
++
++    TEST_CASE_F(OSLAttributes_StringValuesAndArraysUseRuntimeHashes, OSLAttributeFixture)
++    {
++        const OIIO::ustringhash sentinel("unchanged");
++        OIIO::ustringhash label = sentinel;
++        ASSERT_TRUE(attribute("test:label", OIIO::TypeString, &label));
++        EXPECT_TRUE(label == OIIO::ustringhash("hull"));
++        OIIO::ustringhash labels[3] = {sentinel, sentinel, sentinel};
++        ASSERT_TRUE(attribute("test:labels", OIIO::TypeDesc(OIIO::TypeDesc::STRING, 2), labels, true));
++        EXPECT_TRUE(labels[0] == OIIO::ustringhash("left"));
++        EXPECT_TRUE(labels[1] == OIIO::ustringhash("right"));
++        EXPECT_TRUE(labels[2] == sentinel);
++    }
++
++    TEST_CASE_F(OSLAttributes_UnavailableValuesLeaveDestinationUnchanged, OSLAttributeFixture)
++    {
++        float sentinel = -1.0f;
++        EXPECT_FALSE(attribute("test:id", OIIO::TypeFloat, &sentinel));
++        EXPECT_FALSE(attribute("test:missing", OIIO::TypeFloat, &sentinel));
++        EXPECT_FALSE(attribute("test:varying", OIIO::TypeFloat, &sentinel));
++        EXPECT_FALSE(attribute("test:color", OIIO::TypeVector, &sentinel));
++        EXPECT_FALSE(m_renderer_services.get_attribute(
++            nullptr, false, OIIO::ustringhash(), OIIO::TypeFloat,
++            OIIO::ustringhash("test:roughness"), &sentinel));
++        EXPECT_FALSE(m_renderer_services.get_userdata(
++            false, OIIO::ustringhash("test:roughness"), OIIO::TypeFloat, nullptr, &sentinel));
++        EXPECT_FALSE(m_renderer_services.get_attribute(
++            &m_globals, false, OIIO::ustringhash("named_object"), OIIO::TypeFloat,
++            OIIO::ustringhash("test:roughness"), &sentinel));
++        EXPECT_FEQ(-1.0f, sentinel);
++    }
++
+     struct EmptyScene
+       : public SceneBase
+     {
+diff -Naur appleseed/src/appleseed/renderer/modeling/object/object.h APPLESEED_BLD/src/appleseed/renderer/modeling/object/object.h
+--- appleseed/src/appleseed/renderer/modeling/object/object.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/object/object.h	1970-01-01 00:00:00.000000000 +0000
+@@ -39,6 +39,11 @@
+ // appleseed.main headers.
+ #include "main/dllsymbol.h"
+ 
++// OpenImageIO headers.
++#include "foundation/platform/_beginoiioheaders.h"
++#include "OpenImageIO/paramlist.h"
++#include "foundation/platform/_endoiioheaders.h"
++
+ // Standard headers.
+ #include <cstddef>
+ 
+@@ -82,6 +87,11 @@
+     virtual size_t get_material_slot_count() const = 0;
+     virtual const char* get_material_slot(const size_t index) const = 0;
+ 
++    // Uniform shader attributes. Populate before rendering; shader execution
++    // only reads this data. Values retain their authored type and array size.
++    OIIO::ParamValueList& get_attributes();
++    const OIIO::ParamValueList& get_attributes() const;
++
+     // Return the source bound to the alpha map input, or nullptr if the object doesn't have an alpha map.
+     virtual const Source* get_uncached_alpha_map() const;
+ 
+@@ -118,6 +128,7 @@
+     virtual void rasterize(ObjectRasterizer& rasterizer) const;
+ 
+   private:
++    OIIO::ParamValueList m_attributes;
+     RenderData m_render_data;
+ };
+ 
+@@ -126,6 +137,16 @@
+ // Object class implementation.
+ //
+ 
++inline OIIO::ParamValueList& Object::get_attributes()
++{
++    return m_attributes;
++}
++
++inline const OIIO::ParamValueList& Object::get_attributes() const
++{
++    return m_attributes;
++}
++
+ inline const Object::RenderData& Object::get_render_data() const
+ {
+     return m_render_data;
