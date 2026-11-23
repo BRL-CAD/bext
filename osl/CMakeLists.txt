@@ -4,16 +4,17 @@ bext_enable(OSL)
 if (ENABLE_OSL)
 
   set(OSL_PATCH_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0002-clang-diagnostic-lifetime.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0003-bsdl-macros.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0004-freebsd-obj-reader.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0005-native-closure-callbacks.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/patches/0007-public-header-exports.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/osl_environment_derivatives.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/osl_clang_diagnostic_lifetime.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/osl_bsdl_macros.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/osl_freebsd_obj_reader.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/osl_native_closure_callbacks.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/osl_public_header_exports.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/osl.patch"
     )
   if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "^(Clang|IntelLLVM)$")
     list(APPEND OSL_PATCH_FILES
-      "${CMAKE_CURRENT_SOURCE_DIR}/patches/0008-color-table-alignment.patch")
+      "${CMAKE_CURRENT_SOURCE_DIR}/osl_color_table_alignment.patch")
   endif ()
   git_submodule_init(OpenShadingLanguage CMakeLists.txt
     PATCH_FILES ${OSL_PATCH_FILES}

@@ -1,21 +1,7 @@
-From 0426d1b3b47f8e727165b2fa7e9299e03c4c78e1 Mon Sep 17 00:00:00 2001
-From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
-Date: Thu, 12 Nov 2026 05:20:19 +0000
-Subject: [PATCH] fix(testrender): support OBJ file reads on FreeBSD
-
-Reuse the POSIX reader with pread and advisory posix_fadvise calls on
-FreeBSD. Keep the Linux read-ahead and large-offset functions unchanged.
-
-Add a parser unit test for missing files, partial final blocks, and
-sequential and parallel reads. The new regression and existing OSL unit
-tests pass. The parser test also passes Valgrind without memory errors
-or lost allocations.
-
-diff --git a/src/testrender/CMakeLists.txt b/src/testrender/CMakeLists.txt
-index 4e6e428b8a76d0cd125d862d039fef8a76a5736c..4595205d26161d55b0bcf9817e0cab699d413c5a 100644
---- a/src/testrender/CMakeLists.txt
-+++ b/src/testrender/CMakeLists.txt
-@@ -91,4 +91,9 @@ endif ()
+diff -Naur OpenShadingLanguage/src/testrender/CMakeLists.txt OSL_BLD/src/testrender/CMakeLists.txt
+--- OpenShadingLanguage/src/testrender/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/testrender/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -91,4 +91,9 @@
  
  osl_optix_target (testrender)
  
@@ -25,11 +11,10 @@ index 4e6e428b8a76d0cd125d862d039fef8a76a5736c..4595205d26161d55b0bcf9817e0cab69
 +add_test (unit_rapidobj ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rapidobj_test)
 +
  install ( TARGETS testrender RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
-diff --git a/src/testrender/rapidobj/rapidobj.hpp b/src/testrender/rapidobj/rapidobj.hpp
-index 225d0ef044e8696c510248444fa453290b59c407..717d2f81ec851537d9509685e1aa8ed26de3dbb3 100755
---- a/src/testrender/rapidobj/rapidobj.hpp
-+++ b/src/testrender/rapidobj/rapidobj.hpp
-@@ -43,7 +43,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+diff -Naur OpenShadingLanguage/src/testrender/rapidobj/rapidobj.hpp OSL_BLD/src/testrender/rapidobj/rapidobj.hpp
+--- OpenShadingLanguage/src/testrender/rapidobj/rapidobj.hpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/testrender/rapidobj/rapidobj.hpp	1970-01-01 00:00:00.000000000 +0000
+@@ -43,7 +43,7 @@
  #include <variant>
  #include <vector>
  
@@ -38,7 +23,7 @@ index 225d0ef044e8696c510248444fa453290b59c407..717d2f81ec851537d9509685e1aa8ed2
  
  #include <fcntl.h>
  #include <sys/stat.h>
-@@ -4835,7 +4835,7 @@ struct Reader {
+@@ -4835,7 +4835,7 @@
  
  namespace sys {
  
@@ -47,7 +32,7 @@ index 225d0ef044e8696c510248444fa453290b59c407..717d2f81ec851537d9509685e1aa8ed2
  
  inline auto AlignedAllocate(size_t size, size_t alignment)
  {
-@@ -4902,7 +4902,12 @@ struct FileReader : Reader {
+@@ -4902,7 +4902,12 @@
          m_size   = size;
          m_buffer = buffer;
  
@@ -60,7 +45,7 @@ index 225d0ef044e8696c510248444fa453290b59c407..717d2f81ec851537d9509685e1aa8ed2
  
          auto t2 = std::chrono::steady_clock::now();
  
-@@ -4915,7 +4920,11 @@ struct FileReader : Reader {
+@@ -4915,7 +4920,11 @@
      {
          auto t1 = std::chrono::steady_clock::now();
  
@@ -72,11 +57,9 @@ index 225d0ef044e8696c510248444fa453290b59c407..717d2f81ec851537d9509685e1aa8ed2
  
          auto t2 = std::chrono::steady_clock::now();
  
-diff --git a/src/testrender/rapidobj_test.cpp b/src/testrender/rapidobj_test.cpp
-new file mode 100644
-index 0000000000000000000000000000000000000000..d08dbb3a14f2827f88772250852beeb2df38e8af
---- /dev/null
-+++ b/src/testrender/rapidobj_test.cpp
+diff -Naur OpenShadingLanguage/src/testrender/rapidobj_test.cpp OSL_BLD/src/testrender/rapidobj_test.cpp
+--- OpenShadingLanguage/src/testrender/rapidobj_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/testrender/rapidobj_test.cpp	1970-01-01 00:00:00.000000000 +0000
 @@ -0,0 +1,82 @@
 +// Copyright Contributors to the Open Shading Language project.
 +// SPDX-License-Identifier: BSD-3-Clause

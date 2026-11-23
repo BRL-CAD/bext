@@ -1,15 +1,16 @@
---- a/src/cmake/modules/FindLLVM.cmake
-+++ b/src/cmake/modules/FindLLVM.cmake
-@@ -79,6 +79,12 @@
-                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+diff -Naur OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake OSL_BLD/src/cmake/modules/FindLLVM.cmake
+--- OpenShadingLanguage/src/cmake/modules/FindLLVM.cmake	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/cmake/modules/FindLLVM.cmake	1970-01-01 00:00:00.000000000 +0000
+@@ -80,6 +80,12 @@
  endif ()
  string (REPLACE " " ";" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
-+
+ 
 +# llvm-config reports a bare linker flag even for non-system libxml2 installs.
 +if ("-lxml2" IN_LIST LLVM_SYSTEM_LIBRARIES)
 +    find_package (LibXml2 REQUIRED)
 +    list (TRANSFORM LLVM_SYSTEM_LIBRARIES REPLACE "^-lxml2$" "LibXml2::LibXml2")
 +endif ()
- 
++
  # Seems necessary on our Windows CI?
  string (REPLACE "libxml2s.lib" "" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
+ 

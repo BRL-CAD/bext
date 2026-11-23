@@ -1,0 +1,44 @@
+diff -Naur OpenShadingLanguage/src/liboslexec/optexture.cpp OSL_BLD/src/liboslexec/optexture.cpp
+--- OpenShadingLanguage/src/liboslexec/optexture.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/optexture.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -442,8 +442,10 @@
+     using float4 = Imath::Vec4<float>;
+ #endif
+     const Vec3& R(*(Vec3*)R_);
+-    const Vec3& dRdx(*(Vec3*)dRdx_);
+-    const Vec3& dRdy(*(Vec3*)dRdy_);
++    // The JIT passes null derivatives for directions without derivative storage.
++    const Vec3 zero(0.0f);
++    const Vec3& dRdx = dRdx_ ? *(Vec3*)dRdx_ : zero;
++    const Vec3& dRdy = dRdy_ ? *(Vec3*)dRdy_ : zero;
+     TextureOpt* opt               = (TextureOpt*)opt_;
+     float* result                 = (float*)result_;
+     float* dresultdx              = (float*)dresultdx_;
+diff -Naur OpenShadingLanguage/testsuite/texture-environment/no_derivs.osl OSL_BLD/testsuite/texture-environment/no_derivs.osl
+--- OpenShadingLanguage/testsuite/texture-environment/no_derivs.osl	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/testsuite/texture-environment/no_derivs.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,12 @@
++// Copyright Contributors to the Open Shading Language project.
++// SPDX-License-Identifier: BSD-3-Clause
++// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
++
++shader no_derivs(string filename = "ramp.env", vector direction = vector(1, 1, 1),
++                 int explicit_derivs = 0, output color Cout = 0)
++{
++    if (explicit_derivs)
++        Cout = environment(filename, direction, vector(0), vector(0));
++    else
++        Cout = environment(filename, direction);
++}
+diff -Naur OpenShadingLanguage/testsuite/texture-environment/run.py OSL_BLD/testsuite/texture-environment/run.py
+--- OpenShadingLanguage/testsuite/texture-environment/run.py	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/testsuite/texture-environment/run.py	1970-01-01 00:00:00.000000000 +0000
+@@ -6,3 +6,8 @@
+ command += oiiotool("-pattern fill:topleft=0,0,0:topright=1,0,0:bottomleft=0,1,0:bottomright=1,1,1 256x128 3 -d uint8 -oenv ramp.env")
+ command += testshade("-g 256 128 -od uint8 -o Cout out.tif test")
+ outputs = [ "out.tif" ]
++
++# A uniform direction has no derivative storage and must behave like explicit zeros.
++command += testshade("-g 16 16 -o Cout implicit.tif no_derivs")
++command += testshade("-g 16 16 -param explicit_derivs 1 -o Cout explicit.tif no_derivs")
++command += oiiotool("implicit.tif explicit.tif --diff")

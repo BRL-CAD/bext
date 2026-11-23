@@ -1,0 +1,18 @@
+diff -Naur OpenShadingLanguage/src/testrender/shading.cpp OSL_BLD/src/testrender/shading.cpp
+--- OpenShadingLanguage/src/testrender/shading.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/testrender/shading.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -7,6 +7,14 @@
+ #include <OSL/genclosure.h>
+ #include "optics.h"
+ #include "sampling.h"
++
++// System headers can define macros that collide with BSDL's functions.
++#ifdef MAX
++#    undef MAX
++#endif
++#ifdef MIN
++#    undef MIN
++#endif
+ 
+ #include <BSDL/MTX/bsdf_burley_diffuse_impl.h>
+ #include <BSDL/MTX/bsdf_conductor_impl.h>

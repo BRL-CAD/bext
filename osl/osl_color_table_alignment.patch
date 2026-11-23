@@ -1,5 +1,6 @@
---- a/src/liboslexec/opcolor_impl.h
-+++ b/src/liboslexec/opcolor_impl.h
+diff -Naur OpenShadingLanguage/src/liboslexec/opcolor_impl.h OSL_BLD/src/liboslexec/opcolor_impl.h
+--- OpenShadingLanguage/src/liboslexec/opcolor_impl.h	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/opcolor_impl.h	1970-01-01 00:00:00.000000000 +0000
 @@ -54,7 +54,7 @@
  #ifdef __CUDACC__
  OSL_CONSTANT_DATA const float cie_colour_match[81*3] =

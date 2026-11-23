@@ -1,23 +1,7 @@
-From 2d66f07120076d3f0778a6629be2b2ba86f50be3 Mon Sep 17 00:00:00 2001
-From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
-Date: Thu, 12 Nov 2026 13:35:53 +0000
-Subject: [PATCH] fix(oslexec): preserve signatures for native closure
- callbacks
-
-Native closure prepare and setup callbacks are constant function
-pointers, not LLVM Function objects. Keep their explicit function
-signature when emitting scalar and batched calls instead of interpreting
-an opaque pointer as a Function.
-
-Retain the direct-call overload and add JIT tests for indirect integer
-results and closure-style prepare/setup callbacks. All 25 selected
-closure and LLVM utility tests pass.
-
-diff --git a/src/include/OSL/llvm_util.h b/src/include/OSL/llvm_util.h
-index c10f161ae30f929b636dedab9a1627b9bf995f15..0a7ed8c39d11e2e21215791b94885ce1f7d6b87f 100644
---- a/src/include/OSL/llvm_util.h
-+++ b/src/include/OSL/llvm_util.h
-@@ -838,10 +838,12 @@ public:
+diff -Naur OpenShadingLanguage/src/include/OSL/llvm_util.h OSL_BLD/src/include/OSL/llvm_util.h
+--- OpenShadingLanguage/src/include/OSL/llvm_util.h	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/include/OSL/llvm_util.h	1970-01-01 00:00:00.000000000 +0000
+@@ -838,10 +838,12 @@
                                  const std::string& name = std::string(),
                                  int align               = 0);
  
@@ -33,11 +17,10 @@ index c10f161ae30f929b636dedab9a1627b9bf995f15..0a7ed8c39d11e2e21215791b94885ce1
      /// Generate code for a call to the named function with the given arg
      /// list.  Return an llvm::Value* corresponding to the return value of
      /// the function, if any.
-diff --git a/src/liboslexec/backendllvm.h b/src/liboslexec/backendllvm.h
-index ed5f4fdeb9e410e38ed75129b93d96258d28ff07..ed83553db56ac3e15de5b9db4c507fec47d267c5 100644
---- a/src/liboslexec/backendllvm.h
-+++ b/src/liboslexec/backendllvm.h
-@@ -472,13 +472,9 @@ public:
+diff -Naur OpenShadingLanguage/src/liboslexec/backendllvm.h OSL_BLD/src/liboslexec/backendllvm.h
+--- OpenShadingLanguage/src/liboslexec/backendllvm.h	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/backendllvm.h	1970-01-01 00:00:00.000000000 +0000
+@@ -472,13 +472,9 @@
      /// TypeSpec.
      llvm::Type* llvm_pass_type(const TypeSpec& typespec);
  
@@ -53,7 +36,7 @@ index ed5f4fdeb9e410e38ed75129b93d96258d28ff07..ed83553db56ac3e15de5b9db4c507fec
      }
  
      /// Return the basic block of the exit for the whole instance.
-@@ -583,8 +579,7 @@ private:
+@@ -583,8 +579,7 @@
      llvm::Type* m_llvm_type_texture_options;
      llvm::Type* m_llvm_type_trace_options;
      llvm::Type* m_llvm_type_noise_options;
@@ -63,11 +46,10 @@ index ed5f4fdeb9e410e38ed75129b93d96258d28ff07..ed83553db56ac3e15de5b9db4c507fec
      int m_llvm_local_mem;   // Amount of memory we use for locals
      bool m_name_llvm_syms;  // Whether to name LLVM symbols
  
-diff --git a/src/liboslexec/batched_backendllvm.h b/src/liboslexec/batched_backendllvm.h
-index 0417b7d48cd6fe2ab97592e534b48e304d074bcd..be5fb6487dc9b7cbd417c67baa8cc6af67deef6c 100644
---- a/src/liboslexec/batched_backendllvm.h
-+++ b/src/liboslexec/batched_backendllvm.h
-@@ -681,13 +681,9 @@ public:
+diff -Naur OpenShadingLanguage/src/liboslexec/batched_backendllvm.h OSL_BLD/src/liboslexec/batched_backendllvm.h
+--- OpenShadingLanguage/src/liboslexec/batched_backendllvm.h	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/batched_backendllvm.h	1970-01-01 00:00:00.000000000 +0000
+@@ -681,13 +681,9 @@
      llvm::Type* llvm_pass_type(const TypeSpec& typespec);
      llvm::Type* llvm_pass_wide_type(const TypeSpec& typespec);
  
@@ -83,7 +65,7 @@ index 0417b7d48cd6fe2ab97592e534b48e304d074bcd..be5fb6487dc9b7cbd417c67baa8cc6af
      }
  
      /// Return the basic block of the exit for the whole instance.
-@@ -831,8 +827,7 @@ private:
+@@ -831,8 +827,7 @@
      llvm::Type* m_llvm_type_batched_texture_options;
      llvm::Type* m_llvm_type_batched_trace_options;
      llvm::Type* m_llvm_type_noise_options;
@@ -93,11 +75,10 @@ index 0417b7d48cd6fe2ab97592e534b48e304d074bcd..be5fb6487dc9b7cbd417c67baa8cc6af
      int m_llvm_local_mem;   // Amount of memory we use for locals
      bool m_name_llvm_syms;  // Whether to name LLVM symbols
  
-diff --git a/src/liboslexec/batched_llvm_gen.cpp b/src/liboslexec/batched_llvm_gen.cpp
-index 145b5ba611fdbd7303f5116c68d2ac1fbe8146ae..4d85155fb05121a17e0e9d778136143d192bef1a 100644
---- a/src/liboslexec/batched_llvm_gen.cpp
-+++ b/src/liboslexec/batched_llvm_gen.cpp
-@@ -7414,11 +7414,12 @@ LLVMGEN(llvm_gen_closure)
+diff -Naur OpenShadingLanguage/src/liboslexec/batched_llvm_gen.cpp OSL_BLD/src/liboslexec/batched_llvm_gen.cpp
+--- OpenShadingLanguage/src/liboslexec/batched_llvm_gen.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/batched_llvm_gen.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -7414,11 +7414,12 @@
          // zero out the closure parameter memory.
          if (clentry->prepare) {
              // Call clentry->prepare(renderservices *, int id, void *mem)
@@ -114,7 +95,7 @@ index 145b5ba611fdbd7303f5116c68d2ac1fbe8146ae..4d85155fb05121a17e0e9d778136143d
          } else {
              rop.ll.op_memset(mem_void_ptr, 0, clentry->struct_size,
                               4 /*align*/);
-@@ -7498,11 +7499,12 @@ LLVMGEN(llvm_gen_closure)
+@@ -7498,11 +7499,12 @@
          // setup(render_services, id, mem_ptr).
          if (clentry->setup) {
              // Call clentry->setup(renderservices *, int id, void *mem)
@@ -131,11 +112,10 @@ index 145b5ba611fdbd7303f5116c68d2ac1fbe8146ae..4d85155fb05121a17e0e9d778136143d
          }
  
          llvm_gen_keyword_fill(rop, op, clentry, closure_name, mem_void_ptr,
-diff --git a/src/liboslexec/batched_llvm_instance.cpp b/src/liboslexec/batched_llvm_instance.cpp
-index b33c4576a18ca8d3d65f3ab4451491759553db0b..df7cefc13c6ab64270748f2686d9ab7bd0d341e7 100644
---- a/src/liboslexec/batched_llvm_instance.cpp
-+++ b/src/liboslexec/batched_llvm_instance.cpp
-@@ -2607,9 +2607,7 @@ BatchedBackendLLVM::initialize_llvm_group()
+diff -Naur OpenShadingLanguage/src/liboslexec/batched_llvm_instance.cpp OSL_BLD/src/liboslexec/batched_llvm_instance.cpp
+--- OpenShadingLanguage/src/liboslexec/batched_llvm_instance.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/batched_llvm_instance.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -2607,9 +2607,7 @@
      params[0]                        = (llvm::Type*)ll.type_char_ptr();
      params[1]                        = ll.type_int();
      params[2]                        = (llvm::Type*)ll.type_char_ptr();
@@ -146,11 +126,10 @@ index b33c4576a18ca8d3d65f3ab4451491759553db0b..df7cefc13c6ab64270748f2686d9ab7b
  }
  
  
-diff --git a/src/liboslexec/llvm_gen.cpp b/src/liboslexec/llvm_gen.cpp
-index 3b9e788e6d8b00c3f850029294497b1bc6e3f0f0..224f774a73e1062f823e23c6303513b49b02cd13 100644
---- a/src/liboslexec/llvm_gen.cpp
-+++ b/src/liboslexec/llvm_gen.cpp
-@@ -3885,11 +3885,11 @@ LLVMGEN(llvm_gen_closure)
+diff -Naur OpenShadingLanguage/src/liboslexec/llvm_gen.cpp OSL_BLD/src/liboslexec/llvm_gen.cpp
+--- OpenShadingLanguage/src/liboslexec/llvm_gen.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/llvm_gen.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -3885,11 +3885,11 @@
      // zero out the closure parameter memory.
      if (clentry->prepare) {
          // Call clentry->prepare(renderservices *, int id, void *mem)
@@ -166,7 +145,7 @@ index 3b9e788e6d8b00c3f850029294497b1bc6e3f0f0..224f774a73e1062f823e23c6303513b4
      } else {
          rop.ll.op_memset(mem_void_ptr, 0, clentry->struct_size, 4 /*align*/);
      }
-@@ -3921,11 +3921,11 @@ LLVMGEN(llvm_gen_closure)
+@@ -3921,11 +3921,11 @@
      // setup(render_services, id, mem_ptr).
      if (clentry->setup) {
          // Call clentry->setup(renderservices *, int id, void *mem)
@@ -182,11 +161,10 @@ index 3b9e788e6d8b00c3f850029294497b1bc6e3f0f0..224f774a73e1062f823e23c6303513b4
      }
  
      llvm_gen_keyword_fill(rop, op, clentry, closure_name, mem_void_ptr,
-diff --git a/src/liboslexec/llvm_instance.cpp b/src/liboslexec/llvm_instance.cpp
-index 209799b6227486bc4ccd8d20d2f33928f834b6f2..b867ce9051821d01e05a2a7519e92386862d335f 100644
---- a/src/liboslexec/llvm_instance.cpp
-+++ b/src/liboslexec/llvm_instance.cpp
-@@ -1943,9 +1943,7 @@ BackendLLVM::initialize_llvm_group()
+diff -Naur OpenShadingLanguage/src/liboslexec/llvm_instance.cpp OSL_BLD/src/liboslexec/llvm_instance.cpp
+--- OpenShadingLanguage/src/liboslexec/llvm_instance.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/llvm_instance.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -1943,9 +1943,7 @@
      params[0]                        = (llvm::Type*)ll.type_char_ptr();
      params[1]                        = ll.type_int();
      params[2]                        = (llvm::Type*)ll.type_char_ptr();
@@ -197,11 +175,10 @@ index 209799b6227486bc4ccd8d20d2f33928f834b6f2..b867ce9051821d01e05a2a7519e92386
  }
  
  
-diff --git a/src/liboslexec/llvm_util.cpp b/src/liboslexec/llvm_util.cpp
-index 43ce4c5b6c90dbba093ca6bb33758e851f59a0c5..9d7e816d49fb010b987bf5808fe334ed61188025 100644
---- a/src/liboslexec/llvm_util.cpp
-+++ b/src/liboslexec/llvm_util.cpp
-@@ -4099,19 +4099,20 @@ LLVM_Util::wide_op_alloca(const TypeDesc& type, int n, const std::string& name,
+diff -Naur OpenShadingLanguage/src/liboslexec/llvm_util.cpp OSL_BLD/src/liboslexec/llvm_util.cpp
+--- OpenShadingLanguage/src/liboslexec/llvm_util.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/llvm_util.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -4099,24 +4099,25 @@
  llvm::Value*
  LLVM_Util::call_function(llvm::Value* func, cspan<llvm::Value*> args)
  {
@@ -220,11 +197,11 @@ index 43ce4c5b6c90dbba093ca6bb33758e851f59a0c5..9d7e816d49fb010b987bf5808fe334ed
 -    return r;
 +    auto* function = llvm::cast<llvm::Function>(func);
 +    return call_function(function->getFunctionType(), function, args);
-+}
-+
-+
-+
-+llvm::Value*
+ }
+ 
+ 
+ 
+ llvm::Value*
 +LLVM_Util::call_function(llvm::FunctionType* type, llvm::Value* func,
 +                         cspan<llvm::Value*> args)
 +{
@@ -232,14 +209,18 @@ index 43ce4c5b6c90dbba093ca6bb33758e851f59a0c5..9d7e816d49fb010b987bf5808fe334ed
 +    return builder().CreateCall(type, func,
 +                                llvm::ArrayRef<llvm::Value*>(args.data(),
 +                                                             args.size()));
- }
- 
- 
-diff --git a/src/liboslexec/llvmutil_test.cpp b/src/liboslexec/llvmutil_test.cpp
-index ae57d013ef84f408b77d2b3e9f5798b1ea353091..0ff803faec4be366c7a017c0e65bc3477ed3dd6f 100644
---- a/src/liboslexec/llvmutil_test.cpp
-+++ b/src/liboslexec/llvmutil_test.cpp
-@@ -204,6 +204,79 @@ test_big_func(bool do_print = false)
++}
++
++
++
++llvm::Value*
+ LLVM_Util::call_function(const char* name, cspan<llvm::Value*> args)
+ {
+     llvm::Function* func = module()->getFunction(name);
+diff -Naur OpenShadingLanguage/src/liboslexec/llvmutil_test.cpp OSL_BLD/src/liboslexec/llvmutil_test.cpp
+--- OpenShadingLanguage/src/liboslexec/llvmutil_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslexec/llvmutil_test.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -204,6 +204,79 @@
  
  
  
@@ -319,7 +300,7 @@ index ae57d013ef84f408b77d2b3e9f5798b1ea353091..0ff803faec4be366c7a017c0e65bc347
  void
  test_isa_features()
  {
-@@ -234,6 +307,8 @@ main(int argc, char* argv[])
+@@ -234,6 +307,8 @@
      // Test simple functions
      test_int_func();
      test_triple_func();

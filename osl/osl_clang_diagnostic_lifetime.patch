@@ -1,20 +1,7 @@
-From d36af5ea0377d7fa961aaaf7b80f54abacb7eb65 Mon Sep 17 00:00:00 2001
-From: Clifford Yapp <238416+starseeker@users.noreply.github.com>
-Date: Thu, 12 Nov 2026 05:10:22 +0000
-Subject: [PATCH] fix(oslcomp): own diagnostic options across preprocessing
-
-Clang 21 and newer borrow diagnostic options rather than reference
-counting them. Keep a stack-owned value alive through compiler instance
-destruction, retaining an intrusive owner with older Clang.
-
-Keep error capture alive through diagnostic shutdown as well. Successful
-and failed preprocessing both pass Valgrind with no lost allocations.
-
-diff --git a/src/liboslcomp/oslcomp.cpp b/src/liboslcomp/oslcomp.cpp
-index b7dedd90ec83493869468c826f8032d1c0f61986..f46da8e5bc781eee6ac1b025945599a6f7ad30ed 100644
---- a/src/liboslcomp/oslcomp.cpp
-+++ b/src/liboslcomp/oslcomp.cpp
-@@ -164,25 +164,30 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
+diff -Naur OpenShadingLanguage/src/liboslcomp/oslcomp.cpp OSL_BLD/src/liboslcomp/oslcomp.cpp
+--- OpenShadingLanguage/src/liboslcomp/oslcomp.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OSL_BLD/src/liboslcomp/oslcomp.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -164,25 +164,30 @@
      std::unique_ptr<llvm::MemoryBuffer> mbuf(
          llvm::MemoryBuffer::getMemBuffer(instring, filename));
  
