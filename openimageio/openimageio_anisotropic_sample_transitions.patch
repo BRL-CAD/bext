@@ -1,0 +1,559 @@
+diff -Naur oiio/src/libOpenImageIO/CMakeLists.txt OPENIMAGEIO_BLD/src/libOpenImageIO/CMakeLists.txt
+--- oiio/src/libOpenImageIO/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -271,6 +271,11 @@
+     add_test (unit_imagebuf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/imagebuf_test)
+     set_tests_properties (unit_imagebuf PROPERTIES COST 30)
+ 
++    fancy_add_executable (NAME texture_test SRC texture_test.cpp
++                          LINK_LIBRARIES OpenImageIO
++                          FOLDER "Unit Tests" NO_INSTALL)
++    add_test (unit_texture ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/texture_test)
++
+     fancy_add_executable (NAME imagecache_test SRC imagecache_test.cpp
+                           LINK_LIBRARIES OpenImageIO
+                           FOLDER "Unit Tests" NO_INSTALL)
+diff -Naur oiio/src/libOpenImageIO/texture_test.cpp OPENIMAGEIO_BLD/src/libOpenImageIO/texture_test.cpp
+--- oiio/src/libOpenImageIO/texture_test.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libOpenImageIO/texture_test.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,380 @@
++// Copyright Contributors to the OpenImageIO project.
++// SPDX-License-Identifier: Apache-2.0
++// https://github.com/AcademySoftwareFoundation/OpenImageIO
++
++#include <OpenImageIO/filesystem.h>
++#include <OpenImageIO/imagebuf.h>
++#include <OpenImageIO/imagebufalgo.h>
++#include <OpenImageIO/strutil.h>
++#include <OpenImageIO/texture.h>
++#include <OpenImageIO/unittest.h>
++
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <string>
++#include <vector>
++
++using namespace OIIO;
++
++namespace {
++using Color              = std::array<float, 4>;
++constexpr int Resolution = 256;
++constexpr double Pi      = 3.14159265358979323846;
++
++struct TemporaryTextures {
++    std::string directory;
++    ustring signal, ramp;
++    bool valid = false;
++
++    TemporaryTextures()
++    {
++        const std::string proposed = Filesystem::temp_directory_path() + "/"
++                                     + Filesystem::unique_path(
++                                         "texture-filter-%%%%-%%%%");
++        std::string error;
++        if (!Filesystem::create_directory(proposed, error)) {
++            print(stderr, "Could not create temporary directory: {}\n", error);
++            return;
++        }
++        directory = proposed;
++        signal    = ustring(directory + "/signal.tx");
++        ramp      = ustring(directory + "/ramp.tx");
++        for (bool linear : { false, true }) {
++            ImageBuf pixels(ImageSpec(Resolution, Resolution, 3, TypeFloat));
++            for (int y = 0; y < Resolution; ++y) {
++                for (int x = 0; x < Resolution; ++x) {
++                    const double u = (x + 0.5) / Resolution;
++                    const double v = (y + 0.5) / Resolution;
++                    const std::array<float, 3> color
++                        = linear
++                              ? std::array<float, 3> { float(0.1 + 1.5 * u),
++                                                       float(0.2 + 2 * v),
++                                                       0.25f }
++                              : std::array<float, 3> {
++                                    float(0.5
++                                          + 0.35 * std::cos(2 * Pi * 17 * u)
++                                                * std::cos(2 * Pi * 9 * v)),
++                                    float(0.5
++                                          + 0.3
++                                                * std::sin(2 * Pi
++                                                           * (5 * u + 23 * v))),
++                                    float(0.5
++                                          + 0.2
++                                                * std::cos(2 * Pi
++                                                           * (31 * u - 7 * v)))
++                                };
++                    pixels.setpixel(x, y, color.data());
++                }
++            }
++            ImageSpec config;
++            config.format = TypeFloat;
++            config.attribute("maketx:filtername", "box");
++            config.attribute("maketx:constant_color_detect", 0);
++            config.attribute("maketx:monochrome_detect", 0);
++            if (!ImageBufAlgo::make_texture(ImageBufAlgo::MakeTxTexture, pixels,
++                                            linear ? ramp.string()
++                                                   : signal.string(),
++                                            config)) {
++                print(stderr, "Could not create texture: {}\n",
++                      pixels.geterror());
++                return;
++            }
++        }
++        valid = true;
++    }
++
++    ~TemporaryTextures()
++    {
++        if (directory.empty())
++            return;
++        std::string error;
++        Filesystem::remove_all(directory, error);
++        if (!error.empty())
++            print(stderr, "Could not remove temporary textures: {}\n", error);
++        OIIO_CHECK_ASSERT(error.empty());
++    }
++};
++
++Color
++lookup(TextureSystem& textures, ustring file, TextureOpt options, float s,
++       float t, float minor, float aspect, float angle, float* ds = nullptr,
++       float* dt = nullptr)
++{
++    const float c = std::cos(angle), sn = std::sin(angle);
++    Color color {};
++    const bool ok = textures.texture(file, options, s, t, minor * aspect * c,
++                                     minor * aspect * sn, -minor * sn,
++                                     minor * c, 3, color.data(), ds, dt);
++    OIIO_CHECK_ASSERT(ok);
++    if (!ok)
++        print(stderr, "{}\n", textures.geterror());
++    return color;
++}
++
++void
++test_continuity(TextureSystem& textures, ustring file)
++{
++    const float Perturbation = 1.0e-6f;
++    const float JumpBound    = 5.0e-5f;
++    float maximum_jump       = 0;
++    for (auto mode :
++         { TextureOpt::InterpBilinear, TextureOpt::InterpSmartBicubic })
++        for (float minor : { 0.0027f, 0.00463f, 0.0093f })
++            for (float angle : { 0.0f, 0.27f, 0.79f })
++                for (const auto coordinate :
++                     { std::array<float, 2> { 0.1934f, 0.0739f },
++                       std::array<float, 2> { 0.499f, 0.601f } }) {
++                    TextureOpt options;
++                    options.swrap = options.twrap = TextureOpt::WrapPeriodic;
++                    options.interpmode            = mode;
++                    for (int boundary = 3; boundary <= 32; ++boundary) {
++                        const float aspect = boundary * 0.5f;
++                        const auto before = lookup(textures, file, options,
++                                                   coordinate[0], coordinate[1],
++                                                   minor, aspect - Perturbation,
++                                                   angle);
++                        const auto after  = lookup(textures, file, options,
++                                                   coordinate[0], coordinate[1],
++                                                   minor, aspect + Perturbation,
++                                                   angle);
++                        for (int channel = 0; channel < 3; ++channel) {
++                            OIIO_CHECK_ASSERT(std::isfinite(before[channel])
++                                              && std::isfinite(after[channel]));
++                            maximum_jump = std::max(
++                                maximum_jump,
++                                std::abs(after[channel] - before[channel]));
++                        }
++                    }
++                }
++    print("Maximum transition jump: {}\n", maximum_jump);
++    OIIO_CHECK_ASSERT(maximum_jump <= JumpBound);
++}
++
++Color
++integrated_reference(TextureSystem& textures, ustring file, TextureOpt options,
++                     float s, float t, float minor, float aspect, float angle,
++                     bool refined)
++{
++    // Integrate the continuous Gaussian implied by the deterministic filter.
++    // Isotropic lookups reconstruct the same MIP levels without reusing any
++    // anisotropic positions or weights. Gaussian coordinates resolve thin
++    // ellipses without a large bank of nearly zero integration weights.
++    const double extent = double(minor) * (aspect - 1);
++    const double sigma  = extent * (aspect - 1) / aspect;
++    // Tails beyond eight standard deviations have negligible double mass.
++    constexpr double MaximumDistance = 8;
++    const double end = std::min(double(aspect) / (aspect - 1), MaximumDistance);
++    const double ds  = sigma * std::cos(angle);
++    const double dt  = sigma * std::sin(angle);
++    std::array<double, 3> total {};
++    auto add_sample = [&](double z, double weight) {
++        const auto value = lookup(textures, file, options, float(s + ds * z),
++                                  float(t + dt * z), minor, 1.0f, 0.0f);
++        for (int channel = 0; channel < 3; ++channel)
++            total[channel] += weight * value[channel];
++    };
++    double normalization = 0;
++    if (options.interpmode == TextureOpt::InterpClosest) {
++        // Nearest reconstruction is constant between texel boundaries.
++        // Split at boundaries of both contributing MIPs and integrate each
++        // interval's Gaussian mass exactly, rather than sampling a step.
++        int resolution = Resolution;
++        while (minor * resolution > 1 && resolution > 1)
++            resolution /= 2;
++        std::vector<double> knots { -end, end };
++        for (int size : { resolution, std::min(Resolution, 2 * resolution) }) {
++            auto add_boundaries = [&](double coordinate, double direction) {
++                if (direction == 0)
++                    return;
++                const int first = int(
++                    std::ceil((coordinate - std::abs(direction) * end) * size));
++                const int last = int(std::floor(
++                    (coordinate + std::abs(direction) * end) * size));
++                for (int texel = first; texel <= last; ++texel) {
++                    const double z = (double(texel) / size - coordinate)
++                                     / direction;
++                    if (z > -end && z < end)
++                        knots.push_back(z);
++                }
++            };
++            add_boundaries(s, ds);
++            add_boundaries(t, dt);
++        }
++        std::sort(knots.begin(), knots.end());
++        knots.erase(std::unique(knots.begin(), knots.end()), knots.end());
++        for (size_t i = 1; i < knots.size(); ++i) {
++            const double a = knots[i - 1], b = knots[i];
++            const double weight = std::erf(b / std::sqrt(2.0))
++                                  - std::erf(a / std::sqrt(2.0));
++            add_sample((a + b) * 0.5, weight);
++        }
++        normalization = 2 * std::erf(end / std::sqrt(2.0));
++    } else {
++        constexpr int Steps = 1024;
++        const int steps     = refined ? 2 * Steps : Steps;
++        for (int i = 0; i <= steps; ++i) {
++            const double z           = 2 * end * i / steps - end;
++            const double coefficient = (i == 0 || i == steps)
++                                           ? 1
++                                           : ((i % 2) ? 4 : 2);
++            const double weight      = coefficient * std::exp(-0.5 * z * z);
++            add_sample(z, weight);
++            normalization += weight;
++        }
++    }
++    Color result {};
++    for (int channel = 0; channel < 3; ++channel)
++        result[channel] = float(total[channel] / normalization);
++    return result;
++}
++
++void
++test_integrated_response(TextureSystem& textures, ustring file,
++                         TextureOpt::InterpMode mode)
++{
++    // A nearest reconstruction is discontinuous between texels; its small
++    // quadrature budget permits larger errors than the smooth interpolants.
++    const double maximum_bound = mode == TextureOpt::InterpClosest   ? 0.06
++                                 : mode == TextureOpt::InterpBicubic ? 0.005
++                                                                     : 0.01;
++    const double rms_bound     = mode == TextureOpt::InterpClosest   ? 0.013
++                                 : mode == TextureOpt::InterpBicubic ? 0.001
++                                                                     : 0.005;
++    constexpr double ReferenceChangeBound = 1.0e-5;
++    TextureOpt options;
++    options.swrap = options.twrap = TextureOpt::WrapPeriodic;
++    options.interpmode            = mode;
++    double maximum_error = 0, squared_error = 0, maximum_reference_change = 0;
++    int comparisons = 0;
++    for (float aspect : { 1.1f, 1.3f, 1.49f, 1.51f, 1.75f, 1.99f, 2.01f, 2.49f,
++                          2.51f, 3.2f, 7.9f, 15.9f })
++        for (float minor : { 0.0027f, 0.00463f, 0.0093f })
++            for (float angle : { 0.13f, 0.79f })
++                for (const auto coordinate :
++                     { std::array<float, 2> { 0.1934f, 0.0739f },
++                       std::array<float, 2> { 0.499f, 0.601f } }) {
++                    const auto actual = lookup(textures, file, options,
++                                               coordinate[0], coordinate[1],
++                                               minor, aspect, angle);
++                    const auto expected
++                        = integrated_reference(textures, file, options,
++                                               coordinate[0], coordinate[1],
++                                               minor, aspect, angle, true);
++                    const auto coarse
++                        = integrated_reference(textures, file, options,
++                                               coordinate[0], coordinate[1],
++                                               minor, aspect, angle, false);
++                    for (int channel = 0; channel < 3; ++channel) {
++                        const double error = std::abs(double(actual[channel])
++                                                      - expected[channel]);
++                        maximum_error      = std::max(maximum_error, error);
++                        maximum_reference_change
++                            = std::max(maximum_reference_change,
++                                       std::abs(double(expected[channel])
++                                                - coarse[channel]));
++                        squared_error += error * error;
++                        ++comparisons;
++                    }
++                }
++    const double rms = std::sqrt(squared_error / comparisons);
++    print("Integrated kernel mode {}: max {}, RMS {}, reference delta {}\n",
++          int(mode), maximum_error, rms, maximum_reference_change);
++    OIIO_CHECK_ASSERT(maximum_error <= maximum_bound);
++    OIIO_CHECK_ASSERT(rms <= rms_bound);
++    OIIO_CHECK_ASSERT(maximum_reference_change <= ReferenceChangeBound);
++}
++
++void
++test_linear_values_and_derivatives(TextureSystem& textures, ustring file)
++{
++    TextureOpt options;
++    options.swrap = options.twrap = TextureOpt::WrapClamp;
++    options.interpmode            = TextureOpt::InterpBilinear;
++    for (int limit : { 1, 2, 4, 8, 16, 32 })
++        for (float aspect : { 1.0f, 1.25f, 1.99f, 2.01f, 7.9f, 15.9f, 31.9f })
++            for (float angle : { 0.0f, 0.27f, 0.79f }) {
++                options.anisotropic = limit;
++                Color ds {}, dt {};
++                const auto value = lookup(textures, file, options, 0.499f,
++                                          0.601f, 0.0037f, aspect, angle,
++                                          ds.data(), dt.data());
++                OIIO_CHECK_EQUAL_THRESH(value[0], 0.1f + 1.5f * 0.499f,
++                                        2.0e-5f);
++                OIIO_CHECK_EQUAL_THRESH(value[1], 0.2f + 2.0f * 0.601f,
++                                        2.0e-5f);
++                OIIO_CHECK_EQUAL_THRESH(value[2], 0.25f, 2.0e-5f);
++                OIIO_CHECK_EQUAL_THRESH(ds[0], 1.5f, 2.0e-5f);
++                OIIO_CHECK_EQUAL_THRESH(dt[1], 2.0f, 2.0e-5f);
++                OIIO_CHECK_EQUAL_THRESH(dt[0], 0.0f, 2.0e-5f);
++                OIIO_CHECK_EQUAL_THRESH(ds[1], 0.0f, 2.0e-5f);
++                OIIO_CHECK_EQUAL_THRESH(ds[2], 0.0f, 2.0e-5f);
++                OIIO_CHECK_EQUAL_THRESH(dt[2], 0.0f, 2.0e-5f);
++            }
++}
++void
++test_batch_agrees_with_scalar(TextureSystem& textures, ustring file)
++{
++    constexpr int Width = Tex::BatchWidth;
++    alignas(Tex::BatchAlign) float s[Width], t[Width], dxs[Width], dxt[Width],
++        dys[Width], dyt[Width];
++    alignas(Tex::BatchAlign) float result[3 * Width];
++    TextureOptBatch options;
++    options.swrap = options.twrap = decltype(options.swrap)(
++        TextureOpt::WrapPeriodic);
++    options.interpmode = decltype(options.interpmode)(
++        TextureOpt::InterpBilinear);
++    TextureOpt scalar;
++    scalar.swrap = scalar.twrap = TextureOpt::WrapPeriodic;
++    scalar.interpmode           = TextureOpt::InterpBilinear;
++    const float angle = 0.27f, minor = 0.00463f;
++    for (int lane = 0; lane < Width; ++lane) {
++        const float aspect = 1.0f + 0.25f * lane;
++        s[lane]            = 0.1934f + 0.01f * lane;
++        t[lane]            = 0.601f;
++        dxs[lane]          = minor * aspect * std::cos(angle);
++        dxt[lane]          = minor * aspect * std::sin(angle);
++        dys[lane]          = -minor * std::sin(angle);
++        dyt[lane]          = minor * std::cos(angle);
++    }
++    for (bool masked : { false, true }) {
++        Tex::RunMask mask = 0;
++        for (int lane = 0; lane < Width; ++lane)
++            if (!masked || lane % 2 == 0)
++                mask |= Tex::RunMask(1) << lane;
++        OIIO_CHECK_ASSERT(textures.texture(file, options, mask, s, t, dxs, dxt,
++                                           dys, dyt, 3, result));
++        for (int lane = 0; lane < Width; ++lane) {
++            if (!(mask & (Tex::RunMask(1) << lane)))
++                continue;
++            const auto expected = lookup(textures, file, scalar, s[lane],
++                                         t[lane], minor, 1.0f + 0.25f * lane,
++                                         angle);
++            for (int channel = 0; channel < 3; ++channel)
++                OIIO_CHECK_EQUAL_THRESH(result[channel * Width + lane],
++                                        expected[channel], 2.0e-6f);
++        }
++    }
++}
++}  // namespace
++
++int
++main()
++{
++    OIIO::attribute("threads", 1);
++    {
++        TemporaryTextures files;
++        OIIO_CHECK_ASSERT(files.valid);
++        if (files.valid) {
++            auto textures = TextureSystem::create(false);
++            test_continuity(*textures, files.signal);
++            for (auto mode :
++                 { TextureOpt::InterpClosest, TextureOpt::InterpBilinear,
++                   TextureOpt::InterpBicubic })
++                test_integrated_response(*textures, files.signal, mode);
++            test_linear_values_and_derivatives(*textures, files.ramp);
++            test_batch_agrees_with_scalar(*textures, files.signal);
++        }
++    }
++    return unit_test_failures;
++}
+diff -Naur oiio/src/libtexture/texturesys.cpp OPENIMAGEIO_BLD/src/libtexture/texturesys.cpp
+--- oiio/src/libtexture/texturesys.cpp	1970-01-01 00:00:00.000000000 +0000
++++ OPENIMAGEIO_BLD/src/libtexture/texturesys.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -2192,69 +2192,72 @@
+ 
+ 
+ 
+-// Given the aspect ratio, major axis orientation angle, and axis lengths,
+-// calculate the smajor & tmajor values that give the orientation of the
+-// line on which samples should be distributed.  If there are n samples,
+-// they should be positioned as:
+-//     p_i = 2*(i+0.5)/n - 1.0;
+-//     sample_i = (s + p_i*smajor, t + p_i*tmajor)
+-// If a weights ptr is supplied, it will be filled in [0..nsamples-1] with
+-// normalized weights for each sample.
++// Position symmetric midpoint cells along the major axis. An odd number
++// of full cells is flanked by two partial cells. New edge cells enter with
++// zero weight and grow continuously into full cells, avoiding a filter jump
++// when the required number of anisotropic samples changes.
+ inline int
+ compute_ellipse_sampling(float aspect, float theta, float majorlength,
+                          float minorlength, float& smajor, float& tmajor,
+-                         float& invsamples, float* weights, float* samplepos,
+-                         bool stochastic, float rnd)
++                         float* weights, float* samplepos, bool stochastic,
++                         float rnd)
+ {
+-    // Compute the sin and cos of the sampling direction, given major
+-    // axis angle
+     sincos(theta, &tmajor, &smajor);
+     float LL = 2.0f * (majorlength - minorlength);
+     smajor *= LL;
+     tmajor *= LL;
+     if (stochastic) {
+-        // If we're doing stochastic anisotropy, we just need one sample.
+-        weights[0] = 1.0f;
+-        invsamples = 1.0f;
+         // For window half width w, standard deviation s, uniform random
+         // number r, warping to a windowed Gaussian PDF is:
+         //   M_SQRT2 * s * ierf((2 * r - 1) * erf(w / (M_SQRT2 * s)))
++        weights[0]   = 1.0f;
+         samplepos[0] = float(M_SQRT2)
+                        * fast_ierf((2.0f * rnd - 1.0f)
+                                    * fast_erf(1.0f / float(M_SQRT2)));
+         return 1;
+     }
+-#if 1
+-    // This is the theoretically correct number of samples.
+-    int nsamples = std::max(1, int(2.0f * aspect - 1.0f));
+-#else
+-    int nsamples = std::max(1, (int)ceilf(aspect - 0.3f));
+-    // This approach does fewer samples for high aspect ratios, but I see
+-    // artifacts.
+-#endif
+-    invsamples = 1.0f / nsamples;
+-    if (nsamples == 1) {
++    const float count = std::max(1.0f, 2.0f * aspect - 1.0f);
++    if (count == 1.0f) {
+         weights[0]   = 1.0f;
+         samplepos[0] = 0.0f;
+-    } else if (nsamples == 2) {
+-        weights[0]   = 0.5f;
+-        weights[1]   = 0.5f;
+-        samplepos[0] = -0.5f;
+-        samplepos[1] = 0.5f;
+-    } else {
+-        float scale = majorlength / LL;  // 1/(L/major)
+-        float sumw  = 0.0f;
+-        for (int i = 0; i < nsamples; ++i) {
+-            float sp   = 2.0f * (i + 0.5f) * invsamples - 1.0f;
+-            float x    = sp * scale;
+-            float w    = fast_exp(-2.0f * x * x);
+-            weights[i] = w;
+-            sumw += w;
+-            samplepos[i] = sp;
+-        }
+-        for (int i = 0; i < nsamples; ++i)
+-            weights[i] /= sumw;
++        return 1;
+     }
++    const float inv_count     = 1.0f / count;
++    const int full_samples    = 2 * int((count - 1.0f) * 0.5f) + 1;
++    const float edge_fraction = (count - full_samples) * 0.5f;
++    const float scale         = majorlength / LL;
++    float sumw                = 0.0f;
++    for (int i = 0; i < full_samples; ++i) {
++        float sp     = (2.0f * i + 1.0f - full_samples) * inv_count;
++        float x      = sp * scale;
++        float w      = fast_exp(-2.0f * x * x);
++        samplepos[i] = sp;
++        weights[i]   = w;
++        sumw += w;
++    }
++    int nsamples = full_samples;
++    if (edge_fraction > 0.0f) {
++        float sp                        = 1.0f - edge_fraction * inv_count;
++        float x                         = sp * scale;
++        const float exponent            = -2.0f * x * x;
++        const float min_normal_exponent = std::log(
++            std::numeric_limits<float>::min());
++        // fast_exp clamps to the smallest normal float. In a thin ellipse
++        // this would manufacture subnormal tails instead of reaching zero.
++        float w = edge_fraction
++                  * (exponent < min_normal_exponent ? std::exp(exponent)
++                                                    : fast_exp(exponent));
++        if (w > 0.0f) {
++            samplepos[nsamples]     = -sp;
++            samplepos[nsamples + 1] = sp;
++            weights[nsamples]       = w;
++            weights[nsamples + 1]   = w;
++            sumw += 2.0f * w;
++            nsamples += 2;
++        }
++    }
++    for (int i = 0; i < nsamples; ++i)
++        weights[i] /= sumw;
+     return nsamples;
+ }
+ 
+@@ -2314,11 +2317,10 @@
+     float* samplepos  = lineweight + maxsamples;
+     float* sval       = lineweight + 2 * maxsamples;
+     float* tval       = lineweight + 3 * maxsamples;
+-    float invsamples;
+     int nsamples = compute_ellipse_sampling(aspect, theta, majorlength,
+                                             minorlength, smajor, tmajor,
+-                                            invsamples, lineweight, samplepos,
+-                                            stoch_aniso, options.rnd);
++                                            lineweight, samplepos, stoch_aniso,
++                                            options.rnd);
+     // All the computations were done assuming full diametric axes of
+     // the ellipse, but our derivatives are pixel-to-pixel, yielding
+     // semi-major and semi-minor lengths, so we need to scale everything
+@@ -2333,6 +2335,11 @@
+     // Compute the s and t positions of the samples along the major axis.
+ 
+ #if OIIO_SIMD
++    OIIO_DASSERT(nsamples <= maxsamples);
++    // The last SIMD position batch reads four slots even when fewer
++    // samples contribute. Keep those padded positions initialized.
++    for (int i = nsamples; i < round_to_multiple_of_pow2(nsamples, 4); ++i)
++        samplepos[i] = 0.0f;
+     // Do the computations in batches of 4, with SIMD ops.
+     for (int sample = 0; sample < nsamples; sample += 4) {
+         vfloat4 pos(samplepos + sample);
+@@ -3428,11 +3435,11 @@
+     int maxsamples    = round_to_multiple_of_pow2(2 * options.anisotropic, 4);
+     float* lineweight = OIIO_ALLOCA(float, 4 * maxsamples);
+     float* samplepos  = lineweight + maxsamples;
+-    float smajor, tmajor, invsamples;
++    float smajor, tmajor;
+     int nsamples = compute_ellipse_sampling(aspect, theta, majorlength,
+                                             minorlength, smajor, tmajor,
+-                                            invsamples, lineweight, samplepos,
+-                                            stoch_aniso, 0.5f);
++                                            lineweight, samplepos, stoch_aniso,
++                                            0.5f);
+     // All the computations were done assuming full diametric axes of
+     // the ellipse, but our derivatives are pixel-to-pixel, yielding
+     // semi-major and semi-minor lengths, so we need to scale everything

@@ -11,15 +11,23 @@ if (ENABLE_OPENIMAGEIO)
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_color_gamut_metadata.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_default_look_config.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_test_python_interpreter.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_anisotropic_sample_transitions.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_intel_windows_fp.patch"
     )
   if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "^(Clang|IntelLLVM)$")
     list(APPEND OPENIMAGEIO_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/openimageio_windows_simd_flags.patch")
   endif ()
+  include("${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages.cmake")
+  list(TRANSFORM OPENIMAGEIO_REFERENCE_IMAGES
+    PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/reference-images/"
+    OUTPUT_VARIABLE OPENIMAGEIO_REFERENCE_INPUTS)
   git_submodule_init(oiio CMakeLists.txt
     PATCH_FILES ${OPENIMAGEIO_PATCH_FILES}
     INPUT_FILES
+      ${OPENIMAGEIO_REFERENCE_INPUTS}
+      "${CMAKE_CURRENT_SOURCE_DIR}/ReferenceImages.cmake"
+      "${CMAKE_CURRENT_SOURCE_DIR}/CopyReferenceImages.cmake"
       "${PROJECT_SOURCE_DIR}/CMake/FindPNG.cmake"
       "${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake"
     PATCH_COMMAND_VAR OPENIMAGEIO_PATCH_COMMAND)
@@ -33,6 +41,9 @@ if (ENABLE_OPENIMAGEIO)
     URL "${CMAKE_CURRENT_SOURCE_DIR}/oiio"
     BUILD_ALWAYS ${EXT_BUILD_ALWAYS} ${LOG_OPTS}
     PATCH_COMMAND ${OPENIMAGEIO_PATCH_COMMAND}
+    COMMAND ${CMAKE_COMMAND}
+      "-DOPENIMAGEIO_SOURCE_DIR=<SOURCE_DIR>"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/CopyReferenceImages.cmake"
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindZLIB.cmake;<SOURCE_DIR>/src/cmake/FindZLIB.cmake
     COMMAND ${CMAKE_COMMAND};-E;copy;${PROJECT_SOURCE_DIR}/CMake/FindPNG.cmake;<SOURCE_DIR>/src/cmake/FindPNG.cmake
     CMAKE_ARGS
