@@ -187,6 +187,8 @@ def build(plan):
                    '--parallel', '1']
         if plan['config']:
             command += ['--config', plan['config']]
+        if plan.get('uses_msbuild') and not build_target:
+            command += ['--', '/p:BuildProjectReferences=false']
         print('Building ' + target, flush=True)
         with (logs / (target + '.log')).open('ab') as output:
             process = subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,

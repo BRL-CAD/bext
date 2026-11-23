@@ -111,6 +111,13 @@ function(ExternalProject_Add name)
   endif (TARGET ${name}-install)
 endfunction(ExternalProject_Add name)
 
+function(ExternalProject_Add_StepDependencies name step)
+  if (BEXT_DISCARD_WORK)
+    return()
+  endif ()
+  _ExternalProject_Add_StepDependencies(${name} ${step} ${ARGN})
+endfunction()
+
 function(_bext_json_quote output value)
   string(REPLACE "\\" "\\\\" value "${value}")
   string(REPLACE "\"" "\\\"" value "${value}")
