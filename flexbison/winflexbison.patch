@@ -212,6 +212,17 @@ diff --git a/common/m4/lib/regex.h b/common/m4/lib/regex.h
 +#if (defined(_MSC_VER) || defined(__MINGW32__)) && !defined(__USE_GNU)
  # define __USE_GNU 1
  #endif
+
+@@ -628,7 +628,9 @@
+    Other ISO C99 compilers support it as well.  */
+ #ifndef _Restrict_arr_
+-# ifdef __restrict_arr
++# ifdef _MSC_VER
++#  define _Restrict_arr_
++# elif defined __restrict_arr
+ #  define _Restrict_arr_ __restrict_arr
+ # elif ((199901L <= __STDC_VERSION__ \
+          || 3 < __GNUC__ + (1 <= __GNUC_MINOR__) \
  
 diff --git a/common/misc/bitset/base.h b/common/misc/bitset/base.h
 --- a/common/misc/bitset/base.h
