@@ -2417,6 +2417,351 @@ Message:
     silently skipping the dielectric.  Test forced cover-first entry,
     exit, opaque ownership and ambiguous coverage.
 
+Commit: 52e9d7fd7846ab83cf6711f091596564172f2c7e
+Patches: appleseed_selected_normal_derivatives.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T22:18:29Z
+Parents: 64fb83ad7a991008a49d43b11e88f40d4fc2fa02
+Message:
+    Keep mapped glass scattering on its geometric side
+
+    Validate reflected and transmitted directions against the geometric
+    normal in sampling, evaluation and PDF evaluation.  Preserve the
+    original density for accepted directions while rejecting incompatible
+    scattering before it can change media at the next interface.
+
+    Check smooth and rough reflection and transmission on both sides,
+    radiance and adjoint paths, positive samples and invalid evaluations.
+
+Commit: 86e86c81178decea97f52f4c8b2611c029b70d5d
+Patches: appleseed_selected_normal_derivatives.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T22:18:51Z
+Parents: 52e9d7fd7846ab83cf6711f091596564172f2c7e
+Message:
+    Propagate selected OSL glass normal derivatives
+
+    Carry per-closure normal derivatives into specular ray propagation.
+    Retain surface derivatives as the fallback for existing closures.
+    Provide derivative-aware surface normals to shader initializers and
+    supply glass normal derivatives through optional closure keywords.
+
+    Check reflected and transmitted neighboring rays on both sides and
+    adjoint paths, including constant normals on curved geometry.
+
+Commit: 261254a009907d4e2edc735eb7d082de6fde6fb4
+Patches: appleseed_selected_normal_derivatives.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T22:19:13Z
+Parents: 86e86c81178decea97f52f4c8b2611c029b70d5d
+Message:
+    Honor explicit IOR in standard OSL reflection
+
+    Enable dielectric Fresnel attenuation when converting reflection
+    with a positive IOR. Keep zero as the unweighted mirror convention.
+
+    Compare native radiance and adjoint samples with independent Fresnel
+    energies at normal and oblique incidence, matched indices and total
+    internal reflection. Use zero IOR for the existing mirror fixtures.
+
+Commit: 0d3d04681948e73774a653296404f18d31961b33
+Patches: appleseed_selected_normal_derivatives.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T22:19:35Z
+Parents: 261254a009907d4e2edc735eb7d082de6fde6fb4
+Message:
+    Propagate selected normal derivatives through specular closures
+
+    Share optional normal derivative parameters across canonical glass,
+    glossy, metal, plastic, reflection and glossy coat closures. Preserve
+    legacy surface derivatives when shaders omit the keywords.
+
+    Update the bundled metal, plastic and coat shaders and provide a
+    mapped mirror helper. Compare native reflected derivatives with
+    finite differences, including scaled raw normals and both transport
+    directions. Size test closure parameters from registered layouts.
+
+Commit: 3a8d82ddfc312808880c253fdd45b8cb8f3e1226
+Patches: appleseed_selected_normal_derivatives.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T22:19:57Z
+Parents: 0d3d04681948e73774a653296404f18d31961b33
+Message:
+    Pass selected normal derivatives through bundled materials
+
+    Wire the shared normal derivative contract through all remaining
+    bundled canonical glass, glossy, metal and plastic calls. Obtain
+    default surface normals from the renderer's derivative-aware helper.
+
+    Preserve material parameters, roughness limits and the installed
+    shader catalogue. Compiler check Toon, Subsurface and Maya PhongE.
+
+Commit: 5a025f9b4d24500b11550ddc3b6baa3b37523da8
+Patches: appleseed_ggx_sampling.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T22:20:49Z
+Parents: 3a8d82ddfc312808880c253fdd45b8cb8f3e1226
+Message:
+    Differentiate GGX visible-normal sampling
+
+    Share the scalar sampler between its value and Jacobian paths.
+    Differentiate incident normalization, the sampled frame and disk,
+    and normal unstretching with random variates and widths held fixed.
+
+    Check 150 configurations with tangent finite differences and normal
+    invariants. Preserve exact scalar results on 9216 comparison samples.
+
+Commit: 53e3ce7cecab6acabf5fdb8be68ebf46c3d6c3d2
+Patches: appleseed_ggx_sampling.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T22:20:51Z
+Parents: 5a025f9b4d24500b11550ddc3b6baa3b37523da8
+Message:
+    Propagate GGX sampled-path derivatives through specular frames
+
+    Retain raw closure tangents and accept optional tangent derivatives.
+    Differentiate frame construction, sampled microfacet normals,
+    reflection, refraction and geometric-side correction. Preserve
+    ideal-specular paths and scalar sample values, weights and densities.
+
+    Wire tangent derivatives through bundled canonical shaders. Ignore
+    derivatives of normal/tangent inputs discarded by frame fallback.
+    Qualify fixed-random neighboring paths across six material cases,
+    transport directions, anisotropy and glass sides.
+
+Commit: 3820efa05a6b005c4240e04441ed2bf1d1c0c60b
+Patches: appleseed_surface_frame_derivatives.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T23:33:34Z
+Parents: 53e3ce7cecab6acabf5fdb8be68ebf46c3d6c3d2
+Message:
+    Share normalization and shading-frame differential helpers
+
+    Use shared vector normalization and frame derivatives in GGX sampling
+    and BSDF ray propagation. Differentiate both raw-tangent and signed
+    normal-only frame construction. Check independent neighboring vectors,
+    finite differences and unit-frame invariants.
+
+Commit: 7c67cee0683ea706ff3ddd5f0219b54f27d678d9
+Patches: appleseed_surface_frame_derivatives.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T23:33:35Z
+Parents: 3820efa05a6b005c4240e04441ed2bf1d1c0c60b
+Message:
+    Differentiate native surface frames and OSL tangent userdata
+
+    Accept optional tangent and geometric-normal chart partials from
+    procedural objects. Differentiate transformed chart, radial, local-axis
+    and authored triangle frames. Preserve the geometric position chart and
+    normalized shading-normal gradients. Supply screen derivatives for Tn
+    and UV-oriented Bn userdata, with deliberate fallbacks for unavailable
+    data.
+
+Commit: bcfb9388bd9343057c153df4f6e555df376b944d
+Patches: appleseed_surface_frame_derivatives.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T23:33:37Z
+Parents: 7c67cee0683ea706ff3ddd5f0219b54f27d678d9
+Message:
+    Carry default-frame derivatives through rough sampled paths
+
+    Track surface-tangent provenance separately from tangent value equality.
+    Fill default and zero-input closure fallbacks with actual surface-frame
+    derivatives. Query geometric-normal derivatives for corrected metal
+    reflection and default tangents for native leaf sampling. Preserve
+    explicit shader tangent derivatives and fixture overrides.
+
+Commit: 711eb195eddb3fa13d7bc57e937888df2d29fcba
+Patches: appleseed_beckmann_and_normal_incidence.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T23:38:14Z
+Parents: bcfb9388bd9343057c153df4f6e555df376b944d
+Message:
+    Refine sampling Jacobian references at grazing incidence
+
+    Use a double-precision GGX value reference and a smaller finite-
+    difference step for the expanded grazing matrix. Retain the derivative
+    bound and compare sampled values independently. Share the invariant test
+    body across visible-normal distributions.
+
+Commit: 673d3861a94d9abd41ccf1cc7ef40f5a66721509
+Patches: appleseed_beckmann_and_normal_incidence.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T23:38:16Z
+Parents: 711eb195eddb3fa13d7bc57e937888df2d29fcba
+Message:
+    Differentiate the clamped inverse-error approximation
+
+    Share the existing Giles polynomial value path with an optional
+    derivative. Follow each polynomial domain transform and the argument
+    clamp. Check derivatives against finite differences and preserve the
+    scalar approximation.
+
+Commit: 59a69228f5701316d551041ee51f902983e7989a
+Patches: appleseed_beckmann_and_normal_incidence.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T23:38:18Z
+Parents: 673d3861a94d9abd41ccf1cc7ef40f5a66721509
+Message:
+    Differentiate Beckmann visible-normal sampling
+
+    Share the scalar sampler with its fixed-random, fixed-width Jacobian
+    path. Differentiate stretching, the selected polar branch, slope
+    inversion and both Newton updates, azimuth rotation and normalization.
+    Use the actual inverse-error approximation derivative. Check neighboring
+    samples and unit-normal invariants alongside GGX.
+
+Commit: 1b64715071c6fc84c17b214e815172c6828f7b85
+Patches: appleseed_beckmann_and_normal_incidence.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T00:49:17Z
+Parents: 59a69228f5701316d551041ee51f902983e7989a
+Message:
+    Handle Oren-Nayar reflection at normal incidence
+
+    Avoid normalizing zero tangent projections when either direction lies
+    on the shading normal.  Compute polar angles with atan2 to avoid
+    amplifying unit-vector rounding near the pole.
+
+    Check the analytic pole limit for both directions and rotated normals,
+    and verify finite sampled values agree with evaluation and density.
+
+Commit: 619ea5c7914c1d248fe8e7f6b0e331f403b4b624
+Patches: appleseed_standard_microfacet_reflection.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T03:18:46Z
+Parents: 1b64715071c6fc84c17b214e815172c6828f7b85
+Message:
+    Support standard OSL microfacet reflection
+
+    Register the modern seven-parameter closure and preserve Beckmann/GGX
+    distribution widths and dielectric Fresnel semantics.  Retain ideal
+    reflection for two zero widths and regularize singular finite axes.
+    Reject unsupported transmission modes explicitly.
+
+    Carry selected frames through fixed-random reflection derivatives for
+    both distributions.  Preserve anisotropy during ray roughness clamping.
+
+    Check oblique response, sampling density and Fresnel against independent
+    references, and compare ray derivatives with neighboring scalar paths.
+    Exercise ideal reflection, finite narrow axes and unsupported inputs.
+
+Commit: f2e4a3de8519adca9ae02a98e9668dcb751bd596
+Patches: appleseed_standard_microfacet_reflection.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T03:18:48Z
+Parents: 619ea5c7914c1d248fe8e7f6b0e331f403b4b624
+Message:
+    Wire standard microfacet shader frames and coating normals
+
+    Pass selected normal derivatives from Standard Surface coat and normal
+    and tangent derivatives from Maya Anisotropic.  Use the renderer shading
+    normal for the latter's default input.
+
+    Treat constant and connected coating normals consistently.  A zero
+    coating normal inherits the substrate, preserving default behavior while
+    honoring explicitly authored nonzero values.
+
+Commit: 0753ae8006e8dd045028c50f60ddac511eef36f4
+Patches: appleseed_closure_ior_context.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T04:55:33Z
+Parents: f2e4a3de8519adca9ae02a98e9668dcb751bd596
+Message:
+    Share microfacet transmission and preserve near-matched media
+
+    Reuse the glass transmission geometry, Fresnel calculation, BSDF value
+    and directional density for both GGX and Beckmann distributions.
+
+    Replace the fixed transmission-denominator cutoff with an exact
+    singularity check. Adjacent representable refractive indices around one
+    produce narrow, finite lobes that the old cutoff discarded.
+
+    Compare values and densities with independent double-precision
+    references, including importance transport and both interface sides.
+    The complete native unit suite passes for this isolated change.
+
+Commit: 3d1e66be92dad4e8a59d281164c5fc20f14e258d
+Patches: appleseed_closure_ior_context.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T04:58:29Z
+Parents: 0753ae8006e8dd045028c50f60ddac511eef36f4
+Message:
+    Resolve relative closure indices in their medium context
+
+    Distinguish absolute interior indices from transmitted/incident ratios.
+    Resolve relative entries using the outside medium and interface side,
+    without changing the authored values during repeated preparation.
+
+    Route OSL input preparation through one shared entry point so runtime
+    and direct callers supply the same medium and derivative context.
+    Retain the absolute-index and vacuum behavior and reject invalid or
+    unrepresentable relative results explicitly.
+
+    Test mixed weighted entries, entering and leaving interfaces, vacuum
+    fallback and range errors. The complete native unit suite passes for
+    this isolated change; standard microfacet transmission remains disabled.
+
+Commit: 3a7ee1e3316e250e82879da1d71aebc62fc4987c
+Patches: appleseed_closure_ior_context.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T07:27:19Z
+Parents: 3d1e66be92dad4e8a59d281164c5fc20f14e258d
+Message:
+    Preserve dielectric Fresnel limits at normal incidence
+
+    Avoid multiplying a zero incident sine by an overflowing squared index.
+    Share the Snell cosine calculation between foundation Fresnel functions
+    and microfacet transmission. Add float, double and shared-helper checks
+    for extreme finite indices and the total-internal-reflection limit.
+
+Commit: 1fb85a6af338195f653a93792941ec5ed32e8e0b
+Patches: appleseed_closure_ior_context.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T07:27:20Z
+Parents: 3a7ee1e3316e250e82879da1d71aebc62fc4987c
+Message:
+    Expose adjacent medium indices to OSL materials
+
+    Add path:outside_ior and as_relative_ior so standard closures can use
+    absolute material indices inside nested dielectrics. Return zero screen
+    derivatives and reject unavailable context or unrepresentable ratios.
+
+    Check entry, exit, optical-interface overrides, type errors and missing
+    shader context in the renderer service regression.
+
+Commit: 07102584803dd528f35bf6dcdbb0c9d5fbdd0299
+Patches: appleseed_standard_microfacet_transmission.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T07:42:07Z
+Parents: 1fb85a6af338195f653a93792941ec5ed32e8e0b
+Message:
+    Support standard OSL microfacet transmission
+
+    Implement pure transmission and Fresnel-combined Beckmann/GGX modes.
+    Preserve matched-index delta transport, total internal reflection,
+    radiance/importance scaling, roughness clamping and sampled derivatives.
+    Track relative closure indices as interior media and reject ratios with
+    unrepresentable reciprocals.
+
+    Rename the OSL leaf to a BSDF and retain the reflection path. Add direct
+    value, density, smooth sampling, mode and boundary regressions.
+
+Commit: 395a0a4b82c1a8bc0d71cd904f43d60e805fdf76
+Patches: appleseed_standard_microfacet_transmission.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T07:42:07Z
+Parents: 07102584803dd528f35bf6dcdbb0c9d5fbdd0299
+Message:
+    Qualify rough standard transmission sampling and derivatives
+
+    Replay independent random states to compare sampled reflection and
+    refraction with double-precision references, including null events.
+    Check the transmission density against numerical Snell Jacobians.
+
+    Extend fixed-event differential checks to both distributions and modes,
+    including matched indices and both sides of the critical-angle branch.
+
 Commit: 9a4f748199f593831f8e4dfd32d147ce76e6a2c6
 Patch: 06
 Author: Christopher Sean Morrison <brlcad@gmail.com>

@@ -1,0 +1,937 @@
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_standard_surface.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_standard_surface.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_standard_surface.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_standard_surface.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -506,7 +506,7 @@
+         string page = "Transparency",
+         int as_max_param_id = 58
+     ]],
+-    normal in_bump_normal_coating = as_shading_normal()
++    normal in_bump_normal_coating = normal(0)
+     [[
+         string as_maya_attribute_name = "coatingNormal",
+         string as_maya_attribute_short_name = "ncn",
+@@ -669,7 +669,9 @@
+ 
+     if (compute_coating)
+     {
+-        normal Nn = isconnected(in_bump_normal_coating)
++        // Zero inherits the substrate; explicit constants and connections
++        // both override it. isconnected() ignores authored constant values.
++        normal Nn = in_bump_normal_coating != normal(0)
+             ? normalize(in_bump_normal_coating)
+             : normalize(in_bump_normal_substrate);
+ 
+@@ -681,9 +683,14 @@
+                 in_coating_reflectivity * microfacet(
+                     "beckmann",
+                     Nn,
++                    vector(0),
+                     in_coating_roughness,
++                    in_coating_roughness,
+                     in_coating_ior,
+-                    0);
++                    0,
++                    "normal_derivatives", 1,
++                    "dNdx", vector(Dx(Nn)),
++                    "dNdy", vector(Dy(Nn)));
+ 
+             // Dielectric coating, usually [1,2], Schlick approx. suffices.
+ 
+diff -Naur appleseed/src/appleseed.shaders/src/maya/as_maya_anisotropic.osl APPLESEED_BLD/src/appleseed.shaders/src/maya/as_maya_anisotropic.osl
+--- appleseed/src/appleseed.shaders/src/maya/as_maya_anisotropic.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/maya/as_maya_anisotropic.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -28,6 +28,7 @@
+ 
+ // Ref: $MAYA_LOCATION/docs/Nodes/anisotropic.html
+ 
++#include "appleseed/as_osl_extensions.h"
+ #include "appleseed/color/as_color_helpers.h"
+ #include "appleseed/math/as_math_helpers.h"
+ 
+@@ -60,7 +61,7 @@
+         string label = "Incandescence Color",
+         string page = "Common Material Attributes"
+     ]],
+-    normal in_normalCamera = N
++    normal in_normalCamera = as_shading_normal()
+     [[
+         string as_maya_attribute_name = "normalCamera",
+         string label = "Bump Mapping Normal",
+@@ -331,6 +332,11 @@
+                 alpha_x,
+                 alpha_y,
+                 in_fresnelRefractiveIndex,
+-                0);
++                0,
++                "normal_derivatives", 1,
++                "dNdx", vector(Dx(Nn)),
++                "dNdy", vector(Dy(Nn)),
++                "dTdx", Dx(tangent),
++                "dTdy", Dy(tangent));
+     }
+ }
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -1660,6 +1660,8 @@
+     renderer/modeling/bsdf/orennayarbrdf.h
+     renderer/modeling/bsdf/oslbsdf.cpp
+     renderer/modeling/bsdf/oslbsdf.h
++    renderer/modeling/bsdf/oslmicrofacetbrdf.cpp
++    renderer/modeling/bsdf/oslmicrofacetbrdf.h
+     renderer/modeling/bsdf/plasticbrdf.cpp
+     renderer/modeling/bsdf/plasticbrdf.h
+     renderer/modeling/bsdf/sheenbrdf.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/closures.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.cpp
+--- appleseed/src/appleseed/renderer/kernel/shading/closures.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -43,6 +43,7 @@
+ #include "renderer/modeling/bsdf/hairbsdf.h"
+ #include "renderer/modeling/bsdf/metalbrdf.h"
+ #include "renderer/modeling/bsdf/microfacethelper.h"
++#include "renderer/modeling/bsdf/oslmicrofacetbrdf.h"
+ #include "renderer/modeling/bsdf/orennayarbrdf.h"
+ #include "renderer/modeling/bsdf/plasticbrdf.h"
+ #include "renderer/modeling/bsdf/sheenbrdf.h"
+@@ -741,7 +742,96 @@
+             composite_closure.add_ior(weight, values->m_ior);
+         }
+     };
++
++    struct OSLMicrofacetClosure
++    {
++        struct Params
++        {
++            OSL::ustringhash distribution;
++            OSL::Vec3 N;
++            OSL::Vec3 U;
++            float xalpha;
++            float yalpha;
++            float eta;
++            int refract;
++            NormalDerivativeParams normal_derivatives;
++        };
+ 
++        static const char* name()
++        {
++            return "microfacet";
++        }
++
++        static ClosureID id()
++        {
++            return OSLMicrofacetID;
++        }
++
++        static int modes()
++        {
++            return ScatteringMode::Glossy | ScatteringMode::Specular;
++        }
++
++        static void register_closure(OSLShadingSystem& shading_system)
++        {
++            const OSL::ClosureParam params[] =
++            {
++                CLOSURE_STRING_PARAM(Params, distribution),
++                CLOSURE_VECTOR_PARAM(Params, N),
++                CLOSURE_VECTOR_PARAM(Params, U),
++                CLOSURE_FLOAT_PARAM(Params, xalpha),
++                CLOSURE_FLOAT_PARAM(Params, yalpha),
++                CLOSURE_FLOAT_PARAM(Params, eta),
++                CLOSURE_INT_PARAM(Params, refract),
++                CLOSURE_FINISH_PARAM(Params)
++            };
++            register_closure_with_normal_derivatives<Params>(shading_system, name(), id(), params);
++            g_closure_convert_funs[id()] = &convert_closure;
++            g_closure_get_modes_funs[id()] = &modes;
++        }
++
++        static void convert_closure(
++            CompositeClosure& composite,
++            const Basis3f& basis,
++            const void* osl_params,
++            const Color3f& weight,
++            Arena& arena)
++        {
++            const Params& p = *static_cast<const Params*>(osl_params);
++            constexpr int ReflectionMode = 0;
++            constexpr float MinimumWidth = 1.0e-6f;
++            if (p.refract != ReflectionMode)
++                throw ExceptionOSLRuntimeError("standard microfacet transmission is not implemented");
++            if (!std::isfinite(p.xalpha) || !std::isfinite(p.yalpha) ||
++                p.xalpha < 0.0f || p.yalpha < 0.0f || !std::isfinite(p.eta) || p.eta <= 0.0f)
++                throw ExceptionOSLRuntimeError("invalid standard microfacet widths or refractive index");
++            const Vector3f normal(p.N), tangent(p.U);
++            if (!std::isfinite(square_norm(normal)) || !std::isfinite(square_norm(tangent)))
++                throw ExceptionOSLRuntimeError("invalid standard microfacet frame");
++            if (square_norm(normal) > 0.0f && square_norm(tangent) > 0.0f &&
++                square_norm(cross(normal, tangent)) == 0.0f)
++                throw ExceptionOSLRuntimeError("standard microfacet tangent is parallel to its normal");
++            OSLMicrofacetDistribution distribution;
++            if (p.distribution == OSL::ustringhash("beckmann"))
++                distribution = OSLMicrofacetDistribution::Beckmann;
++            else if (p.distribution == OSL::ustringhash("ggx"))
++                distribution = OSLMicrofacetDistribution::GGX;
++            else
++                throw ExceptionOSLRuntimeError("unsupported standard microfacet distribution");
++            auto* values = composite.add_closure<OSLMicrofacetBRDFInputValues>(
++                id(), basis, weight, p.N, p.U, arena);
++            p.normal_derivatives.apply(composite, p.N, p.U, arena);
++            values->m_distribution = distribution;
++            values->m_reflectance.set(1.0f);
++            // Preserve exact zero as the ideal-reflection limit. A tiny
++            // finite floor keeps individual anisotropic axes nonsingular.
++            const bool smooth = p.xalpha == 0.0f && p.yalpha == 0.0f;
++            values->m_alpha_x = smooth ? 0.0f : std::max(p.xalpha, MinimumWidth);
++            values->m_alpha_y = smooth ? 0.0f : std::max(p.yalpha, MinimumWidth);
++            values->m_eta = p.eta;
++        }
++    };
++
+     struct GlossyClosure
+     {
+         struct Params
+@@ -3181,6 +3271,7 @@
+     register_closure<EmissionClosure>(shading_system);
+     register_closure<GlassClosure>(shading_system);
+     register_closure<GlossyClosure>(shading_system);
++    register_closure<OSLMicrofacetClosure>(shading_system);
+     register_closure<GlossyLayerClosure>(shading_system);
+     register_closure<HairClosure>(shading_system);
+     register_closure<HoldoutClosure>(shading_system);
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/closures.h APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.h
+--- appleseed/src/appleseed/renderer/kernel/shading/closures.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.h	1970-01-01 00:00:00.000000000 +0000
+@@ -81,6 +81,7 @@
+     GlossyID,
+     MetalID,
+     PlasticID,
++    OSLMicrofacetID,
+ 
+     // BSSRDF closures.
+     SubsurfaceID,
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_microfacet_differentials.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_microfacet_differentials.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_microfacet_differentials.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_microfacet_differentials.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -34,6 +34,7 @@
+ #include "renderer/modeling/bsdf/glossybrdf.h"
+ #include "renderer/modeling/bsdf/glossylayerbsdf.h"
+ #include "renderer/modeling/bsdf/metalbrdf.h"
++#include "renderer/modeling/bsdf/oslmicrofacetbrdf.h"
+ #include "renderer/modeling/bsdf/plasticbrdf.h"
+ #include "renderer/utility/paramarray.h"
+ #include "foundation/math/basis.h"
+@@ -52,7 +53,11 @@
+ 
+ TEST_SUITE(Renderer_Modeling_BSDF_MicrofacetDifferentials)
+ {
+-    enum class Material { Glossy, Metal, Plastic, Coat, GlassReflection, GlassTransmission };
++    enum class Material
++    {
++        Glossy, Metal, Plastic, Coat, GlassReflection, GlassTransmission,
++        StandardGGX, StandardBeckmann
++    };
+     // Opposite, unequal screen directions expose accidental axis reuse.
+     constexpr float SecondaryAxisScale = -0.7f;
+ 
+@@ -119,6 +124,7 @@
+         PlasticBRDFInputValues plastic{};
+         GlossyLayerBSDFInputValues coat{};
+         GlassBSDFInputValues glass{};
++        OSLMicrofacetBRDFInputValues standard{};
+         void* inputs = nullptr;
+         switch (material)
+         {
+@@ -159,6 +165,19 @@
+             coat.m_ior = 1.5f;
+             inputs = &coat;
+             break;
++          case Material::StandardGGX:
++          case Material::StandardBeckmann:
++            bsdf = OSLMicrofacetBRDFFactory::create("rough_direction", ParamArray());
++            standard.m_distribution = material == Material::StandardGGX ?
++                OSLMicrofacetDistribution::GGX : OSLMicrofacetDistribution::Beckmann;
++            standard.m_reflectance.set(1.0f);
++            // These inputs are raw widths, unlike the perceptual roughness
++            // and anisotropy controls used by the other native materials.
++            standard.m_alpha_x = roughness;
++            standard.m_alpha_y = roughness * (1.0f + anisotropy);
++            standard.m_eta = 1.5f;
++            inputs = &standard;
++            break;
+           case Material::GlassReflection:
+           case Material::GlassTransmission:
+             bsdf = GlassBSDFFactory().create("rough_direction", ParamArray());
+@@ -305,6 +324,8 @@
+         }
+     }
+ 
++    TEST_CASE_F(StandardGGXReflection, Fixture) { check(Material::StandardGGX, test_listener, case_result, get_name()); }
++    TEST_CASE_F(StandardBeckmannReflection, Fixture) { check(Material::StandardBeckmann, test_listener, case_result, get_name()); }
+     TEST_CASE_F(GlossyReflection, Fixture) { check(Material::Glossy, test_listener, case_result, get_name()); }
+     TEST_CASE_F(MetalReflection, Fixture) { check(Material::Metal, test_listener, case_result, get_name()); }
+     TEST_CASE_F(PlasticReflection, Fixture) { check(Material::Plastic, test_listener, case_result, get_name()); }
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -36,6 +36,7 @@
+ #include "renderer/modeling/bsdf/bsdf.h"
+ #include "renderer/modeling/bsdf/bsdfsample.h"
+ #include "renderer/modeling/bsdf/oslbsdf.h"
++#include "renderer/modeling/bsdf/oslmicrofacetbrdf.h"
+ #include "renderer/modeling/bsdf/metalbrdf.h"
+ #include "renderer/modeling/bsdf/glossybrdf.h"
+ #include "renderer/utility/paramarray.h"
+@@ -68,6 +69,56 @@
+ 
+ TEST_SUITE(Renderer_Modeling_BSDF_OSL)
+ {
++    // A double-precision analytic reference, independent of the native MDF
++    // helpers, distinguishes the two distributions away from their pole.
++    struct StandardMicrofacetReference
++    {
++        static double lambda(const Vector3d& direction, const Vector2d& alpha, const bool beckmann)
++        {
++            const double projected = square(alpha.x * direction.x) + square(alpha.y * direction.z);
++            if (projected == 0.0)
++                return 0.0;
++            if (!beckmann)
++                return 0.5 * (std::sqrt(1.0 + projected / square(direction.y)) - 1.0);
++            const double a = std::abs(direction.y) / std::sqrt(projected);
++            // Match the model's Smith masking fit, independently of its
++            // projected-roughness implementation and float arithmetic.
++            return a >= 1.6 ? 0.0 :
++                (1.0 - 1.259 * a + 0.396 * square(a)) / (3.535 * a + 2.181 * square(a));
++        }
++
++        static double fresnel(const double cosine, const double eta)
++        {
++            const double transmitted_squared = (1.0 - square(cosine)) / square(eta);
++            if (transmitted_squared >= 1.0)
++                return 1.0;
++            const double transmitted_cosine = std::sqrt(1.0 - transmitted_squared);
++            const double perpendicular = (cosine - eta * transmitted_cosine) /
++                (cosine + eta * transmitted_cosine);
++            const double parallel = (eta * cosine - transmitted_cosine) /
++                (eta * cosine + transmitted_cosine);
++            return 0.5 * (square(perpendicular) + square(parallel));
++        }
++
++        static Vector2d evaluate(const Vector3f& outgoing, const Vector3f& incoming,
++            const Vector2f& widths, const float eta, const bool beckmann)
++        {
++            const Vector3d wo(outgoing), wi(incoming);
++            const Vector2d alpha(widths);
++            const Vector3d half = normalize(wo + wi);
++            const double slope_squared = square(half.x / alpha.x) + square(half.z / alpha.y);
++            const double density = beckmann ?
++                std::exp(-slope_squared / square(half.y)) /
++                    (Pi<double>() * alpha.x * alpha.y * square(square(half.y))) :
++                1.0 / (Pi<double>() * alpha.x * alpha.y * square(slope_squared + square(half.y)));
++            const double lambda_o = lambda(wo, alpha, beckmann);
++            const double masking = 1.0 / (1.0 + lambda_o + lambda(wi, alpha, beckmann));
++            const double reflectance = fresnel(std::min(1.0, dot(wo, half)), eta);
++            return Vector2d(reflectance * density * masking / (4.0 * wo.y * wi.y),
++                density / (4.0 * wo.y * (1.0 + lambda_o)));
++        }
++    };
++
+     struct Fixture
+     {
+         auto_release_ptr<Project> project;
+@@ -127,7 +178,7 @@
+             node->w = OSL::Vec3(weight);
+             std::memset(node->data(), 0, finish->offset);
+             const OSL::Vec3 n(normal.x, normal.y, normal.z);
+-            std::memcpy(static_cast<char*>(node->data()) + params[0].offset, &n, sizeof(n));
++            std::memcpy(static_cast<char*>(node->data()) + params[id == OSLMicrofacetID ? 1 : 0].offset, &n, sizeof(n));
+             if (id == ReflectionID)
+                 std::memcpy(static_cast<char*>(node->data()) + params[1].offset, &ior, sizeof(ior));
+             if (tree)
+@@ -159,6 +210,36 @@
+                 }
+             }
+             throw Exception("test closure keyword is not registered");
++        }
++
++        template <typename T>
++        void set_formal(OSL::ClosureComponent* node, const size_t index, const T& value)
++        {
++            const OSL::ClosureParam* params = nullptr;
++            if (!system->query_closure(nullptr, &node->id, &params))
++                throw Exception("test closure is not registered");
++            for (size_t field = 0; field <= index; ++field)
++            {
++                if (params[field].type == OSL::TypeDesc() || params[field].key)
++                    throw Exception("test formal parameter is not registered");
++            }
++            if (params[index].field_size != sizeof(T))
++                throw Exception("test formal parameter has an unexpected size");
++            std::memcpy(static_cast<char*>(node->data()) + params[index].offset, &value, sizeof(T));
++        }
++
++        OSL::ClosureComponent* add_standard_microfacet(
++            const char* distribution, const float alpha_x, const float alpha_y, const float eta)
++        {
++            tree = nullptr;
++            auto* node = add_closure(OSLMicrofacetID, 1.0f, basis.get_normal());
++            set_formal(node, 0, OSL::ustringhash(distribution));
++            set_formal(node, 2, OSL::Vec3(1.0f, 0.0f, 0.0f));
++            set_formal(node, 3, alpha_x);
++            set_formal(node, 4, alpha_y);
++            set_formal(node, 5, eta);
++            set_formal(node, 6, 0);
++            return node;
+         }
+ 
+         void add_diffuse(const float weight, const Vector3f& normal)
+@@ -226,6 +307,216 @@
+         }
+     }
+ 
++    TEST_CASE_F(StandardMicrofacet_PreservesRawWidthsAndDistribution, Fixture)
++    {
++        for (const char* distribution : {"beckmann", "ggx"})
++        {
++            for (const Vector2f alpha : {Vector2f(0.0f), Vector2f(0.0001f, 0.0002f), Vector2f(0.04f, 0.2f)})
++            {
++                add_standard_microfacet(distribution, alpha.x, alpha.y, 1.42f);
++                Arena inputs;
++                CompositeSurfaceClosure closure(basis, tree, inputs);
++                ASSERT_EQ(size_t(1), closure.get_closure_count());
++                EXPECT_EQ(OSLMicrofacetID, closure.get_closure_type(0));
++                const auto& values = *static_cast<const OSLMicrofacetBRDFInputValues*>(closure.get_closure_input_values(0));
++                EXPECT_EQ(alpha.x, values.m_alpha_x);
++                EXPECT_EQ(alpha.y, values.m_alpha_y);
++                EXPECT_EQ(1.42f, values.m_eta);
++                const auto expected_distribution = std::strcmp(distribution, "ggx") == 0 ?
++                    OSLMicrofacetDistribution::GGX : OSLMicrofacetDistribution::Beckmann;
++                EXPECT_TRUE(values.m_distribution == expected_distribution);
++            }
++        }
++    }
++
++    TEST_CASE_F(StandardMicrofacet_RespectsRayRoughnessClamping, Fixture)
++    {
++        ShadingRay ray = point.get_ray();
++        ray.m_min_roughness = 0.5f;
++        ShadingPointBuilder(point).set_ray(ray);
++        auto leaf = OSLMicrofacetBRDFFactory::create("standard_clamp", ParamArray());
++        for (const Vector2f alpha : {Vector2f(0.0f), Vector2f(0.04f, 0.2f)})
++        {
++            add_standard_microfacet("ggx", alpha.x, alpha.y, 1.5f);
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            void* data = closure.get_closure_input_values(0);
++            leaf->prepare_inputs(inputs, point, data);
++            const auto& values = *static_cast<const OSLMicrofacetBRDFInputValues*>(data);
++            EXPECT_FEQ_EPS(0.25f, values.m_alpha_y, 1.0e-6f);
++            EXPECT_FEQ_EPS(alpha.x == 0.0f ? 0.25f : 0.05f, values.m_alpha_x, 1.0e-6f);
++        }
++    }
++
++    TEST_CASE_F(StandardMicrofacet_NormalIncidenceMatchesIndependentDensity, Fixture)
++    {
++        const float ValueTolerance = 2.0e-5f;
++        const float AlphaX = 0.04f, AlphaY = 0.2f, Eta = 1.5f;
++        const float normal_reflectance = square((Eta - 1.0f) / (Eta + 1.0f));
++        const float density = 1.0f / (Pi<float>() * AlphaX * AlphaY);
++        auto leaf = OSLMicrofacetBRDFFactory::create("standard_density", ParamArray());
++        const Vector3f direction = basis.get_normal();
++        for (const char* distribution : {"beckmann", "ggx"})
++        {
++            add_standard_microfacet(distribution, AlphaX, AlphaY, Eta);
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            DirectShadingComponents value;
++            const float probability = leaf->evaluate(closure.get_closure_input_values(0),
++                false, false, geometry, direction, direction, ScatteringMode::All, value);
++            EXPECT_FEQ_EPS(density / 4.0f, probability, ValueTolerance);
++            EXPECT_FEQ_EPS(normal_reflectance * density / 4.0f, value.m_beauty[0], ValueTolerance);
++            EXPECT_FEQ_EPS(probability, leaf->evaluate_pdf(closure.get_closure_input_values(0),
++                false, geometry, direction, direction, ScatteringMode::All), ValueTolerance);
++        }
++    }
++
++    TEST_CASE_F(StandardMicrofacet_ObliqueResponseMatchesIndependentDensityAndFresnel, Fixture)
++    {
++        const double AbsoluteTolerance = 1.0e-7;
++        const double RelativeTolerance = 5.0e-5;
++        auto leaf = OSLMicrofacetBRDFFactory::create("standard_oblique", ParamArray());
++        for (const char* distribution : {"beckmann", "ggx"})
++        for (const Vector2f widths : {Vector2f(0.04f, 0.2f), Vector2f(0.36f, 0.1f),
++            Vector2f(0.1f, 0.36f), Vector2f(0.6f)})
++        for (const float eta : {0.75f, 1.0f, 1.5f, 2.0f})
++        {
++            add_standard_microfacet(distribution, widths.x, widths.y, eta);
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            const void* data = closure.get_closure_input_values(0);
++            for (const Vector3f wo : {normalize(Vector3f(0.3f, 1.0f, 0.2f)),
++                normalize(Vector3f(1.0f, 0.2f, -0.3f))})
++            for (const Vector3f wi : {normalize(Vector3f(-0.25f, 1.0f, -0.18f)),
++                normalize(Vector3f(-1.0f, 0.3f, 0.2f))})
++            {
++                const Vector2d expected = StandardMicrofacetReference::evaluate(wo, wi, widths,
++                    eta, std::strcmp(distribution, "beckmann") == 0);
++                const Vector3f outgoing = basis.transform_to_parent(wo);
++                const Vector3f incoming = basis.transform_to_parent(wi);
++                DirectShadingComponents value;
++                const float pdf = leaf->evaluate(data, false, false, geometry,
++                    outgoing, incoming, ScatteringMode::All, value);
++                // A relative comparison alone cannot bound float Fresnel
++                // cancellation when equal indices have zero reflectance.
++                EXPECT_LT(AbsoluteTolerance + RelativeTolerance * std::abs(expected.x),
++                    std::abs(double(value.m_beauty[0]) - expected.x));
++                EXPECT_LT(AbsoluteTolerance + RelativeTolerance * std::abs(expected.y),
++                    std::abs(double(pdf) - expected.y));
++                const float queried_pdf = leaf->evaluate_pdf(data, false, geometry,
++                    outgoing, incoming, ScatteringMode::All);
++                EXPECT_LT(AbsoluteTolerance + RelativeTolerance * std::abs(expected.y),
++                    std::abs(double(queried_pdf) - expected.y));
++            }
++        }
++    }
++
++    TEST_CASE_F(StandardMicrofacet_SamplesAgreeWithIndependentResponseAndDensity, Fixture)
++    {
++        const double AbsoluteTolerance = 1.0e-6;
++        const double RelativeTolerance = 0.001;
++        const size_t SampleCount = 64;
++        auto leaf = OSLMicrofacetBRDFFactory::create("standard_samples", ParamArray());
++        for (const char* distribution : {"beckmann", "ggx"})
++        for (const Vector2f widths : {Vector2f(0.1f, 0.36f), Vector2f(0.6f)})
++        for (const float eta : {0.75f, 1.5f})
++        {
++            add_standard_microfacet(distribution, widths.x, widths.y, eta);
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            const void* data = closure.get_closure_input_values(0);
++            for (const Vector3f wo : {normalize(Vector3f(0.3f, 1.0f, 0.2f)),
++                normalize(Vector3f(1.0f, 0.2f, -0.3f))})
++            {
++                const Vector3f outgoing = basis.transform_to_parent(wo);
++                size_t accepted = 0;
++                for (size_t index = 0; index < SampleCount; ++index)
++                {
++                    BSDFSample result;
++                    leaf->sample(sampling, data, false, false, geometry,
++                        Dual3f(outgoing), ScatteringMode::All, result);
++                    if (result.get_mode() == ScatteringMode::None)
++                        continue;
++                    ASSERT_EQ(ScatteringMode::Glossy, result.get_mode());
++                    const Vector3f wi = basis.transform_to_local(result.m_incoming.get_value());
++                    ASSERT_TRUE(wi.y > 0.0f);
++                    const Vector2d expected = StandardMicrofacetReference::evaluate(wo, wi, widths,
++                        eta, std::strcmp(distribution, "beckmann") == 0);
++                    EXPECT_TRUE(std::isfinite(result.m_value.m_beauty[0]));
++                    EXPECT_LT(AbsoluteTolerance + RelativeTolerance * std::abs(expected.x),
++                        std::abs(double(result.m_value.m_beauty[0]) - expected.x));
++                    EXPECT_LT(AbsoluteTolerance + RelativeTolerance * std::abs(expected.y),
++                        std::abs(double(result.get_probability()) - expected.y));
++                    ++accepted;
++                }
++                EXPECT_TRUE(accepted > 0);
++            }
++        }
++    }
++
++    TEST_CASE_F(StandardMicrofacet_DegenerateFiniteWidthAxesRemainFinite, Fixture)
++    {
++        const size_t SampleCount = 32;
++        auto leaf = OSLMicrofacetBRDFFactory::create("standard_narrow_axes", ParamArray());
++        for (const char* distribution : {"beckmann", "ggx"})
++        for (const Vector2f widths : {Vector2f(0.0f, 0.2f), Vector2f(0.2f, 0.0f),
++            Vector2f(1.0e-20f)})
++        {
++            add_standard_microfacet(distribution, widths.x, widths.y, 1.5f);
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            const void* data = closure.get_closure_input_values(0);
++            DirectShadingComponents peak;
++            const float density = leaf->evaluate(data, false, false, geometry,
++                basis.get_normal(), basis.get_normal(), ScatteringMode::All, peak);
++            EXPECT_TRUE(std::isfinite(density) && density > 0.0f);
++            EXPECT_TRUE(std::isfinite(peak.m_beauty[0]) && peak.m_beauty[0] > 0.0f);
++            size_t accepted = 0;
++            for (size_t index = 0; index < SampleCount; ++index)
++            {
++                BSDFSample result;
++                leaf->sample(sampling, data, false, false, geometry,
++                    Dual3f(basis.get_normal()), ScatteringMode::All, result);
++                if (result.get_mode() == ScatteringMode::None)
++                    continue;
++                ASSERT_EQ(ScatteringMode::Glossy, result.get_mode());
++                EXPECT_TRUE(std::isfinite(result.get_probability()) && result.get_probability() > 0.0f);
++                EXPECT_TRUE(std::isfinite(result.m_value.m_beauty[0]) && result.m_value.m_beauty[0] >= 0.0f);
++                EXPECT_TRUE(is_normalized(result.m_incoming.get_value()));
++                ++accepted;
++            }
++            EXPECT_TRUE(accepted > 0);
++        }
++    }
++
++    TEST_CASE_F(StandardMicrofacet_ZeroWidthsRetainIdealReflection, Fixture)
++    {
++        for (const char* distribution : {"beckmann", "ggx"})
++        {
++            add_standard_microfacet(distribution, 0.0f, 0.0f, 1.5f);
++            BSDFSample result = sample();
++            ASSERT_EQ(ScatteringMode::Specular, result.get_mode());
++            EXPECT_FEQ_EPS(0.04f, result.m_value.m_beauty[0], 1.0e-6f);
++            EXPECT_FEQ_EPS(basis.get_normal(), result.m_incoming.get_value(), 1.0e-6f);
++        }
++    }
++
++    TEST_CASE_F(StandardMicrofacet_UnsupportedModesAndMalformedInputsFail, Fixture)
++    {
++        for (const int mode : {1, 2, -1})
++        {
++            auto* node = add_standard_microfacet("ggx", 0.1f, 0.2f, 1.5f);
++            set_formal(node, 6, mode);
++            EXPECT_EXCEPTION(ExceptionOSLRuntimeError, sample());
++        }
++        add_standard_microfacet("unknown", 0.1f, 0.2f, 1.5f);
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, sample());
++        add_standard_microfacet("beckmann", -0.1f, 0.2f, 1.5f);
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, sample());
++        add_standard_microfacet("ggx", 0.1f, 0.2f, 0.0f);
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, sample());
++    }
++
+     TEST_CASE_F(StandardReflection_PropagatesTheSelectedNormalFootprint, Fixture)
+     {
+         const float DirectionTolerance = 2.0e-6f;
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/microfacethelper.h APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/microfacethelper.h
+--- appleseed/src/appleseed/renderer/modeling/bsdf/microfacethelper.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/microfacethelper.h	1970-01-01 00:00:00.000000000 +0000
+@@ -111,9 +111,12 @@
+         // Compute the incoming direction by sampling the MDF.
+         sampling_context.split_in_place(2, 1);
+         const foundation::Vector2f s = sampling_context.next2<foundation::Vector2f>();
++        constexpr bool HasSamplingJacobian =
++            std::is_same<MDF, foundation::GGXMDF>::value ||
++            std::is_same<MDF, foundation::BeckmannMDF>::value;
+         foundation::Matrix3f normal_jacobian;
+         foundation::Vector3f m;
+-        if constexpr (std::is_same<MDF, foundation::GGXMDF>::value)
++        if constexpr (HasSamplingJacobian)
+         {
+             m = outgoing.has_derivatives() ?
+                 MDF::sample(wo, s, alpha_x, alpha_y, normal_jacobian) :
+@@ -178,7 +181,7 @@
+                 local_geometry.m_shading_basis.transform_to_parent(wi);
+             sample.m_incoming = foundation::Dual<foundation::Vector3f>(incoming);
+ 
+-            if constexpr (std::is_same<MDF, foundation::GGXMDF>::value)
++            if constexpr (HasSamplingJacobian)
+                 sample.compute_microfacet_reflected_differentials(local_geometry, outgoing,
+                     sampled_normal, normal_jacobian, BSDFSample::MicrofacetReflectionMode::GeometricCorrection);
+             else sample.compute_glossy_reflected_differentials(local_geometry, roughness, outgoing);
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -41,6 +41,7 @@
+ #include "renderer/modeling/bsdf/bsdfsample.h"
+ #include "renderer/modeling/bsdf/glossylayerbsdf.h"
+ #include "renderer/modeling/bsdf/ibsdffactory.h"
++#include "renderer/modeling/bsdf/oslmicrofacetbrdf.h"
+ #include "renderer/modeling/scene/assembly.h"
+ #include "renderer/utility/paramarray.h"
+ 
+@@ -102,6 +103,8 @@
+             m_sheen_brdf = create_and_register_bsdf(SheenID, "sheen_brdf");
+ 
+             // Register OSL exclusive BSDFs.
++            m_osl_microfacet_brdf = OSLMicrofacetBRDFFactory::create("osl_microfacet_brdf", ParamArray());
++            m_all_bsdfs[OSLMicrofacetID] = m_osl_microfacet_brdf.get();
+             m_glossy_layer_bsdf = GlossyLayerBSDFFactory::create("glossy_layer_bsdf", ParamArray());
+             m_all_bsdfs[GlossyLayerID] = m_glossy_layer_bsdf.get();
+         }
+@@ -454,6 +457,7 @@
+         auto_release_ptr<BSDF>      m_glass_bsdf;
+         auto_release_ptr<BSDF>      m_glossy_brdf;
+         auto_release_ptr<BSDF>      m_glossy_layer_bsdf;
++        auto_release_ptr<BSDF>      m_osl_microfacet_brdf;
+         auto_release_ptr<BSDF>      m_hair_bsdf;
+         auto_release_ptr<BSDF>      m_metal_brdf;
+         auto_release_ptr<BSDF>      m_microfacet_blinn_brdf;
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/oslmicrofacetbrdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslmicrofacetbrdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bsdf/oslmicrofacetbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslmicrofacetbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,212 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#include "oslmicrofacetbrdf.h"
++
++#include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/modeling/bsdf/bsdf.h"
++#include "renderer/modeling/bsdf/bsdfsample.h"
++#include "renderer/modeling/bsdf/bsdfwrapper.h"
++#include "renderer/modeling/bsdf/fresnel.h"
++#include "renderer/modeling/bsdf/microfacethelper.h"
++#include "renderer/modeling/bsdf/specularhelper.h"
++#include "renderer/utility/paramarray.h"
++#include "foundation/math/microfacet.h"
++
++#include <algorithm>
++#include <cmath>
++
++using namespace foundation;
++
++namespace renderer
++{
++namespace
++{
++    template <typename Function>
++    auto visit_distribution(const OSLMicrofacetDistribution distribution, const Function& function)
++    {
++        if (distribution == OSLMicrofacetDistribution::GGX)
++            return function(GGXMDF());
++        return function(BeckmannMDF());
++    }
++
++    class OSLMicrofacetBRDFImpl
++      : public BSDF
++    {
++      public:
++        OSLMicrofacetBRDFImpl(const char* name, const ParamArray& params)
++          : BSDF(name, Reflective, ScatteringMode::Glossy | ScatteringMode::Specular, params)
++        {
++        }
++
++        void release() override
++        {
++            delete this;
++        }
++
++        const char* get_model() const override
++        {
++            return "osl_microfacet_brdf";
++        }
++
++        size_t compute_input_data_size() const override
++        {
++            return sizeof(OSLMicrofacetBRDFInputValues);
++        }
++
++        void prepare_inputs(Arena& arena, const ShadingPoint& point, void* data) const override
++        {
++            auto& values = *static_cast<OSLMicrofacetBRDFInputValues*>(data);
++            const float minimum_alpha = square(point.get_ray().m_min_roughness);
++            const float maximum_alpha = std::max(values.m_alpha_x, values.m_alpha_y);
++            if (maximum_alpha < minimum_alpha)
++            {
++                if (maximum_alpha > 0.0f)
++                {
++                    // Scale both axes together to preserve authored anisotropy.
++                    // Double precision avoids overflow in a large width ratio.
++                    const double scale = static_cast<double>(minimum_alpha) / maximum_alpha;
++                    values.m_alpha_x = static_cast<float>(values.m_alpha_x * scale);
++                    values.m_alpha_y = static_cast<float>(values.m_alpha_y * scale);
++                }
++                else
++                {
++                    values.m_alpha_x = minimum_alpha;
++                    values.m_alpha_y = minimum_alpha;
++                }
++            }
++        }
++
++        void sample(
++            SamplingContext& sampling_context,
++            const void* data,
++            const bool adjoint,
++            const bool cosine_mult,
++            const LocalGeometry& geometry,
++            const Dual3f& outgoing,
++            const int modes,
++            BSDFSample& sample) const override
++        {
++            const auto& values = *static_cast<const OSLMicrofacetBRDFInputValues*>(data);
++            if (dot(outgoing.get_value(), geometry.m_shading_basis.get_normal()) <= 0.0f)
++                return;
++            const FresnelDielectricFun fresnel(values.m_reflectance, 1.0f, 1.0f / values.m_eta, 1.0f);
++            if (is_smooth(values))
++            {
++                if (ScatteringMode::has_specular(modes))
++                    SpecularBRDFHelper::sample(fresnel, geometry, outgoing, sample);
++            }
++            else if (ScatteringMode::has_glossy(modes))
++            {
++                // The standard closure supplies distribution widths directly.
++                // Roughness here is only downstream roughness-clamp metadata.
++                const float roughness = std::sqrt(std::max(values.m_alpha_x, values.m_alpha_y));
++                visit_distribution(values.m_distribution, [&](auto distribution)
++                {
++                    using MDF = decltype(distribution);
++                    MicrofacetBRDFHelper<MDF>::sample(sampling_context, roughness,
++                        values.m_alpha_x, values.m_alpha_y, fresnel, geometry, outgoing, sample);
++                });
++                if (sample.get_mode() != ScatteringMode::None)
++                    sample.m_min_roughness = roughness;
++            }
++            if (sample.get_mode() != ScatteringMode::None &&
++                dot(sample.m_incoming.get_value(), geometry.m_shading_basis.get_normal()) <= 0.0f)
++                sample.set_to_absorption();
++            if (sample.get_mode() != ScatteringMode::None)
++                sample.m_value.m_beauty = sample.m_value.m_glossy;
++        }
++
++        float evaluate(
++            const void* data,
++            const bool adjoint,
++            const bool cosine_mult,
++            const LocalGeometry& geometry,
++            const Vector3f& outgoing,
++            const Vector3f& incoming,
++            const int modes,
++            DirectShadingComponents& value) const override
++        {
++            const auto& values = *static_cast<const OSLMicrofacetBRDFInputValues*>(data);
++            if (!valid_glossy(values, geometry, outgoing, incoming, modes))
++                return 0.0f;
++            const FresnelDielectricFun fresnel(values.m_reflectance, 1.0f, 1.0f / values.m_eta, 1.0f);
++            const float probability = visit_distribution(values.m_distribution, [&](auto distribution)
++            {
++                using MDF = decltype(distribution);
++                return MicrofacetBRDFHelper<MDF>::evaluate(values.m_alpha_x, values.m_alpha_y,
++                    fresnel, geometry, outgoing, incoming, value.m_glossy);
++            });
++            value.m_beauty = value.m_glossy;
++            return probability;
++        }
++
++        float evaluate_pdf(
++            const void* data,
++            const bool adjoint,
++            const LocalGeometry& geometry,
++            const Vector3f& outgoing,
++            const Vector3f& incoming,
++            const int modes) const override
++        {
++            const auto& values = *static_cast<const OSLMicrofacetBRDFInputValues*>(data);
++            if (!valid_glossy(values, geometry, outgoing, incoming, modes))
++                return 0.0f;
++            return visit_distribution(values.m_distribution, [&](auto distribution)
++            {
++                using MDF = decltype(distribution);
++                return MicrofacetBRDFHelper<MDF>::pdf(values.m_alpha_x, values.m_alpha_y,
++                    geometry, outgoing, incoming);
++            });
++        }
++
++      private:
++        static bool is_smooth(const OSLMicrofacetBRDFInputValues& values)
++        {
++            return values.m_alpha_x == 0.0f && values.m_alpha_y == 0.0f;
++        }
++
++        static bool valid_glossy(
++            const OSLMicrofacetBRDFInputValues& values,
++            const LocalGeometry& geometry,
++            const Vector3f& outgoing,
++            const Vector3f& incoming,
++            const int modes)
++        {
++            const Vector3f& normal = geometry.m_shading_basis.get_normal();
++            return ScatteringMode::has_glossy(modes) && !is_smooth(values) &&
++                dot(outgoing, normal) > 0.0f && dot(incoming, normal) > 0.0f;
++        }
++    };
++}
++
++auto_release_ptr<BSDF> OSLMicrofacetBRDFFactory::create(const char* name, const ParamArray& params)
++{
++    return auto_release_ptr<BSDF>(new BSDFWrapper<OSLMicrofacetBRDFImpl>(name, params));
++}
++} // namespace renderer
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/oslmicrofacetbrdf.h APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslmicrofacetbrdf.h
+--- appleseed/src/appleseed/renderer/modeling/bsdf/oslmicrofacetbrdf.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslmicrofacetbrdf.h	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,60 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#pragma once
++
++#include "renderer/global/globaltypes.h"
++#include "renderer/modeling/input/inputarray.h"
++#include "foundation/memory/autoreleaseptr.h"
++
++namespace renderer
++{
++class BSDF;
++class ParamArray;
++
++enum class OSLMicrofacetDistribution
++{
++    Beckmann,
++    GGX
++};
++
++APPLESEED_DECLARE_INPUT_VALUES(OSLMicrofacetBRDFInputValues)
++{
++    OSLMicrofacetDistribution m_distribution;
++    Spectrum m_reflectance;
++    float m_alpha_x;
++    float m_alpha_y;
++    float m_eta;
++};
++
++class OSLMicrofacetBRDFFactory
++{
++  public:
++    static foundation::auto_release_ptr<BSDF> create(const char* name, const ParamArray& params);
++};
++} // namespace renderer

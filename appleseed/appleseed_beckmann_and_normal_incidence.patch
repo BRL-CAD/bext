@@ -1,0 +1,791 @@
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -640,6 +640,7 @@
+     foundation/meta/tests/test_sharedlibrary.cpp
+     foundation/meta/tests/test_siphash.cpp
+     foundation/meta/tests/test_snprintf.cpp
++    foundation/meta/tests/test_specialfunctions.cpp
+     foundation/meta/tests/test_sphericalimportancesampler.cpp
+     foundation/meta/tests/test_spline.cpp
+     foundation/meta/tests/test_stampedptr.cpp
+@@ -1525,6 +1526,7 @@
+     renderer/meta/tests/test_inputarray.cpp
+     renderer/meta/tests/test_intersector.cpp
+     renderer/meta/tests/test_localsampleaccumulationbuffer.cpp
++    renderer/meta/tests/test_orennayarbrdf.cpp
+     renderer/meta/tests/test_oslbsdf.cpp
+     renderer/meta/tests/test_osledf.cpp
+     renderer/meta/tests/test_paramarray.cpp
+diff -Naur appleseed/src/appleseed/foundation/math/microfacet.cpp APPLESEED_BLD/src/appleseed/foundation/math/microfacet.cpp
+--- appleseed/src/appleseed/foundation/math/microfacet.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/math/microfacet.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -267,97 +267,159 @@
+     const float         alpha_x,
+     const float         alpha_y)
+ {
+-    // Preconditions.
++    return sample_visible_normal(v, s, alpha_x, alpha_y, nullptr);
++}
++
++Vector3f BeckmannMDF::sample(
++    const Vector3f&     v,
++    const Vector2f&     s,
++    const float         alpha_x,
++    const float         alpha_y,
++    Matrix3f&           jacobian)
++{
++    return sample_visible_normal(v, s, alpha_x, alpha_y, &jacobian);
++}
++
++Vector3f BeckmannMDF::sample_visible_normal(
++    const Vector3f&     v,
++    const Vector2f&     s,
++    const float         alpha_x,
++    const float         alpha_y,
++    Matrix3f*           jacobian)
++{
++    constexpr float FramePoleThreshold = 0.99999f;
+     assert(is_normalized(v));
+ 
+-    // Stretch incident.
+     const float sign_cos_vn = v.y < 0.0f ? -1.0f : 1.0f;
+     Vector3f stretched(
+         sign_cos_vn * v[0] * alpha_x,
+         sign_cos_vn * v[1],
+         sign_cos_vn * v[2] * alpha_y);
+-
++    const Vector3f raw_stretched = stretched;
+     stretched = normalize(stretched);
+ 
+-    const float cos_theta = stretched[1];
+-    const float phi =
+-        stretched[1] < 0.99999f ? std::atan2(stretched[2], stretched[0]) : 0.0f;
+-
+-    Vector2f slope = sample_slope(cos_theta, s);
+-
+-    // Rotate.
++    const float phi = stretched.y < FramePoleThreshold ?
++        std::atan2(stretched.z, stretched.x) : 0.0f;
++    float slope_derivative = 0.0f;
++    const Vector2f slope = sample_slope(stretched.y, s, jacobian ? &slope_derivative : nullptr);
+     const float cos_phi = std::cos(phi);
+     const float sin_phi = std::sin(phi);
+-    slope = Vector2f(
+-        cos_phi * slope[0] - sin_phi * slope[1],
+-        sin_phi * slope[0] + cos_phi * slope[1]);
+-
+-    // Unstretch and normalize.
+-    const Vector3f m(
+-        -slope[0] * alpha_x,
+-        1.0f,
+-        -slope[1] * alpha_y);
+-    return normalize(m);
++    const Vector2f rotated(
++        cos_phi * slope.x - sin_phi * slope.y,
++        sin_phi * slope.x + cos_phi * slope.y);
++    const Vector3f raw(-rotated.x * alpha_x, 1.0f, -rotated.y * alpha_y);
++    const Vector3f normal = normalize(raw);
++    if (jacobian)
++    {
++        for (std::size_t column = 0; column < 3; ++column)
++        {
++            Vector3f dv(0.0f);
++            dv[column] = 1.0f;
++            const Vector3f ds = differentiate_normalize(raw_stretched, stretched,
++                sign_cos_vn * Vector3f(alpha_x * dv.x, dv.y, alpha_y * dv.z));
++            const float dphi = stretched.y < FramePoleThreshold ?
++                (stretched.x * ds.z - stretched.z * ds.x) /
++                    (square(stretched.x) + square(stretched.z)) : 0.0f;
++            const float dx = slope_derivative * ds.y;
++            const float rotated_dx = cos_phi * dx - rotated.y * dphi;
++            const float rotated_dy = sin_phi * dx + rotated.x * dphi;
++            const Vector3f dm = differentiate_normalize(raw, normal,
++                Vector3f(-alpha_x * rotated_dx, 0.0f, -alpha_y * rotated_dy));
++            for (std::size_t row = 0; row < 3; ++row)
++                (*jacobian)(row, column) = dm[row];
++        }
++    }
++    return normal;
+ }
+ 
+ // This code comes from OpenShadingLanguage test render.
+ Vector2f BeckmannMDF::sample_slope(
+     const float         cos_theta,
+-    const Vector2f&     s)
++    const Vector2f&     s,
++    float*              derivative)
+ {
+-    const float threshold = 1e-06f;
++    constexpr float Threshold = 1.0e-6f;
++    constexpr std::size_t NewtonSteps = 2;
++    if (derivative)
++        *derivative = 0.0f;
+     Vector2f slope;
+-
+-    // Sample slope Y.
+-    slope[1] = erf_inv(2.0f * s[1] - 1.0f);
+-
+-    // Sample slope X:
+-
+-    // Special case (normal incidence).
+-    if (cos_theta > 1.0f - threshold)
++    slope.y = erf_inv(2.0f * s.y - 1.0f);
++    if (cos_theta > 1.0f - Threshold)
+     {
+-        slope[0] = erf_inv(2.0f * s[0] - 1.0f);
++        slope.x = erf_inv(2.0f * s.x - 1.0f);
+         return slope;
+     }
+ 
+-    const float ct = std::max(cos_theta, threshold);
++    const float ct = std::max(cos_theta, Threshold);
+     const float tan_theta = std::sqrt(1.0f - square(ct)) / ct;
+     const float cot_theta = 1.0f / tan_theta;
++    const float c = std::erf(cot_theta);
++    const float K = tan_theta / SqrtPi<float>();
++    const float y_approx = s.x * (1.0f + c + K * (1 - c * c));
++    const float y_exact = s.x * (1.0f + c + K * std::exp(-square(cot_theta)));
++    const float root = std::sqrt(K * (K - y_approx + 1.0f) + 0.25f);
++    float b = (0.5f - root) / K;
+ 
+-    // Compute a coarse approximation using the approximation:
+-    // exp(-ierf(x)^2) ~= 1 - x * x
+-    // solve y = 1 + b + K * (1 - b * b).
+-
+-    const float c = std::erf(cot_theta);
+-
+-    const float K = tan_theta / SqrtPi<float>();
+-    const float y_approx = s[0] * (1.0f + c + K * (1 - c * c));
+-    const float y_exact  = s[0] * (1.0f + c + K * std::exp(-square(cot_theta)));
+-    float b = (0.5f - std::sqrt(K * (K - y_approx + 1.0f) + 0.25f)) / K;
+-
+-    // Perform a Newton step to refine toward the true root.
+-    float inv_erf = erf_inv(b);
+-    float value = 1.0f + b + K * std::exp(-square(inv_erf)) - y_exact;
+-
+-    // Check if we are close enough already.
+-    // This also avoids NaNs as we get close to the root.
+-    if (std::abs(value) > threshold)
++    float dtan = 0.0f, dK = 0.0f, dy_exact = 0.0f, db = 0.0f;
++    if (derivative)
+     {
+-        // Newton step 1.
+-        b -= value / (1.0f - inv_erf * tan_theta);
++        dtan = cos_theta > Threshold ? -1.0f / (square(ct) * std::sqrt(1.0f - square(ct))) : 0.0f;
++        const float dcot = -dtan / square(tan_theta);
++        const float exponential = std::exp(-square(cot_theta));
++        const float dc = 2.0f / SqrtPi<float>() * exponential * dcot;
++        dK = dtan / SqrtPi<float>();
++        const float dy_approx = s.x * (dc + dK * (1 - c * c) - 2.0f * K * c * dc);
++        dy_exact = s.x * (dc + dK * exponential - 2.0f * K * cot_theta * dcot * exponential);
++        const float droot = (dK * (K - y_approx + 1.0f) + K * (dK - dy_approx)) / (2.0f * root);
++        db = -droot / K - b * dK / K;
++    }
+ 
+-        inv_erf = erf_inv(b);
+-        value = 1.0f + b + K * std::exp(-square(inv_erf)) - y_exact;
+-
+-        // Newton step 2.
+-        b -= value / (1.0f - inv_erf * tan_theta);
+-
+-        // Compute the slope from the refined value.
+-        slope[0] = erf_inv(b);
++    float inv_erf, value, dinv = 0.0f, dvalue = 0.0f;
++    const auto evaluate_error = [&]()
++    {
++        if (derivative)
++        {
++            float gradient;
++            inv_erf = erf_inv(b, gradient);
++            dinv = gradient * db;
++        }
++        else inv_erf = erf_inv(b);
++        const float exponential = std::exp(-square(inv_erf));
++        value = 1.0f + b + K * exponential - y_exact;
++        if (derivative)
++            dvalue = db + dK * exponential - 2.0f * K * inv_erf * dinv * exponential - dy_exact;
++    };
++    evaluate_error();
++    if (std::abs(value) > Threshold)
++    {
++        // Follow the actual two-step approximation, including its selected
++        // inverse-erf polynomial; an ideal inverse-CDF derivative differs.
++        for (std::size_t step = 0; step < NewtonSteps; ++step)
++        {
++            const float denominator = 1.0f - inv_erf * tan_theta;
++            if (derivative)
++            {
++                const float ddenominator = -dinv * tan_theta - inv_erf * dtan;
++                db -= (dvalue * denominator - value * ddenominator) / square(denominator);
++            }
++            b -= value / denominator;
++            if (step + 1 < NewtonSteps)
++                evaluate_error();
++        }
++        if (derivative)
++        {
++            float gradient;
++            slope.x = erf_inv(b, gradient);
++            *derivative = gradient * db;
++        }
++        else slope.x = erf_inv(b);
+     }
+     else
+-        slope[0] = inv_erf;
+-
++    {
++        slope.x = inv_erf;
++        if (derivative)
++            *derivative = dinv;
++    }
+     return slope;
+ }
+ 
+diff -Naur appleseed/src/appleseed/foundation/math/microfacet.h APPLESEED_BLD/src/appleseed/foundation/math/microfacet.h
+--- appleseed/src/appleseed/foundation/math/microfacet.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/math/microfacet.h	1970-01-01 00:00:00.000000000 +0000
+@@ -138,8 +138,16 @@
+         const float         alpha_x,
+         const float         alpha_y);
+ 
++    // Fixed-random, fixed-width sampled-normal Jacobian with respect to v.
+     static Vector3f sample(
++        const Vector3f&     v,
+         const Vector2f&     s,
++        const float         alpha_x,
++        const float         alpha_y,
++        Matrix3f&           jacobian);
++
++    static Vector3f sample(
++        const Vector2f&     s,
+         const float         alpha);
+ 
+     static float pdf(
+@@ -149,9 +157,17 @@
+         const float         alpha_y);
+ 
+   private:
++    static Vector3f sample_visible_normal(
++        const Vector3f&     v,
++        const Vector2f&     s,
++        const float         alpha_x,
++        const float         alpha_y,
++        Matrix3f*           jacobian);
++
+     static Vector2f sample_slope(
+         const float         cos_theta,
+-        const Vector2f&     s);
++        const Vector2f&     s,
++        float*              derivative);
+ 
+     static float lambda(
+         const Vector3f&     v,
+diff -Naur appleseed/src/appleseed/foundation/math/specialfunctions.cpp APPLESEED_BLD/src/appleseed/foundation/math/specialfunctions.cpp
+--- appleseed/src/appleseed/foundation/math/specialfunctions.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/math/specialfunctions.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -34,6 +34,7 @@
+ 
+ // Standard headers.
+ #include <cmath>
++#include <cstddef>
+ 
+ namespace foundation
+ {
+@@ -72,42 +73,73 @@
+ //   https://people.maths.ox.ac.uk/gilesm/files/gems_erfinv.pdf
+ //
+ 
+-float erf_inv(const float x)
++namespace
+ {
+-    const float y = clamp(x, -0.99999f, 0.99999f);
+-    float w = -std::log((1 - y) * (1 + y));
+-    float p;
+-
+-    if (w < 5.0f)
++    template <std::size_t N>
++    float inverse_erf_polynomial(const float (&coefficients)[N], const float w, float* derivative)
+     {
+-        w = w - 2.5f;
+-        p = 2.81022636e-08f;
+-        p = 3.43273939e-07f + p * w;
+-        p = -3.5233877e-06f + p * w;
+-        p = -4.39150654e-06f + p * w;
+-        p = 0.00021858087f + p * w;
+-        p = -0.00125372503f + p * w;
+-        p = -0.00417768164f + p * w;
+-        p = 0.246640727f + p * w;
+-        p = 1.50140941f + p * w;
++        float p = coefficients[0];
++        float dp = 0.0f;
++        for (std::size_t i = 1; i < N; ++i)
++        {
++            if (derivative)
++                dp = p + dp * w;
++            p = coefficients[i] + p * w;
++        }
++        if (derivative)
++            *derivative = dp;
++        return p;
+     }
+-    else
++
++    float inverse_erf(const float x, float* derivative)
+     {
+-        w = std::sqrt(w) - 3.0f;
+-        p = -0.000200214257f;
+-        p = 0.000100950558f + p * w;
+-        p = 0.00134934322f + p * w;
+-        p = -0.00367342844f + p * w;
+-        p = 0.00573950773f + p * w;
+-        p = -0.0076224613f + p * w;
+-        p = 0.00943887047f + p * w;
+-        p = 1.00167406f + p * w;
+-        p = 2.83297682f + p * w;
++        constexpr float MaxArgument = 0.99999f;
++        const float y = clamp(x, -MaxArgument, MaxArgument);
++        float w = -std::log((1 - y) * (1 + y));
++        float dw = 0.0f;
++        if (derivative)
++            dw = 2.0f * y / ((1 - y) * (1 + y));
++        float dp = 0.0f;
++        float p;
++
++        // Giles' polynomial fits use different transformed domains.
++        if (w < 5.0f)
++        {
++            static constexpr float Coefficients[] = {
++                2.81022636e-08f, 3.43273939e-07f, -3.5233877e-06f,
++                -4.39150654e-06f, 0.00021858087f, -0.00125372503f,
++                -0.00417768164f, 0.246640727f, 1.50140941f};
++            w = w - 2.5f;
++            p = inverse_erf_polynomial(Coefficients, w, derivative ? &dp : nullptr);
++        }
++        else
++        {
++            static constexpr float Coefficients[] = {
++                -0.000200214257f, 0.000100950558f, 0.00134934322f,
++                -0.00367342844f, 0.00573950773f, -0.0076224613f,
++                0.00943887047f, 1.00167406f, 2.83297682f};
++            const float root = std::sqrt(w);
++            w = root - 3.0f;
++            if (derivative)
++                dw /= 2.0f * root;
++            p = inverse_erf_polynomial(Coefficients, w, derivative ? &dp : nullptr);
++        }
++        if (derivative)
++            *derivative = x < -MaxArgument || x > MaxArgument ? 0.0f : p + y * dp * dw;
++        return p * y;
+     }
++}
+ 
+-    return p * y;
++float erf_inv(const float x)
++{
++    return inverse_erf(x, nullptr);
+ }
+ 
++float erf_inv(const float x, float& derivative)
++{
++    return inverse_erf(x, &derivative);
++}
++
+ float gamma(const float x)
+ {
+     const float gm0 = 1.0f /12.0f;
+diff -Naur appleseed/src/appleseed/foundation/math/specialfunctions.h APPLESEED_BLD/src/appleseed/foundation/math/specialfunctions.h
+--- appleseed/src/appleseed/foundation/math/specialfunctions.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/math/specialfunctions.h	1970-01-01 00:00:00.000000000 +0000
+@@ -37,6 +37,10 @@
+ // Inverse error function.
+ float erf_inv(const float x);
+ 
++// Return the same clamped polynomial approximation and its derivative.
++// The derivative follows the selected polynomial and is zero outside the clamp.
++float erf_inv(const float x, float& derivative);
++
+ // Gamma function.
+ float gamma(const float x);
+ float gamma_fraction(const float num, const float denom);
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_microfacet.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_microfacet.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_microfacet.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_microfacet.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -43,54 +43,102 @@
+ #include <cmath>
+ #include <cstddef>
+ #include <limits>
++#include <type_traits>
+ 
+ using namespace foundation;
+ 
+ TEST_SUITE(Foundation_Math_Microfacet)
+ {
+-    TEST_CASE(GGX_SamplingJacobianMatchesFixedSampleFiniteDifferences)
++    // A double-precision value path permits small finite differences at
++    // grazing incidence without single-precision cancellation. It does not
++    // evaluate or reuse the production sampling Jacobian.
++    Vector3d ggx_sample_reference(const Vector3d& input, const Vector2d& random, const Vector2d& alpha)
+     {
+-        const float Step = 0.0005f;
+-        const float DerivativeTolerance = 0.003f;
+-        const Vector3f directions[] = {
+-            Vector3f(0.0f, 1.0f, 0.0f), Vector3f(0.0f, -1.0f, 0.0f),
+-            normalize(Vector3f(0.3f, 1.0f, 0.2f)),
+-            normalize(Vector3f(0.3f, -1.0f, 0.2f)),
+-            normalize(Vector3f(1.0f, 0.05f, 0.3f))};
+-        const Vector2f roughness[] = {
+-            Vector2f(0.01f), Vector2f(0.1f), Vector2f(0.36f),
+-            Vector2f(0.8f), Vector2f(0.1f, 0.6f), Vector2f(0.7f, 0.2f)};
+-        const Vector2f samples[] = {
+-            Vector2f(0.0f, 0.2f), Vector2f(0.2f, 0.1f),
+-            Vector2f(0.6f, 0.4f), Vector2f(0.8f, 0.7f), Vector2f(0.97f, 0.9f)};
+-        for (const Vector3f& v : directions)
++        const double side = input.y < 0.0 ? -1.0 : 1.0;
++        const Vector3d view = normalize(side * Vector3d(input.x * alpha.x, input.y, input.z * alpha.y));
++        const Vector3d tangent = view.y < static_cast<double>(0.9999f) ?
++            normalize(cross(view, Vector3d(0.0, 1.0, 0.0))) : Vector3d(1.0, 0.0, 0.0);
++        const Vector3d bitangent = cross(tangent, view);
++        const double split = 1.0 / (1.0 + view.y);
++        const double radius = std::sqrt(random.x);
++        const double angle = random.y < split ? random.y * Pi<double>() / split :
++            Pi<double>() + (random.y - split) * Pi<double>() / (1.0 - split);
++        const double x = radius * std::cos(angle);
++        const double y = radius * std::sin(angle) * (random.y < split ? 1.0 : view.y);
++        const double z = std::sqrt(std::max(0.0, 1.0 - x * x - y * y));
++        const Vector3d hemisphere = x * tangent + y * bitangent + z * view;
++        return normalize(Vector3d(alpha.x * hemisphere.x, std::max(0.0, hemisphere.y), alpha.y * hemisphere.z));
++    }
++
++    TEST_CASE(VisibleNormalSamplingJacobiansMatchFixedSampleFiniteDifferences)
++    {
++        const auto check = [&](auto distribution)
+         {
+-            const Basis3f frame(v);
+-            for (const Vector2f& alpha : roughness)
++            using MDF = decltype(distribution);
++            const float Step = 0.0005f;
++            const float DerivativeTolerance = 0.003f;
++            const Vector3f directions[] = {
++                Vector3f(0.0f, 1.0f, 0.0f), Vector3f(0.0f, -1.0f, 0.0f),
++                normalize(Vector3f(0.3f, 1.0f, 0.2f)),
++                normalize(Vector3f(0.3f, -1.0f, 0.2f)),
++                normalize(Vector3f(1.0f, 0.05f, 0.3f)),
++                normalize(Vector3f(-1.0f, 0.01f, -0.5f))};
++            const Vector2f roughness[] = {
++                Vector2f(0.01f), Vector2f(0.1f), Vector2f(0.36f),
++                Vector2f(0.8f), Vector2f(0.1f, 0.6f), Vector2f(0.7f, 0.2f)};
++            const Vector2f samples[] = {
++                Vector2f(0.0f, 0.2f), Vector2f(0.2f, 0.1f),
++                Vector2f(0.6f, 0.4f), Vector2f(0.8f, 0.7f), Vector2f(0.97f, 0.9f)};
++            for (const Vector3f& v : directions)
+             {
+-                for (const Vector2f& random : samples)
++                const Basis3f frame(v);
++                for (const Vector2f& alpha : roughness)
+                 {
+-                    Matrix3f jacobian;
+-                    const Vector3f normal = GGXMDF::sample(v, random, alpha.x, alpha.y, jacobian);
+-                    EXPECT_EQ(GGXMDF::sample(v, random, alpha.x, alpha.y), normal);
+-                    for (const Vector3f& dv : {frame.get_tangent_u(), frame.get_tangent_v()})
++                    for (const Vector2f& random : samples)
+                     {
+-                        const Vector3f left = GGXMDF::sample(normalize(v - Step * dv), random, alpha.x, alpha.y);
+-                        const Vector3f right = GGXMDF::sample(normalize(v + Step * dv), random, alpha.x, alpha.y);
+-                        const Vector3f finite = (right - left) / (2.0f * Step);
+-                        const Vector3f predicted = jacobian * dv;
+-                        EXPECT_LT(DerivativeTolerance * std::max(1.0f, norm(finite)), norm(predicted - finite));
+-                        EXPECT_LT(DerivativeTolerance, std::abs(dot(normal, predicted)));
++                        Matrix3f jacobian;
++                        const Vector3f normal = MDF::sample(v, random, alpha.x, alpha.y, jacobian);
++                        EXPECT_EQ(MDF::sample(v, random, alpha.x, alpha.y), normal);
++                        if constexpr (std::is_same<MDF, GGXMDF>::value)
++                        {
++                            constexpr double ValueTolerance = 1.0e-5;
++                            EXPECT_LT(ValueTolerance, norm(Vector3d(normal) -
++                                ggx_sample_reference(Vector3d(v), Vector2d(random), Vector2d(alpha))));
++                        }
++                        for (const Vector3f& dv : {frame.get_tangent_u(), frame.get_tangent_v()})
++                        {
++                            Vector3f finite;
++                            if constexpr (std::is_same<MDF, GGXMDF>::value)
++                            {
++                                constexpr double ReferenceStep = 1.0e-5;
++                                const Vector3d direction(v), tangent(dv);
++                                const Vector3d left = ggx_sample_reference(
++                                    normalize(direction - ReferenceStep * tangent), Vector2d(random), Vector2d(alpha));
++                                const Vector3d right = ggx_sample_reference(
++                                    normalize(direction + ReferenceStep * tangent), Vector2d(random), Vector2d(alpha));
++                                finite = Vector3f((right - left) / (2.0 * ReferenceStep));
++                            }
++                            else
++                            {
++                                const Vector3f left = MDF::sample(normalize(v - Step * dv), random, alpha.x, alpha.y);
++                                const Vector3f right = MDF::sample(normalize(v + Step * dv), random, alpha.x, alpha.y);
++                                finite = (right - left) / (2.0f * Step);
++                            }
++                            const Vector3f predicted = jacobian * dv;
++                            EXPECT_LT(DerivativeTolerance * std::max(1.0f, norm(finite)), norm(predicted - finite));
++                            EXPECT_LT(DerivativeTolerance, std::abs(dot(normal, predicted)));
++                        }
++                        // Scaling the input direction does not change the sampled
++                        // normal, because hemisphere stretching normalizes it.
++                        EXPECT_LT(DerivativeTolerance, norm(jacobian * v));
+                     }
+-                    // Scaling the input direction does not change the sampled
+-                    // normal, because hemisphere stretching normalizes it.
+-                    EXPECT_LT(DerivativeTolerance, norm(jacobian * v));
+                 }
+             }
+-        }
++        };
++        check(GGXMDF());
++        check(BeckmannMDF());
+     }
+ 
+-
+     class StdMDFAdapter
+     {
+       public:
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_specialfunctions.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_specialfunctions.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_specialfunctions.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_specialfunctions.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,63 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2010-2013 Francois Beaune, Jupiter Jazz Limited
++// Copyright (c) 2014-2018 Francois Beaune, The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.foundation headers.
++#include "foundation/math/specialfunctions.h"
++#include "foundation/utility/test.h"
++
++// Standard headers.
++#include <algorithm>
++#include <cmath>
++
++using namespace foundation;
++
++TEST_SUITE(Foundation_Math_SpecialFunctions)
++{
++    TEST_CASE(InverseErrorDerivativeMatchesClampedPolynomialFiniteDifferences)
++    {
++        constexpr float MaxStep = 0.0005f;
++        constexpr float DomainStepFraction = 0.02f;
++        constexpr float RelativeTolerance = 0.005f;
++        const float values[] = {
++            -2.0f, -1.01f, -0.999f, -0.997f, -0.995f, -0.95f, -0.5f,
++            -0.1f, 0.0f, 0.1f, 0.5f, 0.95f, 0.995f, 0.997f, 0.999f, 1.01f, 2.0f};
++        for (const float x : values)
++        {
++            float derivative;
++            EXPECT_EQ(erf_inv(x), erf_inv(x, derivative));
++            // Remain inside each polynomial or the constant clamp branch.
++            const float step = std::abs(x) >= 1.0f ? MaxStep :
++                std::min(MaxStep, DomainStepFraction * (1.0f - std::abs(x)));
++            const float finite = (erf_inv(x + step) - erf_inv(x - step)) / (2.0f * step);
++            EXPECT_LT(RelativeTolerance * std::max(1.0f, std::abs(finite)), std::abs(derivative - finite));
++            if (std::abs(x) >= 1.0f)
++                EXPECT_EQ(0.0f, derivative);
++        }
++    }
++}
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_orennayarbrdf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_orennayarbrdf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_orennayarbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_orennayarbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,139 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/kernel/shading/shadingpointbuilder.h"
++#include "renderer/modeling/bsdf/bsdf.h"
++#include "renderer/modeling/bsdf/bsdfsample.h"
++#include "renderer/modeling/bsdf/orennayarbrdf.h"
++#include "renderer/utility/paramarray.h"
++#include "foundation/math/rng/xoroshiro128plus.h"
++#include "foundation/utility/test.h"
++
++#include <cmath>
++#include <utility>
++
++using namespace foundation;
++using namespace renderer;
++
++TEST_SUITE(Renderer_Modeling_BSDF_OrenNayar)
++{
++    struct Fixture
++    {
++        auto_release_ptr<BSDF> leaf;
++        OrenNayarBRDFInputValues values;
++        ShadingPoint point;
++        BSDF::LocalGeometry geometry;
++        Xoroshiro128plus rng;
++        SamplingContext sampling;
++
++        Fixture()
++          : leaf(OrenNayarBRDFFactory().create("pole_diffuse", ParamArray()))
++          , sampling(rng, SamplingContext::RNGMode)
++        {
++            values.m_reflectance.set(0.5f);
++            values.m_reflectance_multiplier = 1.0f;
++            values.m_roughness = 0.1f;
++            ShadingPointBuilder builder(point);
++            builder.set_ray(ShadingRay(Vector3d(0.0, 1.0, 0.0), Vector3d(0.0, -1.0, 0.0),
++                ShadingRay::Time(), VisibilityFlags::CameraRay, 0));
++            builder.set_primitive_type(ShadingPoint::PrimitiveTriangle);
++            geometry.m_shading_point = &point;
++            set_normal(Vector3f(0.0f, 1.0f, 0.0f));
++        }
++
++        void set_normal(const Vector3f& normal)
++        {
++            ShadingPointBuilder builder(point);
++            builder.set_geometric_normal(Vector3d(normal));
++            builder.set_shading_basis(Basis3d(Vector3d(normal)));
++            geometry.m_geometric_normal = normal;
++            geometry.m_shading_basis = Basis3f(normal);
++        }
++
++        float pole_value() const
++        {
++            const float sigma_squared = square(values.m_roughness);
++            const float direct = 1.0f - 0.5f * sigma_squared / (sigma_squared + 0.33f);
++            // At either pole beta is zero, eliminating all azimuth terms.
++            const float indirect = 0.17f * sigma_squared / (sigma_squared + 0.13f);
++            return RcpPi<float>() * (values.m_reflectance[0] * direct +
++                square(values.m_reflectance[0]) * indirect);
++        }
++    };
++
++    TEST_CASE_F(NormalIncidenceHasFiniteAnalyticLimitOnBothDirections, Fixture)
++    {
++        const float Tolerance = 2.0e-6f;
++        for (const Vector3f normal : {Vector3f(0.0f, 1.0f, 0.0f),
++            normalize(Vector3f(0.3f, 1.0f, 0.2f)), normalize(Vector3f(-0.4f, 0.7f, 0.8f))})
++        {
++            set_normal(normal);
++            const Vector3f oblique = normalize(normal + 0.4f * geometry.m_shading_basis.get_tangent_u());
++            const std::pair<Vector3f, Vector3f> directions[] = {
++                {normal, normal}, {normal, oblique}, {oblique, normal}};
++            for (const float sigma : {0.1f, 0.5f, 1.0f})
++            {
++                values.m_roughness = sigma;
++                for (const auto& pair : directions)
++                {
++                    DirectShadingComponents value;
++                    const float pdf = leaf->evaluate(&values, false, false, geometry,
++                        pair.first, pair.second, ScatteringMode::All, value);
++                    EXPECT_FEQ_EPS(std::abs(dot(pair.second, normal)) * RcpPi<float>(), pdf, Tolerance);
++                    EXPECT_TRUE(std::isfinite(value.m_beauty[0]));
++                    EXPECT_FEQ_EPS(pole_value(), value.m_beauty[0], Tolerance);
++                }
++            }
++        }
++    }
++
++    TEST_CASE_F(SampledNormalIncidenceMatchesTheFiniteEvaluatedLimit, Fixture)
++    {
++        const float Tolerance = 2.0e-6f;
++        const size_t SampleCount = 32;
++        for (const float sigma : {0.1f, 0.5f, 1.0f})
++        {
++            values.m_roughness = sigma;
++            for (size_t sample_index = 0; sample_index < SampleCount; ++sample_index)
++            {
++                BSDFSample result;
++                leaf->sample(sampling, &values, false, false, geometry,
++                    Dual3f(geometry.m_shading_basis.get_normal()), ScatteringMode::All, result);
++                ASSERT_EQ(ScatteringMode::Diffuse, result.get_mode());
++                EXPECT_TRUE(std::isfinite(result.m_value.m_beauty[0]));
++                EXPECT_FEQ_EPS(pole_value(), result.m_value.m_beauty[0], Tolerance);
++                DirectShadingComponents evaluated;
++                const float pdf = leaf->evaluate(&values, false, false, geometry,
++                    geometry.m_shading_basis.get_normal(), result.m_incoming.get_value(), ScatteringMode::All, evaluated);
++                EXPECT_FEQ_EPS(pdf, result.get_probability(), Tolerance);
++                EXPECT_FEQ_EPS(evaluated.m_beauty[0], result.m_value.m_beauty[0], Tolerance);
++            }
++        }
++    }
++}
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/orennayarbrdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/orennayarbrdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bsdf/orennayarbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/orennayarbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -248,16 +248,21 @@
+             Spectrum&                   value)
+         {
+             const float sigma2 = square(roughness);
+-            const float theta_r = std::min(std::acos(cos_on), HalfPi<float>());
+-            const float theta_i = std::acos(cos_in);
++            const Vector3f outgoing_tangent = project(outgoing, n);
++            const Vector3f incoming_tangent = project(incoming, n);
++            const float outgoing_length = norm(outgoing_tangent);
++            const float incoming_length = norm(incoming_tangent);
++            // acos(dot) amplifies unit-vector rounding near normal incidence.
++            const float theta_r = std::atan2(outgoing_length, cos_on);
++            const float theta_i = std::atan2(incoming_length, cos_in);
+             const float alpha = std::max(theta_r, theta_i);
+             const float beta = std::min(theta_r, theta_i);
+ 
+-            // Project outgoing and incoming vectors onto the tangent plane
+-            // and compute the cosine of the angle between them.
+-            const Vector3f V_perp_N = normalize(project(outgoing, n));
+-            const Vector3f I_perp_N = normalize(incoming - n * cos_in);
+-            const float delta_cos_phi = dot(V_perp_N, I_perp_N);
++            // At either pole azimuth is undefined, but its contributions
++            // vanish with beta. Avoid normalizing a zero projection.
++            const float length_product = outgoing_length * incoming_length;
++            const float delta_cos_phi = length_product > 0.0f ?
++                clamp(dot(outgoing_tangent, incoming_tangent) / length_product, -1.0f, 1.0f) : 0.0f;
+ 
+             // Compute C1 coefficient.
+             const float C1 = 1.0f - 0.5f * (sigma2 / (sigma2 + 0.33f));

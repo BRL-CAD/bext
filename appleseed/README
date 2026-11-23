@@ -90,3 +90,16 @@ appleseed_directional_emission.patch: Evaluate directional emission in its
   optical context
 appleseed_coincident_covers.patch: Resolve real surfaces behind invisible
   covers
+appleseed_selected_normal_derivatives.patch: Propagate selected normals
+  through specular closures
+appleseed_ggx_sampling.patch: Differentiate GGX visible-normal sampled paths
+appleseed_surface_frame_derivatives.patch: Differentiate native and OSL
+  surface frames
+appleseed_beckmann_and_normal_incidence.patch: Stabilize grazing and
+  normal-incidence sampling
+appleseed_standard_microfacet_reflection.patch: Wire standard OSL microfacet
+  reflection and frames
+appleseed_closure_ior_context.patch: Resolve closure indices in their adjacent
+  media
+appleseed_standard_microfacet_transmission.patch: Support standard OSL
+  microfacet transmission

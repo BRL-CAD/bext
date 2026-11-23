@@ -1,0 +1,1076 @@
+diff -Naur appleseed/src/appleseed.shaders/include/appleseed/material/as_material_helpers.h APPLESEED_BLD/src/appleseed.shaders/include/appleseed/material/as_material_helpers.h
+--- appleseed/src/appleseed.shaders/include/appleseed/material/as_material_helpers.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/include/appleseed/material/as_material_helpers.h	1970-01-01 00:00:00.000000000 +0000
+@@ -55,6 +55,31 @@
+ }
+ 
+ 
++// Standard closures take transmitted/incident ratios. Use the adjacent
++// medium rather than assuming air when converting an absolute material IOR.
++float as_relative_ior(float interior_ior)
++{
++    float outside_ior = 0;
++    if (!getattribute("path:outside_ior", outside_ior) ||
++        !isfinite(outside_ior) || outside_ior <= 0 ||
++        !isfinite(interior_ior) || interior_ior <= 0)
++    {
++        error("Invalid or unavailable dielectric medium indices");
++        return 0;
++    }
++    float eta = backfacing() ? outside_ior / interior_ior : interior_ior / outside_ior;
++    // OSL division turns nonfinite quotients into zero. Positivity of the
++    // reciprocal is essential before C++ uses it as a refraction scale.
++    float inverse_eta = 1 / eta;
++    if (!isfinite(eta) || eta <= 0 || !isfinite(inverse_eta) || inverse_eta <= 0)
++    {
++        error("Relative dielectric index is not representable");
++        return 0;
++    }
++    return eta;
++}
++
++
+ //
+ // Reference:
+ //
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -1655,6 +1655,7 @@
+     renderer/modeling/bsdf/microfacetbrdfwrapper.h
+     renderer/modeling/bsdf/microfacethelper.cpp
+     renderer/modeling/bsdf/microfacethelper.h
++    renderer/modeling/bsdf/microfacettransmissionhelper.h
+     renderer/modeling/bsdf/nullbsdf.h
+     renderer/modeling/bsdf/orennayarbrdf.cpp
+     renderer/modeling/bsdf/orennayarbrdf.h
+diff -Naur appleseed/src/appleseed/foundation/math/fresnel.h APPLESEED_BLD/src/appleseed/foundation/math/fresnel.h
+--- appleseed/src/appleseed/foundation/math/fresnel.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/math/fresnel.h	1970-01-01 00:00:00.000000000 +0000
+@@ -33,6 +33,7 @@
+ #include "foundation/math/scalar.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <cassert>
+ #include <cmath>
+ 
+@@ -56,6 +57,11 @@
+ //   eta = eta_i / eta_t
+ //   cos_theta_i = cos(incident direction, normal)
+ //
++
++// Squared transmitted cosine from Snell's law, negative at total internal
++// reflection. eta is the incident/transmitted index ratio.
++template <typename Eta, typename T>
++T fresnel_transmitted_cosine_squared(const Eta eta, const T cosine);
+ 
+ // Compute the Fresnel reflectance for a dielectric for parallel-polarized light.
+ template <typename SpectrumType, typename T>
+@@ -267,6 +273,16 @@
+     template <typename T> struct GetValueType   { typedef typename T::ValueType ValueType; };
+     template <> struct GetValueType<float>      { typedef float ValueType; };
+     template <> struct GetValueType<double>     { typedef double ValueType; };
++}
++
++template <typename Eta, typename T>
++T fresnel_transmitted_cosine_squared(const Eta eta, const T cosine)
++{
++    const T sin_theta_i2 = std::max(T(0), T(1) - square(cosine));
++    // A finite index can have an overflowing square. At normal incidence
++    // the transmitted sine is exactly zero, independent of that square.
++    const T sin_theta_t2 = sin_theta_i2 == T(0) ? T(0) : sin_theta_i2 * square(eta);
++    return T(1) - sin_theta_t2;
+ }
+ 
+ template <typename SpectrumType, typename T>
+@@ -388,9 +404,7 @@
+ {
+     typedef typename impl::GetValueType<SpectrumType>::ValueType ValueType;
+ 
+-    const T sin_theta_i2 = T(1.0) - square(cos_theta_i);
+-    const T sin_theta_t2 = sin_theta_i2 * square(eta);
+-    const T cos_theta_t2 = T(1.0) - sin_theta_t2;
++    const T cos_theta_t2 = fresnel_transmitted_cosine_squared(eta, cos_theta_i);
+ 
+     if (cos_theta_t2 < T(0.0))
+     {
+@@ -412,9 +426,7 @@
+ {
+     typedef typename impl::GetValueType<SpectrumType>::ValueType ValueType;
+ 
+-    const T sin_theta_i2 = T(1.0) - square(cos_theta_i);
+-    const T sin_theta_t2 = sin_theta_i2 * square(eta);
+-    const T cos_theta_t2 = T(1.0) - sin_theta_t2;
++    const T cos_theta_t2 = fresnel_transmitted_cosine_squared(eta, cos_theta_i);
+ 
+     if (cos_theta_t2 < T(0.0))
+     {
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_fresnel.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_fresnel.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_fresnel.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_fresnel.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -42,12 +42,45 @@
+ // Standard headers.
+ #include <cmath>
+ #include <cstddef>
++#include <limits>
+ #include <vector>
+ 
+ using namespace foundation;
+ 
+ TEST_SUITE(Foundation_Math_Fresnel)
+ {
++    TEST_CASE(DielectricFresnel_ExtremeFiniteIndicesRetainNormalIncidenceAndTirLimits)
++    {
++        const auto check = [&](auto magnitude)
++        {
++            using T = decltype(magnitude);
++            const T tolerance = T(8) * std::numeric_limits<T>::epsilon();
++            for (const T eta : {magnitude, T(1) / magnitude})
++            {
++                T reflectance, transmittance;
++                fresnel_reflectance_dielectric(reflectance, eta, T(1));
++                fresnel_transmittance_dielectric(transmittance, eta, T(1));
++                const T amplitude = (T(1) - eta) / (T(1) + eta);
++                const T expected = square(amplitude);
++                EXPECT_TRUE(std::isfinite(reflectance) && std::isfinite(transmittance));
++                EXPECT_TRUE(std::abs(reflectance - expected) <= tolerance);
++                EXPECT_TRUE(std::abs(reflectance + transmittance - T(1)) <= tolerance);
++            }
++            // Every representable nonzero incident angle is beyond the
++            // critical cone for these very large incident/transmitted ratios.
++            for (const T cosine : {std::nextafter(T(1), T(0)), T(0.5)})
++            {
++                T reflectance, transmittance;
++                fresnel_reflectance_dielectric(reflectance, magnitude, cosine);
++                fresnel_transmittance_dielectric(transmittance, magnitude, cosine);
++                EXPECT_EQ(T(1), reflectance);
++                EXPECT_EQ(T(0), transmittance);
++            }
++        };
++        check(1.0e20f);
++        check(1.0e200);
++    }
++
+     TEST_CASE(FresnelReflectanceDielectricSchlick_GivenCosThetaIsZero_ReturnsOne)
+     {
+         const RegularSpectrum31f NormalReflectance(42.0f);
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -138,6 +138,7 @@
+     m_global_attr_getters[OIIO::ustringhash("path:ray_depth")] = {&RendererServices::get_attr_ray_depth, true};
+     m_global_attr_getters[OIIO::ustringhash("path:ray_length")] = {&RendererServices::get_attr_ray_length, true};
+     m_global_attr_getters[OIIO::ustringhash("path:ray_ior")] = {&RendererServices::get_attr_ray_ior, true};
++    m_global_attr_getters[OIIO::ustringhash("path:outside_ior")] = {&RendererServices::get_attr_outside_ior, true};
+     m_global_attr_getters[OIIO::ustringhash("path:ray_has_differentials")] = {&RendererServices::get_attr_ray_has_differentials, true};
+ 
+     m_global_attr_getters[OIIO::ustringhash("surface_shader:diffuse")] = {&RendererServices::get_attr_surface_shader_diffuse, true};
+@@ -1056,6 +1057,19 @@
+         return true;
+     }
+ 
++    return false;
++}
++
++IMPLEMENT_ATTR_GETTER(outside_ior)
++{
++    if (type == OIIO::TypeFloat)
++    {
++        const auto* shading_point = static_cast<const ShadingPoint*>(sg->renderstate);
++        reinterpret_cast<float*>(val)[0] = shading_point->get_outside_ior();
++        if (derivs)
++            clear_derivatives(type, val);
++        return true;
++    }
+     return false;
+ }
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.h	1970-01-01 00:00:00.000000000 +0000
+@@ -375,6 +375,7 @@
+     DECLARE_ATTR_GETTER(ray_depth);
+     DECLARE_ATTR_GETTER(ray_length);
+     DECLARE_ATTR_GETTER(ray_ior);
++    DECLARE_ATTR_GETTER(outside_ior);
+     DECLARE_ATTR_GETTER(ray_has_differentials);
+ 
+     // NPR attributes.
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/closures.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.cpp
+--- appleseed/src/appleseed/renderer/kernel/shading/closures.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -74,6 +74,7 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <iterator>
++#include <limits>
+ #include <vector>
+ 
+ using namespace foundation;
+@@ -2436,6 +2437,8 @@
+ CompositeClosure::CompositeClosure()
+   : m_closure_count(0)
+   , m_ior_count(0)
++  , m_outside_ior(1.0f)
++  , m_entering(true)
+ {
+     std::memset(m_layers, -1, MaxClosureEntries * MaxClosureLayers);
+     std::fill_n(m_normal_derivatives, MaxClosureEntries, nullptr);
+@@ -2612,26 +2615,46 @@
+ 
+ void CompositeClosure::add_ior(
+     const Color3f&              weight,
+-    const float                 ior)
++    const float                 ior,
++    const IorType               type)
+ {
++    if (!std::isfinite(ior) || ior <= 0.0f)
++        throw ExceptionOSLRuntimeError("invalid closure index of refraction");
++    assert(m_ior_count < MaxClosureEntries);
+     // We use the luminance of the weight as the IOR weight.
+     const float w = luminance(weight);
+     assert(w > 0.0f);
+ 
+     m_iors[m_ior_count] = ior;
++    m_ior_types[m_ior_count] = type;
+     m_ior_cdf[m_ior_count] = w;
+     ++m_ior_count;
+ }
+ 
++void CompositeClosure::set_ior_context(const float outside_ior, const bool entering)
++{
++    if (!std::isfinite(outside_ior) || outside_ior <= 0.0f)
++        throw ExceptionOSLRuntimeError("invalid outside index of refraction");
++    m_outside_ior = outside_ior;
++    m_entering = entering;
++}
++
+ float CompositeClosure::choose_ior(const float w) const
+ {
+     assert(m_ior_count > 0);
+-
+-    if APPLESEED_LIKELY(m_ior_count == 1)
+-        return m_iors[0];
++    const std::size_t index = m_ior_count == 1 ? 0 : sample_cdf_linear_search(m_ior_cdf, w);
++    if (m_ior_types[index] == IorType::Absolute)
++        return m_iors[index];
+ 
+-    const std::size_t index = sample_cdf_linear_search(m_ior_cdf, w);
+-    return m_iors[index];
++    // Standard closures supply transmitted/incident ratios. The ray's
++    // medium list needs the object's absolute interior index on both sides.
++    // Keep the authored ratio so preparing the same inputs is idempotent.
++    const double outside = m_outside_ior;
++    const double absolute = m_entering ? outside * m_iors[index] : outside / m_iors[index];
++    if (!std::isfinite(absolute) || absolute > std::numeric_limits<float>::max() ||
++        absolute < std::numeric_limits<float>::denorm_min())
++        throw ExceptionOSLRuntimeError("closure interior index of refraction is out of range");
++    return static_cast<float>(absolute);
+ }
+ 
+ void CompositeClosure::copy_layer_ids(const SmallClosureLayerIDStack& layer_stack)
+@@ -2679,10 +2702,16 @@
+     SmallClosureLayerIDStack layer_stack;
+     process_closure_tree(ci, original_shading_basis, Color3f(1.0f), layer_stack, arena);
+ 
++    compute_ior_cdf();
++}
++
++void CompositeClosure::compute_ior_cdf()
++{
+     if (m_ior_count == 0)
+     {
+         m_ior_count = 1;
+         m_iors[0] = 1.0f;
++        m_ior_types[0] = IorType::Absolute;
+         return;
+     }
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/closures.h APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.h
+--- appleseed/src/appleseed/renderer/kernel/shading/closures.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.h	1970-01-01 00:00:00.000000000 +0000
+@@ -190,6 +190,8 @@
+   : public foundation::NonCopyable
+ {
+   public:
++    enum class IorType { Absolute, Relative };
++
+     enum { MaxClosureEntries = 16 };
+     enum { MaxClosureLayers = 4 };
+ 
+@@ -254,8 +256,11 @@
+ 
+     void add_ior(
+         const foundation::Color3f&  weight,
+-        const float                 ior);
++        const float                 ior,
++        const IorType               type = IorType::Absolute);
+ 
++    void set_ior_context(const float outside_ior, const bool entering);
++
+     float choose_ior(const float w) const;
+ 
+     void copy_layer_ids(const SmallClosureLayerIDStack& layer_stack);
+@@ -272,6 +277,9 @@
+     bool                            m_uses_surface_tangent[MaxClosureEntries];
+     std::size_t                     m_ior_count;
+     float                           m_iors[MaxClosureEntries];
++    IorType                         m_ior_types[MaxClosureEntries];
++    float                           m_outside_ior;
++    bool                            m_entering;
+     float                           m_ior_cdf[MaxClosureEntries];
+     std::int8_t                     m_layers[MaxClosureEntries * MaxClosureLayers];
+ 
+@@ -287,6 +295,7 @@
+         foundation::Arena&          arena);
+ 
+     void compute_pdfs(float pdfs[MaxClosureEntries]);
++    void compute_ior_cdf();
+ };
+ 
+ 
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -37,6 +37,7 @@
+ #include "renderer/modeling/bsdf/bsdfsample.h"
+ #include "renderer/modeling/bsdf/oslbsdf.h"
+ #include "renderer/modeling/bsdf/oslmicrofacetbrdf.h"
++#include "renderer/modeling/bsdf/microfacettransmissionhelper.h"
+ #include "renderer/modeling/bsdf/metalbrdf.h"
+ #include "renderer/modeling/bsdf/glossybrdf.h"
+ #include "renderer/utility/paramarray.h"
+@@ -61,6 +62,7 @@
+ // Standard headers.
+ #include <algorithm>
+ #include <cmath>
++#include <limits>
+ #include <cstring>
+ #include <memory>
+ 
+@@ -100,22 +102,47 @@
+             return 0.5 * (square(perpendicular) + square(parallel));
+         }
+ 
++        static double density(const Vector3d& half, const Vector2d& alpha, const bool beckmann)
++        {
++            const double slope_squared = square(half.x / alpha.x) + square(half.z / alpha.y);
++            return beckmann ?
++                std::exp(-slope_squared / square(half.y)) /
++                    (Pi<double>() * alpha.x * alpha.y * square(square(half.y))) :
++                1.0 / (Pi<double>() * alpha.x * alpha.y * square(slope_squared + square(half.y)));
++        }
++
+         static Vector2d evaluate(const Vector3f& outgoing, const Vector3f& incoming,
+             const Vector2f& widths, const float eta, const bool beckmann)
+         {
+             const Vector3d wo(outgoing), wi(incoming);
+             const Vector2d alpha(widths);
+             const Vector3d half = normalize(wo + wi);
+-            const double slope_squared = square(half.x / alpha.x) + square(half.z / alpha.y);
+-            const double density = beckmann ?
+-                std::exp(-slope_squared / square(half.y)) /
+-                    (Pi<double>() * alpha.x * alpha.y * square(square(half.y))) :
+-                1.0 / (Pi<double>() * alpha.x * alpha.y * square(slope_squared + square(half.y)));
++            const double D = density(half, alpha, beckmann);
+             const double lambda_o = lambda(wo, alpha, beckmann);
+             const double masking = 1.0 / (1.0 + lambda_o + lambda(wi, alpha, beckmann));
+             const double reflectance = fresnel(std::min(1.0, dot(wo, half)), eta);
+-            return Vector2d(reflectance * density * masking / (4.0 * wo.y * wi.y),
+-                density / (4.0 * wo.y * (1.0 + lambda_o)));
++            return Vector2d(reflectance * D * masking / (4.0 * wo.y * wi.y),
++                D / (4.0 * wo.y * (1.0 + lambda_o)));
++        }
++
++        static Vector2d transmission(const Vector3f& outgoing, const Vector3f& incoming,
++            const Vector2f& widths, const double eta, const bool beckmann, const bool adjoint)
++        {
++            const Vector3d wo(outgoing), wi(incoming);
++            const Vector2d alpha(widths);
++            Vector3d half = normalize(wo + eta * wi);
++            if (half.y < 0.0)
++                half = -half;
++            const double cos_o = dot(wo, half), cos_i = dot(wi, half);
++            const double denom = square(cos_o + eta * cos_i);
++            const double D = density(half, alpha, beckmann);
++            const double lambda_o = lambda(wo, alpha, beckmann);
++            const double G = 1.0 / (1.0 + lambda_o + lambda(wi, alpha, beckmann));
++            const double T = 1.0 - fresnel(std::min(1.0, std::abs(cos_o)), eta);
++            const double value = T * D * G * std::abs(cos_o * cos_i / (wo.y * wi.y)) / denom;
++            const double pdf = D * std::abs(cos_o / wo.y) / (1.0 + lambda_o) *
++                std::abs(cos_i) * square(eta) / denom;
++            return Vector2d(value * (adjoint ? square(eta) : 1.0), pdf);
+         }
+     };
+ 
+@@ -150,6 +177,7 @@
+                 Vector3d(0.0, -1.0, 0.0), ShadingRay::Time(), VisibilityFlags::CameraRay, 0));
+             builder.set_primitive_type(ShadingPoint::PrimitiveTriangle);
+             builder.set_geometric_normal(Vector3d(0.0, 1.0, 0.0));
++            builder.set_side(ObjectInstance::FrontSide);
+             builder.set_shading_basis(Basis3d(basis));
+             geometry.m_shading_point = &point;
+             geometry.m_geometric_normal = basis.get_normal();
+@@ -261,9 +289,191 @@
+             bsdf->sample(sampling, &closure, false, false, geometry,
+                 Dual3f(basis.get_normal()), modes, result);
+             return result;
++        }
++    };
++
++    TEST_CASE_F(RendererServices_OutsideIorUsesTheAdjacentMediumAndRejectsMissingContext, Fixture)
++    {
++        const OIIO::ustringhash attribute("path:outside_ior");
++        const OIIO::ustringhash object;
++        OSL::ShaderGlobals globals{};
++        globals.renderstate = &point;
++        ShadingRay ray = point.get_ray();
++        ray.m_medium_count = 2;
++        ray.m_media[0] = {nullptr, nullptr, 1.6f};
++        ray.m_media[1] = {nullptr, nullptr, 1.2f};
++        ShadingPointBuilder builder(point);
++        builder.set_ray(ray);
++        const auto check = [&](const float expected)
++        {
++            float value[3] = {-1.0f, -1.0f, -1.0f};
++            EXPECT_TRUE(services.get_attribute(&globals, true, object, OIIO::TypeFloat, attribute, value));
++            EXPECT_EQ(expected, value[0]);
++            EXPECT_EQ(0.0f, value[1]);
++            EXPECT_EQ(0.0f, value[2]);
++        };
++        for (const bool entering : {false, true})
++        {
++            builder.set_side(entering ? ObjectInstance::FrontSide : ObjectInstance::BackSide);
++            point.set_no_optical_interface();
++            check(entering ? 1.6f : 1.2f);
++            point.set_optical_interface(ShadingPoint::OpticalInterface::Surface, ray, 1.1f);
++            check(1.1f);
+         }
++        int wrong_type = -1;
++        EXPECT_FALSE(services.get_attribute(&globals, false, object, OIIO::TypeInt, attribute, &wrong_type));
++        EXPECT_EQ(-1, wrong_type);
++        float unchanged = -1.0f;
++        EXPECT_FALSE(services.get_attribute(nullptr, false, object, OIIO::TypeFloat, attribute, &unchanged));
++        globals.renderstate = nullptr;
++        EXPECT_FALSE(services.get_attribute(&globals, false, object, OIIO::TypeFloat, attribute, &unchanged));
++        EXPECT_EQ(-1.0f, unchanged);
++    }
++
++    struct IorClosure : CompositeClosure
++    {
++        IorClosure() = default;
++        void finish() { compute_ior_cdf(); }
+     };
++
++    TEST_CASE(ClosureIor_ResolvesRelativeIndicesWithoutChangingAbsoluteEntries)
++    {
++        for (const float outside : {1.0f, 1.2f, 1.5f})
++        {
++            IorClosure closure;
++            closure.add_ior(Color3f(1.0f), 1.4f);
++            closure.add_ior(Color3f(3.0f), 1.5f, CompositeClosure::IorType::Relative);
++            closure.add_ior(Color3f(2.0f), 1.1f);
++            closure.finish();
++            for (const bool entering : {false, true})
++            {
++                closure.set_ior_context(outside, entering);
++                EXPECT_FEQ_EPS(1.4f, closure.choose_ior(0.01f), 1.0e-6f);
++                EXPECT_FEQ_EPS(entering ? outside * 1.5f : outside / 1.5f,
++                    closure.choose_ior(0.4f), 1.0e-6f);
++                EXPECT_FEQ_EPS(1.1f, closure.choose_ior(0.9f), 1.0e-6f);
++            }
++        }
++    }
++
++    TEST_CASE(ClosureIor_RetainsVacuumFallbackAndChecksInvalidRelativeResults)
++    {
++        IorClosure fallback;
++        fallback.finish();
++        EXPECT_FEQ_EPS(1.0f, fallback.choose_ior(0.5f), 1.0e-6f);
++        IorClosure relative;
++        relative.add_ior(Color3f(1.0f), 2.0f, CompositeClosure::IorType::Relative);
++        relative.finish();
++        relative.set_ior_context(std::numeric_limits<float>::max(), true);
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, relative.choose_ior(0.5f));
++        relative.set_ior_context(std::numeric_limits<float>::denorm_min(), false);
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, relative.choose_ior(0.5f));
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, relative.set_ior_context(0.0f, true));
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, relative.set_ior_context(std::numeric_limits<float>::quiet_NaN(), true));
++    }
+ 
++    TEST_CASE(SharedMicrofacetFresnel_NormalIncidenceRetainsTheTransmittedCosineAtExtremeIndices)
++    {
++        using Transmission = MicrofacetTransmissionHelper<GGXMDF>;
++        constexpr double Tolerance = 8.0 * std::numeric_limits<float>::epsilon();
++        for (const float eta : {std::numeric_limits<float>::min(), 1.0e-20f,
++            0.75f, 1.0f, 1.5f, 1.0e20f, std::numeric_limits<float>::max()})
++        for (const float side : {-1.0f, 1.0f})
++        {
++            float cosine;
++            const float actual = Transmission::fresnel(side, eta, cosine);
++            const double amplitude = (1.0 - double(eta)) / (1.0 + double(eta));
++            EXPECT_TRUE(std::isfinite(actual));
++            EXPECT_TRUE(std::abs(double(actual) - square(amplitude)) <= Tolerance);
++            EXPECT_EQ(1.0f, cosine);
++        }
++    }
++
++    TEST_CASE(SharedMicrofacetTransmission_MatchesIndependentValueAndDensity)
++    {
++        const Vector2f widths(0.19f, 0.37f);
++        const auto check = [&](auto distribution, const bool beckmann)
++        {
++            using MDF = decltype(distribution);
++            using Transmission = MicrofacetTransmissionHelper<MDF>;
++            for (const float eta : {0.65f, 1.1f, 1.5f, 2.0f})
++            {
++                for (const float side : {-1.0f, 1.0f})
++                {
++                    const Vector3f wo = side * normalize(Vector3f(0.3f, 1.0f, 0.1f));
++                    for (const float tilt : {-0.15f, 0.0f, 0.12f})
++                    {
++                        const Vector3f m = normalize(Vector3f(tilt, 1.0f, 0.08f));
++                        const double cosine = dot(Vector3d(wo), Vector3d(m));
++                        const double transmitted_squared = 1.0 - (1.0 - square(cosine)) / square(double(eta));
++                        if (transmitted_squared <= 0.0)
++                            continue;
++                        const Vector3f wi(normalize((cosine / eta - std::copysign(std::sqrt(transmitted_squared), cosine)) *
++                            Vector3d(m) - Vector3d(wo) / double(eta)));
++                        if (wo.y * wi.y >= 0.0f)
++                            continue;
++                        const Vector3f half = Transmission::half_vector(wo, wi, eta);
++                        EXPECT_TRUE(Transmission::valid_facet(wo, wi, half));
++                        const float T = 1.0f - static_cast<float>(StandardMicrofacetReference::fresnel(
++                            std::abs(dot(Vector3d(wo), Vector3d(half))), eta));
++                        for (const bool adjoint : {false, true})
++                        {
++                            Spectrum value;
++                            Transmission::evaluate(eta, Spectrum(1.0f), adjoint, wo, wi, half,
++                                widths.x, widths.y, T, value);
++                            const float pdf = Transmission::pdf(wo, wi, half, widths.x, widths.y, eta);
++                            const Vector2d expected = StandardMicrofacetReference::transmission(wo, wi, widths, eta,
++                                beckmann, adjoint);
++                            EXPECT_TRUE(std::abs(expected.x - value[0]) <= 1.0e-4 * std::max(1.0, expected.x));
++                            EXPECT_TRUE(std::abs(expected.y - pdf) <= 1.0e-4 * std::max(1.0, expected.y));
++                        }
++                    }
++                }
++            }
++        };
++        check(GGXMDF(), false);
++        check(BeckmannMDF(), true);
++    }
++
++    TEST_CASE(SharedMicrofacetTransmission_RejectsFacetsThatDoNotCrossBothSides)
++    {
++        using Transmission = MicrofacetTransmissionHelper<GGXMDF>;
++        const Vector3f wo = normalize(Vector3f(0.8f, 0.2f, 0.0f));
++        const Vector3f wi = normalize(Vector3f(0.8f, -0.2f, 0.0f));
++        EXPECT_TRUE(Transmission::valid_facet(wo, wi, Vector3f(0.0f, 1.0f, 0.0f)));
++        EXPECT_FALSE(Transmission::valid_facet(wo, wi, normalize(Vector3f(1.0f, 0.1f, 0.0f))));
++        EXPECT_FALSE(Transmission::valid_facet(wo, wi, normalize(Vector3f(-1.0f, 0.1f, 0.0f))));
++    }
++
++    TEST_CASE(SharedMicrofacetTransmission_NearMatchedIndicesRetainTheirFiniteDensity)
++    {
++        const Vector3f wo(0.0f, 1.0f, 0.0f), wi(0.0f, -1.0f, 0.0f);
++        const Vector2f widths(0.2f, 0.4f);
++        const auto check = [&](auto distribution, const bool beckmann)
++        {
++            using Transmission = MicrofacetTransmissionHelper<decltype(distribution)>;
++            for (const float eta : {std::nextafter(1.0f, 0.0f), std::nextafter(1.0f, 2.0f)})
++            {
++                for (const bool adjoint : {false, true})
++                {
++                    Spectrum value;
++                    const Vector3f half = Transmission::half_vector(wo, wi, eta);
++                    const float T = 1.0f - Transmission::fresnel(1.0f, eta);
++                    Transmission::evaluate(eta, Spectrum(1.0f), adjoint, wo, wi, half,
++                        widths.x, widths.y, T, value);
++                    const float pdf = Transmission::pdf(wo, wi, half, widths.x, widths.y, eta);
++                    const Vector2d expected = StandardMicrofacetReference::transmission(wo, wi, widths, eta,
++                        beckmann, adjoint);
++                    EXPECT_TRUE(std::isfinite(value[0]) && std::isfinite(pdf));
++                    EXPECT_TRUE(std::abs(double(value[0]) / expected.x - 1.0) <= 1.0e-5);
++                    EXPECT_TRUE(std::abs(double(pdf) / expected.y - 1.0) <= 1.0e-5);
++                }
++            }
++        };
++        check(GGXMDF(), false);
++        check(BeckmannMDF(), true);
++    }
++
+     TEST_CASE_F(StandardReflection_UsesFresnelForExplicitIorAndPreservesTheMirrorDefault, Fixture)
+     {
+         const float EnergyTolerance = 1.0e-6f;
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/glassbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -39,6 +39,7 @@
+ #include "renderer/modeling/bsdf/energycompensation.h"
+ #include "renderer/modeling/bsdf/energycompensationtables.h"
+ #include "renderer/modeling/bsdf/microfacethelper.h"
++#include "renderer/modeling/bsdf/microfacettransmissionhelper.h"
+ #include "renderer/utility/messagecontext.h"
+ #include "renderer/utility/paramarray.h"
+ 
+@@ -73,6 +74,8 @@
+ 
+ namespace
+ {
++    using GGXTransmission = MicrofacetTransmissionHelper<GGXMDF>;
++
+     //
+     // Glass BSDF.
+     //
+@@ -100,38 +103,6 @@
+         return ((cos_outgoing > 0.0f) == (cos_incoming > 0.0f)) == reflection;
+     }
+ 
+-    float fresnel_reflectance(
+-        const float         cos_theta_i,
+-        const float         eta,
+-        float&              cos_theta_t)
+-    {
+-        const float sin_theta_t2 = (1.0f - square(cos_theta_i)) * square(eta);
+-        if (sin_theta_t2 > 1.0f)
+-        {
+-            cos_theta_t = 0.0f;
+-            return 1.0f;
+-        }
+-
+-        cos_theta_t = std::min(std::sqrt(std::max(1.0f - sin_theta_t2, 0.0f)), 1.0f);
+-
+-        float F;
+-        fresnel_reflectance_dielectric(
+-            F,
+-            eta,
+-            std::abs(cos_theta_i),
+-            cos_theta_t);
+-
+-        return F;
+-    }
+-
+-    float fresnel_reflectance(
+-        const float         cos_theta_i,
+-        const float         eta)
+-    {
+-        float cos_theta_t;
+-        return fresnel_reflectance(cos_theta_i, eta, cos_theta_t);
+-    }
+-
+     Vector3f refracted_direction(
+         const Vector3f&     wo,
+         const Vector3f&     m,
+@@ -343,7 +314,7 @@
+             const float cos_wom = clamp(dot(wo, m), -1.0f, 1.0f);
+ 
+             float cos_theta_t;
+-            const float F = fresnel_reflectance(cos_wom, rcp_eta, cos_theta_t);
++            const float F = GGXTransmission::fresnel(cos_wom, eta, cos_theta_t);
+             const float r_probability =
+                 choose_reflection_probability(
+                     values->m_precomputed.m_reflection_weight,
+@@ -416,7 +387,7 @@
+                 }
+                 else
+                 {
+-                    evaluate_refraction(
++                    GGXTransmission::evaluate(
+                         eta,
+                         values->m_precomputed.m_refraction_color,
+                         adjoint,
+@@ -428,7 +399,7 @@
+                         1.0f - F,
+                         sample.m_value.m_glossy);
+                     probability = (1.0f - r_probability) *
+-                        refraction_pdf(wo, wi, m, alpha_x, alpha_y, eta);
++                        GGXTransmission::pdf(wo, wi, m, alpha_x, alpha_y, eta);
+                 }
+             }
+ 
+@@ -524,8 +495,6 @@
+                 return 0.0f;
+             }
+ 
+-            const float rcp_eta = 1.0f / eta;
+-
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+                 values->m_roughness,
+@@ -549,7 +518,7 @@
+                 const Vector3f m = half_reflection_vector(wo, wi);
+                 const float cos_wom = dot(wo, m);
+ 
+-                const float F = fresnel_reflectance(cos_wom, rcp_eta);
++                const float F = GGXTransmission::fresnel(cos_wom, eta);
+ 
+                 evaluate_reflection(
+                     values->m_precomputed.m_reflection_color,
+@@ -575,16 +544,16 @@
+             else
+             {
+                 // Refraction.
+-                const Vector3f m = half_refraction_vector(wo, wi, eta);
+-                if (!valid_refraction_microfacet(wo, wi, m))
++                const Vector3f m = GGXTransmission::half_vector(wo, wi, eta);
++                if (!GGXTransmission::valid_facet(wo, wi, m))
+                 {
+                     value.set(0.0f);
+                     return 0.0f;
+                 }
+                 const float cos_wom = dot(wo, m);
+-                const float F = fresnel_reflectance(cos_wom, 1.0f / eta);
++                const float F = GGXTransmission::fresnel(cos_wom, eta);
+ 
+-                evaluate_refraction(
++                GGXTransmission::evaluate(
+                     eta,
+                     values->m_precomputed.m_refraction_color,
+                     adjoint,
+@@ -605,7 +574,7 @@
+ 
+                 pdf =
+                     (1.0f - r_probability) *
+-                    refraction_pdf(wo, wi, m, alpha_x, alpha_y, eta);
++                    GGXTransmission::pdf(wo, wi, m, alpha_x, alpha_y, eta);
+             }
+ 
+             assert(pdf >= 0.0f);
+@@ -643,8 +612,6 @@
+             if (APPLESEED_UNLIKELY(eta == 1.0f))
+                 return 0.0f;
+ 
+-            const float rcp_eta = 1.0f / eta;
+-
+             float alpha_x, alpha_y;
+             microfacet_alpha_from_roughness(
+                 values->m_roughness,
+@@ -667,7 +634,7 @@
+                 const Vector3f m = half_reflection_vector(wo, wi);
+                 const float cos_wom = dot(wo, m);
+ 
+-                const float F = fresnel_reflectance(cos_wom, rcp_eta);
++                const float F = GGXTransmission::fresnel(cos_wom, eta);
+ 
+                 const float r_probability =
+                     choose_reflection_probability(
+@@ -682,11 +649,11 @@
+             else
+             {
+                 // Refraction.
+-                const Vector3f m = half_refraction_vector(wo, wi, eta);
+-                if (!valid_refraction_microfacet(wo, wi, m))
++                const Vector3f m = GGXTransmission::half_vector(wo, wi, eta);
++                if (!GGXTransmission::valid_facet(wo, wi, m))
+                     return 0.0f;
+                 const float cos_wom = dot(wo, m);
+-                const float F = fresnel_reflectance(cos_wom, rcp_eta);
++                const float F = GGXTransmission::fresnel(cos_wom, eta);
+ 
+                 const float r_probability = choose_reflection_probability(
+                     values->m_precomputed.m_reflection_weight,
+@@ -695,7 +662,7 @@
+ 
+                 pdf =
+                     (1.0f - r_probability) *
+-                    refraction_pdf(wo, wi, m, alpha_x, alpha_y, eta);
++                    GGXTransmission::pdf(wo, wi, m, alpha_x, alpha_y, eta);
+             }
+ 
+             assert(pdf >= 0.0f);
+@@ -824,90 +791,6 @@
+             const float jacobian = 1.0f / (4.0f * std::abs(cos_oh));
+             return jacobian * GGXMDF::pdf(wo, m, alpha_x, alpha_y);
+         }
+-
+-        static Vector3f half_refraction_vector(
+-            const Vector3f&             wo,
+-            const Vector3f&             wi,
+-            const float                 eta)
+-        {
+-            // [1] eq. 16.
+-            const Vector3f h = normalize(wo + eta * wi);
+-            return h.y < 0.0f ? -h : h;
+-        }
+-
+-        static bool valid_refraction_microfacet(
+-            const Vector3f&             wo,
+-            const Vector3f&             wi,
+-            const Vector3f&             m)
+-        {
+-            // Refraction must cross the facet as well as the macrosurface.
+-            // Other half vectors cannot be generated by the Snell sampler.
+-            return dot(wo, m) * wo.y > 0.0f && dot(wi, m) * wi.y > 0.0f;
+-        }
+-
+-        static void evaluate_refraction(
+-            const float                 eta,
+-            const Spectrum&             refraction_color,
+-            const bool                  adjoint,
+-            const Vector3f&             wo,
+-            const Vector3f&             wi,
+-            const Vector3f&             m,
+-            const float                 alpha_x,
+-            const float                 alpha_y,
+-            const float                 T,
+-            Spectrum&                   value)
+-        {
+-            if (wo.y == 0.0f || wi.y == 0.0f)
+-            {
+-                value.set(0.0f);
+-                return;
+-            }
+-
+-            // [1] eq. 21.
+-            const float cos_ih = dot(m, wi);
+-            const float cos_oh = dot(m, wo);
+-            const float dots = (cos_ih * cos_oh) / (wi.y * wo.y);
+-
+-            const float sqrt_denom = cos_oh + eta * cos_ih;
+-            if (std::abs(sqrt_denom) < 1.0e-6f)
+-            {
+-                value.set(0.0f);
+-                return;
+-            }
+-
+-            const float D = GGXMDF::D(m, alpha_x, alpha_y);
+-            const float G = GGXMDF::G(wi, wo, m, alpha_x, alpha_y);
+-
+-            float multiplier = std::abs(dots) * T * D * G / square(sqrt_denom);
+-
+-            // The transmission PDF contains eta squared. Radiance retains
+-            // its reciprocal correction; importance transport cancels it.
+-            if (adjoint)
+-                multiplier *= square(eta);
+-
+-            value = refraction_color;
+-            value *= multiplier;
+-        }
+-
+-        static float refraction_pdf(
+-            const Vector3f&             wo,
+-            const Vector3f&             wi,
+-            const Vector3f&             m,
+-            const float                 alpha_x,
+-            const float                 alpha_y,
+-            const float                 eta)
+-        {
+-            // [1] eq. 17.
+-            const float cos_ih = dot(m, wi);
+-            const float cos_oh = dot(m, wo);
+-
+-            const float sqrt_denom = cos_oh + eta * cos_ih;
+-            if (std::abs(sqrt_denom) < 1.0e-6f)
+-                return 0.0f;
+-
+-            const float jacobian = std::abs(cos_ih) * square(eta / sqrt_denom);
+-            return jacobian * GGXMDF::pdf(wo, m, alpha_x, alpha_y);
+-        }
+     };
+ 
+     typedef BSDFWrapper<GlassBSDFImpl, false> GlassBSDF;
+@@ -985,7 +868,7 @@
+                 const float cos_wom = clamp(dot(wo, m), -1.0f, 1.0f);
+ 
+                 float cos_theta_t;
+-                const float F = fresnel_reflectance(cos_wom, rcp_eta, cos_theta_t);
++                const float F = GGXTransmission::fresnel(cos_wom, eta, cos_theta_t);
+ 
+                 const float rcp_G1 =
+                     safe_rcp(GGXMDF::G1(wo, m, alpha, alpha), 1e-8f);
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/microfacettransmissionhelper.h APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/microfacettransmissionhelper.h
+--- appleseed/src/appleseed/renderer/modeling/bsdf/microfacettransmissionhelper.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/microfacettransmissionhelper.h	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,160 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2016-2019 Esteban Tovagliari, The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++#pragma once
++
++#include "renderer/global/globaltypes.h"
++#include "foundation/math/fresnel.h"
++#include "foundation/math/microfacet.h"
++#include "foundation/math/scalar.h"
++#include "foundation/math/vector.h"
++
++#include <algorithm>
++#include <cmath>
++
++namespace renderer
++{
++
++// Shared transmission geometry, value and directional density from Walter
++// et al., Microfacet Models for Refraction through Rough Surfaces (2007).
++// [1] https://www.graphics.cornell.edu/~bjw/microfacetbsdf.pdf
++// eta is the transmitted/incident index ratio; wo and wi point away from
++// the interface. Adjoint transport uses importance rather than radiance.
++template <typename MDF>
++class MicrofacetTransmissionHelper
++{
++  public:
++    static float fresnel(const float cosine, const float eta, float& transmitted_cosine)
++    {
++        const float ratio = 1.0f / eta;
++        const float transmitted_cosine_squared = foundation::fresnel_transmitted_cosine_squared(ratio, cosine);
++        if (transmitted_cosine_squared < 0.0f)
++        {
++            transmitted_cosine = 0.0f;
++            return 1.0f;
++        }
++        transmitted_cosine = std::min(std::sqrt(std::max(0.0f, transmitted_cosine_squared)), 1.0f);
++        float result;
++        foundation::fresnel_reflectance_dielectric(result, ratio, std::abs(cosine), transmitted_cosine);
++        return result;
++    }
++
++    static float fresnel(const float cosine, const float eta)
++    {
++        float transmitted_cosine;
++        return fresnel(cosine, eta, transmitted_cosine);
++    }
++
++    static foundation::Vector3f half_vector(
++        const foundation::Vector3f&   wo,
++        const foundation::Vector3f&   wi,
++        const float                   eta)
++    {
++        // [1] eq. 16.
++        const foundation::Vector3f h = normalize(wo + eta * wi);
++        return h.y < 0.0f ? -h : h;
++    }
++
++    static bool valid_facet(
++        const foundation::Vector3f&   wo,
++        const foundation::Vector3f&   wi,
++        const foundation::Vector3f&   m)
++    {
++        // Refraction must cross the facet as well as the macrosurface.
++        // Other half vectors cannot be generated by the Snell sampler.
++        return dot(wo, m) * wo.y > 0.0f && dot(wi, m) * wi.y > 0.0f;
++    }
++
++    static void evaluate(
++        const float                   eta,
++        const Spectrum&               refraction_color,
++        const bool                    adjoint,
++        const foundation::Vector3f&   wo,
++        const foundation::Vector3f&   wi,
++        const foundation::Vector3f&   m,
++        const float                   alpha_x,
++        const float                   alpha_y,
++        const float                   T,
++        Spectrum&                     value)
++    {
++        if (wo.y == 0.0f || wi.y == 0.0f)
++        {
++            value.set(0.0f);
++            return;
++        }
++
++        // [1] eq. 21.
++        const float cos_ih = dot(m, wi);
++        const float cos_oh = dot(m, wo);
++        const float dots = (cos_ih * cos_oh) / (wi.y * wo.y);
++
++        // Near-matching media have a narrow but finite lobe. Only exact
++        // cancellation is singular; a fixed cutoff removes valid transport.
++        const float sqrt_denom = cos_oh + eta * cos_ih;
++        if (sqrt_denom == 0.0f)
++        {
++            value.set(0.0f);
++            return;
++        }
++
++        const float D = MDF::D(m, alpha_x, alpha_y);
++        const float G = MDF::G(wi, wo, m, alpha_x, alpha_y);
++
++        float multiplier = std::abs(dots) * T * D * G / foundation::square(sqrt_denom);
++
++        // The transmission PDF contains eta squared. Radiance retains
++        // its reciprocal correction; importance transport cancels it.
++        if (adjoint)
++            multiplier *= foundation::square(eta);
++
++        value = refraction_color;
++        value *= multiplier;
++    }
++
++    static float pdf(
++        const foundation::Vector3f&   wo,
++        const foundation::Vector3f&   wi,
++        const foundation::Vector3f&   m,
++        const float                   alpha_x,
++        const float                   alpha_y,
++        const float                   eta)
++    {
++        // [1] eq. 17.
++        const float cos_ih = dot(m, wi);
++        const float cos_oh = dot(m, wo);
++
++        const float sqrt_denom = cos_oh + eta * cos_ih;
++        if (sqrt_denom == 0.0f)
++            return 0.0f;
++
++        const float jacobian = std::abs(cos_ih) * foundation::square(eta / sqrt_denom);
++        return jacobian * MDF::pdf(wo, m, alpha_x, alpha_y);
++    }
++};
++
++} // namespace renderer
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -175,6 +175,17 @@
+                 shading_point.get_osl_shader_globals().Ci,
+                 arena);
+ 
++            prepare_inputs(arena, shading_point, c);
++            return c;
++        }
++
++        void prepare_inputs(
++            Arena&                      arena,
++            const ShadingPoint&         shading_point,
++            void*                       data) const override
++        {
++            auto* c = static_cast<CompositeSurfaceClosure*>(data);
++            c->set_ior_context(shading_point.get_outside_ior(), shading_point.is_entering());
+             Vector3f ux, uy, vx, vy;
+             shading_point.compute_screen_space_basis_derivatives(ux, uy, vx, vy);
+             c->set_surface_tangent_derivatives(ux, uy);
+@@ -187,8 +198,6 @@
+                         shading_point,
+                         c->get_closure_input_values(i));
+             }
+-
+-            return c;
+         }
+ 
+         void sample(

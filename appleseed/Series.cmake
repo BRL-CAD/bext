@@ -46,6 +46,13 @@ set(APPLESEED_ART_PATCH_FILES
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_volume_environment.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_directional_emission.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_coincident_covers.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_selected_normal_derivatives.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_ggx_sampling.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_surface_frame_derivatives.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_beckmann_and_normal_incidence.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_standard_microfacet_reflection.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_closure_ior_context.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_standard_microfacet_transmission.patch"
   )
 
 set(APPLESEED_PATCH_STAGE "ART" CACHE STRING
