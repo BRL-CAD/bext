@@ -26,6 +26,10 @@ set(APPLESEED_ART_PATCH_FILES
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_osl_input_contracts.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_bump_and_texture_nodes.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_struetype.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_ideal_glass.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_closure_mixtures.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_coat_closures.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_panorama_and_image_helpers.patch"
   )
 
 set(APPLESEED_PATCH_STAGE "ART" CACHE STRING

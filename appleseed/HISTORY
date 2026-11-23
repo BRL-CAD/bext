@@ -1485,6 +1485,22 @@ Message:
     seven regression cases for built-in and custom fonts, metrics, paragraph
     layout, premultiplied coverage, clipping, and invalid inputs.
 
+Commit: 1778030f63d4dc4f161c1a9c3f40d459c0ff5128
+Patches: appleseed_ideal_glass.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T13:35:54Z
+Parents: 3c5b35f8597e858792f56d64fd65a85c1887b32e
+Message:
+    Transmit through glass with matching refractive indices
+
+    Matching inside and outside indices remove the refracting interface.
+    Sample the straight-through delta limit instead of absorbing the path at
+    the singular microfacet transmission density.
+
+    Preserve surface tint and outgoing differentials, advertise specular
+    support, and honor scattering masks. Four focused cases cover both
+    sides, transport weighting, masks, and rejected directions.
+
 Commit: 87a899d89508f7fceaac013f04fde5fc21a5ee19
 Patches: appleseed_procedural_surfaces.patch
 Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
@@ -1524,6 +1540,198 @@ Message:
     verify exit status one afterwards. Developer unit execution still
     passes.
 
+Commit: a3325de2250c0e63d6a8fa08e1499a0c7f316e0e
+Patches: appleseed_ideal_glass.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T14:18:41Z
+Parents: 976e6832d8d4d8e091bc7d48fef19981453307b8
+Message:
+    Handle back-face normal incidence in GGX sampling
+
+    Build the sampling basis around the hemisphere-oriented stretched view.
+    Testing the original view leaves a zero cross product at back-face
+    normal incidence, producing NaNs and absorbing a valid glass path.
+
+    Check finite, normalized samples on both sides at several widths and
+    sample positions. The glass suite also exercises transmission at normal
+    incidence from both sides.
+
+Commit: 1deb9d4060bf2cdb68a2781822beb1180f1300ec
+Patches: appleseed_ideal_glass.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T14:18:41Z
+Parents: a3325de2250c0e63d6a8fa08e1499a0c7f316e0e
+Message:
+    Correct reflected and transmitted ray differentials
+
+    Outgoing dual values hold neighboring ray directions. Differentiate
+    reflection and refraction using changes in that outgoing direction,
+    including the correct normal terms. Pass the refractive ratio before
+    roughness to the glass transmission helper.
+
+    Compare reflected and transmitted neighbors with independent analytic
+    rays on a plane and sphere. Check near-ideal Snell directions,
+    unpolarized Fresnel transmission, total internal reflection, and exact
+    normal incidence.
+
+    All 203 native suites pass 1683 cases and 467402 assertions. The
+    negative controls reproduce the differential and GGX failures before the
+    corresponding fixes.
+
+Commit: 6501d0646aad6c5da6ac848aae57e6035f343364
+Patches: appleseed_ideal_glass.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T14:50:32Z
+Parents: 1deb9d4060bf2cdb68a2781822beb1180f1300ec
+Message:
+    Sample ideal glass at zero roughness
+
+    Preserve zero roughness in OSL glass inputs and sample its discrete
+    reflection and refraction limit. Share Fresnel selection and direction
+    calculations with positive-roughness GGX sampling while retaining the
+    appropriate delta weights, transport factors, masks, and differentials.
+    Continuous evaluation returns zero for the ideal surface.
+
+    Add exact Snell and Fresnel checks on both sides, adjoint weighting,
+    tinted branch selection, reflected and refracted neighbors, total
+    internal reflection, black glass, and excluded modes. All 203 native
+    suites pass 1688 cases and 467951 assertions.
+
+    Independent art comparisons cover directly transmitted paths through CSG
+    and BOT cubes, spheres, and ellipsoids at two indices and camera
+    projections. General rough and layered transport still need separate
+    qualification.
+
+Commit: 4db6b6cd5c9ac85d2c95519095b5426cee793c44
+Patches: appleseed_closure_mixtures.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T15:33:35Z
+Parents: 6501d0646aad6c5da6ac848aae57e6035f343364
+Message:
+    Correct sampling of mixed OSL closures
+
+    Compensate ideal-specular samples for closure selection because the
+    path tracer consumes delta probabilities as a sentinel. Preserve sparse
+    mode-filtered closure indices, the full supported closure count, and
+    eligible selection when normalization rounds below the upper endpoint.
+
+    Evaluate continuous mixture terms in each closure's shading frame while
+    preserving the sampled frame. Return absorbed samples before reading
+    their undefined incoming direction.
+
+    Add independent tests of mirror and diffuse mixture energy, analytic
+    mixture densities and values, mode filtering, and closure-count bounds.
+    The complete unit suite passes 1,696 cases and 468,479 assertions.
+
+Commit: 4988e2d9ec58ebd492d722cab3ded1de20e8958f
+Patches: appleseed_closure_mixtures.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T15:59:42Z
+Parents: 4db6b6cd5c9ac85d2c95519095b5426cee793c44
+Message:
+    Initialize rays in OSL BSDF sampling fixtures
+
+    Supply an explicit ray before preparing closure inputs so debug
+    poisoning of the shading point cannot affect roughness or medium state.
+
+Commit: c32de6f4127a8106e697d1f753f8674b5534d37d
+Patches: appleseed_closure_mixtures.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T15:59:42Z
+Parents: 4988e2d9ec58ebd492d722cab3ded1de20e8958f
+Message:
+    Correct diffuse and specular sampling in plastic materials
+
+    Choose lobes independently of the sampled microfacet normal and respect
+    the enabled scattering modes. Return the full continuous response and
+    its marginal sampling density, consistently with evaluation.
+
+    Preserve explicit zero roughness through OSL. Sample its ideal
+    reflection as a delta with lobe-selection compensation and cosine
+    normalization. Keep the finite-roughness BRDF evaluation model
+    unchanged.
+
+    Add independent Fresnel/GGX and hemisphere-integration tests,
+    restricted-mode checks, smooth-reflection tests, and black-material
+    coverage. All 1,702 unit cases and 469,928 assertions pass.
+
+Commit: 596a4f70df87b1eb28c83883c19c205936672cb5
+Patches: appleseed_coat_closures.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T16:40:18Z
+Parents: c32de6f4127a8106e697d1f753f8674b5534d37d
+Message:
+    Correct null and ideal interfaces in coat closures
+
+    Handle matched indices and ideal reflection analytically instead of
+    clamping them through finite-roughness lookup tables. Use the
+    surrounding medium index in attenuation and preserve zero transmittance
+    channels.
+
+    Reject excessive coat depth before changing the layer stack and exclude
+    zero-weight closures from sampling distributions. Add independent
+    Fresnel and Beer checks, mode and limit checks, and zero-weight
+    coverage.
+
+    All 1,712 renderer unit cases and 470,097 assertions pass. Independent
+    art images cover absorption, reflection, and persisted coat networks.
+
+Commit: 4bf42580aab9e58b9da861bd210eb34caaaec2fd
+Patches: appleseed_coat_closures.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-12T16:40:18Z
+Parents: 596a4f70df87b1eb28c83883c19c205936672cb5
+Message:
+    Expose the glossy coat closure as an installed OSL node
+
+    Provide substrate, reflection, roughness, index, absorption,
+    shading-frame, and bypass inputs through the existing glossy-layer
+    closure. Install the node with the shader library for use in material
+    networks.
+
+    Persisted networks pass independent art references on CSG and BOT
+    geometry, including smooth reflection, matched-index absorption, and
+    neutral-coat composition with native plastic.
+
+Commit: e2a49dc6332fd16f40bf85f1286770e93d500daf
+Patches: appleseed_panorama_and_image_helpers.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-13T22:28:03Z
+Parents: 4bf42580aab9e58b9da861bd210eb34caaaec2fd
+Message:
+    Correct filtered panorama sampling and boundary addressing
+
+    Preserve the south pole under zero angular shift and evaluate radiance
+    at each sampled direction rather than at its importance-map texel
+    center.
+
+    Add a panorama addressing mode that wraps longitude, clamps latitude,
+    and interpolates using texel centers. Preserve existing clamp and wrap
+    modes and their enum values.
+
+    Cover off-center sampling consistency, longitude interpolation, and pole
+    handling. The strengthened baseline exposes two failures; the corrected
+    environment suite and full native suite pass.
+
+Commit: dc53a3886063df679e476ef283e6bf88a6471b87
+Patches: appleseed_coat_closures.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-13T22:28:03Z
+Parents: e2a49dc6332fd16f40bf85f1286770e93d500daf
+Message:
+    Keep smooth glossy and metal evaluation discrete
+
+    Return zero continuous density when glossy or metal roughness is zero,
+    matching the ideal-reflection branch used by sampling and the existing
+    glass behavior.
+
+    This prevents next-event estimation from adding a narrow finite lobe to
+    an already sampled ideal reflection. Native mesh renders now agree with
+    the independent BSDF-only mirror control at the original tolerance.
+
+    Add native reflection and metal density regressions that fail before the
+    guards and pass afterward. All 1718 native cases pass.
+
 Commit: ea337eb8b1d5691028bfc7f5037a161172858e22
 Patches: appleseed_core_and_developer_fixes.patch
 Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
@@ -1539,6 +1747,22 @@ Message:
 
     This lets rendering integrations use the same conversion path as
     Frame::write_main_image instead of maintaining a second implementation.
+
+Commit: 8fd53e89d11e31cedfbecaf4c823b9725b71f1d2
+Patches: appleseed_panorama_and_image_helpers.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T02:20:29Z
+Parents: bce2e81bbd8b11bed81ba151264851fba16b3ce5
+Message:
+    Correct depth coverage and support camera-space Z
+
+    Store depth coverage in its own image rather than in an unrelated color
+    AOV. Preserve ray-distance output as the default and optionally measure
+    negative camera-space Z so orthographic ray-origin shifts do not change
+    the reported view depth.
+
+    Test hits, misses, independent color alpha, and invariance to origin
+    shifts using procedural geometry.
 
 Commit: c25ce97173473cc2cf243c361390eed22c442575
 Patches: appleseed_shader_resources.patch

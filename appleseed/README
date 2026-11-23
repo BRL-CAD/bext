@@ -52,3 +52,10 @@ appleseed_osl_input_contracts.patch: Validate OSL inputs and align query
 appleseed_bump_and_texture_nodes.patch: Preserve bump frames and correct
   texture decoding
 appleseed_struetype.patch: Replace vendored font code with bounded struetype
+appleseed_ideal_glass.patch: Correct ideal glass and ray differential sampling
+appleseed_closure_mixtures.patch: Correct OSL mixtures and plastic material
+  sampling
+appleseed_coat_closures.patch: Correct coat interfaces and expose the glossy
+  layer
+appleseed_panorama_and_image_helpers.patch: Correct panorama filtering, depth
+  and image helpers

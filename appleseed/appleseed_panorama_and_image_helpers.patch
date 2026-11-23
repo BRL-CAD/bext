@@ -1,0 +1,490 @@
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_environmentedf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_environmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_environmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -45,10 +45,14 @@
+ #include "renderer/modeling/environmentedf/gradientenvironmentedf.h"
+ #include "renderer/modeling/environmentedf/latlongmapenvironmentedf.h"
+ #include "renderer/modeling/environmentedf/mirrorballmapenvironmentedf.h"
++#include "renderer/modeling/environmentedf/sphericalcoordinates.h"
++#include "renderer/modeling/input/inputarray.h"
+ #include "renderer/modeling/input/source.h"
++#include "renderer/modeling/input/sourceinputs.h"
+ #include "renderer/modeling/input/texturesource.h"
+ #include "renderer/modeling/scene/containers.h"
+ #include "renderer/modeling/scene/scene.h"
++#include "renderer/modeling/scene/textureinstance.h"
+ #include "renderer/modeling/texture/texture.h"
+ #include "renderer/modeling/texture/tileptr.h"
+ #include "renderer/utility/paramarray.h"
+@@ -209,14 +213,15 @@
+         {
+         }
+ 
+-        bool check_consistency(const EnvironmentEDF& env_edf) const
++        bool check_consistency(const EnvironmentEDF& env_edf,
++            const Vector2f& sample = Vector2f(0.3f, 0.7f)) const
+         {
+             Vector3f outgoing;
+             Spectrum value1(Spectrum::Illuminance);
+             float probability1;
+             env_edf.sample(
+                 m_shading_context,
+-                Vector2f(0.3f, 0.7f),
++                sample,
+                 outgoing,
+                 value1,
+                 probability1);
+@@ -295,12 +300,16 @@
+     {
+         EnvironmentEDF* m_env_edf;
+ 
+-        LatLongMapEnvironmentEDFTestScene()
++        explicit LatLongMapEnvironmentEDFTestScene(const char* addressing_mode = "clamp")
+         {
+             m_scene.textures().insert(
+                 auto_release_ptr<Texture>(
+                     new HorizontalGradientTexture("horiz_gradient_texture")));
+-            create_texture_instance("horiz_gradient_texture_inst", "horiz_gradient_texture");
++            m_scene.texture_instances().insert(TextureInstanceFactory::create(
++                "horiz_gradient_texture_inst",
++                ParamArray().insert("addressing_mode", addressing_mode)
++                    .insert("filtering_mode", "bilinear"),
++                "horiz_gradient_texture"));
+ 
+             auto_release_ptr<EnvironmentEDF> env_edf(
+                 LatLongMapEnvironmentEDFFactory().create(
+@@ -321,6 +330,52 @@
+         EXPECT_TRUE(check_consistency(*m_env_edf));
+     }
+ 
++    TEST_CASE_F(CheckLatLongMapConsistencyAwayFromTexelCenters, Fixture<LatLongMapEnvironmentEDFTestScene>)
++    {
++        const Vector2f samples[] = {
++            Vector2f(0.11f, 0.27f),
++            Vector2f(0.37f, 0.83f),
++            Vector2f(0.91f, 0.43f)
++        };
++        for (const Vector2f& sample : samples)
++            EXPECT_TRUE(check_consistency(*m_env_edf, sample));
++    }
++
++    TEST_CASE(SphericalCoordinates_ZeroShiftPreservesPoles)
++    {
++        const float angles[] = {0.0f, HalfPi<float>(), Pi<float>()};
++        for (const float expected : angles)
++        {
++            float theta = expected;
++            float phi = 0.0f;
++            shift_angles(theta, phi, 0.0f, 0.0f);
++            EXPECT_FEQ(expected, theta);
++        }
++    }
++
++    struct PanoramaEnvironmentEDFTestScene : public LatLongMapEnvironmentEDFTestScene
++    {
++        PanoramaEnvironmentEDFTestScene()
++          : LatLongMapEnvironmentEDFTestScene("wrap_u_clamp_v")
++        {
++        }
++    };
++
++    TEST_CASE_F(CheckPanoramaConsistencyAwayFromTexelCenters, Fixture<PanoramaEnvironmentEDFTestScene>)
++    {
++        EXPECT_TRUE(check_consistency(*m_env_edf, Vector2f(0.11f, 0.27f)));
++        EXPECT_TRUE(check_consistency(*m_env_edf, Vector2f(0.91f, 0.83f)));
++    }
++
++    TEST_CASE_F(PanoramaBilinearLookupCrossesLongitudeSeam, Fixture<PanoramaEnvironmentEDFTestScene>)
++    {
++        const Source* source = m_env_edf->get_inputs().source("radiance");
++        Color3f value;
++        source->evaluate(m_texture_cache, SourceInputs(Vector2f(0.0f, 0.5f)), value);
++        for (size_t channel = 0; channel < 3; ++channel)
++            EXPECT_FEQ(0.5f, value[channel]);
++    }
++
+     struct MirrorBallMapEnvironmentEDFTestScene
+       : public TestSceneBase
+     {
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_intersector.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_intersector.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_intersector.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_intersector.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -28,6 +28,18 @@
+ //
+ 
+ // appleseed.renderer headers.
++#include "renderer/kernel/aov/aovaccumulator.h"
++#include "renderer/kernel/aov/aovcomponents.h"
++#include "renderer/kernel/rendering/pixelcontext.h"
++#include "renderer/kernel/shading/shadingcomponents.h"
++#include "renderer/kernel/shading/shadingresult.h"
++#include "renderer/modeling/aov/aov.h"
++#include "renderer/modeling/aov/aovcontainer.h"
++#include "renderer/modeling/aov/depthaov.h"
++#include "renderer/modeling/frame/frame.h"
++#include "renderer/modeling/camera/camera.h"
++#include "renderer/modeling/camera/orthographiccamera.h"
++#include "renderer/modeling/project/project.h"
+ #include "renderer/global/globaltypes.h"
+ #include "renderer/kernel/intersection/intersector.h"
+ #include "renderer/kernel/intersection/tracecontext.h"
+@@ -50,6 +62,8 @@
+ #include "renderer/utility/testutils.h"
+ 
+ // appleseed.foundation headers.
++#include "foundation/image/color.h"
++#include "foundation/image/image.h"
+ #include "foundation/containers/dictionary.h"
+ #include "foundation/math/matrix.h"
+ #include "foundation/math/scalar.h"
+@@ -341,6 +355,79 @@
+ 
+     using SlabFixture = Fixture<false, ProceduralTestScene<SlabProbeObject>>;
+ 
++    struct DepthCameraScene : ProceduralTestScene<>
++    {
++        DepthCameraScene()
++        {
++            auto_release_ptr<Camera> camera(OrthographicCameraFactory().create("camera",
++                ParamArray().insert("film_dimensions", "4 4")));
++            camera->transform_sequence().set_transform(0.0f,
++                Transformd(Matrix4d::make_translation(Vector3d(0.0, 0.0, 40.0))));
++            m_scene.cameras().insert(camera);
++            m_project.set_frame(FrameFactory::create("depth_camera_frame",
++                ParamArray().insert("resolution", "1 1").insert("camera", "camera")));
++        }
++    };
++    using DepthCameraFixture = Fixture<false, DepthCameraScene>;
++
++    struct DepthSample
++    {
++        Color<float, 2> depth;
++        float unrelated_alpha;
++    };
++
++    DepthSample accumulate_depth(const ShadingPoint& point, const bool camera_space = false)
++    {
++        AOVContainer aovs;
++        aovs.insert(DepthAOVFactory().create(ParamArray().insert("camera_space", camera_space)));
++        auto_release_ptr<Frame> frame(FrameFactory::create("depth_test",
++            ParamArray().insert("resolution", "1 1").insert("tile_size", "1 1"), aovs));
++        frame->clear_main_and_aov_images();
++        AOVAccumulatorContainer accumulators(*frame);
++        accumulators.on_tile_begin(*frame, 0, 0, 1);
++        ShadingResult result(1);
++        result.m_aovs[0] = Color4f(0.25f);
++        accumulators.write(PixelContext(Vector2i(0), Vector2d(0.5)), point,
++            ShadingComponents(), AOVComponents(), result);
++        accumulators.on_tile_end(*frame, 0, 0);
++        DepthSample sample;
++        frame->aovs().get_by_name("depth")->get_image().get_pixel(0, 0, sample.depth);
++        sample.unrelated_alpha = result.m_aovs[0].a;
++        return sample;
++    }
++
++    TEST_CASE_F(DepthAOV_HitWritesOwnCoverageWithoutChangingColorResult, ProceduralFixture)
++    {
++        ShadingPoint point;
++        ASSERT_TRUE(m_intersector.trace(ray_to_plane(false), point));
++        const DepthSample sample = accumulate_depth(point);
++        EXPECT_FEQ(static_cast<float>(point.get_distance()), sample.depth[0]);
++        EXPECT_FEQ(1.0f, sample.depth[1]);
++        EXPECT_FEQ(0.25f, sample.unrelated_alpha);
++    }
++
++    TEST_CASE_F(DepthAOV_CameraSpaceIgnoresPrimaryRayOriginShift, DepthCameraFixture)
++    {
++        ShadingRay near_ray = ray_to_plane(false);
++        ShadingRay far_ray = near_ray;
++        far_ray.m_org -= 10.0 * far_ray.m_dir;
++        ShadingPoint near_point, far_point;
++        ASSERT_TRUE(m_intersector.trace(near_ray, near_point));
++        ASSERT_TRUE(m_intersector.trace(far_ray, far_point));
++        EXPECT_FEQ(33.0f, accumulate_depth(near_point, true).depth[0]);
++        EXPECT_FEQ(33.0f, accumulate_depth(far_point, true).depth[0]);
++        EXPECT_FEQ(10.0f, accumulate_depth(far_point).depth[0] -
++            accumulate_depth(near_point).depth[0]);
++    }
++
++    TEST_CASE(DepthAOV_MissClearsOwnCoverageWithoutChangingColorResult)
++    {
++        const DepthSample sample = accumulate_depth(ShadingPoint());
++        EXPECT_FEQ(0.0f, sample.depth[0]);
++        EXPECT_FEQ(0.0f, sample.depth[1]);
++        EXPECT_FEQ(0.25f, sample.unrelated_alpha);
++    }
++
+     TEST_CASE_F(OffsetSecondaryRay_PreservesActualHitAndLeavesClosedObject, SlabFixture)
+     {
+         ShadingPoint entry;
+diff -Naur appleseed/src/appleseed/renderer/modeling/aov/depthaov.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/aov/depthaov.cpp
+--- appleseed/src/appleseed/renderer/modeling/aov/depthaov.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/aov/depthaov.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -30,6 +30,7 @@
+ #include "depthaov.h"
+ 
+ // appleseed.renderer headers.
++#include "renderer/global/globallogger.h"
+ #include "renderer/kernel/aov/aovaccumulator.h"
+ #include "renderer/kernel/aov/imagestack.h"
+ #include "renderer/kernel/rendering/pixelcontext.h"
+@@ -37,6 +38,8 @@
+ #include "renderer/kernel/shading/shadingresult.h"
+ #include "renderer/modeling/aov/aov.h"
+ #include "renderer/modeling/frame/frame.h"
++#include "renderer/modeling/camera/camera.h"
++#include "renderer/modeling/scene/scene.h"
+ 
+ // appleseed.foundation headers.
+ #include "foundation/containers/dictionary.h"
+@@ -66,8 +69,9 @@
+       : public UnfilteredAOVAccumulator
+     {
+       public:
+-        explicit DepthAOVAccumulator(Image& image)
++        DepthAOVAccumulator(Image& image, const bool camera_space)
+           : UnfilteredAOVAccumulator(image)
++          , m_camera_space(camera_space)
+         {
+         }
+ 
+@@ -92,15 +96,33 @@
+ 
+             if (shading_point.hit_surface())
+             {
+-                shading_result.m_aovs[0].a = 1.0f;
+-                *out = static_cast<float>(shading_point.get_distance());
++                out[1] = 1.0f;
++                double depth = shading_point.get_distance();
++                if (m_camera_space)
++                {
++                    const Camera* camera = shading_point.get_scene().get_render_data().m_active_camera;
++                    if (camera == nullptr)
++                    {
++                        RENDERER_LOG_ERROR("camera-space depth requires an active camera.");
++                        out[0] = out[1] = 0.0f;
++                        return;
++                    }
++                    Transformd scratch;
++                    const Transformd& transform = camera->transform_sequence().evaluate(
++                        shading_point.get_time().m_absolute, scratch);
++                    depth = -transform.point_to_local(shading_point.get_point()).z;
++                }
++                *out = static_cast<float>(depth);
+             }
+             else
+             {
+-                shading_result.m_aovs[0].a = 0.0f;
++                out[1] = 0.0f;
+                 *out = 0.0f;
+             }
+         }
++
++      private:
++        const bool m_camera_space;
+     };
+ 
+ 
+@@ -116,6 +138,7 @@
+       public:
+         explicit DepthAOV(const ParamArray& params)
+           : UnfilteredAOV("depth", params)
++          , m_camera_space(params.get_optional<bool>("camera_space", false))
+         {
+         }
+ 
+@@ -146,10 +169,12 @@
+         }
+ 
+       private:
++        const bool m_camera_space;
++
+         auto_release_ptr<AOVAccumulator> create_accumulator() const override
+         {
+             return auto_release_ptr<AOVAccumulator>(
+-                new DepthAOVAccumulator(get_image()));
++                new DepthAOVAccumulator(get_image(), m_camera_space));
+         }
+     };
+ }
+@@ -181,6 +206,13 @@
+ DictionaryArray DepthAOVFactory::get_input_metadata() const
+ {
+     DictionaryArray metadata;
++    metadata.push_back(
++        Dictionary()
++            .insert("name", "camera_space")
++            .insert("type", "bool")
++            .insert("default", "false")
++            .insert("label", "Camera-Space Depth")
++            .insert("help", "Measure negative camera-space Z instead of distance from the ray origin"));
+     return metadata;
+ }
+ 
+diff -Naur appleseed/src/appleseed/renderer/modeling/environmentedf/latlongmapenvironmentedf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/latlongmapenvironmentedf.cpp
+--- appleseed/src/appleseed/renderer/modeling/environmentedf/latlongmapenvironmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/latlongmapenvironmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -258,8 +258,9 @@
+             const Transformd& transform = m_transform_sequence.evaluate(0.0f, scratch);
+             outgoing = transform.vector_to_parent(local_outgoing);
+ 
+-            // Return the emitted radiance.
+-            value.set(payload, g_std_lighting_conditions, Spectrum::Illuminance);
++            // Match evaluation at the actual direction, including filtering,
++            // rather than returning radiance at the importance-map texel center.
++            lookup_environment_map(shading_context, u, v, value);
+ 
+             // Compute the probability density of this direction.
+             probability = prob_xy * m_probability_scale / sin_theta;
+diff -Naur appleseed/src/appleseed/renderer/modeling/environmentedf/sphericalcoordinates.h APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/sphericalcoordinates.h
+--- appleseed/src/appleseed/renderer/modeling/environmentedf/sphericalcoordinates.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/sphericalcoordinates.h	1970-01-01 00:00:00.000000000 +0000
+@@ -100,11 +100,15 @@
+     theta += theta_shift;
+     phi += phi_shift;
+ 
+-    theta = std::fmod(theta, Pi<T>());
++    // Both poles belong to the closed [0, Pi] interval.  In particular,
++    // a zero shift must not wrap the south pole onto the north pole.
++    if (theta < T(0.0) || theta > Pi<T>())
++    {
++        theta = std::fmod(theta, Pi<T>());
++        if (theta < T(0.0))
++            theta += Pi<T>();
++    }
+ 
+-    if (theta < T(0.0))
+-        theta += Pi<T>();
+-
+     phi += Pi<T>();
+ 
+     phi = std::fmod(phi, TwoPi<T>());
+diff -Naur appleseed/src/appleseed/renderer/modeling/input/texturesource.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/input/texturesource.cpp
+--- appleseed/src/appleseed/renderer/modeling/input/texturesource.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/input/texturesource.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -42,6 +42,7 @@
+ 
+ // Standard headers.
+ #include <cassert>
++#include <cmath>
+ 
+ using namespace foundation;
+ 
+@@ -74,6 +75,11 @@
+             p.y = wrap(p.y);
+             break;
+ 
++          case TextureAddressingWrapUClampV:
++            p.x = wrap(p.x);
++            p.y = saturate(p.y);
++            break;
++
+           default:
+             assert(!"Wrong texture addressing mode.");
+         }
+@@ -87,33 +93,20 @@
+         int                         ix,
+         int                         iy)
+     {
+-        const int max_x = static_cast<int>(canvas_width - 1);
+-        const int max_y = static_cast<int>(canvas_height - 1);
+-
+-        switch (addressing_mode)
+-        {
+-          case TextureAddressingClamp:
+-            if (ix < 0) ix = 0;
+-            if (iy < 0) iy = 0;
+-            if (ix > max_x) ix = max_x;
+-            if (iy > max_y) iy = max_y;
+-            break;
+-
+-          case TextureAddressingWrap:
+-            if (ix < 0) ix = max_x;
+-            if (iy < 0) iy = max_y;
+-            if (ix > max_x) ix = 0;
+-            if (iy > max_y) iy = 0;
+-            break;
+-
+-          default:
+-            assert(!"Wrong texture addressing mode.");
+-        }
++        assert(addressing_mode == TextureAddressingClamp ||
++               addressing_mode == TextureAddressingWrap ||
++               addressing_mode == TextureAddressingWrapUClampV);
+ 
+-        return
+-            Vector<size_t, 2>(
+-                static_cast<size_t>(ix),
+-                static_cast<size_t>(iy));
++        const auto constrain = [](const int index, const int maximum, const bool repeat) {
++            if (repeat)
++                return index < 0 ? maximum : index > maximum ? 0 : index;
++            return clamp(index, 0, maximum);
++        };
++        return Vector<size_t, 2>(
++            static_cast<size_t>(constrain(ix, static_cast<int>(canvas_width - 1),
++                addressing_mode != TextureAddressingClamp)),
++            static_cast<size_t>(constrain(iy, static_cast<int>(canvas_height - 1),
++                addressing_mode == TextureAddressingWrap)));
+     }
+ 
+     // Utility function to sample a tile.
+@@ -378,11 +371,15 @@
+ 
+       case TextureFilteringBilinear:
+         {
+-            p.x *= m_max_x;
+-            p.y *= m_max_y;
++            const bool panorama =
++                m_texture_instance.get_addressing_mode() == TextureAddressingWrapUClampV;
++            // Periodic panoramas place texel centers halfway into each cell.
++            // Clamp latitude while interpolating across the longitude seam.
++            p.x = panorama ? p.x * m_scalar_canvas_width - 0.5f : p.x * m_max_x;
++            p.y = panorama ? p.y * m_scalar_canvas_height - 0.5f : p.y * m_max_y;
+ 
+-            const int ix = truncate<int>(p.x);
+-            const int iy = truncate<int>(p.y);
++            const int ix = panorama ? static_cast<int>(std::floor(p.x)) : truncate<int>(p.x);
++            const int iy = panorama ? static_cast<int>(std::floor(p.y)) : truncate<int>(p.y);
+ 
+             // Retrieve the four surrounding texels.
+             Color4f t00, t10, t01, t11;
+diff -Naur appleseed/src/appleseed/renderer/modeling/scene/textureinstance.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/scene/textureinstance.cpp
+--- appleseed/src/appleseed/renderer/modeling/scene/textureinstance.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/scene/textureinstance.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -96,9 +96,11 @@
+ 
+     // Retrieve the texture addressing mode.
+     const std::string addressing_mode =
+-        m_params.get_optional<std::string>("addressing_mode", "wrap", make_vector("clamp", "wrap"), context);
++        m_params.get_optional<std::string>("addressing_mode", "wrap", make_vector("clamp", "wrap", "wrap_u_clamp_v"), context);
+     if (addressing_mode == "clamp")
+         m_addressing_mode = TextureAddressingClamp;
++    else if (addressing_mode == "wrap_u_clamp_v")
++        m_addressing_mode = TextureAddressingWrapUClampV;
+     else m_addressing_mode = TextureAddressingWrap;
+ 
+     // Retrieve the texture filtering mode.
+@@ -258,7 +260,8 @@
+             .insert("items",
+                 Dictionary()
+                     .insert("Clamp", "clamp")
+-                    .insert("Wrap/Tile", "wrap"))
++                    .insert("Wrap/Tile", "wrap")
++                    .insert("Wrap U, Clamp V", "wrap_u_clamp_v"))
+             .insert("use", "optional")
+             .insert("default", "wrap"));
+ 
+diff -Naur appleseed/src/appleseed/renderer/modeling/scene/textureinstance.h APPLESEED_BLD/src/appleseed/renderer/modeling/scene/textureinstance.h
+--- appleseed/src/appleseed/renderer/modeling/scene/textureinstance.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/scene/textureinstance.h	1970-01-01 00:00:00.000000000 +0000
+@@ -61,7 +61,8 @@
+ enum TextureAddressingMode
+ {
+     TextureAddressingClamp,
+-    TextureAddressingWrap
++    TextureAddressingWrap,
++    TextureAddressingWrapUClampV
+ };
+ 
+ enum TextureFilteringMode

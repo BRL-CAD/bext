@@ -1,0 +1,903 @@
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -1520,9 +1520,11 @@
+     renderer/meta/tests/test_inputarray.cpp
+     renderer/meta/tests/test_intersector.cpp
+     renderer/meta/tests/test_localsampleaccumulationbuffer.cpp
++    renderer/meta/tests/test_oslbsdf.cpp
+     renderer/meta/tests/test_paramarray.cpp
+     renderer/meta/tests/test_pinholecamera.cpp
+     renderer/meta/tests/test_pixelsampler.cpp
++    renderer/meta/tests/test_plasticbrdf.cpp
+     renderer/meta/tests/test_projectfilereader.cpp
+     renderer/meta/tests/test_projectfilewriter.cpp
+     renderer/meta/tests/test_rgbspectrum.cpp
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/closures.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.cpp
+--- appleseed/src/appleseed/renderer/kernel/shading/closures.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/closures.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -1414,7 +1414,7 @@
+             values->m_specular_reflectance.set(Color3f(p->specular_reflectance), g_std_lighting_conditions,
+             Spectrum::Reflectance);
+             values->m_specular_reflectance_multiplier = std::max(p->specular_reflectance_multiplier, 0.0f);
+-            values->m_roughness = clamp(p->roughness, 0.0001f, 1.0f);
++            values->m_roughness = clamp(p->roughness, 0.0f, 1.0f);
+             values->m_ior = std::max(p->ior, 0.001f);
+             values->m_diffuse_reflectance.set(Color3f(p->diffuse_reflectance), g_std_lighting_conditions,
+             Spectrum::Reflectance);
+@@ -1492,7 +1492,7 @@
+             values->m_specular_reflectance.set(Color3f(p->specular_reflectance), g_std_lighting_conditions,
+             Spectrum::Reflectance);
+             values->m_specular_reflectance_multiplier = std::max(p->specular_reflectance_multiplier, 0.0f);
+-            values->m_roughness = clamp(p->roughness, 0.0001f, 1.0f);
++            values->m_roughness = clamp(p->roughness, 0.0f, 1.0f);
+             values->m_ior = std::max(p->ior, 0.001f);
+             values->m_diffuse_reflectance.set(Color3f(p->diffuse_reflectance), g_std_lighting_conditions,
+             Spectrum::Reflectance);
+@@ -2524,9 +2524,17 @@
+     float                       pdfs[MaxClosureEntries]) const
+ {
+     assert(num_closures > 0);
+-    assert(num_closures < MaxClosureEntries);
++    assert(num_closures <= MaxClosureEntries);
+ 
+-    return sample_pdf_linear_search(pdfs, num_closures, w);
++    std::size_t index = sample_pdf_linear_search(pdfs, num_closures, w);
++
++    // If normalization rounds the sum below w, the search returns the last
++    // entry.  Trailing entries may have been excluded by the scattering mask.
++    while (index > 0 && pdfs[index] == 0.0f)
++        --index;
++
++    assert(pdfs[index] > 0.0f);
++    return index;
+ }
+ 
+ void CompositeSurfaceClosure::process_closure_tree(
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,280 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.renderer headers.
++#include "renderer/kernel/rendering/rendererservices.h"
++#include "renderer/kernel/shading/closures.h"
++#include "renderer/kernel/shading/oslshadingsystem.h"
++#include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/kernel/shading/shadingpointbuilder.h"
++#include "renderer/kernel/texturing/oiiotexturesystem.h"
++#include "renderer/modeling/bsdf/bsdf.h"
++#include "renderer/modeling/bsdf/bsdfsample.h"
++#include "renderer/modeling/bsdf/oslbsdf.h"
++#include "renderer/modeling/project/project.h"
++
++// appleseed.foundation headers.
++#include "foundation/math/basis.h"
++#include "foundation/math/rng/xoroshiro128plus.h"
++#include "foundation/math/scalar.h"
++#include "foundation/math/vector.h"
++#include "foundation/memory/arena.h"
++#include "foundation/memory/autoreleaseptr.h"
++#include "foundation/utility/test.h"
++
++// OSL headers.
++#include "foundation/platform/_beginoslheaders.h"
++#include "OSL/oslclosure.h"
++#include "foundation/platform/_endoslheaders.h"
++
++// Standard headers.
++#include <algorithm>
++#include <cmath>
++#include <memory>
++
++using namespace foundation;
++using namespace renderer;
++
++TEST_SUITE(Renderer_Modeling_BSDF_OSL)
++{
++    struct Fixture
++    {
++        auto_release_ptr<Project> project;
++        std::shared_ptr<OIIOTextureSystem> textures;
++        RendererServices services;
++        auto_release_ptr<OSLShadingSystem> system;
++        auto_release_ptr<BSDF> bsdf;
++        Arena arena;
++        Basis3f basis;
++        const OSL::ClosureColor* tree;
++        ShadingPoint point;
++        BSDF::LocalGeometry geometry;
++        Xoroshiro128plus rng;
++        SamplingContext sampling;
++
++        Fixture()
++          : project(ProjectFactory::create("mixture_test"))
++          , textures(OIIOTextureSystemFactory::create())
++          , services(*project, *textures)
++          , system(OSLShadingSystemFactory::create(&services, textures.get()))
++          , bsdf(OSLBSDFFactory().create())
++          , basis(Vector3f(0.0f, 1.0f, 0.0f))
++          , tree(nullptr)
++          , sampling(rng, SamplingContext::RNGMode)
++        {
++            register_closures(*system);
++            ShadingPointBuilder builder(point);
++            builder.set_ray(ShadingRay(Vector3d(0.0, 1.0, 0.0),
++                Vector3d(0.0, -1.0, 0.0), ShadingRay::Time(), VisibilityFlags::CameraRay, 0));
++            builder.set_primitive_type(ShadingPoint::PrimitiveTriangle);
++            builder.set_geometric_normal(Vector3d(0.0, 1.0, 0.0));
++            builder.set_shading_basis(Basis3d(basis));
++            geometry.m_shading_point = &point;
++            geometry.m_geometric_normal = basis.get_normal();
++            geometry.m_shading_basis = basis;
++        }
++
++        void add_closure(const ClosureID id, const float weight, const Vector3f& normal)
++        {
++            // These standard OSL closures take a normal, followed by an IOR
++            // for reflection.  Component parameters follow its aligned header.
++            struct NormalClosure
++            {
++                OSL::ClosureComponent component;
++                OSL::Vec3 normal;
++                float ior;
++            };
++            auto* node = arena.allocate<NormalClosure>();
++            node->component.id = id;
++            node->component.w = OSL::Vec3(weight);
++            node->normal = OSL::Vec3(normal.x, normal.y, normal.z);
++            node->ior = 1.5f;
++            if (tree)
++            {
++                auto* sum = arena.allocate<OSL::ClosureAdd>();
++                sum->id = OSL::ClosureColor::ADD;
++                sum->closureA = tree;
++                sum->closureB = &node->component;
++                tree = sum;
++            }
++            else tree = &node->component;
++        }
++
++        void add_diffuse(const float weight, const Vector3f& normal)
++        {
++            add_closure(DiffuseID, weight, normal);
++        }
++
++        void add_mirror(const float weight, const Vector3f& normal)
++        {
++            add_closure(ReflectionID, weight, normal);
++        }
++
++        BSDFSample sample(const int modes = ScatteringMode::All)
++        {
++            Arena inputs;
++            CompositeSurfaceClosure closure(basis, tree, inputs);
++            bsdf->prepare_inputs(inputs, point, &closure);
++            BSDFSample result;
++            bsdf->sample(sampling, &closure, false, false, geometry,
++                Dual3f(basis.get_normal()), modes, result);
++            return result;
++        }
++    };
++
++    TEST_CASE_F(DeltaMixture_PreservesTotalReflectionForEitherClosure, Fixture)
++    {
++        const Vector3f tilted(0.6f, 0.8f, 0.0f);
++        add_mirror(0.2f, basis.get_normal());
++        add_mirror(0.3f, tilted);
++        size_t straight = 0, angled = 0;
++        const size_t SampleCount = 64;
++        for (size_t i = 0; i < SampleCount; ++i)
++        {
++            const BSDFSample result = sample();
++            ASSERT_EQ(ScatteringMode::Specular, result.get_mode());
++            EXPECT_EQ(BSDF::DiracDelta, result.get_probability());
++            const Vector3f& incoming = result.m_incoming.get_value();
++            const Vector3f& normal = incoming.x > 0.5f ? tilted : basis.get_normal();
++            const float cosine = std::abs(dot(incoming, normal));
++            EXPECT_FEQ_EPS(0.5f, result.m_value.m_beauty[0] * cosine, 1.0e-6f);
++            if (incoming.x > 0.5f) ++angled;
++            else ++straight;
++        }
++        EXPECT_TRUE(straight > 0);
++        EXPECT_TRUE(angled > 0);
++    }
++
++    TEST_CASE_F(ModeMask_SelectsEligibleClosureAfterAnExcludedOne, Fixture)
++    {
++        add_diffuse(0.2f, basis.get_normal());
++        add_mirror(0.3f, basis.get_normal());
++        const BSDFSample result = sample(ScatteringMode::Specular);
++        ASSERT_EQ(ScatteringMode::Specular, result.get_mode());
++        EXPECT_FEQ_EPS(0.3f, result.m_value.m_beauty[0], 1.0e-6f);
++    }
++
++    TEST_CASE_F(ModeMask_SelectsDiffuseAfterAnExcludedMirror, Fixture)
++    {
++        add_mirror(0.2f, basis.get_normal());
++        add_diffuse(0.3f, basis.get_normal());
++        const BSDFSample result = sample(ScatteringMode::Diffuse);
++        ASSERT_EQ(ScatteringMode::Diffuse, result.get_mode());
++        EXPECT_FEQ_EPS(0.3f * RcpPi<float>(), result.m_value.m_beauty[0], 1.0e-6f);
++    }
++
++    TEST_CASE_F(ContinuousMixture_UsesEachClosuresShadingFrame, Fixture)
++    {
++        const Vector3f tilted(0.6f, 0.8f, 0.0f);
++        const float first_weight = 0.2f, second_weight = 0.3f;
++        add_diffuse(first_weight, basis.get_normal());
++        add_diffuse(second_weight, tilted);
++        const size_t SampleCount = 32;
++        for (size_t i = 0; i < SampleCount; ++i)
++        {
++            const BSDFSample result = sample(ScatteringMode::Diffuse);
++            ASSERT_EQ(ScatteringMode::Diffuse, result.get_mode());
++            const Vector3f& incoming = result.m_incoming.get_value();
++            const float first_cos = std::max(dot(incoming, basis.get_normal()), 0.0f);
++            const float second_cos = std::max(dot(incoming, tilted), 0.0f);
++            const float expected_pdf = (first_weight * first_cos + second_weight * second_cos)
++                * RcpPi<float>() / (first_weight + second_weight);
++            const float expected_value = ((first_cos > 0.0f ? first_weight : 0.0f) +
++                (second_cos > 0.0f ? second_weight : 0.0f)) * RcpPi<float>();
++            EXPECT_FEQ_EPS(expected_pdf, result.get_probability(), 1.0e-6f);
++            EXPECT_FEQ_EPS(expected_value, result.m_value.m_beauty[0], 1.0e-6f);
++            Arena inputs;
++            CompositeSurfaceClosure mixture(basis, tree, inputs);
++            DirectShadingComponents evaluated;
++            const float evaluated_pdf = bsdf->evaluate(&mixture, false, false,
++                geometry, basis.get_normal(), incoming, ScatteringMode::Diffuse, evaluated);
++            EXPECT_FEQ_EPS(expected_pdf, evaluated_pdf, 1.0e-6f);
++            EXPECT_FEQ_EPS(expected_value, evaluated.m_beauty[0], 1.0e-6f);
++            EXPECT_FEQ_EPS(expected_pdf, bsdf->evaluate_pdf(&mixture, false,
++                geometry, basis.get_normal(), incoming, ScatteringMode::Diffuse), 1.0e-6f);
++        }
++    }
++
++    TEST_CASE_F(DiffuseAndMirrorMixture_PreservesEnergyForEitherSamplingMode, Fixture)
++    {
++        add_diffuse(0.2f, basis.get_normal());
++        add_mirror(0.3f, basis.get_normal());
++        size_t diffuse = 0, specular = 0;
++        const size_t SampleCount = 64;
++        for (size_t i = 0; i < SampleCount; ++i)
++        {
++            const BSDFSample result = sample();
++            ASSERT_TRUE(result.get_mode() != ScatteringMode::None);
++            const float cosine = dot(result.m_incoming.get_value(), basis.get_normal());
++            const float probability = result.get_probability() == BSDF::DiracDelta ?
++                1.0f : result.get_probability();
++            EXPECT_FEQ_EPS(0.5f, result.m_value.m_beauty[0] * cosine / probability, 1.0e-6f);
++            if (result.get_mode() == ScatteringMode::Diffuse) ++diffuse;
++            else ++specular;
++        }
++        EXPECT_TRUE(diffuse > 0);
++        EXPECT_TRUE(specular > 0);
++    }
++
++    TEST_CASE_F(MaximumClosureCount_CanBeSampledAndRejectsAnExtraClosure, Fixture)
++    {
++        const float weight = 1.0f / CompositeSurfaceClosure::MaxClosureEntries;
++        for (size_t i = 0; i < CompositeSurfaceClosure::MaxClosureEntries; ++i)
++            add_mirror(weight, basis.get_normal());
++        const BSDFSample result = sample();
++        ASSERT_EQ(ScatteringMode::Specular, result.get_mode());
++        EXPECT_FEQ_EPS(1.0f, result.m_value.m_beauty[0], 1.0e-6f);
++        add_mirror(weight, basis.get_normal());
++        EXPECT_EXCEPTION(ExceptionOSLRuntimeError, sample());
++    }
++
++    TEST_CASE_F(FilteredMixture_RoundedUpperEndpointStaysInAnEligibleClosure, Fixture)
++    {
++        // Normalizing these weights rounds the sum below the largest float
++        // less than one.  The excluded trailing mirror must remain excluded.
++        add_diffuse(1.0f, basis.get_normal());
++        add_diffuse(17.0f, basis.get_normal());
++        add_diffuse(13.0f, basis.get_normal());
++        add_mirror(1.0f, basis.get_normal());
++        Arena inputs;
++        CompositeSurfaceClosure mixture(basis, tree, inputs);
++        float pdfs[CompositeSurfaceClosure::MaxClosureEntries];
++        EXPECT_EQ(3, mixture.compute_pdfs(ScatteringMode::Diffuse, pdfs));
++        EXPECT_EQ(2, mixture.choose_closure(std::nextafter(1.0f, 0.0f),
++            mixture.get_closure_count(), pdfs));
++    }
++
++    TEST_CASE_F(EmptyOrExcludedMixturesHaveNoScattering, Fixture)
++    {
++        EXPECT_EQ(ScatteringMode::None, sample().get_mode());
++        add_diffuse(0.5f, basis.get_normal());
++        EXPECT_EQ(ScatteringMode::None, sample(ScatteringMode::Specular).get_mode());
++        add_mirror(0.5f, basis.get_normal());
++        EXPECT_EQ(ScatteringMode::None, sample(ScatteringMode::Glossy).get_mode());
++    }
++}
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_plasticbrdf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_plasticbrdf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_plasticbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_plasticbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,270 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.renderer headers.
++#include "renderer/kernel/shading/shadingpoint.h"
++#include "renderer/modeling/bsdf/bsdf.h"
++#include "renderer/modeling/bsdf/bsdfsample.h"
++#include "renderer/modeling/bsdf/plasticbrdf.h"
++#include "renderer/utility/paramarray.h"
++
++// appleseed.foundation headers.
++#include "foundation/math/rng/xoroshiro128plus.h"
++#include "foundation/math/scalar.h"
++#include "foundation/memory/arena.h"
++#include "foundation/memory/autoreleaseptr.h"
++#include "foundation/utility/test.h"
++
++// Standard headers.
++#include <algorithm>
++#include <cmath>
++
++using namespace foundation;
++using namespace renderer;
++
++TEST_SUITE(Renderer_Modeling_BSDF_Plastic)
++{
++    // Independent double-precision Fresnel and isotropic GGX equations.
++    double fresnel(const double cosine, const double ior)
++    {
++        const double transmitted = std::sqrt(std::max(0.0,
++            1.0 - (1.0 - cosine * cosine) / (ior * ior)));
++        const double rs = (cosine - ior * transmitted) / (cosine + ior * transmitted);
++        const double rp = (ior * cosine - transmitted) / (ior * cosine + transmitted);
++        return (rs * rs + rp * rp) * 0.5;
++    }
++
++    double smith_lambda(const double cosine, const double alpha)
++    {
++        return (std::sqrt(1.0 + alpha * alpha * (1.0 - cosine * cosine)
++            / (cosine * cosine)) - 1.0) * 0.5;
++    }
++
++    struct Fixture
++    {
++        auto_release_ptr<BSDF> bsdf;
++        PlasticBRDFInputValues values{};
++        ShadingPoint point;
++        BSDF::LocalGeometry geometry;
++        Xoroshiro128plus rng;
++        SamplingContext sampling;
++
++        Fixture()
++          : bsdf(PlasticBRDFFactory().create("plastic", ParamArray()))
++          , sampling(rng, SamplingContext::RNGMode)
++        {
++            values.m_diffuse_reflectance.set(0.5f);
++            values.m_diffuse_reflectance_multiplier = 1.0f;
++            values.m_specular_reflectance.set(1.0f);
++            values.m_specular_reflectance_multiplier = 1.0f;
++            values.m_roughness = 0.5f;
++            values.m_ior = 1.5f;
++            values.m_internal_scattering = 1.0f;
++            point.set_ray(ShadingRay(Vector3d(0.0, 1.0, 0.0),
++                Vector3d(0.0, -1.0, 0.0), ShadingRay::Time(), VisibilityFlags::CameraRay, 0));
++            geometry.m_shading_point = &point;
++            geometry.m_geometric_normal = Vector3f(0.0f, 1.0f, 0.0f);
++            geometry.m_shading_basis = Basis3f(geometry.m_geometric_normal);
++            prepare();
++        }
++
++        void prepare()
++        {
++            Arena arena;
++            bsdf->prepare_inputs(arena, point, &values);
++        }
++
++        BSDFSample sample(const Vector3f& outgoing, const int modes = ScatteringMode::All)
++        {
++            BSDFSample result;
++            bsdf->sample(sampling, &values, false, false, geometry, Dual3f(outgoing), modes, result);
++            return result;
++        }
++
++        double reference(const Vector3d& wo, const Vector3d& wi) const
++        {
++            const double ior = values.m_ior;
++            const double fdr = -1.4399 / (ior * ior) + 0.7099 / ior + 0.6681 + 0.0636 * ior;
++            const double diffuse = values.m_diffuse_reflectance[0];
++            const double denominator = 1.0 - (1.0 - values.m_internal_scattering +
++                values.m_internal_scattering * diffuse) * fdr;
++            const bool smooth = values.m_roughness == 0.0f;
++            const Vector3d half = smooth ? Vector3d(0.0, 1.0, 0.0) : normalize(wi + wo);
++            const double fo = fresnel(dot(wo, half), ior);
++            const double fi = fresnel(dot(wi, half), ior);
++            const double base = (1.0 - fo) * (1.0 - fi) * diffuse
++                / (ior * ior * Pi<double>() * denominator);
++            if (smooth)
++                return base;
++            const double alpha = std::max(0.001, double(values.m_roughness) * values.m_roughness);
++            const double shape = 1.0 + (alpha * alpha - 1.0) * half.y * half.y;
++            const double d = alpha * alpha / (Pi<double>() * shape * shape);
++            const double g = 1.0 / (1.0 + smith_lambda(wo.y, alpha) + smith_lambda(wi.y, alpha));
++            return base + values.m_specular_reflectance[0] * fo * d * g / (4.0 * wi.y * wo.y);
++        }
++    };
++
++    TEST_CASE_F(RoughSamples_AgreeWithEvaluationAndMarginalDensity, Fixture)
++    {
++        const Vector3f outgoing = normalize(Vector3f(0.8f, 0.6f, 0.0f));
++        size_t diffuse = 0, glossy = 0;
++        const size_t SampleCount = 128;
++        for (size_t i = 0; i < SampleCount; ++i)
++        {
++            const BSDFSample result = sample(outgoing);
++            if (result.get_mode() == ScatteringMode::None)
++                continue;
++            DirectShadingComponents evaluated;
++            const Vector3f& incoming = result.m_incoming.get_value();
++            const float pdf = bsdf->evaluate(&values, false, false, geometry,
++                outgoing, incoming, ScatteringMode::All, evaluated);
++            EXPECT_FEQ_EPS(pdf, result.get_probability(), 1.0e-5f);
++            EXPECT_FEQ_EPS(pdf, bsdf->evaluate_pdf(&values, false, geometry,
++                outgoing, incoming, ScatteringMode::All), 1.0e-5f);
++            EXPECT_FEQ_EPS(evaluated.m_beauty[0], result.m_value.m_beauty[0], 1.0e-5f);
++            EXPECT_FEQ_EPS(float(reference(Vector3d(outgoing), Vector3d(incoming))),
++                result.m_value.m_beauty[0], 1.0e-5f);
++            if (result.get_mode() == ScatteringMode::Diffuse) ++diffuse;
++            else ++glossy;
++        }
++        EXPECT_TRUE(diffuse > 0);
++        EXPECT_TRUE(glossy > 0);
++    }
++
++    TEST_CASE_F(RestrictedRoughModes_ReturnOnlyTheRequestedLobe, Fixture)
++    {
++        const Vector3f outgoing(0.0f, 1.0f, 0.0f);
++        for (const int mode : {ScatteringMode::Diffuse, ScatteringMode::Glossy})
++        {
++            size_t accepted = 0;
++            for (size_t i = 0; i < 32; ++i)
++            {
++                const BSDFSample result = sample(outgoing, mode);
++                if (result.get_mode() == ScatteringMode::None)
++                    continue;
++                ++accepted;
++                EXPECT_EQ(mode, result.get_mode());
++                const Vector3f& incoming = result.m_incoming.get_value();
++                const float pdf = bsdf->evaluate_pdf(&values, false, geometry, outgoing, incoming, mode);
++                EXPECT_FEQ_EPS(pdf, result.get_probability(), 1.0e-5f);
++                if (mode == ScatteringMode::Diffuse)
++                    EXPECT_FEQ_EPS(incoming.y * RcpPi<float>(), result.get_probability(), 1.0e-6f);
++            }
++            EXPECT_TRUE(accepted > 0);
++        }
++        EXPECT_EQ(ScatteringMode::None, sample(outgoing, ScatteringMode::Specular).get_mode());
++        EXPECT_EQ(ScatteringMode::None, sample(outgoing, 0).get_mode());
++    }
++
++    TEST_CASE_F(SmoothSpecular_IsAnExactFresnelWeightedDelta, Fixture)
++    {
++        values.m_roughness = 0.0f;
++        prepare();
++        const Vector3f outgoing(0.6f, 0.8f, 0.0f);
++        const BSDFSample result = sample(outgoing, ScatteringMode::Specular);
++        ASSERT_EQ(ScatteringMode::Specular, result.get_mode());
++        EXPECT_EQ(BSDF::DiracDelta, result.get_probability());
++        EXPECT_FEQ_EPS(-0.6f, result.m_incoming.get_value().x, 1.0e-6f);
++        EXPECT_FEQ_EPS(0.8f, result.m_incoming.get_value().y, 1.0e-6f);
++        EXPECT_FEQ_EPS(float(fresnel(0.8, 1.5)), result.m_value.m_beauty[0] * 0.8f, 1.0e-6f);
++        EXPECT_EQ(0.0f, bsdf->evaluate_pdf(&values, false, geometry,
++            outgoing, result.m_incoming.get_value(), ScatteringMode::Specular));
++    }
++
++    TEST_CASE_F(SmoothMixture_CompensatesTheDeltaSelectionProbability, Fixture)
++    {
++        values.m_roughness = 0.0f;
++        prepare();
++        const Vector3f outgoing(0.0f, 1.0f, 0.0f);
++        const float f = 0.04f;
++        const float specular_probability = f / (f + (1.0f - f) * 0.5f);
++        size_t diffuse = 0, specular = 0;
++        for (size_t i = 0; i < 256; ++i)
++        {
++            const BSDFSample result = sample(outgoing);
++            ASSERT_TRUE(result.get_mode() != ScatteringMode::None);
++            if (result.get_mode() == ScatteringMode::Specular)
++            {
++                ++specular;
++                EXPECT_EQ(BSDF::DiracDelta, result.get_probability());
++                EXPECT_FEQ_EPS(f / specular_probability, result.m_value.m_beauty[0], 1.0e-6f);
++            }
++            else
++            {
++                ++diffuse;
++                EXPECT_EQ(ScatteringMode::Diffuse, result.get_mode());
++                EXPECT_FEQ_EPS((1.0f - specular_probability) * result.m_incoming.get_value().y
++                    * RcpPi<float>(), result.get_probability(), 1.0e-6f);
++            }
++        }
++        EXPECT_TRUE(diffuse > 0);
++        EXPECT_TRUE(specular > 0);
++    }
++
++    TEST_CASE_F(RoughSampling_IntegratesToIndependentHemisphereQuadrature, Fixture)
++    {
++        const size_t PolarCount = 128, AzimuthCount = 256, SampleCount = 32768;
++        for (const float roughness : {0.3f, 0.7f})
++        {
++            values.m_roughness = roughness;
++            prepare();
++            const Vector3f outgoing(0.8f, 0.6f, 0.0f);
++            double integral = 0.0;
++            for (size_t t = 0; t < PolarCount; ++t)
++            {
++                const double mu = (t + 0.5) / PolarCount;
++                const double radius = std::sqrt(1.0 - mu * mu);
++                for (size_t p = 0; p < AzimuthCount; ++p)
++                {
++                    const double phi = TwoPi<double>() * (p + 0.5) / AzimuthCount;
++                    integral += reference(Vector3d(outgoing),
++                        Vector3d(radius * std::cos(phi), mu, radius * std::sin(phi))) * mu;
++                }
++            }
++            integral *= TwoPi<double>() / (PolarCount * AzimuthCount);
++            double estimate = 0.0;
++            for (size_t i = 0; i < SampleCount; ++i)
++            {
++                const BSDFSample result = sample(outgoing);
++                if (result.get_mode() != ScatteringMode::None)
++                    estimate += result.m_value.m_beauty[0] * result.m_incoming.get_value().y
++                        / result.get_probability();
++            }
++            estimate /= SampleCount;
++            EXPECT_FEQ_EPS(integral, estimate, 0.005);
++        }
++    }
++
++    TEST_CASE_F(BlackOrExcludedMaterialsHaveNoScattering, Fixture)
++    {
++        values.m_diffuse_reflectance.set(0.0f);
++        values.m_specular_reflectance.set(0.0f);
++        prepare();
++        EXPECT_EQ(ScatteringMode::None, sample(Vector3f(0.0f, 1.0f, 0.0f)).get_mode());
++    }
++}
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/oslbsdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -205,7 +205,7 @@
+             sampling_context.split_in_place(1, 1);
+             const size_t closure_index = c->choose_closure(
+                 sampling_context.next2<float>(),
+-                num_matching_closures,
++                c->get_closure_count(),
+                 pdfs);
+ 
+             const Basis3f& modified_basis = c->get_closure_shading_basis(closure_index);
+@@ -225,6 +225,9 @@
+                     modes,
+                     sample);
+ 
++            if (sample.get_mode() == ScatteringMode::None)
++                return;
++
+             apply_layers_attenuation(
+                 *c,
+                 closure_index,
+@@ -235,19 +238,28 @@
+             sample.m_value *= c->get_closure_weight(closure_index);
+             sample.m_aov_components.m_albedo *= c->get_closure_weight(closure_index);
+ 
+-            if (sample.get_mode() == ScatteringMode::None ||
+-                sample.get_mode() == ScatteringMode::Specular ||
+-                sample.get_probability() < 1.0e-6f)
++            if (sample.get_mode() == ScatteringMode::Specular)
++            {
++                // The path tracer treats a delta probability as a sentinel,
++                // so account for closure selection in the value itself.
++                sample.m_value *= 1.0f / pdfs[closure_index];
+                 return;
++            }
+ 
++            if (sample.get_probability() < 1.0e-6f)
++                return;
++
+             float probability = sample.get_probability() * pdfs[closure_index];
+             pdfs[closure_index] = 0.0f;
+ 
+-            // Evaluate the closures we didn't sample.
++            // Evaluate the closures we didn't sample without replacing the
++            // shading frame used to launch the selected closure's ray.
++            LocalGeometry evaluation_geometry = local_geometry;
+             for (size_t i = 0, e = c->get_closure_count(); i < e; ++i)
+             {
+                 if (pdfs[i] > 0.0f)
+                 {
++                    evaluation_geometry.m_shading_basis = c->get_closure_shading_basis(i);
+                     DirectShadingComponents s;
+                     const float pdf =
+                         pdfs[i] *
+@@ -256,7 +268,7 @@
+                                 c->get_closure_input_values(i),
+                                 adjoint,
+                                 cosine_mult,
+-                                closure_geometry,
++                                evaluation_geometry,
+                                 outgoing.get_value(),
+                                 sample.m_incoming.get_value(),
+                                 modes,
+diff -Naur appleseed/src/appleseed/renderer/modeling/bsdf/plasticbrdf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/plasticbrdf.cpp
+--- appleseed/src/appleseed/renderer/modeling/bsdf/plasticbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/bsdf/plasticbrdf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -150,94 +150,62 @@
+             BSDFSample&                 sample) const override
+         {
+             const InputValues* values = static_cast<const InputValues*>(data);
+-            const float alpha = microfacet_alpha_from_roughness(values->m_roughness);
+-
+-            // Compute the microfacet normal by sampling the MDF.
++            const float alpha = alpha_from_roughness(values->m_roughness);
+             const Vector3f wo = local_geometry.m_shading_basis.transform_to_local(outgoing.get_value());
+-            sampling_context.split_in_place(3, 1);
+-            const Vector3f s = sampling_context.next2<Vector3f>();
+-            const Vector3f m =
+-                alpha == 0.0f
+-                    ? Vector3f(0.0f, 1.0f, 0.0f)
+-                    : GGXMDF::sample(wo, Vector2f(s[0], s[1]), alpha);
++            const float specular_probability = choose_specular_probability(*values, wo, alpha, modes);
+ 
+-            const float F = fresnel_reflectance(wo, m, values->m_precomputed.m_eta);
+-            const float specular_probability = choose_specular_probability(*values, F);
++            if (specular_probability == 0.0f &&
++                (!ScatteringMode::has_diffuse(modes) || values->m_precomputed.m_diffuse_weight == 0.0f))
++                return;
+ 
++            sampling_context.split_in_place(3, 1);
++            const Vector3f s = sampling_context.next2<Vector3f>();
++            const bool sample_specular = s[2] < specular_probability;
+             Vector3f wi;
+ 
+-            // Choose between specular/glossy and diffuse.
+-            if (ScatteringMode::has_glossy(modes) &&
+-                (!ScatteringMode::has_diffuse(modes) || s[2] < specular_probability))
++            if (sample_specular)
+             {
++                const Vector3f m = alpha == 0.0f ? Vector3f(0.0f, 1.0f, 0.0f) :
++                    GGXMDF::sample(wo, Vector2f(s[0], s[1]), alpha);
+                 wi = improve_normalization(reflect(wo, m));
+                 if (wi.y <= 0.0f)
+                     return;
+ 
+                 if (alpha == 0.0f)
+                 {
+-                    if (!ScatteringMode::has_specular(modes))
+-                        return;
+-
+                     sample.set_to_scattering(ScatteringMode::Specular, DiracDelta);
+                     sample.m_value.m_glossy = values->m_specular_reflectance;
+-                    sample.m_value.m_glossy *= F;
++                    sample.m_value.m_glossy *= fresnel_reflectance(wo, m, values->m_precomputed.m_eta)
++                        / (specular_probability * wi.y);
+                     sample.m_value.m_beauty = sample.m_value.m_glossy;
+                     sample.m_incoming = Dual3f(local_geometry.m_shading_basis.transform_to_parent(wi));
+                     sample.m_min_roughness = values->m_roughness;
+-                    sample.compute_glossy_reflected_differentials(local_geometry, values->m_roughness, outgoing);
++                    sample.compute_specular_reflected_differentials(local_geometry, outgoing);
++                    return;
+                 }
+-                else
+-                {
+-                    const float probability = specular_pdf(alpha, wo, m) * specular_probability;
+-                    assert(probability >= 0.0f);
++            }
++            else wi = sample_hemisphere_cosine(Vector2f(s[0], s[1]));
+ 
+-                    if (probability > 1.0e-6f)
+-                    {
+-                        sample.set_to_scattering(ScatteringMode::Glossy, probability);
+-                        sample.m_incoming = Dual3f(local_geometry.m_shading_basis.transform_to_parent(wi));
+-                        sample.m_min_roughness = values->m_roughness;
++            sample.m_incoming = Dual3f(local_geometry.m_shading_basis.transform_to_parent(wi));
+ 
+-                        evaluate_specular(
+-                            values->m_specular_reflectance,
+-                            alpha,
+-                            wi,
+-                            wo,
+-                            m,
+-                            F,
+-                            sample.m_value.m_glossy);
+-                        sample.m_value.m_beauty = sample.m_value.m_glossy;
++            // Continuous samples carry the complete enabled BSDF and its
++            // marginal density, including both lobes when both are enabled.
++            // Bypass the wrapper here; it applies the cosine after sampling.
++            const float probability = PlasticBRDFImpl::evaluate(
++                data, adjoint, false, local_geometry, outgoing.get_value(),
++                sample.m_incoming.get_value(), modes, sample.m_value);
++            if (probability <= 0.0f)
++                return;
+ 
+-                        sample.compute_glossy_reflected_differentials(local_geometry, values->m_roughness, outgoing);
+-                    }
+-                }
+-            }
++            sample.set_to_scattering(sample_specular ? ScatteringMode::Glossy : ScatteringMode::Diffuse,
++                probability);
++            sample.m_min_roughness = values->m_roughness;
++            if (sample_specular)
++                sample.compute_glossy_reflected_differentials(local_geometry, values->m_roughness, outgoing);
+             else
+             {
+-                wi = sample_hemisphere_cosine(Vector2f(s[0], s[1]));
+-
+-                const float probability = wi.y * RcpPi<float>() * (1.0f - specular_probability);
+-                assert(probability >= 0.0f);
+-
+-                if (probability > 1.0e-6f)
+-                {
+-                    sample.set_to_scattering(ScatteringMode::Diffuse, probability);
+-                    sample.m_incoming = Dual3f(local_geometry.m_shading_basis.transform_to_parent(wi));
+-                    sample.m_min_roughness = values->m_roughness;
+-
+-                    const float Fi = fresnel_reflectance(wi, m, values->m_precomputed.m_eta);
+-                    evaluate_diffuse(
+-                        values->m_diffuse_reflectance,
+-                        values->m_precomputed.m_eta,
+-                        values->m_internal_scattering,
+-                        F,
+-                        Fi,
+-                        sample.m_value.m_diffuse);
+-                    sample.m_value.m_beauty = sample.m_value.m_diffuse;
+-                    sample.m_aov_components.m_albedo = values->m_diffuse_reflectance;
+-
+-                    sample.compute_diffuse_differentials(outgoing);
+-                }
++                sample.m_aov_components.m_albedo = values->m_diffuse_reflectance;
++                sample.compute_diffuse_differentials(outgoing);
+             }
+         }
+ 
+@@ -252,7 +220,7 @@
+             DirectShadingComponents&    value) const override
+         {
+             const InputValues* values = static_cast<const InputValues*>(data);
+-            const float alpha = microfacet_alpha_from_roughness(values->m_roughness);
++            const float alpha = alpha_from_roughness(values->m_roughness);
+ 
+             const Vector3f wo = local_geometry.m_shading_basis.transform_to_local(outgoing);
+             const Vector3f wi = local_geometry.m_shading_basis.transform_to_local(incoming);
+@@ -263,7 +231,7 @@
+ 
+             const float Fo = fresnel_reflectance(wo, m, values->m_precomputed.m_eta);
+             const float Fi = fresnel_reflectance(wi, m, values->m_precomputed.m_eta);
+-            const float specular_probability = choose_specular_probability(*values, Fo);
++            const float specular_probability = choose_specular_probability(*values, wo, alpha, modes);
+ 
+             float pdf_glossy = 0.0f, pdf_diffuse = 0.0f;
+ 
+@@ -297,10 +265,7 @@
+             value.m_beauty = value.m_diffuse;
+             value.m_beauty += value.m_glossy;
+ 
+-            const float pdf =
+-                ScatteringMode::has_diffuse_and_glossy(modes) ? lerp(pdf_diffuse, pdf_glossy, specular_probability) :
+-                ScatteringMode::has_diffuse(modes) ? pdf_diffuse :
+-                ScatteringMode::has_glossy(modes) ? pdf_glossy : 0.0f;
++            const float pdf = lerp(pdf_diffuse, pdf_glossy, specular_probability);
+             assert(pdf >= 0.0f);
+ 
+             return pdf;
+@@ -315,7 +280,7 @@
+             const int                   modes) const override
+         {
+             const InputValues* values = static_cast<const InputValues*>(data);
+-            const float alpha = microfacet_alpha_from_roughness(values->m_roughness);
++            const float alpha = alpha_from_roughness(values->m_roughness);
+ 
+             const Vector3f wo = local_geometry.m_shading_basis.transform_to_local(outgoing);
+             const Vector3f wi = local_geometry.m_shading_basis.transform_to_local(incoming);
+@@ -324,8 +289,7 @@
+                     ? Vector3f(0.0f, 1.0f, 0.0f)
+                     : normalize(wi + wo);
+ 
+-            const float F = fresnel_reflectance(wo, m, values->m_precomputed.m_eta);
+-            const float specular_probability = choose_specular_probability(*values, F);
++            const float specular_probability = choose_specular_probability(*values, wo, alpha, modes);
+ 
+             const float pdf_glossy =
+                 ScatteringMode::has_glossy(modes)
+@@ -337,10 +301,7 @@
+                     ? std::abs(wi.y) * RcpPi<float>()
+                     : 0.0f;
+ 
+-            const float pdf =
+-                ScatteringMode::has_diffuse_and_glossy(modes) ? lerp(pdf_diffuse, pdf_glossy, specular_probability) :
+-                ScatteringMode::has_diffuse(modes) ? pdf_diffuse :
+-                ScatteringMode::has_glossy(modes) ? pdf_glossy : 0.0f;
++            const float pdf = lerp(pdf_diffuse, pdf_glossy, specular_probability);
+             assert(pdf >= 0.0f);
+ 
+             return pdf;
+@@ -349,14 +310,28 @@
+       private:
+         typedef PlasticBRDFInputValues InputValues;
+ 
++        static float alpha_from_roughness(const float roughness)
++        {
++            return roughness == 0.0f ? 0.0f : microfacet_alpha_from_roughness(roughness);
++        }
++
+         static float choose_specular_probability(
+             const InputValues&          values,
+-            const float                 F)
++            const Vector3f&             outgoing,
++            const float                 alpha,
++            const int                   modes)
+         {
+-            const float specular_weight = F * values.m_precomputed.m_specular_weight;
+-            const float diffuse_weight = (1.0f - F) * values.m_precomputed.m_diffuse_weight;
++            // Keep lobe selection independent of the random microfacet normal
++            // so the marginal density is a mixture of GGX and cosine sampling.
++            const float F = fresnel_reflectance(outgoing, Vector3f(0.0f, 1.0f, 0.0f),
++                values.m_precomputed.m_eta);
++            const int specular_mode = alpha == 0.0f ? ScatteringMode::Specular : ScatteringMode::Glossy;
++            const float specular_weight = (modes & specular_mode) ?
++                F * values.m_precomputed.m_specular_weight : 0.0f;
++            const float diffuse_weight = ScatteringMode::has_diffuse(modes) ?
++                (1.0f - F) * values.m_precomputed.m_diffuse_weight : 0.0f;
+             const float total_weight = specular_weight + diffuse_weight;
+-            return total_weight == 0.0f ? 1.0f : specular_weight / total_weight;
++            return total_weight == 0.0f ? 0.0f : specular_weight / total_weight;
+         }
+ 
+         static float fresnel_reflectance(
