@@ -1,0 +1,726 @@
+diff -Naur appleseed/src/appleseed/CMakeLists.txt APPLESEED_BLD/src/appleseed/CMakeLists.txt
+--- appleseed/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/CMakeLists.txt	1970-01-01 00:00:00.000000000 +0000
+@@ -1515,6 +1515,7 @@
+     renderer/meta/tests/test_environmentedf.cpp
+     renderer/meta/tests/test_forwardlightsampler.cpp
+     renderer/meta/tests/test_frame.cpp
++    renderer/meta/tests/test_samplingabort.cpp
+     renderer/meta/tests/test_glassbsdf.cpp
+     renderer/meta/tests/test_glossylayerbsdf.cpp
+     renderer/meta/tests/test_imagetools.cpp
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_job.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_job.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_job.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_job.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -40,6 +40,7 @@
+ #include "foundation/utility/test.h"
+ 
+ // Standard headers.
++#include <chrono>
+ #include <cstddef>
+ #include <cstdint>
+ #include <future>
+@@ -218,6 +219,95 @@
+         EXPECT_EQ(0, job_queue.get_scheduled_job_count());
+         EXPECT_EQ(0, job_queue.get_running_job_count());
+         EXPECT_EQ(0, job_queue.get_total_job_count());
++    }
++
++    class ObservedAbortSwitch : public IAbortSwitch
++    {
++      public:
++        AbortSwitch         m_switch;
++        std::promise<void>  m_first_poll;
++
++        bool is_aborted() override
++        {
++            const bool aborted = m_switch.is_aborted();
++            if (!m_polled)
++            {
++                m_polled = true;
++                m_first_poll.set_value();
++            }
++            return aborted;
++        }
++
++      private:
++        bool m_polled = false;
++    };
++
++    TEST_CASE(AbortedWaitDestroysOwnedScheduledJobs)
++    {
++        volatile std::uint32_t destruction_count = 0;
++        JobQueue job_queue;
++        job_queue.schedule(new JobNotifyingAboutDestruction(&destruction_count));
++        AbortSwitch abort_switch;
++        abort_switch.abort();
++        job_queue.wait_until_completion(abort_switch);
++        EXPECT_EQ(1, destruction_count);
++        EXPECT_FALSE(job_queue.has_scheduled_or_running_jobs());
++    }
++
++    TEST_CASE(AbortedWaitPreservesCallerOwnedScheduledJobs)
++    {
++        volatile std::uint32_t destruction_count = 0;
++        JobNotifyingAboutDestruction job(&destruction_count);
++        JobQueue job_queue;
++        job_queue.schedule(&job, false);
++        AbortSwitch abort_switch;
++        abort_switch.abort();
++        job_queue.wait_until_completion(abort_switch);
++        EXPECT_EQ(0, destruction_count);
++        EXPECT_FALSE(job_queue.has_scheduled_or_running_jobs());
++    }
++
++    TEST_CASE(WaitObservesAbortWithoutQueueNotification)
++    {
++        JobQueue job_queue;
++        job_queue.schedule(new EmptyJob());
++        ObservedAbortSwitch abort_switch;
++        std::future<void> observed = abort_switch.m_first_poll.get_future();
++        std::future<void> waiting = std::async(std::launch::async, [&]()
++        {
++            job_queue.wait_until_completion(abort_switch);
++        });
++        observed.wait();
++        abort_switch.m_switch.abort();
++        const std::chrono::seconds CompletionTimeout(2);
++        EXPECT_TRUE(waiting.wait_for(CompletionTimeout) == std::future_status::ready);
++        // Keep a failed observation bounded even if polling regresses.
++        job_queue.clear_scheduled_jobs();
++        waiting.get();
++        EXPECT_FALSE(job_queue.has_scheduled_or_running_jobs());
++    }
++
++    TEST_CASE(AbortedWaitPreservesRunningJobUntilRetirement)
++    {
++        volatile std::uint32_t destruction_count = 0;
++        JobQueue job_queue;
++        job_queue.schedule(new JobNotifyingAboutDestruction(&destruction_count));
++        const auto running = job_queue.acquire_scheduled_job();
++        ObservedAbortSwitch abort_switch;
++        abort_switch.m_switch.abort();
++        std::future<void> observed = abort_switch.m_first_poll.get_future();
++        std::future<void> waiting = std::async(std::launch::async, [&]()
++        {
++            job_queue.wait_until_completion(abort_switch);
++        });
++        observed.wait();
++        const std::chrono::milliseconds RetentionObservation(100);
++        EXPECT_TRUE(waiting.wait_for(RetentionObservation) == std::future_status::timeout);
++        EXPECT_EQ(0, destruction_count);
++        job_queue.retire_running_job(running);
++        waiting.get();
++        EXPECT_EQ(1, destruction_count);
++        EXPECT_FALSE(job_queue.has_scheduled_or_running_jobs());
+     }
+ 
+     TEST_CASE(AcquireScheduledJobWorksOnEmptyJobQueue)
+diff -Naur appleseed/src/appleseed/foundation/utility/job/jobqueue.cpp APPLESEED_BLD/src/appleseed/foundation/utility/job/jobqueue.cpp
+--- appleseed/src/appleseed/foundation/utility/job/jobqueue.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/job/jobqueue.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -39,6 +39,7 @@
+ 
+ // Standard headers.
+ #include <cassert>
++#include <chrono>
+ #include <condition_variable>
+ #include <mutex>
+ 
+@@ -56,6 +57,27 @@
+     JobList                         m_scheduled_jobs;
+     JobList                         m_running_jobs;
+ 
++    void wait_until_completion(IAbortSwitch* abort_switch)
++    {
++        std::unique_lock<std::mutex> lock(m_mutex);
++        // Abort switches do not notify this queue. Poll only cancellable
++        // waits so aborting also works after every worker has terminated.
++        const std::chrono::milliseconds AbortPollInterval(10);
++        while (!m_scheduled_jobs.empty() || !m_running_jobs.empty())
++        {
++            if (is_aborted(abort_switch))
++            {
++                delete_jobs(m_scheduled_jobs);
++                m_event.notify_all();
++                if (m_running_jobs.empty())
++                    return;
++            }
++            if (abort_switch)
++                m_event.wait_for(lock, AbortPollInterval);
++            else m_event.wait(lock);
++        }
++    }
++
+     static void delete_jobs(JobList& list)
+     {
+         for (each<JobList> i = list; i; ++i)
+@@ -152,11 +174,12 @@
+ 
+ void JobQueue::wait_until_completion()
+ {
+-    std::unique_lock<std::mutex> lock(impl->m_mutex);
++    impl->wait_until_completion(nullptr);
++}
+ 
+-    // Wait until there is no more scheduled or running jobs.
+-    while (!impl->m_scheduled_jobs.empty() || !impl->m_running_jobs.empty())
+-        impl->m_event.wait(lock);
++void JobQueue::wait_until_completion(IAbortSwitch& abort_switch)
++{
++    impl->wait_until_completion(&abort_switch);
+ }
+ 
+ JobQueue::RunningJobInfo JobQueue::acquire_scheduled_job()
+diff -Naur appleseed/src/appleseed/foundation/utility/job/jobqueue.h APPLESEED_BLD/src/appleseed/foundation/utility/job/jobqueue.h
+--- appleseed/src/appleseed/foundation/utility/job/jobqueue.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/utility/job/jobqueue.h	1970-01-01 00:00:00.000000000 +0000
+@@ -44,12 +44,14 @@
+ 
+ // Forward declarations.
+ namespace foundation    { class AbortSwitch; }
++namespace foundation    { class IAbortSwitch; }
+ namespace foundation    { class IJob; }
+ 
+ // Unit test case declarations.
+ DECLARE_TEST_CASE(Foundation_Utility_Job_JobQueue, AcquireScheduledJobWorksOnEmptyJobQueue);
+ DECLARE_TEST_CASE(Foundation_Utility_Job_JobQueue, AcquireScheduledJobWorksOnNonEmptyJobQueue);
+ DECLARE_TEST_CASE(Foundation_Utility_Job_JobQueue, RetiringRunningJobWorks);
++DECLARE_TEST_CASE(Foundation_Utility_Job_JobQueue, AbortedWaitPreservesRunningJobUntilRetirement);
+ DECLARE_TEST_CASE(Foundation_Utility_Job_JobQueue, RunningJobOwnedByQueueIsDestructedWhenRetired);
+ DECLARE_TEST_CASE(Foundation_Utility_Job_JobQueue, RunningJobNotOwnedByQueueIsNotDestructedWhenRetired);
+ 
+@@ -105,6 +107,10 @@
+     // Wait until all scheduled and running jobs are completed.
+     void wait_until_completion();
+ 
++    // On cancellation, discard scheduled jobs but still await running jobs
++    // before their referenced scene and callback resources can be released.
++    void wait_until_completion(IAbortSwitch& abort_switch);
++
+   private:
+     friend class WorkerThread;
+ 
+@@ -114,6 +120,7 @@
+     GRANT_ACCESS_TO_TEST_CASE(Foundation_Utility_Job_JobQueue, AcquireScheduledJobWorksOnEmptyJobQueue);
+     GRANT_ACCESS_TO_TEST_CASE(Foundation_Utility_Job_JobQueue, AcquireScheduledJobWorksOnNonEmptyJobQueue);
+     GRANT_ACCESS_TO_TEST_CASE(Foundation_Utility_Job_JobQueue, RetiringRunningJobWorks);
++    GRANT_ACCESS_TO_TEST_CASE(Foundation_Utility_Job_JobQueue, AbortedWaitPreservesRunningJobUntilRetirement);
+     GRANT_ACCESS_TO_TEST_CASE(Foundation_Utility_Job_JobQueue, RunningJobOwnedByQueueIsDestructedWhenRetired);
+     GRANT_ACCESS_TO_TEST_CASE(Foundation_Utility_Job_JobQueue, RunningJobNotOwnedByQueueIsNotDestructedWhenRetired);
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp
+--- appleseed/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/lighting/sppm/sppmphotontracer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -895,7 +895,7 @@
+     }
+ 
+     // Wait until the photon tracing jobs have completed.
+-    job_queue.wait_until_completion();
++    job_queue.wait_until_completion(abort_switch);
+ 
+     // Update photon tracing statistics.
+     m_total_emitted_photon_count += emitted_photon_count;
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/final/adaptivetilerenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/adaptivetilerenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/final/adaptivetilerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/adaptivetilerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -335,6 +335,12 @@
+                     tile_y,
+                     tile_bbox);
+             assert(framebuffer);
++            const auto release_framebuffer = [this](ShadingResultFrameBuffer* buffer)
++            {
++                m_framebuffer_factory->destroy(buffer);
++            };
++            const std::unique_ptr<ShadingResultFrameBuffer, decltype(release_framebuffer)>
++                framebuffer_owner(framebuffer, release_framebuffer);
+ 
+             // Create the buffer into which we will accumulate every second samples.
+             // If rendering multiple passes, the permanent buffer factory will return
+@@ -439,6 +445,9 @@
+                     pass_hash,
+                     aov_count);
+ 
++                if (abort_switch.is_aborted())
++                    return;
++
+                 const AABB2u block_image_bb = AABB2i::intersect(framebuffer->get_crop_window(), pb.m_surface);
+ 
+                 // Evaluate block's noise amount.
+@@ -585,9 +594,6 @@
+             // Develop the framebuffer to the tile.
+             framebuffer->develop_to_tile(tile, aov_tiles);
+ 
+-            // Release the framebuffer.
+-            m_framebuffer_factory->destroy(framebuffer);
+-
+             // Inform the AOV accumulators that we are done rendering the tile.
+             m_aov_accumulators.on_tile_end(frame, tile_x, tile_y);
+ 
+@@ -810,7 +816,8 @@
+                         pass_hash,
+                         instance,
+                         batch_size,
+-                        aov_count);
++                        aov_count,
++                        abort_switch);
+                 }
+             }
+ 
+@@ -826,7 +833,8 @@
+             const std::uint32_t                 pass_hash,
+             const size_t                        instance,
+             const size_t                        batch_size,
+-            const size_t                        aov_count)
++            const size_t                        aov_count,
++            IAbortSwitch&                       abort_switch)
+         {
+             on_pixel_begin(frame, pi, pt);
+ 
+@@ -840,6 +848,9 @@
+ 
+             for (size_t i = 0; i < batch_size; ++i)
+             {
++                if (abort_switch.is_aborted())
++                    break;
++
+                 // Generate a uniform sample in [0,1)^2.
+                 const Vector2f s = sampling_context.next2<Vector2f>();
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/texturecontrolledpixelrenderer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -55,6 +55,7 @@
+ #include "foundation/math/scalar.h"
+ #include "foundation/math/vector.h"
+ #include "foundation/memory/autoreleaseptr.h"
++#include "foundation/utility/job/iabortswitch.h"
+ #include "foundation/utility/statistics.h"
+ 
+ // OpenImageIO headers.
+@@ -138,7 +139,8 @@
+             const Vector2i&             pi,
+             const Vector2i&             pt,
+             AOVAccumulatorContainer&    aov_accumulators,
+-            ShadingResultFrameBuffer&   framebuffer) override
++            ShadingResultFrameBuffer&   framebuffer,
++            IAbortSwitch&               abort_switch) override
+         {
+             const size_t aov_count = frame.aov_images().size();
+ 
+@@ -178,6 +180,9 @@
+ 
+             for (size_t i = 0; i < sample_count; ++i)
+             {
++                if (abort_switch.is_aborted())
++                    break;
++
+                 // Generate a uniform sample in [0,1)^2.
+                 const Vector2f s =
+                     m_max_sample_count > 1 || m_params.m_force_aa
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/final/uniformpixelrenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/uniformpixelrenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/final/uniformpixelrenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/final/uniformpixelrenderer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -56,6 +56,7 @@
+ #include "foundation/math/scalar.h"
+ #include "foundation/math/vector.h"
+ #include "foundation/memory/autoreleaseptr.h"
++#include "foundation/utility/job/iabortswitch.h"
+ #include "foundation/utility/statistics.h"
+ 
+ // Standard headers.
+@@ -126,7 +127,8 @@
+             const Vector2i&             pi,
+             const Vector2i&             pt,
+             AOVAccumulatorContainer&    aov_accumulators,
+-            ShadingResultFrameBuffer&   framebuffer) override
++            ShadingResultFrameBuffer&   framebuffer,
++            IAbortSwitch&               abort_switch) override
+         {
+             const size_t aov_count = frame.aov_images().size();
+ 
+@@ -146,6 +148,9 @@
+ 
+             for (size_t i = 0, e = m_sample_count; i < e; ++i)
+             {
++                if (abort_switch.is_aborted())
++                    break;
++
+                 // Generate a uniform sample in [0,1)^2.
+                 const Vector2f s =
+                     m_sample_count > 1 || m_params.m_force_aa
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/genericframerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -172,7 +172,7 @@
+         void render() override
+         {
+             start_rendering();
+-            m_job_queue.wait_until_completion();
++            m_job_queue.wait_until_completion(m_abort_switch);
+         }
+ 
+         bool is_rendering() const override
+@@ -212,12 +212,11 @@
+ 
+         void stop_rendering() override
+         {
+-            // First, delete scheduled jobs to prevent worker threads from picking them up.
++            // Publish cancellation before waking queue waits. A pass callback
++            // may concurrently schedule work after this queue is cleared.
++            m_abort_switch.abort();
+             m_job_queue.clear_scheduled_jobs();
+ 
+-            // Tell rendering jobs and the pass manager thread to stop.
+-            m_abort_switch.abort();
+-
+             // Wait until the pass manager thread has stopped.
+             m_pass_manager_thread->join();
+ 
+@@ -356,6 +355,9 @@
+                         assert(!m_job_queue.has_scheduled_or_running_jobs());
+                     }
+ 
++                    if (m_abort_switch.is_aborted())
++                        break;
++
+                     // Invoke on_tiled_frame_begin() on tile callbacks.
+                     for (auto tile_callback : m_tile_callbacks)
+                         tile_callback->on_tiled_frame_begin(&m_frame);
+@@ -379,8 +381,11 @@
+                         m_job_queue.schedule(*i);
+ 
+                     // Wait until tile jobs have effectively stopped.
+-                    m_job_queue.wait_until_completion();
++                    m_job_queue.wait_until_completion(m_abort_switch);
+ 
++                    if (m_abort_switch.is_aborted())
++                        break;
++
+                     // Invoke on_tiled_frame_end() on tile callbacks.
+                     for (auto tile_callback : m_tile_callbacks)
+                         tile_callback->on_tiled_frame_end(&m_frame);
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/generic/generictilerenderer.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/generictilerenderer.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/generic/generictilerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/generic/generictilerenderer.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -168,6 +168,12 @@
+                     tile_y,
+                     tile_bbox);
+             assert(framebuffer);
++            const auto release_framebuffer = [this](ShadingResultFrameBuffer* buffer)
++            {
++                m_framebuffer_factory->destroy(buffer);
++            };
++            const std::unique_ptr<ShadingResultFrameBuffer, decltype(release_framebuffer)>
++                framebuffer_owner(framebuffer, release_framebuffer);
+ 
+             // Loop over tile pixels.
+             for (size_t i = 0, e = m_pixel_ordering.size(); i < e; ++i)
+@@ -204,15 +210,16 @@
+                     pi,
+                     pt,
+                     m_aov_accumulators,
+-                    *framebuffer);
++                    *framebuffer,
++                    abort_switch);
+             }
+ 
++            if (abort_switch.is_aborted())
++                return;
++
+             // Develop the framebuffer to the tile.
+             framebuffer->develop_to_tile(tile, aov_tiles);
+ 
+-            // Release the framebuffer.
+-            m_framebuffer_factory->destroy(framebuffer);
+-
+             // Inform the AOV accumulators that we are done rendering a tile.
+             m_aov_accumulators.on_tile_end(frame, tile_x, tile_y);
+ 
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/ipixelrenderer.h APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/ipixelrenderer.h
+--- appleseed/src/appleseed/renderer/kernel/rendering/ipixelrenderer.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/ipixelrenderer.h	1970-01-01 00:00:00.000000000 +0000
+@@ -39,6 +39,7 @@
+ #include <cstdint>
+ 
+ // Forward declarations.
++namespace foundation    { class IAbortSwitch; }
+ namespace foundation    { class StatisticsVector; }
+ namespace foundation    { class Tile; }
+ namespace renderer      { class AOVAccumulatorContainer; }
+@@ -86,7 +87,8 @@
+         const foundation::Vector2i& pi,               // image-space pixel coordinates
+         const foundation::Vector2i& pt,               // tile-space pixel coordinates
+         AOVAccumulatorContainer&    aov_accumulators,
+-        ShadingResultFrameBuffer&   framebuffer) = 0;
++        ShadingResultFrameBuffer&   framebuffer,
++        foundation::IAbortSwitch&    abort_switch) = 0;
+ 
+     // Retrieve performance statistics.
+     virtual foundation::StatisticsVector get_statistics() const = 0;
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_samplingabort.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_samplingabort.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_samplingabort.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_samplingabort.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -0,0 +1,262 @@
++
++//
++// This source file is part of appleseed.
++// Visit https://appleseedhq.net/ for additional information and resources.
++//
++// This software is released under the MIT license.
++//
++// Copyright (c) 2026 The appleseedhq Organization
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++
++// appleseed.renderer headers.
++#include "renderer/kernel/rendering/ephemeralshadingresultframebufferfactory.h"
++#include "renderer/kernel/rendering/final/adaptivetilerenderer.h"
++#include "renderer/kernel/rendering/final/texturecontrolledpixelrenderer.h"
++#include "renderer/kernel/rendering/final/uniformpixelrenderer.h"
++#include "renderer/kernel/rendering/generic/generictilerenderer.h"
++#include "renderer/kernel/rendering/isamplerenderer.h"
++#include "renderer/kernel/shading/shadingresult.h"
++#include "renderer/modeling/frame/frame.h"
++#include "renderer/utility/paramarray.h"
++
++// appleseed.foundation headers.
++#include "foundation/image/color.h"
++#include "foundation/image/image.h"
++#include "foundation/image/tile.h"
++#include "foundation/memory/autoreleaseptr.h"
++#include "foundation/utility/job/abortswitch.h"
++#include "foundation/utility/statistics.h"
++#include "foundation/utility/test.h"
++
++// Standard headers.
++#include <filesystem>
++
++using namespace foundation;
++using namespace renderer;
++
++TEST_SUITE(Renderer_SamplingAbort)
++{
++    constexpr size_t SampleBudget = 32;
++    constexpr size_t AbortAfterSamples = 2;
++
++    struct SampleCounter
++    {
++        AbortSwitch abort_switch;
++        size_t calls = 0;
++        size_t abort_after = AbortAfterSamples;
++    };
++
++    class CountingSampleRenderer : public ISampleRenderer
++    {
++      public:
++        explicit CountingSampleRenderer(SampleCounter& counter) : m_counter(counter)
++        {
++        }
++        void release() override
++        {
++            delete this;
++        }
++        void print_settings() const override
++        {
++        }
++        StatisticsVector get_statistics() const override
++        {
++            return StatisticsVector();
++        }
++        void render_sample(SamplingContext&, const PixelContext&, const Vector2d&,
++                           AOVAccumulatorContainer&, ShadingResult& result) override
++        {
++            result.m_main = Color4f(1.0f);
++            ++m_counter.calls;
++            if (m_counter.calls == m_counter.abort_after)
++                m_counter.abort_switch.abort();
++        }
++
++      private:
++        SampleCounter& m_counter;
++    };
++
++    class CountingSampleFactory : public ISampleRendererFactory
++    {
++      public:
++        explicit CountingSampleFactory(SampleCounter& counter) : m_counter(counter)
++        {
++        }
++        void release() override
++        {
++            delete this;
++        }
++        ISampleRenderer* create(size_t) override
++        {
++            return new CountingSampleRenderer(m_counter);
++        }
++
++      private:
++        SampleCounter& m_counter;
++    };
++
++    class CountingFrameBuffers : public EphemeralShadingResultFrameBufferFactory
++    {
++      public:
++        size_t active = 0;
++        ShadingResultFrameBuffer* create(const Frame& frame, size_t x, size_t y,
++                                         const AABB2u& bounds) override
++        {
++            ShadingResultFrameBuffer* buffer =
++                EphemeralShadingResultFrameBufferFactory::create(frame, x, y, bounds);
++            ++active;
++            return buffer;
++        }
++        void destroy(ShadingResultFrameBuffer* buffer) override
++        {
++            --active;
++            EphemeralShadingResultFrameBufferFactory::destroy(buffer);
++        }
++    };
++
++    struct Fixture
++    {
++        auto_release_ptr<Frame> frame;
++        SampleCounter counter;
++        CountingSampleFactory samples;
++        CountingFrameBuffers framebuffers;
++
++        Fixture()
++            : frame(FrameFactory::create(
++                  "sampling_abort",
++                  ParamArray().insert("resolution", "1 1").insert("tile_size", "1 1"))),
++              samples(counter)
++        {
++            frame->clear_main_and_aov_images();
++            counter.abort_switch.clear();
++        }
++
++        void render_generic(IPixelRendererFactory& pixels)
++        {
++            GenericTileRendererFactory factory(*frame, &pixels, &framebuffers, ParamArray());
++            auto_release_ptr<ITileRenderer> renderer(factory.create(0));
++            renderer->render_tile(*frame, 0, 0, 0, counter.abort_switch);
++        }
++
++        void render_adaptive(size_t minimum)
++        {
++            AdaptiveTileRendererFactory factory(*frame, &samples, &framebuffers,
++                                                ParamArray()
++                                                    .insert("sampling_mode", "qmc")
++                                                    .insert("batch_size", SampleBudget)
++                                                    .insert("min_samples", minimum)
++                                                    .insert("max_samples", SampleBudget)
++                                                    .insert("noise_threshold", 0.1f));
++            auto_release_ptr<ITileRenderer> renderer(factory.create(0));
++            renderer->render_tile(*frame, 0, 0, 0, counter.abort_switch);
++        }
++    };
++
++    TEST_CASE_F(UniformChecksAbortBetweenSamples, Fixture)
++    {
++        UniformPixelRendererFactory pixels(
++            *frame, &samples,
++            ParamArray().insert("sampling_mode", "qmc").insert("samples", SampleBudget));
++        render_generic(pixels);
++        EXPECT_EQ(AbortAfterSamples, counter.calls);
++        EXPECT_EQ(0, framebuffers.active);
++    }
++
++    TEST_CASE_F(UniformReleasesFrameBufferWhenNextPixelSeesAbort, Fixture)
++    {
++        frame = FrameFactory::create(
++            "sampling_abort", ParamArray().insert("resolution", "2 1").insert("tile_size", "2 1"));
++        frame->clear_main_and_aov_images();
++        UniformPixelRendererFactory pixels(
++            *frame, &samples,
++            ParamArray().insert("sampling_mode", "qmc").insert("samples", SampleBudget));
++        render_generic(pixels);
++        EXPECT_EQ(AbortAfterSamples, counter.calls);
++        EXPECT_EQ(0, framebuffers.active);
++        Color4f pixel;
++        frame->image().tile(0, 0).get_pixel(0, 0, pixel);
++        for (size_t channel = 0; channel < 4; ++channel)
++            EXPECT_FEQ(0.0f, pixel[channel]);
++    }
++
++    TEST_CASE_F(UniformFinishesWithoutAbort, Fixture)
++    {
++        counter.abort_after = 0;
++        UniformPixelRendererFactory pixels(
++            *frame, &samples,
++            ParamArray().insert("sampling_mode", "qmc").insert("samples", SampleBudget));
++        render_generic(pixels);
++        EXPECT_EQ(SampleBudget, counter.calls);
++    }
++
++    TEST_CASE_F(TextureControlledChecksAbortBetweenSamples, Fixture)
++    {
++        std::filesystem::create_directories("unit tests/outputs");
++        const char* path = "unit tests/outputs/sampling-abort-texture.png";
++        frame->image().tile(0, 0).clear(Color4f(1.0f));
++        const bool written = frame->write_main_image(path);
++        EXPECT_TRUE(written);
++        if (!written)
++            return;
++        TextureControlledPixelRendererFactory pixels(*frame, &samples,
++                                                     ParamArray()
++                                                         .insert("sampling_mode", "qmc")
++                                                         .insert("min_samples", SampleBudget)
++                                                         .insert("max_samples", SampleBudget));
++        const bool loaded = pixels.load_texture(path);
++        EXPECT_TRUE(loaded);
++        if (!loaded)
++            return;
++        render_generic(pixels);
++        EXPECT_EQ(AbortAfterSamples, counter.calls);
++        EXPECT_EQ(0, framebuffers.active);
++    }
++
++    TEST_CASE_F(AdaptiveChecksAbortInsideInitialUniformPass, Fixture)
++    {
++        render_adaptive(SampleBudget);
++        EXPECT_EQ(AbortAfterSamples, counter.calls);
++        EXPECT_EQ(0, framebuffers.active);
++    }
++
++    TEST_CASE_F(AdaptiveInitialPassFinishesWithoutAbort, Fixture)
++    {
++        counter.abort_after = 0;
++        render_adaptive(SampleBudget);
++        EXPECT_EQ(SampleBudget, counter.calls);
++        EXPECT_EQ(0, framebuffers.active);
++    }
++
++    TEST_CASE_F(AdaptiveBatchFinishesWithoutAbort, Fixture)
++    {
++        counter.abort_after = 0;
++        render_adaptive(0);
++        EXPECT_EQ(SampleBudget, counter.calls);
++        EXPECT_EQ(0, framebuffers.active);
++    }
++
++    TEST_CASE_F(AdaptiveChecksAbortInsideBatch, Fixture)
++    {
++        render_adaptive(0);
++        EXPECT_EQ(AbortAfterSamples, counter.calls);
++        EXPECT_EQ(0, framebuffers.active);
++    }
++}

@@ -59,3 +59,4 @@ appleseed_coat_closures.patch: Correct coat interfaces and expose the glossy
   layer
 appleseed_panorama_and_image_helpers.patch: Correct panorama filtering, depth
   and image helpers
+appleseed_cancellation.patch: Honor cancellation during samples and job waits

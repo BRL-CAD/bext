@@ -1748,6 +1748,22 @@ Message:
     This lets rendering integrations use the same conversion path as
     Frame::write_main_image instead of maintaining a second implementation.
 
+Commit: bce2e81bbd8b11bed81ba151264851fba16b3ce5
+Patches: appleseed_cancellation.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-14T02:20:29Z
+Parents: ea337eb8b1d5691028bfc7f5037a161172858e22
+Message:
+    Respond to cancellation between pixel samples
+
+    Pass the render abort switch into uniform and texture-controlled pixel
+    samplers, and check it inside adaptive batches. Large per-pixel budgets
+    no longer delay interruption until a pixel finishes.
+
+    Release temporary framebuffers on all tile exits and discard partial
+    tiles after cancellation. Add deterministic sample-count and resource
+    lifetime tests for aborted and completed sampling paths.
+
 Commit: 8fd53e89d11e31cedfbecaf4c823b9725b71f1d2
 Patches: appleseed_panorama_and_image_helpers.patch
 Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
@@ -1788,6 +1804,24 @@ Message:
     outputs across configuration, and install the complete shader library
     from the build tree. Remove the empty sandbox-preparation target and its
     disabled command.
+
+Commit: 8de1a00ffcebd8398a23265a17db5c589fddbe5a
+Patches: appleseed_cancellation.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T09:14:30Z
+Parents: cb7c10e531ccefbdfeaf42620e40b8b6f7248d89
+Message:
+    Honor cancellation while waiting for renderer jobs
+
+    Cancellation can clear the work queue before a pass callback finishes
+    scheduling. If preceding worker failures exhaust the pool, waiting for
+    those later jobs hangs shutdown. Make renderer and photon waits cancel
+    pending jobs while still retaining running-job resources until
+    retirement.
+
+    Publish cancellation before clearing the queue and stop advancing
+    cancelled passes. Test queue ownership, cancellation without a queue
+    event, and running-job retirement.
 
 Commit: 9a4f748199f593831f8e4dfd32d147ce76e6a2c6
 Patch: 06

@@ -30,6 +30,7 @@ set(APPLESEED_ART_PATCH_FILES
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_closure_mixtures.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_coat_closures.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_panorama_and_image_helpers.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_cancellation.patch"
   )
 
 set(APPLESEED_PATCH_STAGE "ART" CACHE STRING
