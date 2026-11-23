@@ -1,0 +1,777 @@
+diff -Naur appleseed/src/appleseed.shaders/src/appleseed/as_bump.osl APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_bump.osl
+--- appleseed/src/appleseed.shaders/src/appleseed/as_bump.osl	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed.shaders/src/appleseed/as_bump.osl	1970-01-01 00:00:00.000000000 +0000
+@@ -216,6 +216,14 @@
+         int gafferNoduleLayoutVisible = 0
+     ]],
+ 
++    string in_derivative_layer = ""
++    [[
++        string widget = "null",
++        int as_maya_attribute_hidden = 1,
++        int as_blender_input_socket = 0,
++        int gafferNoduleLayoutVisible = 0
++    ]],
++
+     output normal out_normal = N
+     [[
+         string as_maya_attribute_name = "outNormal",
+@@ -231,6 +239,16 @@
+ 
+     if (in_mode == "Bump")
+     {
++        // Dx/Dy do not carry second derivatives. The renderer can recover
++        // height curvature by evaluating this node on neighboring surfaces.
++        normal differentiated = out_normal;
++        if (in_bump_depth != 0 && getattribute(
++            in_derivative_layer, "appleseed:bump_normal", differentiated))
++        {
++            out_normal = differentiated;
++            return;
++        }
++
+         if (in_bump_depth == 0.0)
+         {
+             return;
+diff -Naur appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp
+--- appleseed/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/rendering/rendererservices.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -34,6 +34,7 @@
+ #include "renderer/global/globallogger.h"
+ #include "renderer/kernel/intersection/intersector.h"
+ #include "renderer/kernel/intersection/refining.h"
++#include "renderer/kernel/shading/oslshadergroupexec.h"
+ #include "renderer/kernel/shading/shadingpoint.h"
+ #include "renderer/kernel/texturing/texturecache.h"
+ #include "renderer/modeling/camera/camera.h"
+@@ -49,6 +50,7 @@
+ #include "foundation/utility/searchpaths.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <filesystem>
+ #include <limits>
+ #include <stdexcept>
+@@ -669,6 +671,27 @@
+     OIIO::ustringhash           name,
+     void*                       val)
+ {
++    if (name == OIIO::ustringhash("appleseed:bump_normal"))
++    {
++        if (!derivatives || type != OIIO::TypeNormal || !sg || !sg->objdata || !m_texture_store)
++            return false;
++        auto& state = *static_cast<OSLBumpContext*>(sg->objdata);
++        const std::uint64_t layer_hash = object.hash();
++        for (const OSLBumpContext* active = &state; active; active = active->m_parent)
++            if (active->m_active_layer == layer_hash)
++                return false;
++        TextureCache cache(*m_texture_store);
++        Intersector intersector(m_project.get_trace_context(), cache);
++        OSL::Vec3 normal[3];
++        if (!state.m_executor->recover_bump_normal(state, intersector, layer_hash, normal))
++        {
++            state.m_failed = true;
++            return false;
++        }
++        std::copy_n(normal, 3, static_cast<OSL::Vec3*>(val));
++        return true;
++    }
++
+     // We don't support getting attributes from named objects, yet.
+     if (object != g_empty_ustr)
+         return false;
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/oslshadergroupexec.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/shading/oslshadergroupexec.cpp
+--- appleseed/src/appleseed/renderer/kernel/shading/oslshadergroupexec.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/oslshadergroupexec.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -30,6 +30,7 @@
+ #include "oslshadergroupexec.h"
+ 
+ // appleseed.renderer headers.
++#include "renderer/kernel/intersection/intersector.h"
+ #include "renderer/kernel/shading/closures.h"
+ #include "renderer/kernel/shading/oslshadingsystem.h"
+ #include "renderer/kernel/shading/shadingpoint.h"
+@@ -38,13 +39,46 @@
+ #include "renderer/modeling/shadergroup/shadergroup.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <cassert>
++#include <cmath>
++#include <limits>
++#include <memory>
+ 
+ using namespace foundation;
+ 
+ namespace renderer
+ {
+ 
++namespace
++{
++    template <typename Vector>
++    bool finite_bump_vector(const Vector& value)
++    {
++        return std::isfinite(value[0]) && std::isfinite(value[1]) && std::isfinite(value[2]);
++    }
++
++    class ScopedBumpContext
++      : public NonCopyable
++    {
++      public:
++        ScopedBumpContext(OSL::ShaderGlobals& globals, OSLBumpContext& context)
++          : m_globals(globals)
++          , m_previous(globals.objdata)
++        {
++            m_globals.objdata = &context;
++        }
++        ~ScopedBumpContext()
++        {
++            m_globals.objdata = m_previous;
++        }
++      private:
++        OSL::ShaderGlobals& m_globals;
++        void* m_previous;
++    };
++}
++
++
+ //
+ // OSLShaderGroupExec class implementation.
+ //
+@@ -230,10 +264,260 @@
+         globals.dIdx = OSL::Vec3(0.0f);
+         globals.dIdy = OSL::Vec3(0.0f);
+     }
++    // A prefix must replay upstream writes to globals exactly once.
++    const OSL::ShaderGlobals input = globals;
++    OSLBumpContext context{this, &shader_group, &input};
++    ScopedBumpContext scope(globals, context);
+     m_osl_shading_system.execute(
+         m_osl_shading_context,
+         *reinterpret_cast<OSL::ShaderGroup*>(shader_group.osl_shader_group()),
+         globals);
++}
++
++bool OSLShaderGroupExec::recover_bump_normal(
++    OSLBumpContext& state,
++    const Intersector& intersector,
++    const std::uint64_t layer_hash,
++    OSL::Vec3* result) const
++{
++    if (!state.m_input || !state.m_input->renderstate || !state.m_group)
++        return false;
++    const OSL::ShaderGlobals& globals = *state.m_input;
++    auto* prefix = static_cast<OSL::ShaderGroup*>(state.m_group->osl_bump_shader_group(layer_hash));
++    const auto& surface = *static_cast<const ShadingPoint*>(globals.renderstate);
++    const ShadingRay& incoming = surface.get_ray();
++    if (!prefix || !surface.hit_surface() || !incoming.m_has_differentials)
++        return false;
++
++    const OIIO::ustring layer = OIIO::ustring::from_hash(layer_hash);
++    const auto release_context = [&](OSL::ShadingContext* context)
++    {
++        m_osl_shading_system.release_context(context);
++    };
++    std::unique_ptr<OSL::ShadingContext, decltype(release_context)> context(
++        m_osl_shading_system.get_context(m_osl_thread_info), release_context);
++    if (!context)
++        return false;
++
++    const auto normal_at = [&](OSL::ShaderGlobals sample, Vector3d& normal)
++    {
++        const OSL::ShaderGlobals input = sample;
++        OSLBumpContext sample_state{this, state.m_group, &input, &state, layer_hash};
++        // Prefix trace messages and closure storage belong to this sample.
++        ShadingPoint::OSLTraceData trace_data{};
++        sample.tracedata = &trace_data;
++        sample.Ci = nullptr;
++        sample.objdata = &sample_state;
++        if (!m_osl_shading_system.execute(context.get(), *prefix, sample) || sample_state.m_failed)
++            return false;
++        OSL::TypeDesc type;
++        const auto* value = static_cast<const OSL::Vec3*>(m_osl_shading_system.get_symbol(
++            *context, layer, OIIO::ustring("out_normal"), type));
++        if (!value || type != OIIO::TypeNormal || !finite_bump_vector(*value))
++            return false;
++        normal = Vector3d(*value);
++        return square_norm(normal) > 0.0;
++    };
++
++    Vector3d center_normal;
++    if (!normal_at(globals, center_normal))
++        return false;
++    result[0] = Vector3f(center_normal);
++
++    // A world-space field remains continuous across unrelated UV seams.
++    // Only constrain its probes to a UV chart when the prefix reads that
++    // chart or its tangent basis; keep the conservative guard if unknown.
++    const int chart_globals = static_cast<int>(OSL::SGBits::u) |
++        static_cast<int>(OSL::SGBits::v) | static_cast<int>(OSL::SGBits::dPdu) |
++        static_cast<int>(OSL::SGBits::dPdv);
++    int globals_read = 0;
++    bool uses_chart = !m_osl_shading_system.getattribute(prefix, "globals_read", globals_read) ||
++        (globals_read & chart_globals) != 0;
++    int userdata_count = 0;
++    OIIO::ustring* userdata_names = nullptr;
++    if (!m_osl_shading_system.getattribute(prefix, "num_userdata", userdata_count) ||
++        (userdata_count != 0 && !m_osl_shading_system.getattribute(
++            prefix, "userdata_names", OSL::TypeDesc::PTR, &userdata_names)))
++        uses_chart = true;
++    else
++    {
++        for (int i = 0; i < userdata_count; ++i)
++            if (userdata_names[i] == OIIO::ustring("Tn") || userdata_names[i] == OIIO::ustring("Bn"))
++                uses_chart = true;
++    }
++
++    // Keep probes in the local surface chart. This bounds both geometric
++    // linearization error and jumps across UV seams without model units.
++    constexpr double MaxLinearizationError = 0.125;
++    constexpr double UVPrecisionUlps = 8.0;
++    constexpr double PositionPrecisionUlps = 64.0;
++    constexpr double InitialPixelStep = 0.125;
++    constexpr size_t MaxInitialRefinements = 8;
++    constexpr size_t MaxSpacingLevels = 18;
++    constexpr double ScoreGrowthLimit = 4.0;
++    constexpr double RichardsonFactor = 15.0;
++    constexpr double StencilCoefficientNorm = 1.5;
++    const double float_epsilon = std::numeric_limits<float>::epsilon();
++
++    for (size_t axis = 0; axis < 2; ++axis)
++    {
++        const Vector3d dp = axis == 0 ? surface.get_dpdx() : surface.get_dpdy();
++        const Vector2d duv = uses_chart
++            ? Vector2d(axis == 0 ? surface.get_duvdx(0) : surface.get_duvdy(0))
++            : Vector2d(0.0);
++        if (!finite_bump_vector(dp) || !std::isfinite(duv[0]) || !std::isfinite(duv[1]))
++            return false;
++        const double width = norm(dp);
++        if (!std::isfinite(width))
++            return false;
++        if (!(width > 0.0))
++        {
++            result[axis + 1] = OSL::Vec3(0.0f);
++            continue;
++        }
++        const Vector2f uv_point(surface.get_uv(0));
++        const double uv_ulp = std::max(
++            std::abs(std::nextafter(uv_point[0], std::numeric_limits<float>::infinity()) - uv_point[0]),
++            std::abs(std::nextafter(uv_point[1], std::numeric_limits<float>::infinity()) - uv_point[1]));
++        if (square_norm(duv) > 0.0 && !std::isfinite(uv_ulp))
++            return false;
++        const Vector3d origin_delta =
++            (axis == 0 ? incoming.m_rx_org : incoming.m_ry_org) - incoming.m_org;
++        const Vector3d direction_delta =
++            (axis == 0 ? incoming.m_rx_dir : incoming.m_ry_dir) - incoming.m_dir;
++        if (!finite_bump_vector(origin_delta) || !finite_bump_vector(direction_delta))
++            return false;
++
++        const auto sample_normal = [&](const double offset, Vector3d& normal)
++        {
++            const Vector3d shift = offset * direction_delta;
++            const Vector3d direction = incoming.m_dir + shift;
++            const Vector3d rx_direction = incoming.m_rx_dir + shift;
++            const Vector3d ry_direction = incoming.m_ry_dir + shift;
++            if (!(square_norm(direction) > 0.0) || !finite_bump_vector(direction) ||
++                !(square_norm(rx_direction) > 0.0) || !finite_bump_vector(rx_direction) ||
++                !(square_norm(ry_direction) > 0.0) || !finite_bump_vector(ry_direction))
++                return false;
++            ShadingRay ray(incoming);
++            ray.m_org = incoming.m_org + offset * origin_delta;
++            ray.m_dir = normalize(direction);
++            ray.m_tmax = std::numeric_limits<double>::max();
++            ray.m_rx_org = ray.m_org + incoming.m_rx_org - incoming.m_org;
++            ray.m_ry_org = ray.m_org + incoming.m_ry_org - incoming.m_org;
++            ray.m_rx_dir = normalize(rx_direction);
++            ray.m_ry_dir = normalize(ry_direction);
++            if (!finite_bump_vector(ray.m_org))
++                return false;
++
++            ShadingPoint neighbor;
++            intersector.trace(ray, neighbor);
++            if (!neighbor.hit_surface() ||
++                &neighbor.get_object_instance() != &surface.get_object_instance() ||
++                &neighbor.get_assembly_instance() != &surface.get_assembly_instance() ||
++                neighbor.get_primitive_attribute_index() != surface.get_primitive_attribute_index() ||
++                neighbor.get_side() != surface.get_side())
++                return false;
++            const Vector3d expected = offset * dp;
++            const Vector3d displacement = neighbor.get_point() - surface.get_point();
++            const double geometric_floor = PositionPrecisionUlps * std::numeric_limits<double>::epsilon() *
++                std::max({norm(surface.get_point()), norm(incoming.m_org), std::numeric_limits<double>::min()});
++            if (!finite_bump_vector(displacement) ||
++                norm(displacement - expected) > MaxLinearizationError * std::max(norm(expected), geometric_floor))
++                return false;
++            if (square_norm(duv) > 0.0)
++            {
++                const Vector2d uv(surface.get_uv(0));
++                const Vector2d delta = Vector2d(neighbor.get_uv(0)) - uv;
++                const double uv_floor = UVPrecisionUlps * uv_ulp;
++                if (norm(delta - offset * duv) >
++                    MaxLinearizationError * std::max(std::abs(offset) * norm(duv), uv_floor))
++                    return false;
++            }
++
++            neighbor.initialize_osl_shader_globals(*state.m_group,
++                static_cast<VisibilityFlags::Type>(globals.raytype), m_osl_shading_system.renderer());
++            auto sample = neighbor.get_osl_shader_globals();
++            // Preserve an incident-direction override used by light shading.
++            if (Vector3f(globals.I) != Vector3f(incoming.m_dir))
++            {
++                const OSL::Vec3 di = axis == 0 ? globals.dIdx : globals.dIdy;
++                const OSL::Vec3 incident = globals.I + static_cast<float>(offset) * di;
++                if (!finite_bump_vector(incident) || !(incident.length2() > 0.0f))
++                    return false;
++                sample.I = incident.normalized();
++                sample.dIdx = globals.dIdx;
++                sample.dIdy = globals.dIdy;
++            }
++            sample.Ps = globals.Ps + static_cast<float>(offset) *
++                (axis == 0 ? globals.dPsdx : globals.dPsdy);
++            sample.dPsdx = globals.dPsdx;
++            sample.dPsdy = globals.dPsdy;
++            return normal_at(sample, normal);
++        };
++
++        const auto estimate = [&](const double step, Vector3d& derivative)
++        {
++            Vector3d positive, negative, outer_positive, outer_negative;
++            if (!sample_normal(step, positive) || !sample_normal(-step, negative) ||
++                !sample_normal(2.0 * step, outer_positive) || !sample_normal(-2.0 * step, outer_negative))
++                return false;
++            derivative = (8.0 * (positive - negative) - (outer_positive - outer_negative)) / (12.0 * step);
++            return finite_bump_vector(derivative);
++        };
++
++        // Balance truncation against float output quantization. Start with a
++        // subpixel probe spanning several position ulps, then compare fourth-
++        // order estimates at successive spacings. Work is bounded at seams.
++        const double chart_step = square_norm(duv) > 0.0 ? PositionPrecisionUlps * uv_ulp / norm(duv) : 0.0;
++        double step = std::max({InitialPixelStep, chart_step,
++            PositionPrecisionUlps * float_epsilon * norm(Vector3d(globals.P)) / width});
++        Vector3d previous;
++        bool valid = false;
++        for (size_t refinement = 0; refinement < MaxInitialRefinements; ++refinement)
++        {
++            if (estimate(step, previous))
++            {
++                valid = true;
++                break;
++            }
++            step *= 0.5;
++        }
++        if (!valid)
++            return false;
++
++        Vector3d best = previous;
++        double best_score = std::numeric_limits<double>::max();
++        bool compared = false;
++        for (size_t level = 0; level < MaxSpacingLevels; ++level)
++        {
++            Vector3d current;
++            if (!estimate(2.0 * step, current))
++                break;
++            const double roundoff_floor = StencilCoefficientNorm * std::sqrt(3.0) * float_epsilon / step;
++            const double score = norm(current - previous) / RichardsonFactor + roundoff_floor;
++            if (score < best_score)
++            {
++                best = previous;
++                best_score = score;
++            }
++            compared = true;
++            if (level >= 2 && score > ScoreGrowthLimit * best_score)
++                break;
++            previous = current;
++            step *= 2.0;
++        }
++        if (!compared)
++        {
++            Vector3d finer;
++            if (!estimate(0.5 * step, finer))
++                return false;
++            best = finer;
++        }
++        if (!finite_bump_vector(best))
++            return false;
++        result[axis + 1] = Vector3f(best);
++    }
++    return true;
+ }
+ 
+ void OSLShaderGroupExec::choose_bsdf_closure_shading_basis(
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/oslshadergroupexec.h APPLESEED_BLD/src/appleseed/renderer/kernel/shading/oslshadergroupexec.h
+--- appleseed/src/appleseed/renderer/kernel/shading/oslshadergroupexec.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/oslshadergroupexec.h	1970-01-01 00:00:00.000000000 +0000
+@@ -43,8 +43,12 @@
+ #include "OSL/oslversion.h"
+ #include "foundation/platform/_endoslheaders.h"
+ 
++// Standard headers.
++#include <cstdint>
++
+ // Forward declarations.
+ namespace foundation    { class Arena; }
++namespace renderer      { class Intersector; }
+ namespace renderer      { class OSLShadingSystem; }
+ namespace renderer      { class ShaderGroup; }
+ namespace renderer      { class ShadingContext; }
+@@ -54,6 +58,20 @@
+ namespace renderer
+ {
+ 
++class OSLShaderGroupExec;
++
++// An execution-local stack prevents only recursive recovery of the same node.
++// Upstream nodes remain free to supply derivatives needed by downstream heights.
++struct OSLBumpContext
++{
++    const OSLShaderGroupExec* m_executor;
++    const ShaderGroup* m_group;
++    const OSL::ShaderGlobals* m_input = nullptr;
++    const OSLBumpContext* m_parent = nullptr;
++    std::uint64_t m_active_layer = 0;
++    bool m_failed = false;
++};
++
+ class OSLShaderGroupExec
+   : public foundation::NonCopyable
+ {
+@@ -69,6 +87,7 @@
+         const foundation::Vector3f&     outgoing) const;
+ 
+   private:
++    friend class RendererServices;
+     friend class ShadingContext;
+     friend class Tracer;
+ 
+@@ -128,6 +147,12 @@
+         const VisibilityFlags::Type     ray_flags,
+         const foundation::Vector3f*     incident = nullptr) const;
+ 
++    bool recover_bump_normal(
++        OSLBumpContext&                 state,
++        const Intersector&             intersector,
++        const std::uint64_t            layer_hash,
++        OSL::Vec3*                     result) const;
++
+     void choose_bsdf_closure_shading_basis(
+         const ShadingPoint&             shading_point,
+         const foundation::Vector2f&     s) const;
+diff -Naur appleseed/src/appleseed/renderer/kernel/shading/oslshadingsystem.cpp APPLESEED_BLD/src/appleseed/renderer/kernel/shading/oslshadingsystem.cpp
+--- appleseed/src/appleseed/renderer/kernel/shading/oslshadingsystem.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/kernel/shading/oslshadingsystem.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -47,6 +47,9 @@
+     OIIOErrorHandler*   err)
+   : OSL::ShadingSystem(renderer, texturesystem, err)
+ {
++    // Material rebuilds and bump prefixes reuse in-memory shader names.
++    // OSL keeps existing groups bound to their original shader masters.
++    attribute("allow_shader_replacement", 1);
+ }
+ 
+ void OSLShadingSystem::release()
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_shadergroup.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shadergroup.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -135,17 +135,35 @@
+             }
+         }
+ 
+-        bool initialize()
++        bool compile_group()
+         {
+             // Exercise staged headers rather than a producer-prefix fallback.
+             auto compiler = ShaderCompilerFactory::create("../shaders/stdosl.h");
++            return m_group->create_optimized_osl_shader_group(*m_system, compiler.get());
++        }
++
++        bool initialize()
++        {
+             m_group->add_source_shader(
+                 "surface", "area_test_emitter", "emitter",
+                 "surface area_test_emitter() { Ci = emission(); }", ParamArray());
+-            return m_group->create_optimized_osl_shader_group(*m_system, compiler.get())
+-                && m_group->has_emission();
++            return compile_group() && m_group->has_emission();
+         }
+ 
++        bool initialize_bump()
++        {
++            m_system->attribute("searchpath:shader", "../shaders/appleseed");
++            m_group->add_source_shader("shader", "bump_test_height", "field",
++                "shader bump_test_height(output float height=0.5) {}", ParamArray());
++            m_group->add_shader("shader", "as_bump", "bump", ParamArray());
++            m_group->add_connection("field", "height", "bump", "in_bump_value");
++            m_group->add_source_shader("surface", "bump_test_sink", "sink",
++                "surface bump_test_sink(normal mapped=N) { N=normal(1,0,0); Ci=emission(); }",
++                ParamArray());
++            m_group->add_connection("bump", "out_normal", "sink", "mapped");
++            return compile_group();
++        }
++
+         void store(const size_t assembly, const size_t object, const float area)
+         {
+             m_registrar.store_object_area_in_shadergroups(
+@@ -196,4 +214,53 @@
+             }
+         }
+     }
++    TEST_CASE_F(BumpPrefixDoesNotExecuteMaterialSink, Fixture)
++    {
++        ASSERT_TRUE(initialize_bump());
++        auto* prefix = static_cast<OSL::ShaderGroup*>(
++            m_group->osl_bump_shader_group(OIIO::ustringhash("bump").hash()));
++        ASSERT_TRUE(prefix != nullptr);
++        EXPECT_TRUE(m_group->osl_bump_shader_group(OIIO::ustringhash("unknown").hash()) == nullptr);
++        auto* thread = m_system->create_thread_info();
++        auto* context = m_system->get_context(thread);
++        OSL::ShaderGlobals globals{};
++        globals.N = OSL::Vec3(0, 0, 1);
++        const bool executed = m_system->execute(context, *prefix, globals);
++        OSL::TypeDesc type;
++        const auto* normal = static_cast<const OSL::Vec3*>(m_system->get_symbol(
++            *context, OIIO::ustring("bump"), OIIO::ustring("out_normal"), type));
++        EXPECT_TRUE(executed);
++        EXPECT_TRUE(normal != nullptr && type == OIIO::TypeNormal);
++        if (normal)
++            EXPECT_EQ(OSL::Vec3(0, 0, 1), *normal);
++        EXPECT_EQ(OSL::Vec3(0, 0, 1), globals.N);
++        EXPECT_TRUE(globals.Ci == nullptr);
++        m_system->release_context(context);
++        m_system->destroy_thread_info(thread);
++    }
++
++    TEST_CASE_F(BumpPrefixesAreReleasedAndCanBeRebuilt, Fixture)
++    {
++        ASSERT_TRUE(initialize_bump());
++        const auto layer = OIIO::ustringhash("bump").hash();
++        ASSERT_TRUE(m_group->osl_bump_shader_group(layer) != nullptr);
++        m_group->release_optimized_osl_shader_group();
++        EXPECT_FALSE(m_group->is_valid());
++        EXPECT_TRUE(m_group->osl_bump_shader_group(layer) == nullptr);
++        ASSERT_TRUE(compile_group());
++        EXPECT_TRUE(m_group->osl_bump_shader_group(layer) != nullptr);
++        m_group->clear();
++        EXPECT_FALSE(m_group->is_valid());
++        EXPECT_TRUE(m_group->osl_bump_shader_group(layer) == nullptr);
++    }
++
++    TEST_CASE_F(MaterialGroupRejectsConnectionsFromUnknownLayers, Fixture)
++    {
++        m_group->add_source_shader("surface", "connection_test_sink", "sink",
++            "surface connection_test_sink(float value=0) { Ci=value*emission(); }", ParamArray());
++        m_group->add_connection("missing", "output", "sink", "value");
++        EXPECT_FALSE(compile_group());
++        EXPECT_FALSE(m_group->is_valid());
++    }
++
+ }
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shader.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shader.cpp
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shader.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shader.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -310,6 +310,11 @@
+     }
+ 
+     return true;
++}
++
++bool Shader::is_bump_shader() const
++{
++    return impl->m_shader == "as_bump" && impl->m_source_code.empty();
+ }
+ 
+ bool Shader::add(OSLShadingSystem& shading_system)
+@@ -327,6 +332,13 @@
+             RENDERER_LOG_ERROR("error loading memory compiled shader %s, %s.", get_shader(), get_layer());
+             return false;
+         }
++    }
++
++    if (is_bump_shader())
++    {
++        const char* layer = get_layer();
++        if (!shading_system.Parameter("in_derivative_layer", OSL::TypeDesc::STRING, &layer))
++            return false;
+     }
+ 
+     if (!shading_system.Shader("surface", get_shader(), get_layer()))
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shader.h APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shader.h
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shader.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shader.h	1970-01-01 00:00:00.000000000 +0000
+@@ -99,6 +99,8 @@
+ 
+     bool compile_shader(const ShaderCompiler* compiler);
+ 
++    bool is_bump_shader() const;
++
+     bool add(OSLShadingSystem& shading_system);
+ };
+ 
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -47,7 +47,9 @@
+ // Standard headers.
+ #include <exception>
+ #include <functional>
++#include <string>
+ #include <unordered_map>
++#include <unordered_set>
+ #include <utility>
+ 
+ using namespace foundation;
+@@ -104,6 +106,7 @@
+     ShaderConnectionContainer   m_connections;
+     mutable OSL::ShaderGroupRef m_shader_group_ref;
+     SurfaceAreaMap              m_surface_areas;
++    std::unordered_map<std::uint64_t, OSL::ShaderGroupRef> m_bump_groups;
+ };
+ 
+ ShaderGroup::ShaderGroup(const char* name)
+@@ -134,6 +137,7 @@
+     impl->m_shaders.clear();
+     impl->m_connections.clear();
+     impl->m_shader_group_ref.reset();
++    impl->m_bump_groups.clear();
+     m_flags = 0;
+ }
+ 
+@@ -213,46 +217,76 @@
+ 
+     try
+     {
+-        OSL::ShaderGroupRef shader_group_ref = shading_system.ShaderGroupBegin(get_name());
+-
+-        if (shader_group_ref.get() == nullptr)
++        // Prefix groups keep numerical probes out of the active closure pool.
++        // Use the same parameter and connection setup as the material group.
++        const auto build_group = [&](const char* name, const Shader* last) -> OSL::ShaderGroupRef
+         {
+-            RENDERER_LOG_ERROR("failed to setup shader group \"%s\": ShaderGroupBegin() call failed.", get_path().c_str());
+-            return false;
+-        }
+-
+-        for (Shader& shader : impl->m_shaders)
+-        {
+-            if (is_aborted(abort_switch))
++            OSL::ShaderGroupRef group = shading_system.ShaderGroupBegin(name);
++            if (!group)
+             {
+-                shading_system.ShaderGroupEnd();
+-                return true;
++                RENDERER_LOG_ERROR("failed to begin OSL group \"%s\".", name);
++                return {};
+             }
+ 
+-            if (!shader.add(shading_system))
+-                return false;
+-        }
++            struct GroupScope
++            {
++                OSLShadingSystem& system;
++                bool active = true;
++                ~GroupScope()
++                {
++                    if (active)
++                        system.ShaderGroupEnd();
++                }
++            } scope{shading_system};
+ 
+-        for (ShaderConnection& connection : impl->m_connections)
+-        {
+-            if (is_aborted(abort_switch))
++            std::unordered_set<std::string> layers;
++            for (Shader& shader : impl->m_shaders)
+             {
+-                shading_system.ShaderGroupEnd();
+-                return true;
++                if (is_aborted(abort_switch) || !shader.add(shading_system))
++                    return {};
++                layers.insert(shader.get_layer());
++                if (&shader == last)
++                    break;
+             }
++            for (ShaderConnection& connection : impl->m_connections)
++            {
++                if (is_aborted(abort_switch))
++                    return {};
++                if ((!last || (layers.count(connection.get_src_layer()) &&
++                    layers.count(connection.get_dst_layer()))) &&
++                    !connection.add(shading_system))
++                    return {};
++            }
++            const bool ended = shading_system.ShaderGroupEnd();
++            scope.active = false;
++            if (!ended)
++                RENDERER_LOG_ERROR("failed to finish OSL group \"%s\".", name);
++            return ended ? group : OSL::ShaderGroupRef();
++        };
+ 
+-            if (!connection.add(shading_system))
+-                return false;
+-        }
++        OSL::ShaderGroupRef group = build_group(get_name(), nullptr);
++        if (!group)
++            return is_aborted(abort_switch);
+ 
+-        if (!shading_system.ShaderGroupEnd())
++        std::unordered_map<std::uint64_t, OSL::ShaderGroupRef> bump_groups;
++        for (Shader& shader : impl->m_shaders)
+         {
+-            RENDERER_LOG_ERROR("failed to setup shader group \"%s\": ShaderGroupEnd() call failed.", get_path().c_str());
+-            return false;
++            if (!shader.is_bump_shader())
++                continue;
++            const std::string name = std::string(get_name()) + "." + shader.get_layer() + ".bump";
++            OSL::ShaderGroupRef prefix = build_group(name.c_str(), &shader);
++            if (!prefix)
++                return is_aborted(abort_switch);
++            const std::string output = std::string(shader.get_layer()) + ".out_normal";
++            const char* outputs[] = {output.c_str()};
++            if (!shading_system.attribute(prefix.get(), "renderer_outputs",
++                OSL::TypeDesc(OSL::TypeDesc::STRING, 1), outputs))
++                return false;
++            bump_groups.emplace(OIIO::ustringhash(shader.get_layer()).hash(), std::move(prefix));
+         }
++        impl->m_shader_group_ref = std::move(group);
++        impl->m_bump_groups = std::move(bump_groups);
+ 
+-        impl->m_shader_group_ref = shader_group_ref;
+-
+         get_shadergroup_closures_info(shading_system);
+         report_has_closure("bsdf", HasBSDFs);
+         report_has_closure(g_emission_str.c_str(), HasEmission);
+@@ -277,6 +311,7 @@
+ 
+ void ShaderGroup::release_optimized_osl_shader_group()
+ {
++    impl->m_bump_groups.clear();
+     impl->m_shader_group_ref.reset();
+ }
+ 
+@@ -312,6 +347,12 @@
+     return impl->m_shader_group_ref.get();
+ }
+ 
++void* ShaderGroup::osl_bump_shader_group(const std::uint64_t layer_hash) const
++{
++    const auto entry = impl->m_bump_groups.find(layer_hash);
++    return entry == impl->m_bump_groups.end() ? nullptr : entry->second.get();
++}
++
+ bool ShaderGroup::compile_source_shaders(const ShaderCompiler* compiler)
+ {
+     for (Shader& shader : impl->m_shaders)
+diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shadergroup.h APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shadergroup.h
+--- appleseed/src/appleseed/renderer/modeling/shadergroup/shadergroup.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/shadergroup/shadergroup.h	1970-01-01 00:00:00.000000000 +0000
+@@ -145,6 +145,9 @@
+     // Return an opaque pointer to the internal OSL shader group.
+     void* osl_shader_group() const;
+ 
++    // Return a bump node's independent upstream group, or null for an unknown layer.
++    void* osl_bump_shader_group(const std::uint64_t layer_hash) const;
++
+   private:
+     friend class LightSamplerBase;
+     friend class ShaderGroupFactory;

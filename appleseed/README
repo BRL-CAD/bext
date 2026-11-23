@@ -3,20 +3,41 @@ Appleseed patch series
 
 Upstream: https://github.com/appleseedhq/appleseed
 Base: c4ba82893febd711befb194f905e955d3ee143a3
+Former fork: e85844681afba97a8d9ff72b444c7d05230ac346
 
-Patches use diff -Naur format and descriptive filenames. Series.cmake
-declares their application order. HISTORY preserves the original
-downstream messages and maps them to the available patches.
+Apply the bootstrap, boost, and art groups in the order declared in
+Series.cmake. Patches use diff -Naur format and descriptive filenames.
+HISTORY preserves all 205 original downstream commit messages, authors,
+dates, and parent IDs, including the earlier fork merges.
 
-The bootstrap and boost groups form the CORE compatibility prefix.
-They adapt bundled dependencies and toolchains, replace core Boost
-facilities with C++17 and PCRE2, and stage modern OSL resources.
-Optional Python bindings still require externally supplied Boost.
+The bootstrap group establishes dependency and platform compatibility,
+including shared-library exports used by basic framebuffer display.
+The bootstrap plus boost groups form a separately buildable core/CLI
+subset. Select those two groups to remove core Boost requirements
+without the art and rendering enhancements. Configure bext with
+-DAPPLESEED_PATCH_STAGE=CORE to select that prefix; the default ART
+selects the complete series. Invalid stage names are rejected.
+The final core topic stages the shader resources needed to compile and
+test against modern OSL. Disable both optional Python bindings; they require
+Boost.Python. The core uses PCRE2 for Perl-style filters, preserving their
+established syntax.
 
-APPLESEED_PATCH_STAGE=CORE selects the compatibility prefix. The
-default ART stage also applies the available rendering enhancements
-listed below. ART patches are cumulative and may depend on earlier
-topics. Invalid stage names are rejected.
+The art group adds procedural geometry, material and shader contracts,
+resource/font updates, optical transport, emitters, volumes, and ray
+differentials. These patches are ordered cumulatively; individual art
+topics may depend on earlier topics.
+
+The core prefix does not include the renderer APIs used by the enhanced
+BRL-CAD art implementation. Pair current art with the complete series.
+The original art sources used Boost only through their build rules;
+removing those discovery, include, link, and definition requirements is
+a separate compatibility change from the later art features. The core
+qualification covers Appleseed itself, not a rebuilt original art.
+
+The complete series reproduces the former fork plus the two existing
+bext adapters exactly, including file modes. Those adapters now belong
+to the bootstrap group. The original brlcad branch remains available
+as historical reference; builds use the unchanged upstream base.
 
 Review topics
 -------------
@@ -104,3 +125,5 @@ appleseed_closure_ior_context.patch: Resolve closure indices in their adjacent
 appleseed_standard_microfacet_transmission.patch: Support standard OSL
   microfacet transmission
 appleseed_emission_range.patch: Keep OSL emission normalization finite
+appleseed_height_curvature.patch: Recover height curvature with isolated bump
+  prefixes

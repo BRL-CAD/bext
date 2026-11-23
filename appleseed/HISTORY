@@ -2781,6 +2781,61 @@ Message:
     arithmetic; the filtered curved-glass reproduction also passes after the
     fix.
 
+Commit: e1d2541529ac37816d3b808caf01ba68a0132464
+Patches: appleseed_height_curvature.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T17:04:47Z
+Parents: 8677bc11c730cb435dbeac86b81a9e9f34a89000
+Message:
+    Build reusable OSL prefixes for bump normal evaluation
+
+    Keep an independent upstream shader group for each native bump node.
+    Share parameter and connection setup with the material group, retain
+    unknown-layer validation, and release prefixes with the material group.
+    Expose a private layer query for renderer-provided normal derivatives.
+
+    Enable supported replacement of in-memory shader definitions so source
+    layers can be reused in prefixes and material groups can be rebuilt.
+    Existing groups retain their original shader masters.
+
+    Add tests for prefix isolation, upstream source reuse, release and
+    rebuild, and invalid connections. All 1898 native cases pass.
+
+Commit: e85844681afba97a8d9ff72b444c7d05230ac346
+Patches: appleseed_height_curvature.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-16T17:13:40Z
+Parents: e1d2541529ac37816d3b808caf01ba68a0132464
+Message:
+    Recover height-bump curvature for outgoing ray differentials
+
+    OSL Dx and Dy discard higher derivatives, leaving height-bump normals
+    without curvature for reflected and refracted ray footprints. Recover
+    normal derivatives by evaluating independent bump prefixes at nearby
+    surface intersections.
+
+    Use fresh geometry and entry globals for each probe. Isolate shader
+    contexts, trace messages and closure storage, and guard recursion per
+    layer so upstream bump nodes can provide nested height derivatives.
+    Select bounded fourth-order stencils using convergence and float
+    precision, with shader fallback when a local probe cannot be recovered.
+
+    Reject UV-chart jumps only when the prefix reads UVs or tangent data.
+    World-space height fields remain continuous across unrelated mesh UV
+    seams, including critical points with zero height gradient.
+
+    All 1898 native cases pass. Analytic normal and outgoing-path tests
+    cover CSG, meshes, curved surfaces, shifted globals, disabled and
+    critical heights, and chained bump nodes without widening comparison
+    bounds.
+
+Legacy bext adapters
+--------------------
+
+The platform/bootstrap patch also incorporates the exact contents of
+the former appleseed.patch and appleseed_intelllvm.patch files. Their
+bext commit history follows so earlier rationale remains available.
+
 Commit: 9a4f748199f593831f8e4dfd32d147ce76e6a2c6
 Patch: 06
 Author: Christopher Sean Morrison <brlcad@gmail.com>
