@@ -2169,6 +2169,169 @@ Message:
     visible emission while making the unavailable direct-light and photon
     paths clear.
 
+Commit: 2871c41146dd1c5d54674131ea9cc01f5f40b91e
+Patches: appleseed_participating_media.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T03:43:25Z
+Parents: ade080f2d5cfd1987063a61308e1145be37fc3d3
+Message:
+    Integrate participating media from the start of a path
+
+    Discover standalone containing volumes as well as BSDF interiors.
+    Integrate the first traced segment before shading its exit, retaining
+    physical attenuation across clipped intersection searches. Share the
+    already-traced segment path with ordinary volume entries, honor retained
+    path data lifetimes and enforce the overall scattering limit.
+
+    Add analytic absorption, adjoint, clipped-search and retained-data
+    regressions alongside the initial-medium discovery checks.
+
+Commit: 323b6104c5a7e3fee32858a050a67d8320610da4
+Patches: appleseed_participating_media.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T03:43:26Z
+Parents: 2871c41146dd1c5d54674131ea9cc01f5f40b91e
+Message:
+    Preserve primary medium attenuation through alpha layers
+
+    Retain the physical camera origin and ray differentials when advancing
+    through alpha layers within a medium. Moving that origin loses both
+    BSDF absorption and volume lighting before transparent foreground
+    surfaces. Keep ordinary alpha traversal for rays in air, preserving
+    coincident-surface behavior in existing structural showcases.
+
+Commit: 35bf02c397ca5cc9b3d630b32ffcadba03c77829
+Patches: appleseed_participating_media.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T04:23:41Z
+Parents: 323b6104c5a7e3fee32858a050a67d8320610da4
+Message:
+    Keep nearly collinear volume light guides finite
+
+    Treat guide heights below float relative precision as collinear, using
+    the existing normalized surrogate proposal. Compute guide positions and
+    angular intervals in double precision. Roundoff otherwise collapses
+    collinear angular ranges or quantizes nearly aligned distance samples,
+    losing or biasing combined-sampling illumination. The CSG and BOT
+    integration regressions compare both distance proposals with independent
+    single-scattering quadrature; the previous renderer fails the aligned-
+    source case, and float guide angles bias a near-alignment case by more
+    than ten percent.
+
+Commit: 03b63ea80c2f3642b48a71df3f15f358baaa7f5e
+Patches: appleseed_image_output.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T05:24:35Z
+Parents: 35bf02c397ca5cc9b3d630b32ffcadba03c77829
+Message:
+    Keep multipart images and checkpoint channel names alive
+
+    Reserve storage before retaining pointers into image and string vectors.
+    Vector growth invalidated multipart image pointers and checkpoint
+    channel names, causing a crash or corrupt names in written EXR files.
+
+    Read every multipart color part and every checkpoint buffer channel name
+    in regression tests.
+
+Commit: 6672305d3b0e73877d36fb432c8dc9041d758cb4
+Patches: appleseed_image_output.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T05:24:36Z
+Parents: 03b63ea80c2f3642b48a71df3f15f358baaa7f5e
+Message:
+    Declare explicit color and data interpretations in image output
+
+    Map legacy linear and sRGB labels to their Rec.709 interop identities.
+    The renderer uses these primaries even when an OCIO scene-linear role
+    selects ACEScg. Preserve explicitly supplied wider-gamut labels.
+
+    Share Rec.709 chromaticities and classify AOVs, multipart parts and
+    checkpoint parts individually. Mark Cryptomatte identifiers as data.
+    Test HDR pixel preservation and mixed color/data output metadata.
+
+Commit: dba8d3a369d6cf7feceeb757fcd050e860e7cb94
+Patches: appleseed_volume_numerics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T06:48:04Z
+Parents: 6672305d3b0e73877d36fb432c8dc9041d758cb4
+Message:
+    Stabilize truncated exponential sampling in thin media
+
+    Use expm1 and log1p to preserve small optical thicknesses when sampling
+    bounded exponential distances. Evaluate the density without subtracting
+    nearly equal exponentials or overflowing a positive exponential.
+
+    Check the thin uniform-density limit and finite thick-segment draws.
+
+Commit: 5c4b66490fa1c67e89d20d683e5d500d1fac0c2e
+Patches: appleseed_volume_numerics.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T06:48:06Z
+Parents: dba8d3a369d6cf7feceeb757fcd050e860e7cb94
+Message:
+    Keep panorama densities valid at seams and poles
+
+    Wrap longitude, retain the south-pole texel and clamp density lookup
+    indices. Recover small polar angles from the transverse components and
+    share a positive Jacobian floor between sampling and evaluation.
+
+    This prevents an out-of-range importance-map access reached by volume
+    paths. Test seam coordinates, exact poles and near-pole directions.
+
+Commit: 94993ffe1f5d9651a5f9fa8622236bbddb477e65
+Patches: appleseed_volume_environment.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T06:48:08Z
+Parents: 5c4b66490fa1c67e89d20d683e5d500d1fac0c2e
+Message:
+    Integrate environment light along participating-volume segments
+
+    Estimate environment illumination along volume rays using a spectral
+    mixture of bounded exponential distances and existing environment shadow
+    tracing. Include the phase proposal locally when continuation is capped.
+
+    Continued phase paths already receive a complementary environment MIS
+    weight. Omitting the environment estimate loses energy under uniform
+    illumination. Preserve null draws for zero-extinction channels and
+    reject invalid numerical distance densities deliberately. Preserve
+    escaped filtered-map radiance even when the importance-map density is
+    zero.
+
+Commit: dfdcaa09cfa03f876148e929f89eab7f8d83857b
+Patches: appleseed_volume_environment.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T09:14:27Z
+Parents: 94993ffe1f5d9651a5f9fa8622236bbddb477e65
+Message:
+    Continue volume attenuation beyond hidden optical boundaries
+
+    A displaced glass hit inside participating media previously ended the
+    volume march without integrating the remaining segment. Start the next
+    march at that hidden hit while retaining the existing physical-distance
+    handling for ordinary glass absorption.
+
+    Exercise both path-tracing entry points and radiance/importance
+    transport with an independently checked Beer attenuation reference.
+
+Commit: cb7c10e531ccefbdfeaf42620e40b8b6f7248d89
+Patches: appleseed_volume_environment.patch
+Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>
+Date: 2026-11-15T09:14:29Z
+Parents: dfdcaa09cfa03f876148e929f89eab7f8d83857b
+Message:
+    Resolve glass and fog interfaces from their active interiors
+
+    Treat surface-free volumes as supported interiors at procedural
+    contacts. Select surface scattering from the active glass while
+    retaining the geometric boundary and the priority-selected interior.
+    Overlapping fog can borrow an adjacent glass material without an
+    artificial air layer.
+
+    Use the incident and transmitted indices for glass scattering. Preserve
+    resolved surface materials across shading-point copies and invalidate
+    them when retracing. Test entering and leaving fog, interface ownership,
+    copied state, and index selection.
+
 Commit: 8de1a00ffcebd8398a23265a17db5c589fddbe5a
 Patches: appleseed_cancellation.patch
 Author: Clifford Yapp <238416+starseeker@users.noreply.github.com>

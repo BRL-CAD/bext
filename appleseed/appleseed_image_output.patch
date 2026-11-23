@@ -1,0 +1,421 @@
+diff -Naur appleseed/src/appleseed/foundation/image/genericimagefilewriter.cpp APPLESEED_BLD/src/appleseed/foundation/image/genericimagefilewriter.cpp
+--- appleseed/src/appleseed/foundation/image/genericimagefilewriter.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/image/genericimagefilewriter.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -187,7 +187,12 @@
+             else if (attr_name == "image_name")
+                 spec.attribute("oiio:subimagename", attr_value);
+             else if (attr_name == "color_space")
+-                spec.attribute("oiio:ColorSpace", attr_value == "linear" ? "scene_linear" : attr_value);
++            {
++                // Renderer RGB uses Rec.709 primaries, independently of the OCIO scene-linear role.
++                const std::string color_space = attr_value == "linear" ? "lin_rec709_scene"
++                    : attr_value == "sRGB" ? "srgb_rec709_scene" : attr_value;
++                spec.attribute("oiio:ColorSpace", color_space);
++            }
+             else if (attr_name == "compression")
+                 spec.attribute("compression", attr_value);
+             else if (attr_name == "compression_quality")
+diff -Naur appleseed/src/appleseed/foundation/image/imageattributes.cpp APPLESEED_BLD/src/appleseed/foundation/image/imageattributes.cpp
+--- appleseed/src/appleseed/foundation/image/imageattributes.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/image/imageattributes.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -32,6 +32,8 @@
+ 
+ // appleseed.foundation headers.
+ #include "foundation/core/appleseed.h"
++#include "foundation/math/vector.h"
++#include "foundation/utility/iostreamop.h"
+ 
+ namespace foundation
+ {
+@@ -48,4 +50,12 @@
+     return attributes;
+ }
+ 
++void ImageAttributes::set_rec709_chromaticities()
++{
++    insert("white_xy_chromaticity", Vector2f(0.3127f, 0.3290f));
++    insert("red_xy_chromaticity", Vector2f(0.64f, 0.33f));
++    insert("green_xy_chromaticity", Vector2f(0.30f, 0.60f));
++    insert("blue_xy_chromaticity", Vector2f(0.15f, 0.06f));
++}
++
+ }   // namespace foundation
+diff -Naur appleseed/src/appleseed/foundation/image/imageattributes.h APPLESEED_BLD/src/appleseed/foundation/image/imageattributes.h
+--- appleseed/src/appleseed/foundation/image/imageattributes.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/image/imageattributes.h	1970-01-01 00:00:00.000000000 +0000
+@@ -57,8 +57,9 @@
+ // - green_xy_chromaticity: The green chromaticity of the image. [vector2]
+ // - blue_xy_chromaticity: The blue chromaticity of the image. [vector2]
+ // - color_space: The color space of the image. [string]
+-//      - linear
+-//      - sRGB
++//      - linear: linear-light sRGB / Rec.709 RGB
++//      - sRGB: encoded sRGB / Rec.709 RGB
++//      - data: noncolor channel values
+ // - compression: The compression mode of the image. [string]
+ // - compression_quality: The compression quality of the image between 0 and 100. [int]
+ // - dpi: The resolution of the image in dots per inch. [int]
+@@ -70,6 +71,9 @@
+   public:
+     // Create a default set of image attributes.
+     static ImageAttributes create_default_attributes();
++
++    // Set sRGB / Rec.709 primaries and the D65 white point.
++    void set_rec709_chromaticities();
+ };
+ 
+ }   // namespace foundation
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_genericimagefilewriter.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_genericimagefilewriter.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_genericimagefilewriter.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_genericimagefilewriter.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -118,6 +118,68 @@
+         }
+     }
+ 
++    struct ColorMetadataFixture
++    {
++        const Color4f pixels = Color4f(-0.25f, 0.5f, 4.0f, 0.75f);
++        ImageAttributes attributes;
++        std::unique_ptr<Image> result;
++
++        void round_trip(const char* path, const char* color_space, const bool rgb_chromaticities)
++        {
++            Image image(1, 1, 1, 1, 4, PixelFormatFloat);
++            image.clear(pixels);
++            ImageAttributes output;
++            output.insert("color_space", color_space);
++            if (rgb_chromaticities)
++                output.set_rec709_chromaticities();
++            GenericImageFileWriter writer(path);
++            writer.append_image(&image);
++            writer.set_image_attributes(output);
++            writer.write();
++
++            GenericImageFileReader reader;
++            result.reset(reader.read(path, &attributes));
++        }
++    };
++
++    TEST_CASE_F(Write_LegacyLinearDeclaresRec709WithoutConvertingHDRPixels, ColorMetadataFixture)
++    {
++        round_trip("unit tests/outputs/linear-rec709.exr", "linear", true);
++        EXPECT_EQ(std::string("lin_rec709_scene"), attributes.get<std::string>("colorInteropID"));
++        EXPECT_EQ(std::string("lin_rec709_scene"), attributes.get<std::string>("oiio:ColorSpace"));
++        Color4f actual;
++        result->get_pixel(0, 0, actual);
++        EXPECT_EQ(pixels, actual);
++    }
++
++    TEST_CASE_F(Write_DataTagPreservesNegativeNumericValues, ColorMetadataFixture)
++    {
++        round_trip("unit tests/outputs/numeric-data.exr", "data", false);
++        EXPECT_EQ(std::string("data"), attributes.get<std::string>("colorInteropID"));
++        EXPECT_FALSE(attributes.exist("chromaticities"));
++        Color4f actual;
++        result->get_pixel(0, 0, actual);
++        EXPECT_EQ(pixels, actual);
++    }
++
++    TEST_CASE_F(Write_EncodedSRGBTagPreservesEncodedValues, ColorMetadataFixture)
++    {
++        round_trip("unit tests/outputs/encoded-srgb.exr", "sRGB", true);
++        EXPECT_EQ(std::string("srgb_rec709_scene"), attributes.get<std::string>("colorInteropID"));
++        Color4f actual;
++        result->get_pixel(0, 0, actual);
++        EXPECT_EQ(pixels, actual);
++    }
++
++    TEST_CASE_F(Write_ExplicitWideGamutColorSpaceIsPreserved, ColorMetadataFixture)
++    {
++        round_trip("unit tests/outputs/explicit-acescg.exr", "ACEScg", false);
++        EXPECT_EQ(std::string("lin_ap1_scene"), attributes.get<std::string>("colorInteropID"));
++        Color4f actual;
++        result->get_pixel(0, 0, actual);
++        EXPECT_EQ(pixels, actual);
++    }
++
+     void draw_radial_gradient_prone_to_banding(Image& image)
+     {
+         const CanvasProperties& props = image.properties();
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_frame.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_frame.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_frame.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_frame.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -27,20 +27,33 @@
+ //
+ 
+ // appleseed.renderer headers.
++#include "renderer/kernel/rendering/permanentshadingresultframebufferfactory.h"
+ #include "renderer/modeling/aov/aov.h"
+ #include "renderer/modeling/aov/aovcontainer.h"
+ #include "renderer/modeling/aov/diffuseaov.h"
+ #include "renderer/modeling/aov/glossyaov.h"
++#include "renderer/modeling/aov/normalaov.h"
+ #include "renderer/modeling/frame/frame.h"
+ #include "renderer/utility/paramarray.h"
+ 
+ // appleseed.foundation headers.
++#include "foundation/image/color.h"
++#include "foundation/image/genericprogressiveimagefilereader.h"
++#include "foundation/image/image.h"
++#include "foundation/image/imageattributes.h"
++#include "foundation/image/tile.h"
+ #include "foundation/memory/autoreleaseptr.h"
+ #include "foundation/platform/thread.h"
++#include "foundation/string/string.h"
++#include "foundation/utility/iostreamop.h"
+ #include "foundation/utility/test.h"
+ 
++// OpenImageIO headers.
++#include "OpenImageIO/imageio.h"
++
+ // Standard headers.
+ #include <filesystem>
++#include <memory>
+ 
+ namespace bf = std::filesystem;
+ using namespace foundation;
+@@ -111,6 +124,107 @@
+         EXPECT_TRUE(bf::exists(m_output_directory / "default-indirect-glossy.exr"));        // note: exr extension added
+     }
+ 
++    TEST_CASE_F(SaveCheckpoint_KeepsEveryBufferChannelNameAlive, Fixture)
++    {
++        const bf::path path = m_output_directory / "checkpoint.exr";
++        AOVContainer aovs;
++        auto frame = FrameFactory::create(
++            "beauty",
++            ParamArray()
++                .insert("resolution", "4 4")
++                .insert("checkpoint_create", true)
++                .insert("checkpoint_create_path", path.string()),
++            aovs);
++        frame->clear_main_and_aov_images();
++        PermanentShadingResultFrameBufferFactory buffers(*frame);
++        frame->save_checkpoint(&buffers, 0);
++
++        auto reader = OIIO::ImageInput::open(path.string());
++        ASSERT_TRUE(reader.get() != nullptr);
++        ASSERT_TRUE(reader->seek_subimage(1, 0));
++        const OIIO::ImageSpec& spec = reader->spec();
++        ASSERT_EQ(5, spec.nchannels);
++        for (size_t channel = 0; channel < spec.channelnames.size(); ++channel)
++        {
++            const std::string expected = "channel_" + pad_left(to_string(channel + 1), '0', 4);
++            EXPECT_EQ(expected, spec.channelnames[channel]);
++        }
++        EXPECT_TRUE(reader->close());
++    }
++
++    TEST_CASE_F(WriteMultipart_KeepsColorImageStorageAliveUntilWrite, Fixture)
++    {
++        const bf::path path = m_output_directory / "multipart-colors.exr";
++        const Color4f beauty(0.25f, 0.5f, 4.0f, 1.0f);
++        m_frame->image().clear(beauty);
++        float value = 1.0f;
++        for (const AOV& aov : m_frame->aovs())
++        {
++            aov.get_image().clear(Color4f(value, 0.5f, 0.25f, 1.0f));
++            value += 1.0f;
++        }
++        m_frame->write_main_and_aov_images_to_multipart_exr(path.string().c_str());
++
++        GenericProgressiveImageFileReader reader;
++        reader.open(path.string().c_str());
++        for (size_t part = 0; part <= m_frame->aovs().size(); ++part)
++        {
++            ASSERT_TRUE(reader.choose_subimage(part));
++            const std::unique_ptr<Tile> tile(reader.read_tile(0, 0));
++            Color4f pixel;
++            tile->get_pixel(0, 0, pixel);
++            const Color4f expected = part == 0
++                ? beauty : Color4f(static_cast<float>(part), 0.5f, 0.25f, 1.0f);
++            EXPECT_EQ(expected, pixel);
++        }
++        EXPECT_FALSE(reader.choose_subimage(1 + m_frame->aovs().size()));
++        reader.close();
++    }
++
++    TEST_CASE_F(WriteSidecarsAndMultipart_KeepColorAndDataMetadataIndependent, Fixture)
++    {
++        AOVContainer aovs;
++        aovs.insert(DirectDiffuseAOVFactory().create(ParamArray()));
++        aovs.insert(NormalAOVFactory().create(ParamArray()));
++        auto frame = FrameFactory::create("beauty", ParamArray().insert("resolution", "4 4"), aovs);
++        frame->clear_main_and_aov_images();
++        const Color3f beauty(0.25f, 0.5f, 4.0f);
++        const Color3f diffuse(1.0f, 0.5f, 0.25f);
++        const Color3f normal(0.25f, 0.5f, 0.75f);
++        frame->image().clear(Color4f(beauty, 1.0f));
++        frame->aovs().get_by_name("direct_diffuse")->get_image().clear(Color4f(diffuse, 1.0f));
++        frame->aovs().get_by_name("normal")->get_image().clear(normal);
++
++        const bf::path main_path = m_output_directory / "metadata.exr";
++        const bf::path multipart_path = m_output_directory / "metadata-multipart.exr";
++        ASSERT_TRUE(frame->write_main_image(main_path.string().c_str()));
++        ASSERT_TRUE(frame->write_aov_images(main_path.string().c_str()));
++        frame->write_main_and_aov_images_to_multipart_exr(multipart_path.string().c_str());
++
++        auto check_part = [&](const bf::path& path, const size_t part, const char* interop,
++            const Color3f& expected, const bool color_data)
++        {
++            GenericProgressiveImageFileReader reader;
++            reader.open(path.string().c_str());
++            ASSERT_TRUE(reader.choose_subimage(part));
++            ImageAttributes attributes;
++            reader.read_image_attributes(attributes);
++            EXPECT_EQ(std::string(interop), attributes.get<std::string>("colorInteropID"));
++            EXPECT_EQ(color_data, attributes.exist("chromaticities"));
++            const std::unique_ptr<Tile> tile(reader.read_tile(0, 0));
++            Color3f pixel;
++            tile->get_pixel(0, 0, pixel);
++            EXPECT_EQ(expected, pixel);
++            reader.close();
++        };
++        check_part(main_path, 0, "lin_rec709_scene", beauty, true);
++        check_part(m_output_directory / "metadata.direct_diffuse.exr", 0, "lin_rec709_scene", diffuse, true);
++        check_part(m_output_directory / "metadata.normal.exr", 0, "data", normal, false);
++        check_part(multipart_path, 0, "lin_rec709_scene", beauty, true);
++        check_part(multipart_path, 1, "lin_rec709_scene", diffuse, true);
++        check_part(multipart_path, 2, "data", normal, false);
++    }
++
+     TEST_CASE_F(WriteMainImage_FilenameHasEXRExtension_WritesEXRFile, Fixture)
+     {
+         m_frame->write_main_image((m_output_directory / "override.exr").string().c_str());
+diff -Naur appleseed/src/appleseed/renderer/modeling/aov/aov.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/aov/aov.cpp
+--- appleseed/src/appleseed/renderer/modeling/aov/aov.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/aov/aov.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -108,7 +108,9 @@
+         writer.set_image_channels(get_channel_count(), get_channel_names());
+ 
+         ImageAttributes image_attributes_copy(image_attributes);
+-        image_attributes_copy.insert("color_space", "linear");
++        image_attributes_copy.insert("color_space", has_color_data() ? "linear" : "data");
++        if (has_color_data())
++            image_attributes_copy.set_rec709_chromaticities();
+         writer.set_image_attributes(image_attributes_copy);
+ 
+         writer.write();
+diff -Naur appleseed/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp
+--- appleseed/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/aov/cryptomatteaov.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -147,12 +147,7 @@
+                 if (attr_name == "software")
+                     m_spec.attribute("Software", attr_value.c_str());
+                 else if (attr_name == "color_space")
+-                {
+-                    if (attr_value == "linear")
+-                        m_spec.attribute("oiio:ColorSpace", "scene_linear");
+-                    else
+-                        m_spec.attribute("oiio:ColorSpace", attr_value.c_str());
+-                }
++                    m_spec.attribute("oiio:ColorSpace", attr_value.c_str());
+ 
+                 else if (attr_name == "dpi")
+                 {
+@@ -867,7 +862,8 @@
+     const std::string manifest = Impl::make_manifest(name_map);
+ 
+     ImageAttributes image_attributes_copy(image_attributes);
+-    image_attributes_copy.insert("color_space", "linear");
++    // Cryptomatte channels contain identifiers and coverage, not RGB colors.
++    image_attributes_copy.insert("color_space", "data");
+     image_attributes_copy.insert(std::string(layer_prefix + "/name").c_str(), layer_name);
+     image_attributes_copy.insert(std::string(layer_prefix + "/hash").c_str(), "MurmurHash3_32");
+     image_attributes_copy.insert(std::string(layer_prefix + "/conversion").c_str(), "uint32_to_float32");
+diff -Naur appleseed/src/appleseed/renderer/modeling/frame/frame.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/frame/frame.cpp
+--- appleseed/src/appleseed/renderer/modeling/frame/frame.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/frame/frame.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -1044,6 +1044,8 @@
+         ImageAttributes image_attributes = ImageAttributes::create_default_attributes();
+         image_attributes.insert("appleseed:LastPass", pass_index);
+         image_attributes.insert("image_name", "beauty");
++        image_attributes.insert("color_space", "linear");
++        image_attributes.set_rec709_chromaticities();
+         writer.set_image_attributes(image_attributes);
+     }
+ 
+@@ -1053,6 +1055,8 @@
+ 
+     // Create channel names.
+     std::vector<std::string> shading_channel_names;
++    // The C-string views below must survive every append.
++    shading_channel_names.reserve(shading_channel_count);
+     std::vector<const char *> shading_channel_names_cstr;
+     {
+         static const std::string channel_name_prefix = "channel_";
+@@ -1072,6 +1076,7 @@
+ 
+         ImageAttributes image_attributes = ImageAttributes::create_default_attributes();
+         image_attributes.insert("image_name", "appleseed:RenderingBuffer");
++        image_attributes.insert("color_space", "data");
+         writer.set_image_attributes(image_attributes);
+     }
+ 
+@@ -1085,6 +1090,9 @@
+ 
+         ImageAttributes image_attributes = ImageAttributes::create_default_attributes();
+         image_attributes.insert("image_name", aov_name);
++        image_attributes.insert("color_space", aov.has_color_data() ? "linear" : "data");
++        if (aov.has_color_data())
++            image_attributes.set_rec709_chromaticities();
+         writer.set_image_attributes(image_attributes);
+     }
+ 
+@@ -1108,15 +1116,6 @@
+ 
+ namespace
+ {
+-    void add_chromaticities_attributes(ImageAttributes& image_attributes)
+-    {
+-        // Scene-linear sRGB / Rec. 709 chromaticities.
+-        image_attributes.insert("white_xy_chromaticity", Vector2f(0.3127f, 0.3290f));
+-        image_attributes.insert("red_xy_chromaticity", Vector2f(0.64f, 0.33f));
+-        image_attributes.insert("green_xy_chromaticity", Vector2f(0.30f, 0.60f));
+-        image_attributes.insert("blue_xy_chromaticity",  Vector2f(0.15f, 0.06f));
+-    }
+-
+     //
+     // Default export formats:
+     //
+@@ -1150,7 +1149,7 @@
+             bf_file_path.replace_extension(extension);
+         }
+ 
+-        add_chromaticities_attributes(image_attributes);
++        image_attributes.set_rec709_chromaticities();
+ 
+         try
+         {
+@@ -1342,10 +1341,12 @@
+     stopwatch.start();
+ 
+     ImageAttributes image_attributes = ImageAttributes::create_default_attributes();
+-    add_chromaticities_attributes(image_attributes);
++    image_attributes.set_rec709_chromaticities();
+     image_attributes.insert("color_space", "linear");
+ 
+     std::vector<Image> images;
++    // The writer retains image pointers until write(), so appends must not move them.
++    images.reserve(1 + impl->m_aovs.size());
+ 
+     create_parent_directories(file_path);
+ 
+@@ -1377,10 +1378,15 @@
+         }
+         else writer.append_image(&image);
+ 
+-        image_attributes.insert("image_name", aov_name.c_str());
++        // Data parts must not inherit the beauty image's color interpretation.
++        ImageAttributes aov_attributes = ImageAttributes::create_default_attributes();
++        aov_attributes.insert("image_name", aov_name.c_str());
++        aov_attributes.insert("color_space", aov.has_color_data() ? "linear" : "data");
++        if (aov.has_color_data())
++            aov_attributes.set_rec709_chromaticities();
+ 
+         writer.set_image_channels(aov.get_channel_count(), aov.get_channel_names());
+-        writer.set_image_attributes(image_attributes);
++        writer.set_image_attributes(aov_attributes);
+     }
+ 
+     writer.write();

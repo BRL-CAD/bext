@@ -78,3 +78,11 @@ appleseed_weighted_emitters.patch: Propagate procedural emitter weights and
   densities
 appleseed_emitter_mis.patch: Use physical origins and finite guides for
   emitter MIS
+appleseed_participating_media.patch: Integrate participating media from
+  physical path origins
+appleseed_image_output.patch: Keep image channel names and color
+  interpretations valid
+appleseed_volume_numerics.patch: Stabilize thin-media sampling and panorama
+  densities
+appleseed_volume_environment.patch: Integrate environment light through hidden
+  boundaries

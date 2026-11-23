@@ -1,0 +1,235 @@
+diff -Naur appleseed/src/appleseed/foundation/math/sampling/mappings.h APPLESEED_BLD/src/appleseed/foundation/math/sampling/mappings.h
+--- appleseed/src/appleseed/foundation/math/sampling/mappings.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/math/sampling/mappings.h	1970-01-01 00:00:00.000000000 +0000
+@@ -650,8 +650,9 @@
+     assert(s < T(1.0));
+     assert(a > T(0.0));
+ 
+-    const T tail = T(1.0) - std::exp(-(r - l) * a);
+-    return clamp(l - std::log(T(1.0) - s * tail) / a, l, r);
++    // Keep the uniform-density limit when optical thickness is very small.
++    const T tail = -std::expm1(-(r - l) * a);
++    return clamp(l - std::log1p(-s * tail) / a, l, r);
+ }
+ 
+ template <typename T>
+@@ -664,9 +665,7 @@
+     assert(x >= l);
+     assert(x <= r);
+ 
+-    const T left = std::exp(a * (x - l));
+-    const T right = std::exp(a * (x - r));
+-    return a / (left - right);
++    return a * std::exp(-a * (x - l)) / -std::expm1(-a * (r - l));
+ }
+ 
+ template <typename T>
+diff -Naur appleseed/src/appleseed/foundation/meta/tests/test_sampling.cpp APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_sampling.cpp
+--- appleseed/src/appleseed/foundation/meta/tests/test_sampling.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/foundation/meta/tests/test_sampling.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -198,6 +198,32 @@
+ 
+ TEST_SUITE(Foundation_Math_Sampling_Mappings)
+ {
++    TEST_CASE(TruncatedExponential_PreservesThinSegmentUniformLimit)
++    {
++        const float rate = 1.0e-10f;
++        for (const float sample : {0.0f, 0.1f, 0.5f, 0.9f, std::nextafter(1.0f, 0.0f)})
++        {
++            const float distance = sample_exponential_distribution_on_segment(sample, rate, 0.0f, 1.0f);
++            const float density = exponential_distribution_on_segment_pdf(distance, rate, 0.0f, 1.0f);
++            EXPECT_FEQ_EPS(sample, distance, 1.0e-6f);
++            EXPECT_FEQ_EPS(1.0f, density, 1.0e-6f);
++        }
++    }
++
++    TEST_CASE(TruncatedExponential_PreservesThickSegmentFiniteDensities)
++    {
++        const float rate = 1000.0f;
++        for (const float sample : {0.0f, 0.1f, 0.5f, 0.9f, std::nextafter(1.0f, 0.0f)})
++        {
++            const float distance = sample_exponential_distribution_on_segment(sample, rate, 0.0f, 1.0f);
++            const double expected = -std::log1p(-static_cast<double>(sample)) / rate;
++            EXPECT_FEQ_EPS(static_cast<float>(expected), distance, 1.0e-6f);
++            const float density = exponential_distribution_on_segment_pdf(distance, rate, 0.0f, 1.0f);
++            EXPECT_TRUE(std::isfinite(density));
++            EXPECT_TRUE(density > 0.0f);
++        }
++    }
++
+     TEST_CASE(SampleHemisphereUniform_GivenZeroZero_ReturnsSampleWithYComponentGreaterThanZero)
+     {
+         EXPECT_GT(0.0, sample_hemisphere_uniform(Vector2d(0.0)).y);
+diff -Naur appleseed/src/appleseed/renderer/meta/tests/test_environmentedf.cpp APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_environmentedf.cpp
+--- appleseed/src/appleseed/renderer/meta/tests/test_environmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/meta/tests/test_environmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -83,6 +83,7 @@
+ 
+ // Standard headers.
+ #include <cassert>
++#include <cmath>
+ #include <cstddef>
+ #include <memory>
+ 
+@@ -351,8 +352,28 @@
+             shift_angles(theta, phi, 0.0f, 0.0f);
+             EXPECT_FEQ(expected, theta);
+         }
++    }
++
++    TEST_CASE(SphericalCoordinates_KeepNearPoleDirections)
++    {
++        float theta, phi;
++        unit_vector_to_angles(Vector3f(1.0e-5f, 1.0f, 0.0f), theta, phi);
++        EXPECT_FEQ_EPS(1.0e-5f, theta, 1.0e-8f);
+     }
+ 
++    TEST_CASE(SphericalCoordinates_SeamAndPolesRemainInTextureDomain)
++    {
++        for (const float theta : {0.0f, Pi<float>()})
++        {
++            float u, v;
++            angles_to_unit_square(theta, Pi<float>(), u, v);
++            EXPECT_EQ(0.0f, u);
++            EXPECT_TRUE(v >= 0.0f);
++            EXPECT_TRUE(v < 1.0f);
++            EXPECT_FEQ(theta / Pi<float>(), v);
++        }
++    }
++
+     struct PanoramaEnvironmentEDFTestScene : public LatLongMapEnvironmentEDFTestScene
+     {
+         PanoramaEnvironmentEDFTestScene()
+@@ -367,6 +388,26 @@
+         EXPECT_TRUE(check_consistency(*m_env_edf, Vector2f(0.91f, 0.83f)));
+     }
+ 
++    TEST_CASE_F(PanoramaDensityIsFiniteAtPolesAndSeam, Fixture<PanoramaEnvironmentEDFTestScene>)
++    {
++        const Vector3f directions[] = {
++            Vector3f(0.0f, 1.0f, 0.0f),
++            Vector3f(0.0f, -1.0f, 0.0f),
++            Vector3f(-1.0f, 0.0f, 0.0f),
++            Vector3f(1.0e-5f, 1.0f, 0.0f)
++        };
++        for (const Vector3f& direction : directions)
++        {
++            Spectrum value(Spectrum::Illuminance);
++            float probability;
++            m_env_edf->evaluate(m_shading_context, direction, value, probability);
++            EXPECT_TRUE(std::isfinite(probability));
++            EXPECT_TRUE(probability >= 0.0f);
++            EXPECT_FEQ(probability, m_env_edf->evaluate_pdf(direction));
++            EXPECT_TRUE(is_finite(value));
++        }
++    }
++
+     TEST_CASE_F(PanoramaBilinearLookupCrossesLongitudeSeam, Fixture<PanoramaEnvironmentEDFTestScene>)
+     {
+         const Source* source = m_env_edf->get_inputs().source("radiance");
+diff -Naur appleseed/src/appleseed/renderer/modeling/environmentedf/latlongmapenvironmentedf.cpp APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/latlongmapenvironmentedf.cpp
+--- appleseed/src/appleseed/renderer/modeling/environmentedf/latlongmapenvironmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/latlongmapenvironmentedf.cpp	1970-01-01 00:00:00.000000000 +0000
+@@ -65,9 +65,11 @@
+ #include "foundation/utility/stopwatch.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <cassert>
+ #include <cmath>
+ #include <cstddef>
++#include <limits>
+ #include <memory>
+ 
+ // Forward declarations.
+@@ -263,7 +265,7 @@
+             lookup_environment_map(shading_context, u, v, value);
+ 
+             // Compute the probability density of this direction.
+-            probability = prob_xy * m_probability_scale / sin_theta;
++            probability = direction_probability(prob_xy, theta);
+             assert(probability >= 0.0f);
+         }
+ 
+@@ -457,6 +459,14 @@
+                 value *= values.m_radiance_multiplier * m_exposure_multiplier;
+             }
+             else value.set(0.0f);
++        }
++
++        float direction_probability(const float prob_xy, const float theta) const
++        {
++            // At the measure-zero poles, the latitude Jacobian vanishes.
++            // Share a positive numerical Jacobian floor in sampling and evaluation.
++            const float sine = std::max(std::sin(theta), std::numeric_limits<float>::epsilon());
++            return prob_xy * m_probability_scale / sine;
+         }
+ 
+         float compute_pdf(
+@@ -469,13 +479,13 @@
+             assert(m_importance_sampler);
+ 
+             // Compute the probability density of this sample in the importance map.
+-            const size_t x = truncate<size_t>(m_importance_map_width * u);
+-            const size_t y = truncate<size_t>(m_importance_map_height * v);
++            const size_t x = std::min(truncate<size_t>(m_importance_map_width * u), m_importance_map_width - 1);
++            const size_t y = std::min(truncate<size_t>(m_importance_map_height * v), m_importance_map_height - 1);
+             const float prob_xy = m_importance_sampler->get_pdf(x, y);
+             assert(prob_xy >= 0.0f);
+ 
+             // Compute the probability density of the emission direction.
+-            const float pdf = prob_xy > 0.0f ? prob_xy * m_probability_scale / std::sin(theta) : 0.0f;
++            const float pdf = direction_probability(prob_xy, theta);
+             assert(pdf >= 0.0f);
+ 
+             return pdf;
+diff -Naur appleseed/src/appleseed/renderer/modeling/environmentedf/sphericalcoordinates.h APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/sphericalcoordinates.h
+--- appleseed/src/appleseed/renderer/modeling/environmentedf/sphericalcoordinates.h	1970-01-01 00:00:00.000000000 +0000
++++ APPLESEED_BLD/src/appleseed/renderer/modeling/environmentedf/sphericalcoordinates.h	1970-01-01 00:00:00.000000000 +0000
+@@ -34,6 +34,7 @@
+ #include "foundation/math/vector.h"
+ 
+ // Standard headers.
++#include <algorithm>
+ #include <cassert>
+ #include <cmath>
+ 
+@@ -55,13 +56,13 @@
+     const T                         theta_shift,    // arbitrary, in radians
+     const T                         phi_shift);     // arbitrary, in radians
+ 
+-// Convert a given direction from spherical coordinates to [0,1]^2.
++// Convert spherical coordinates to wrapped longitude and clamped latitude in [0,1).
+ template <typename T>
+ void angles_to_unit_square(
+     const T                         theta,          // in [0, Pi]
+     const T                         phi,            // in [-Pi, Pi]
+-    T&                              u,              // in [0, 1]
+-    T&                              v);             // in [0, 1]
++    T&                              u,              // in [0, 1)
++    T&                              v);             // in [0, 1)
+ 
+ // Convert a given direction from [0,1]^2 to spherical coordinates.
+ template <typename T>
+@@ -84,7 +85,8 @@
+ {
+     assert(foundation::is_normalized(v));
+ 
+-    theta = static_cast<T>(std::acos(v[1]));
++    // Retain small polar angles even when the axial component rounds to one.
++    theta = static_cast<T>(std::atan2(std::hypot(v[0], v[2]), v[1]));
+     phi = static_cast<T>(std::atan2(v[2], v[0]));
+ }
+ 
+@@ -133,8 +135,9 @@
+     assert(phi >= -Pi<T>());
+     assert(phi <= Pi<T>());
+ 
+-    u = RcpTwoPi<T>() * (phi + Pi<T>());
+-    v = RcpPi<T>() * theta;
++    // Longitude wraps at the seam; latitude keeps the south-pole texel.
++    u = frac(RcpTwoPi<T>() * (phi + Pi<T>()));
++    v = std::min(RcpPi<T>() * theta, std::nextafter(T(1.0), T(0.0)));
+ }
+ 
+ template <typename T>

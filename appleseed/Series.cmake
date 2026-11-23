@@ -40,6 +40,10 @@ set(APPLESEED_ART_PATCH_FILES
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_emitter_geometry.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_weighted_emitters.patch"
   "${CMAKE_CURRENT_LIST_DIR}/appleseed_emitter_mis.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_participating_media.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_image_output.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_volume_numerics.patch"
+  "${CMAKE_CURRENT_LIST_DIR}/appleseed_volume_environment.patch"
   )
 
 set(APPLESEED_PATCH_STAGE "ART" CACHE STRING
