@@ -100,6 +100,25 @@ For preparing, declaring, and adopting a snapshot, see the
 [maintainer guide](MAINTAINING.md#dependency-lifecycle) and its
 [pugixml walkthrough](MAINTAINING.md#example-pugixml-from-local-snapshot-to-submodule).
 
+## Open CASCADE for the FreeCAD importer
+
+Place the upstream OCCT 8.0.2 source in `occt/OCCT` to include it in the
+BRL-CAD dependency group. Run these commands from the bext source directory.
+
+```sh
+git clone --depth 1 --branch V8_0_2 https://github.com/Open-Cascade-SAS/OCCT.git occt/OCCT
+cmake --preset auto -B build/occt -DCMAKE_BUILD_TYPE=Release
+cmake --build build/occt --config Release
+```
+
+The wrapper builds `TKBRep` and its dependencies. Set
+`-DOCCT_BUILD_TEST_TOOLKITS=ON` to also build the geometry construction
+toolkits for BRL-CAD's `gcv_freecad` test. The build applies the install-layout
+patch to its staged copy of the source. Point BRL-CAD's `BRLCAD_EXT_DIR` at
+the bext build directory. When switching an existing BRL-CAD build from
+a system Open CASCADE package to the bundle, clear any cached
+`OpenCASCADE_DIR`. Use `-DENABLE_OCCT=OFF` to skip the local build.
+
 # Official profiles
 
 The supported configure entry points are:

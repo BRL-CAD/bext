@@ -66,6 +66,7 @@ can be applied without the later art rendering enhancements.
 | `mmesh` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/mmesh.git) |
 | `ncurses` | `USE_OSPRAY` | `install` | `patch` | [repository](https://github.com/BRL-CAD/ncurses) |
 | `netpbm` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/netpbm) |
+| `occt` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/Open-Cascade-SAS/OCCT) |
 | `oidn` | `USE_OSPRAY` | `install` | `ispc`, `onetbb` | [repository](https://github.com/BRL-CAD/oidn) |
 | `onetbb` | `USE_APPLESEED`, `USE_OSPRAY`, `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/oneTBB) |
 | `opencolorio` | `USE_APPLESEED` | `install` | `expat`, `minizip-ng`, `imath`, `patch`, `pystring`, `yaml-cpp`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/OpenColorIO) |

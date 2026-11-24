@@ -464,6 +464,9 @@ add_project(zstd GROUPS "APPLESEED;OSPRAY;BRLCAD")
 # https://github.com/zlib-ng/minizip-ng
 add_project(minizip-ng GROUPS "APPLESEED;BRLCAD")
 
+# OCCT - optional local source for the FreeCAD importer
+add_project(occt GROUPS "BRLCAD")
+
 # LZ4 - lossless compression algorithm
 # https://github.com/lz4/lz4
 add_project(lz4 GROUPS "APPLESEED")
