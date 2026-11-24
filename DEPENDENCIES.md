@@ -42,7 +42,7 @@ can be applied without the later art rendering enhancements.
 | `deflate` | `USE_APPLESEED`, `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/libdeflate) |
 | `eigen` | `USE_BRLCAD`, `USE_APPLESEED` | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/eigen) |
 | `embree` | `USE_APPLESEED`, `USE_OSPRAY` | `install` | `onetbb`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/embree) |
-| `expat` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/libexpat) |
+| `expat` | `USE_APPLESEED`, `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/libexpat) |
 | `flexbison` | `USE_APPLESEED`, `USE_OSPRAY` | `noinstall` | — | [repository](https://github.com/BRL-CAD/winflexbison) |
 | `fmt` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/fmt) |
 | `gdal` | `USE_GDAL` | `install` | `patch`, `png`, `proj`, `sqlite3`, `tiff`, `zlib` | [repository](https://github.com/BRL-CAD/gdal) |
@@ -62,7 +62,7 @@ can be applied without the later art rendering enhancements.
 | `lz4` | `USE_APPLESEED` | `install` | `patch` | [repository](https://github.com/BRL-CAD/lz4) |
 | `m4` | `USE_OSPRAY` | `noinstall` | `bison`, `flex`, `patch` | [repository](https://github.com/BRL-CAD/m4.git) |
 | `manifold` | `USE_BRLCAD` | `install` | `patch`, `clipper2` | [repository](https://github.com/BRL-CAD/manifold.git) |
-| `minizip-ng` | `USE_APPLESEED` | `install` | `patch`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/minizip-ng) |
+| `minizip-ng` | `USE_APPLESEED`, `USE_BRLCAD` | `install` | `patch`, `zlib`, `zstd` | [repository](https://github.com/BRL-CAD/minizip-ng) |
 | `mmesh` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/mmesh.git) |
 | `ncurses` | `USE_OSPRAY` | `install` | `patch` | [repository](https://github.com/BRL-CAD/ncurses) |
 | `netpbm` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/netpbm) |

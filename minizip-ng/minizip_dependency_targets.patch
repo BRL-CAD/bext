@@ -1,6 +1,18 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
+@@ -190,9 +190,8 @@
+     elseif(ZLIB_FOUND AND NOT MZ_FORCE_FETCH_LIBS)
+         message(STATUS "Using ZLIB ${ZLIB_VERSION}")
+ 
+-        list(APPEND MINIZIP_INC ${ZLIB_INCLUDE_DIRS})
+-        list(APPEND MINIZIP_LIB ${ZLIB_LIBRARIES})
+-        list(APPEND MINIZIP_LBD ${ZLIB_LIBRARY_DIRS})
++        # Resolve zlib from the consuming prefix when the bundle is relocated.
++        list(APPEND MINIZIP_LIB ZLIB::ZLIB)
+ 
+         set(PC_PRIVATE_DEPS "zlib")
+         set(ZLIB_COMPAT ON)
 @@ -342,18 +342,19 @@
  if(MZ_ZSTD)
      # Check if zstd is present

@@ -462,7 +462,7 @@ add_project(zstd GROUPS "APPLESEED;OSPRAY;BRLCAD")
 
 # minizip-ng - zip manipulation library written in C
 # https://github.com/zlib-ng/minizip-ng
-add_project(minizip-ng GROUPS "APPLESEED")
+add_project(minizip-ng GROUPS "APPLESEED;BRLCAD")
 
 # LZ4 - lossless compression algorithm
 # https://github.com/lz4/lz4
@@ -491,7 +491,7 @@ add_project(regex GROUPS "BRLCAD")
 
 # expat - library for parsing XML 1.0 Fourth Edition
 # https://github.com/libexpat/libexpat
-add_project(expat GROUPS "APPLESEED")
+add_project(expat GROUPS "APPLESEED;BRLCAD")
 
 # International Components for Unicode
 # https://github.com/unicode-org/icu

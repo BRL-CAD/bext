@@ -4,7 +4,7 @@ bext_enable(MINIZIP_NG)
 if (ENABLE_MINIZIP_NG)
 
   git_submodule_init(minizip-ng CMakeLists.txt
-    PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/minizip_zstd_config.patch"
+    PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/minizip_dependency_targets.patch"
     PATCH_COMMAND_VAR MINIZIP_NG_PATCH_COMMAND)
 
   RegisterDeps(MINIZIP_NG)
@@ -27,6 +27,8 @@ if (ENABLE_MINIZIP_NG)
     -DZLIB_ROOT=$<$<BOOL:${ZLIB_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -Dzstd_ROOT=$<$<BOOL:${ZSTD_TARGET}>:${CMAKE_BUNDLE_INSTALL_PREFIX}>
     -DMZ_LIB_SUFFIX=-ng
+    # FreeCAD uses the unzip compatibility API.
+    -DMZ_COMPAT=ON
     -DMZ_FETCH_LIBS=OFF
     -DMZ_BZIP2=OFF
     -DMZ_ICONV=OFF
