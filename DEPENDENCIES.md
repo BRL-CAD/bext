@@ -96,7 +96,7 @@ can be applied without the later art rendering enhancements.
 | `strclear` | always considered | `noinstall` | `patch` | [repository](https://github.com/BRL-CAD/strclear) |
 | `struetype` | `USE_APPLESEED`, `USE_BRLCAD` | `install` | — | [repository](https://github.com/BRL-CAD/struetype) |
 | `tcl` | `USE_TCL` | `install` | `patch`, `zlib` | [repository](https://github.com/BRL-CAD/tcl.git) |
-| `tiff` | `USE_APPLESEED`, `USE_GDAL` | `install` | `jpeg`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/libtiff) |
+| `tiff` | `USE_APPLESEED`, `USE_BRLCAD`, `USE_GDAL` | `install` | `jpeg`, `patch`, `zlib` | [repository](https://github.com/BRL-CAD/libtiff) |
 | `tinygltf` | `USE_BRLCAD` | `install` | `patch` | [repository](https://github.com/BRL-CAD/tinygltf.git) |
 | `tk` | `USE_TCL` | `install` | `patch`, `tcl` | [repository](https://github.com/BRL-CAD/tk) |
 | `tktable` | `USE_TCL` | `install` | `patch`, `tcl`, `tk` | [repository](https://github.com/BRL-CAD/tktable) |
