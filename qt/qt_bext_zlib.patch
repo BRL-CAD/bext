@@ -1,0 +1,16 @@
+--- a/cmake/FindWrapSystemZLIB.cmake
++++ b/cmake/FindWrapSystemZLIB.cmake
+@@ -16,7 +16,12 @@
+     set(WrapSystemZLIB_FOUND ON)
+ 
+     add_library(WrapSystemZLIB::WrapSystemZLIB INTERFACE IMPORTED)
+-    if(APPLE)
++    if(APPLE AND BEXT_ZLIB_LIBRARY_NAME)
++        # bext's bundled zlib uses prefixed symbols and a matching renamed
++        # library. Keep the relocatable link form while selecting that archive.
++        target_link_libraries(WrapSystemZLIB::WrapSystemZLIB INTERFACE
++                              "-l${BEXT_ZLIB_LIBRARY_NAME}")
++    elseif(APPLE)
+         # On Darwin platforms FindZLIB sets IMPORTED_LOCATION to the absolute path of the library
+         # within the framework. This ends up as an absolute path link flag, which we don't want,
+         # because that makes our .prl files un-relocatable and also breaks iOS simulator_and_device

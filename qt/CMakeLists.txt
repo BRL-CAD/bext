@@ -4,6 +4,7 @@ cad_enable(QT "libqtcad")
 set(QT_EXTRA_PATCHES "" CACHE STRING "Additional patches to apply to bundled Qt6")
 list(PREPEND QT_EXTRA_PATCHES
   "${CMAKE_CURRENT_SOURCE_DIR}/qt_metadata.patch"
+  "${CMAKE_CURRENT_SOURCE_DIR}/qt_bext_zlib.patch"
   "${CMAKE_CURRENT_SOURCE_DIR}/qt_freebsd.patch"
   "${CMAKE_CURRENT_SOURCE_DIR}/qt_framework_headers.patch"
   "${CMAKE_CURRENT_SOURCE_DIR}/qt_CVE-2026-105924.patch")

@@ -57,6 +57,9 @@ list(APPEND QT_CMAKE_OPTS
   "-DJPEG_ROOT=@CMAKE_BUNDLE_INSTALL_PREFIX@"
   "-DSQLite3_ROOT=@CMAKE_BUNDLE_INSTALL_PREFIX@"
 )
+if ("@ZLIB_TARGET@")
+  list(APPEND QT_CMAKE_OPTS "-DBEXT_ZLIB_LIBRARY_NAME=z_brl")
+endif ()
 
 # Qt's Markdown dialect flags are tied to the libmd4c revision it ships.
 list(APPEND CONFIG_EXTRA_OPTS -qt-libmd4c)
