@@ -9,6 +9,10 @@ target_compile_features(bext_supply_chain_fixture PRIVATE cxx_std_17)
 
 include(CTest)
 if(BUILD_TESTING)
+  add_executable(bext_process_tree_fixture
+    "${CMAKE_CURRENT_LIST_DIR}/../tests/ProcessTreeFixture.cpp")
+  target_compile_features(bext_process_tree_fixture PRIVATE cxx_std_17)
+
   add_executable(bext_fingerprint_fixture "${CMAKE_CURRENT_LIST_DIR}/../BextFingerprint.cpp")
   add_executable(bext_ownership_fixture "${CMAKE_CURRENT_LIST_DIR}/../BextOwnership.cpp")
   target_compile_features(bext_fingerprint_fixture PRIVATE cxx_std_17)
@@ -31,6 +35,7 @@ if(BUILD_TESTING)
         --case "${name}"
         --tool "$<TARGET_FILE:bext_supply_chain>"
         --fixture "$<TARGET_FILE:bext_supply_chain_fixture>"
+        --process-tree-fixture "$<TARGET_FILE:bext_process_tree_fixture>"
         --cmake "${CMAKE_COMMAND}"
         --source-root "${CMAKE_CURRENT_LIST_DIR}/../..")
     set_tests_properties("supply-chain-${name}" PROPERTIES LABELS "${label}")
@@ -53,9 +58,11 @@ if(BUILD_TESTING)
       updates-invalid-membership updates-committed-gitlink updates-online-candidates
       updates-tool-failure updates-failed-selection
       manifest-output-scopes manifest-invalid-output manifest-remapping
-      filesystem-remove-retry generate-directory-symlink)
+      filesystem-remove-retry filesystem-process-timeout-tree
+      generate-directory-symlink generate-preserve-on-failure)
     bext_add_supply_chain_test("${name}" "supply-chain-native")
   endforeach()
+  set_tests_properties(supply-chain-filesystem-process-timeout-tree PROPERTIES TIMEOUT 15)
   foreach(name scanner-grype scanner-trivy scanner-mixed-variants)
     bext_add_supply_chain_test("${name}" "supply-chain-scanner")
     set_tests_properties("supply-chain-${name}" PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)

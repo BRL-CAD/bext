@@ -566,10 +566,46 @@ std::vector<std::string> output_names(const std::string &product, const std::str
     product + ".build." + profile + ".cdx.json", product + ".build." + profile + ".cdx.coverage.json"};
 }
 
-void remove_outputs(const fs::path &directory, const std::vector<std::string> &names)
+void publish_outputs(const fs::path &staged, const fs::path &directory,
+  const std::vector<std::string> &names, const fs::path &backup)
 {
-  std::error_code error;
-  for (const std::string &name : names) fs::remove(directory / name, error);
+  if (!fs::create_directory(backup)) throw std::runtime_error("publication backup already exists: " + backup.string());
+  std::vector<std::string> preserved_names;
+  std::vector<std::string> published_names;
+  try {
+    for (const std::string &name : names) {
+      const fs::path destination = directory / name;
+      if (fs::exists(destination)) {
+        fs::rename(destination, backup / name);
+        preserved_names.push_back(name);
+      }
+    }
+    for (const std::string &name : names) {
+      const fs::path publication = staged / name;
+      if (fs::exists(publication)) {
+        fs::rename(publication, directory / name);
+        published_names.push_back(name);
+      }
+    }
+    fs::remove_all(backup);
+    fs::remove(staged);
+  } catch (...) {
+    std::error_code error;
+    for (const std::string &name : published_names) fs::remove(directory / name, error);
+    std::string restore_error;
+    for (const std::string &name : preserved_names) {
+      const fs::path preserved_path = backup / name;
+      fs::rename(preserved_path, directory / name, error);
+      if (error && restore_error.empty()) restore_error = error.message();
+    }
+    fs::remove_all(staged, error);
+    if (!restore_error.empty()) {
+      throw std::runtime_error("unable to restore the previous publication set from " +
+        backup.string() + ": " + restore_error);
+    }
+    fs::remove_all(backup, error);
+    throw;
+  }
 }
 
 
@@ -845,7 +881,6 @@ int vex_generate(int argc, char **argv)
   if (is_within(resolved_path(install_root), resolved_path(output))) throw std::runtime_error("VEX outputs must live outside the installed content tree");
   fs::create_directories(output);
   const std::vector<std::string> names = output_names(product, profile);
-  remove_outputs(output, names);
   Json source = read_json(sbom);
   if (source.value("spdxVersion", "") != "SPDX-2.3") throw std::runtime_error("a canonical SPDX 2.3 source inventory is required");
   std::optional<Json> file_inventory;
@@ -880,19 +915,13 @@ int vex_generate(int argc, char **argv)
     generated.inventory["comment"] = generated.inventory.at("comment").get<std::string>() + " This package view retains file-level checksums and ownership in its original inventory and companion ownership manifest.";
   }
   const std::string nonce = std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-  const fs::path temporary = output / ("vex-native-" + sha256(product + nonce).substr(0, 16));
+  const std::string transaction = sha256(product + nonce).substr(0, 16);
+  const fs::path temporary = output / ("vex-native-" + transaction);
+  const fs::path backup = output / ("vex-backup-" + transaction);
   fs::create_directories(temporary);
   try {
     write_base_outputs(temporary, product, generated, aliases, profile);
-    std::vector<fs::path> publications;
-    for (const fs::directory_entry &entry : fs::directory_iterator(temporary)) publications.push_back(entry.path());
-    std::sort(publications.begin(), publications.end(), [](const fs::path &left, const fs::path &right) {
-      const bool left_vex = left.filename().u8string().find("openvex") != std::string::npos;
-      const bool right_vex = right.filename().u8string().find("openvex") != std::string::npos;
-      return left_vex != right_vex ? left_vex < right_vex : left.filename() < right.filename();
-    });
-    for (const fs::path &publication : publications) fs::rename(publication, output / publication.filename());
-    fs::remove(temporary);
+    publish_outputs(temporary, output, names, backup);
   } catch (...) {
     std::error_code error;
     fs::remove_all(temporary, error);

@@ -17,6 +17,13 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  include <windows.h>
+#endif
+
 namespace bext {
 
 namespace fs = std::filesystem;
@@ -253,9 +260,20 @@ inline void write_text_atomic(const fs::path &path, const std::string &contents)
     std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
     if (!output || !(output << contents)) throw std::runtime_error("unable to write " + temporary.string());
   }
+#ifdef _WIN32
+  if (!MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    const std::error_code error(static_cast<int>(GetLastError()), std::system_category());
+    fs::remove(temporary);
+    throw std::runtime_error("unable to replace " + path.string() + ": " + error.message());
+  }
+#else
   std::error_code error;
-  fs::remove(path, error);
-  fs::rename(temporary, path);
+  fs::rename(temporary, path, error);
+  if (error) {
+    fs::remove(temporary);
+    throw std::runtime_error("unable to replace " + path.string() + ": " + error.message());
+  }
+#endif
 }
 
 inline void write_json_atomic(const fs::path &path, const Json &value)

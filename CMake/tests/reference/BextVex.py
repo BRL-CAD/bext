@@ -399,6 +399,9 @@ def build_inventory(source, manifest, files, product):
     packages = {package['SPDXID']: package for package in result['packages']}
     selected, original_ids, builds = {}, {}, {}
     context = digest({'product': product, 'platform': manifest['platform'], 'files': files})
+    manifest_root = manifest.get('install_root')
+    if manifest_root not in ('install', '.'):
+        raise ValueError('Unsupported component manifest root')
     for record in manifest['packages']:
         component, identifier = record['component'], record['spdx_id']
         output = record.get('output')
@@ -406,7 +409,7 @@ def build_inventory(source, manifest, files, product):
             raise ValueError('Component manifest lacks output scope; re-finalize the build')
         if identifier not in packages:
             raise ValueError(f'Unknown package in component manifest: {identifier}')
-        if output != 'install' or not files.get(component):
+        if (manifest_root == 'install' and output != 'install') or not files.get(component):
             continue
         if identifier in selected:
             raise ValueError(f'Duplicate selected package: {identifier}')
@@ -440,7 +443,7 @@ def build_inventory(source, manifest, files, product):
                        'packages': builds, 'sourceDocument': source['documentNamespace']})
     result['name'] = product + '-build'
     result['documentNamespace'] = 'https://brlcad.org/sbom/build/' + identity
-    result['comment'] = ('Finalized installed-product inventory. Qualified PURLs '
+    result['comment'] = ('Finalized product inventory. Qualified PURLs '
                          'identify built variants; annotations retain upstream identities.')
     result['packages'] = [package for identifier, package in packages.items() if identifier in selected]
     result['relationships'] = [
@@ -538,6 +541,11 @@ def generate(source, manifest, install_root, evidence, aliases, product, author,
         exported.append({'component': component, 'capture': capture,
                          'reviews': entry['reviews'], 'files': artifacts,
                          'appliedReviews': applied_reviews})
+    for component, artifacts in sorted(files.items()):
+        if component not in evidence:
+            exported.append({'component': component, 'capture': None,
+                             'reviews': [], 'files': artifacts,
+                             'appliedReviews': []})
     statements.sort(key=lambda statement: (statement['vulnerability']['name'],
                                             statement['products'][0]['@id']))
     vex = {'@context': 'https://openvex.dev/ns/v0.2.0', 'author': author,

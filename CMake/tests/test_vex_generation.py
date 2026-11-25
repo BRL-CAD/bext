@@ -87,7 +87,8 @@ class VexGenerationTests(unittest.TestCase):
                                    'reviews': [self.review]}}
         self.manifest = {
             'schema': 'https://brlcad.org/schema/bext-component-manifest-v2',
-            'platform': 'fixture', 'files': [{'path': 'lib/libz.so', 'component': 'probe'}],
+            'platform': 'fixture', 'install_root': 'install',
+            'files': [{'path': 'lib/libz.so', 'component': 'probe'}],
             'packages': [{'spdx_id': 'SPDXRef-zlib', 'component': 'probe', 'output': 'install'}],
         }
 
@@ -222,6 +223,26 @@ class VexGenerationTests(unittest.TestCase):
     def test_noinstall_package_is_not_part_of_build_inventory(self):
         self.manifest['packages'][0]['output'] = 'noinstall'
         self.assertFalse(self.run_generation()[0]['packages'])
+
+    def test_package_inventory_includes_noinstall_without_review_evidence(self):
+        artifact = self.install / 'noinstall' / 'bin' / 'probe'
+        artifact.parent.mkdir(parents=True)
+        artifact.write_bytes(b'build tool')
+        self.manifest['install_root'] = '.'
+        self.manifest['files'] = [{'path': 'noinstall/bin/probe', 'component': 'probe'}]
+        self.manifest['packages'][0]['output'] = 'noinstall'
+        inventory, vex, exported, report = generate(
+            self.source_sbom, self.manifest, self.install, {}, {}, 'fixture',
+            'https://example.invalid/')
+        self.assertEqual([package['SPDXID'] for package in inventory['packages']],
+                         ['SPDXRef-zlib'])
+        self.assertIsNone(vex)
+        self.assertEqual(exported['components'], [{
+            'component': 'probe', 'capture': None, 'reviews': [],
+            'files': [{'path': 'noinstall/bin/probe', 'sha256': file_digest(artifact)}],
+            'appliedReviews': [],
+        }])
+        self.assertEqual(report['unreviewedPackages'], ['SPDXRef-zlib'])
 
     def test_downstream_import_verifies_bytes_and_remapped_package(self):
         _, _, exported, _ = self.run_generation()
@@ -375,7 +396,7 @@ class VexGenerationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             read_json(duplicate)
 
-    def test_cli_outputs_formats_and_removes_stale_assertions_on_error(self):
+    def test_cli_outputs_formats_and_preserves_publications_on_error(self):
         output = self.root / 'output'
         source = self.root / 'source.json'
         manifest = self.root / 'manifest.json'
@@ -395,6 +416,7 @@ class VexGenerationTests(unittest.TestCase):
         check_parity(spdx, cdx)
         self.assertEqual(cdx['metadata']['lifecycles'], [{'phase': 'post-build'}])
         self.assertTrue((output / 'bext.openvex.json').exists())
+        published = {path.name: path.read_bytes() for path in output.iterdir() if path.is_file()}
         file_inventory = copy.deepcopy(self.source_sbom)
         file_inventory['packages'][0]['filesAnalyzed'] = True
         file_inventory['files'] = [{'SPDXID': 'SPDXRef-file', 'fileName': './lib/libz.so'}]
@@ -402,7 +424,8 @@ class VexGenerationTests(unittest.TestCase):
         result = subprocess.run(command, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('--package-view', result.stderr)
-        self.assertFalse((output / 'bext.openvex.json').exists())
+        self.assertEqual({path.name: path.read_bytes() for path in output.iterdir() if path.is_file()},
+                         published)
         result = subprocess.run(command + ['--package-view'], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         report = read_json(output / 'bext-vex-report.json')
@@ -415,13 +438,14 @@ class VexGenerationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((output / 'bext.openvex.json').exists())
         check_parity(read_json(output / 'bext.build.spdx.json'), read_json(output / 'bext.build.cdx.json'))
+        published = {path.name: path.read_bytes() for path in output.iterdir() if path.is_file()}
         manifest.write_text(json_text(self.manifest))
         self.catalog['reviews'][0]['status'] = 'invalid'
         self.catalog_path.write_text(json_text(self.catalog))
         result = subprocess.run(command, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertFalse((output / 'bext.openvex.json').exists())
-        self.assertFalse((output / 'bext-vex-evidence.json').exists())
+        self.assertEqual({path.name: path.read_bytes() for path in output.iterdir() if path.is_file()},
+                         published)
 
 
 if __name__ == '__main__':

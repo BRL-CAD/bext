@@ -111,16 +111,36 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
   startup.hStdOutput = output_write;
   startup.hStdError = merge_error ? output_write : error_write;
   PROCESS_INFORMATION process{};
+  HANDLE job = CreateJobObjectW(nullptr, nullptr);
+  JOBOBJECT_EXTENDED_LIMIT_INFORMATION job_limits{};
+  job_limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+  if (!job || !SetInformationJobObject(job, JobObjectExtendedLimitInformation,
+      &job_limits, sizeof(job_limits))) {
+    close_handle(job);
+    close_handle(output_read); close_handle(output_write);
+    close_handle(error_read); close_handle(error_write);
+    throw std::runtime_error("unable to create process job");
+  }
   std::wstring directory = working_directory.empty() ? std::wstring() : working_directory.wstring();
   const BOOL created = CreateProcessW(nullptr, command.data(), nullptr, nullptr, TRUE,
-    CREATE_NO_WINDOW, nullptr, directory.empty() ? nullptr : directory.c_str(), &startup, &process);
-  close_handle(output_write);
-  close_handle(error_write);
+    CREATE_NO_WINDOW | CREATE_SUSPENDED, nullptr, directory.empty() ? nullptr : directory.c_str(), &startup, &process);
   if (!created) {
+    close_handle(job);
+    close_handle(output_write); close_handle(error_write);
     close_handle(output_read);
     close_handle(error_read);
     throw std::runtime_error("unable to start " + arguments.front());
   }
+  if (!AssignProcessToJobObject(job, process.hProcess) || ResumeThread(process.hThread) == static_cast<DWORD>(-1)) {
+    TerminateJobObject(job, 1);
+    CloseHandle(process.hThread); CloseHandle(process.hProcess);
+    close_handle(job);
+    close_handle(output_write); close_handle(error_write);
+    close_handle(output_read); close_handle(error_read);
+    throw std::runtime_error("unable to configure process job");
+  }
+  close_handle(output_write);
+  close_handle(error_write);
   std::string standard_output, standard_error;
   std::thread output_reader([&] { standard_output = read_pipe(output_read, output); });
   std::thread error_reader;
@@ -128,8 +148,9 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
   const DWORD wait = timeout == std::chrono::seconds::zero() ? INFINITE :
     static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
   if (WaitForSingleObject(process.hProcess, wait) == WAIT_TIMEOUT) {
-    TerminateProcess(process.hProcess, 1);
+    TerminateJobObject(job, 1);
     WaitForSingleObject(process.hProcess, INFINITE);
+    close_handle(job);
     output_reader.join();
     if (error_reader.joinable()) error_reader.join();
     CloseHandle(process.hThread); CloseHandle(process.hProcess);
@@ -137,6 +158,7 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
   }
   DWORD exit_code = 1;
   GetExitCodeProcess(process.hProcess, &exit_code);
+  close_handle(job);
   output_reader.join();
   if (error_reader.joinable()) error_reader.join();
   CloseHandle(process.hThread); CloseHandle(process.hProcess);
@@ -183,6 +205,7 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
     throw std::runtime_error("unable to fork process");
   }
   if (!process) {
+    if (setpgid(0, 0)) _exit(127);
     dup2(output_pipe[1], STDOUT_FILENO);
     dup2(merge_error ? output_pipe[1] : error_pipe[1], STDERR_FILENO);
     close(output_pipe[0]); close(output_pipe[1]);
@@ -195,6 +218,13 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
     execvp(command.front(), command.data());
     _exit(127);
   }
+  if (setpgid(process, process) && errno != EACCES && errno != ESRCH) {
+    kill(process, SIGKILL);
+    waitpid(process, nullptr, 0);
+    close(output_pipe[0]); close(output_pipe[1]);
+    if (!merge_error) { close(error_pipe[0]); close(error_pipe[1]); }
+    throw std::runtime_error("unable to create process group");
+  }
   close(output_pipe[1]);
   if (!merge_error) close(error_pipe[1]);
   std::string standard_output, standard_error;
@@ -205,13 +235,14 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
   const auto deadline = std::chrono::steady_clock::now() + timeout;
   while (waitpid(process, &status, WNOHANG) == 0) {
     if (timeout != std::chrono::seconds::zero() && std::chrono::steady_clock::now() >= deadline) {
-      kill(process, SIGKILL); waitpid(process, &status, 0);
+      kill(-process, SIGKILL); waitpid(process, &status, 0);
       output_reader.join();
       if (error_reader.joinable()) error_reader.join();
       throw std::runtime_error(arguments.front() + " exceeded its timeout");
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+  kill(-process, SIGKILL);
   output_reader.join();
   if (error_reader.joinable()) error_reader.join();
   const int exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);

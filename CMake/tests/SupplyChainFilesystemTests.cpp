@@ -9,6 +9,20 @@ namespace bext::tests {
 
 void run_filesystem_test(const std::string &name, Context &context)
 {
+  if (name == "process-timeout-tree") {
+    const fs::path marker = context.root / "descendant-survived";
+    bool timed_out = false;
+    try {
+      context.run({context.process_tree_fixture, "--parent", marker.u8string()}, {},
+        std::chrono::seconds(1));
+    } catch (const std::runtime_error &error) {
+      timed_out = contains(error.what(), "exceeded its timeout");
+    }
+    require(timed_out, "process tree fixture did not time out");
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    require(!fs::exists(marker), "timed-out descendant survived");
+    return;
+  }
   if (name != "remove-retry") throw std::runtime_error("unknown filesystem test " + name);
   const fs::path directory = context.root / "remove-retry";
   const fs::path file = directory / "locked.txt";

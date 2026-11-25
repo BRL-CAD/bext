@@ -18,12 +18,13 @@ using Json = nlohmann::json;
 struct Context {
   std::string tool;
   std::string fixture;
+  std::string process_tree_fixture;
   std::string cmake;
   fs::path source_root;
   fs::path root;
 
-  Context(std::string tool_path, std::string fixture_path, std::string cmake_path,
-    fs::path source_path);
+  Context(std::string tool_path, std::string fixture_path, std::string process_tree_fixture_path,
+    std::string cmake_path, fs::path source_path);
   ~Context();
 
   ProcessResult run(const std::vector<std::string> &arguments,

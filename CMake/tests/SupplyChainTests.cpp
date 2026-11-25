@@ -30,9 +30,10 @@ std::string argument_value(int argc, char **argv, const std::string &name)
   throw std::runtime_error("missing " + name);
 }
 
-Context::Context(std::string tool_path, std::string fixture_path, std::string cmake_path,
-  fs::path source_path) : tool(std::move(tool_path)), fixture(std::move(fixture_path)),
-  cmake(std::move(cmake_path)), source_root(std::move(source_path)), root(temporary_directory())
+Context::Context(std::string tool_path, std::string fixture_path, std::string process_tree_fixture_path,
+  std::string cmake_path, fs::path source_path) : tool(std::move(tool_path)), fixture(std::move(fixture_path)),
+  process_tree_fixture(std::move(process_tree_fixture_path)), cmake(std::move(cmake_path)),
+  source_root(std::move(source_path)), root(temporary_directory())
 {
 }
 
@@ -122,6 +123,7 @@ int main(int argc, char **argv)
     bext::tests::Context context(
       bext::tests::argument_value(argc, argv, "--tool"),
       bext::tests::argument_value(argc, argv, "--fixture"),
+      bext::tests::argument_value(argc, argv, "--process-tree-fixture"),
       bext::tests::argument_value(argc, argv, "--cmake"),
       std::filesystem::u8path(bext::tests::argument_value(argc, argv, "--source-root")));
     if (!name.rfind("scan-", 0)) bext::tests::run_scan_report_test(name.substr(5), context);
