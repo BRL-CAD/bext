@@ -1,3 +1,8 @@
+/*
+ * Published in 2026 by the United States Government.
+ * This work is in the public domain.
+ */
+
 #include "SupplyChainTests.hpp"
 
 #include "../SupplyChain/Support.hpp"
@@ -32,7 +37,7 @@ void run_generation_test(const std::string &name, Context &context)
 
   const fs::path manifest = context.root / "manifest.json";
   write_json(manifest, {{"schema", "https://brlcad.org/schema/bext-component-manifest-v2"},
-    {"platform", "fixture"}, {"files", Json::array({{{"path", artifact_name},
+    {"platform", "fixture"}, {"install_root", "install"}, {"files", Json::array({{{"path", artifact_name},
       {"component", "qt"}}})}, {"packages", Json::array({{{"spdx_id", "SPDXRef-zlib"},
       {"component", "qt"}, {"output", "install"}}})}});
   const fs::path evidence = context.root / "evidence.json";

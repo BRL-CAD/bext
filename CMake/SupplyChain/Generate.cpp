@@ -1,3 +1,8 @@
+/*
+ * Published in 2026 by the United States Government.
+ * This work is in the public domain.
+ */
+
 #include "Process.hpp"
 #include "Commands.hpp"
 #include "Support.hpp"
@@ -241,12 +246,14 @@ Inventory build_inventory(const Json &source, const Json &manifest,
   std::map<std::string, Json *> packages;
   for (Json &package : inventory.document.at("packages")) packages[package.at("SPDXID")] = &package;
   inventory.context = digest({{"product", product}, {"platform", manifest.at("platform")}, {"files", files}});
+  const std::string manifest_root = manifest.at("install_root");
+  if (manifest_root != "install" && manifest_root != ".") throw std::runtime_error("unsupported component manifest root");
   for (const Json &record : manifest.at("packages")) {
     const std::string component = record.at("component"), identifier = record.at("spdx_id");
     const std::string output = record.value("output", "");
     if (output != "install" && output != "noinstall") throw std::runtime_error("component manifest lacks output scope; re-finalize the build");
     if (!packages.count(identifier)) throw std::runtime_error("unknown package in component manifest: " + identifier);
-    if (output != "install" || !files.count(component) || files.at(component).empty()) continue;
+    if ((manifest_root == "install" && output != "install") || !files.count(component) || files.at(component).empty()) continue;
     if (inventory.selected.count(identifier)) throw std::runtime_error("duplicate selected package: " + identifier);
     Json &package = *packages.at(identifier);
     const std::vector<std::string> upstream = package_purls(package);
@@ -272,7 +279,7 @@ Inventory build_inventory(const Json &source, const Json &manifest,
     {"packages", inventory.builds}, {"sourceDocument", source.at("documentNamespace")}});
   inventory.document["name"] = product + "-build";
   inventory.document["documentNamespace"] = "https://brlcad.org/sbom/build/" + inventory.identity;
-  inventory.document["comment"] = "Finalized installed-product inventory. Qualified PURLs identify built variants; annotations retain upstream identities.";
+  inventory.document["comment"] = "Finalized product inventory. Qualified PURLs identify built variants; annotations retain upstream identities.";
   Json selected_packages = Json::array();
   for (const Json &package : inventory.document.at("packages")) if (inventory.selected.count(package.at("SPDXID"))) selected_packages.push_back(package);
   inventory.document["packages"] = selected_packages;
@@ -678,6 +685,11 @@ Generated generate(Json source, const Json &manifest, const fs::path &install_ro
       statements.push_back(statement);
     }
     exported.push_back({{"component", component}, {"capture", capture}, {"reviews", entry.value().at("reviews")}, {"files", artifacts}, {"appliedReviews", applied}});
+  }
+  for (const auto &[component, artifacts] : files) {
+    if (evidence.contains(component)) continue;
+    exported.push_back({{"component", component}, {"capture", nullptr}, {"reviews", Json::array()},
+      {"files", artifacts}, {"appliedReviews", Json::array()}});
   }
   std::sort(statements.begin(), statements.end(), [](const Json &left, const Json &right) {
     return std::make_pair(left.at("vulnerability").at("name").get<std::string>(), left.at("products").front().at("@id").get<std::string>()) <

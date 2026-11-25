@@ -1,3 +1,8 @@
+/*
+ * Published in 2026 by the United States Government.
+ * This work is in the public domain.
+ */
+
 #ifndef BEXT_SUPPLY_CHAIN_MAINTENANCE_HPP
 #define BEXT_SUPPLY_CHAIN_MAINTENANCE_HPP
 

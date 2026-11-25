@@ -655,6 +655,11 @@ get_property(BEXT_PLIEF_EXECUTABLE GLOBAL PROPERTY BEXT_PLIEF_EXECUTABLE)
 
 configure_file("${CMAKE_SOURCE_DIR}/CMake/RefreshSpdx.cmake"
   "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/bext/RefreshSpdx.cmake" COPYONLY)
+file(MAKE_DIRECTORY "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/doc/legal")
+configure_file("${CMAKE_SOURCE_DIR}/CMake/licenses/bext-supply-chain-public-domain.txt"
+  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/doc/legal/bext-supply-chain-public-domain.txt" COPYONLY)
+configure_file("${CMAKE_SOURCE_DIR}/CMake/licenses/nlohmann-json.txt"
+  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/doc/legal/nlohmann-json.txt" COPYONLY)
 
 # Prebuilt consumers need the matching generators and policy fragments without
 # checking out another copy of the dependency sources.
@@ -679,6 +684,11 @@ list(SORT BEXT_INSTALL_EXCLUDE_PATTERNS)
 string(REPLACE ";" "\n" BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT "${BEXT_INSTALL_EXCLUDE_PATTERNS}")
 file(WRITE "${BEXT_INSTALL_EXCLUDE_RULES}" "${BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT}\n")
 set(BEXT_COMPONENT_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-component-manifest.json")
+set(BEXT_NOINSTALL_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-noinstall-manifest.json")
+set(BEXT_PACKAGE_COMPONENT_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-package-component-manifest.json")
+set(BEXT_PACKAGE_SBOM_DIR "${CMAKE_BINARY_DIR}-package-sbom")
+set(BEXT_EMPTY_VEX_EVIDENCE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-empty-vex-evidence.json")
+file(WRITE "${BEXT_EMPTY_VEX_EVIDENCE}" "{\"schemaVersion\":1,\"components\":[]}")
 set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
 set(BEXT_CYCLONEDX_OUTPUT "${CMAKE_BINARY_DIR}/bext.cdx.json")
 set(BEXT_COMPONENT_OWNERSHIP_RULES_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-component-ownership-rules.txt")
@@ -747,6 +757,16 @@ add_custom_target(bext_finalize ${BEXT_FINALIZE_ALL}
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -P ${BEXT_FINALIZE_SCRIPT}
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_INSTALL_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
+    -DBEXT_NOINSTALL_ROOT=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+    -DBEXT_BINARY_ROOT=${CMAKE_BINARY_DIR}
+    -DBEXT_ACTIVE_COMPONENTS=${BEXT_ACTIVE_COMPONENTS_FILE}
+    -DBEXT_COMPONENT_MANIFEST=${BEXT_COMPONENT_MANIFEST}
+    -DBEXT_NOINSTALL_MANIFEST=${BEXT_NOINSTALL_MANIFEST}
+    -DBEXT_PACKAGE_COMPONENT_MANIFEST=${BEXT_PACKAGE_COMPONENT_MANIFEST}
+    -DBEXT_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+    -P ${CMAKE_SOURCE_DIR}/CMake/FinalizePackage.cmake
   COMMAND "$<TARGET_FILE:bext_supply_chain>" vex-generate
     --sbom "${BEXT_SBOM_OUTPUT}" --manifest "${BEXT_COMPONENT_MANIFEST}"
     --install-root "${CMAKE_BUNDLE_INSTALL_PREFIX}"
@@ -755,6 +775,16 @@ add_custom_target(bext_finalize ${BEXT_FINALIZE_ALL}
   COMMAND "${CMAKE_COMMAND}" -E copy_if_different
     "${BEXT_SBOM_OUTPUT}" "${BEXT_CYCLONEDX_OUTPUT}"
     "${CMAKE_BINARY_DIR}/bext-content-stamp" "${CMAKE_INSTALL_PREFIX}"
+  COMMAND "${CMAKE_COMMAND}" -E remove_directory "${BEXT_PACKAGE_SBOM_DIR}"
+  COMMAND "$<TARGET_FILE:bext_supply_chain>" vex-generate
+    --sbom "${BEXT_SBOM_OUTPUT}" --manifest "${BEXT_PACKAGE_COMPONENT_MANIFEST}"
+    --install-root "${CMAKE_INSTALL_PREFIX}"
+    --import-evidence "${BEXT_EMPTY_VEX_EVIDENCE}"
+    --output-dir "${BEXT_PACKAGE_SBOM_DIR}" --aliases "${CMAKE_SOURCE_DIR}"
+    --product bext-package
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory
+    "${BEXT_PACKAGE_SBOM_DIR}" "${CMAKE_INSTALL_PREFIX}"
+  COMMAND "${CMAKE_COMMAND}" -E remove_directory "${BEXT_PACKAGE_SBOM_DIR}"
   DEPENDS ${BEXT_INSTALL_TARGETS} bext_fingerprint bext_ownership bext_supply_chain
   USES_TERMINAL
   VERBATIM

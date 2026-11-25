@@ -435,8 +435,11 @@ in a fresh output tree when removed or changed products could remain installed.
 | `install/` | Libraries, headers, runtime assets, and notices intended for downstream bundling. |
 | `noinstall/` | Build tools and compile-time-only assets; not automatically part of a downstream binary distribution. |
 | `bext-install-manifest.json` | Finalized installed-file classifications and producer-prefix information used by downstream staging. |
+| `bext-noinstall-manifest.json` | Build-only files tracked for the current archive; stale unrecorded files are excluded. |
 | `bext.spdx.json` | Repository dependency inventory for a committed bext revision, including projects outside the active build profile. |
 | `bext.cdx.json` | The same source inventory serialized as CycloneDX 1.6 JSON. |
+| `bext-package.build.spdx.json` | File-level inventory of the reusable bext archive across `install/` and `noinstall/`. |
+| `bext-package.build.cdx.json` | The same archive inventory serialized as CycloneDX 1.6 JSON. |
 
 Wrappers install into their designated prefix using normal `bin`, `lib`,
 `include`, and `share` layout. Copy bundled legal notices into
@@ -963,6 +966,11 @@ prefix receives:
   finalized file hashes, and the decisions established by this build.
 * `bext-vex-report.json`: applied reviews, reviews needing attention,
   components not installed, and packages with no review records.
+* `bext-package.build.spdx.json` and `bext-package.build.cdx.json`: the
+  archive product inventory, including tracked `noinstall` tools and assets.
+* `bext-package-vex-evidence.json`: file hashes and built identities for every
+  archive component. This companion does not replace the install-only review
+  evidence consumed by downstream BRL-CAD builds.
 
 Validate a finalized ownership manifest with the SBOM validation environment:
 
@@ -974,10 +982,11 @@ python3 CMake/ValidateSbom.py \
 Every package record declares `output` as `install` or `noinstall`.
 The schema also accepts `source_spdx_id` for downstream identity remapping.
 
-Canonical source inventories remain unchanged. An installed-product inventory
-excludes `noinstall` tools and packages removed by build selectors, including
-Tcl database packages when those are disabled. It describes bundled artifacts;
-system dependencies require separate provenance and inventory work.
+The install-product inventory excludes `noinstall` tools and packages removed
+by build selectors, including Tcl database packages when those are disabled.
+The package-product inventory covers both tracked output trees and explicitly
+records the native supply-chain tool and its vendored nlohmann JSON dependency.
+System dependencies require separate provenance and inventory work.
 
 Each built package retains its upstream PURL in annotations or properties and
 adds a `bext_build` qualifier to its primary PURL. This qualifier fingerprints

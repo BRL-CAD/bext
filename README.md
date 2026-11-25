@@ -241,12 +241,21 @@ output trees under that prefix:
 * `bext-install-manifest.json` - relative file classifications and the
   platform metadata and producer install prefixes needed by downstream
   staging builds
+* `bext-noinstall-manifest.json` - build-only files recorded by the current
+  build; untracked residue is excluded from release archives
+* `bext-package.build.spdx.json` and `bext-package.build.cdx.json` - the
+  complete packaged bext product, covering both tracked output trees
 
 The normal build finalizes bundled binaries after all dependency install steps.
 It uses `strclear` and, where available, `plief` to remove stale build paths and
 normalize RPATH-bearing files before writing the manifest.  Consumers should
 continue to treat `install/` as read-only and perform their own staging-specific
 path and RPATH edits on copied files.
+
+The existing `bext.build.*` inventory remains install-only for BRL-CAD and
+other redistribution consumers. The separate `bext-package.build.*` inventory
+describes the reusable bext archive itself, including its native build tools
+and incorporated vendored code.
 
 Source, build, and install directories may use symlink aliases.  The manifest's
 `install_prefixes` array records both the requested and physical install roots,

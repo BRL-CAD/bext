@@ -1,3 +1,8 @@
+/*
+ * Published in 2026 by the United States Government.
+ * This work is in the public domain.
+ */
+
 #include "Commands.hpp"
 #include "Support.hpp"
 
@@ -42,8 +47,8 @@ void validate_component_manifest(const Json &manifest)
     throw std::runtime_error("unsupported component manifest schema");
   }
   require_nonempty_string(manifest.at("platform"), "component manifest platform");
-  if (manifest.at("install_root") != "install") {
-    throw std::runtime_error("component manifest install_root must be install");
+  if (manifest.at("install_root") != "install" && manifest.at("install_root") != ".") {
+    throw std::runtime_error("component manifest install_root must be install or .");
   }
   if (manifest.at("generated_by") != "bext" && manifest.at("generated_by") != "brlcad") {
     throw std::runtime_error("component manifest generated_by must be bext or brlcad");

@@ -8,20 +8,35 @@ else()
   set(tool "noinstall/bin/bext_supply_chain")
 endif()
 file(WRITE "${prefix}/${tool}" "")
+string(REGEX REPLACE "^noinstall/" "" tool_relative "${tool}")
+file(WRITE "${prefix}/noinstall/tracked" "tracked")
+file(WRITE "${prefix}/noinstall/unrecorded" "unrecorded")
 set(evidence_files
-  bext-install-manifest.json bext-install-exclude-manifest.json bext-content-stamp
-  bext.spdx.json bext.cdx.json bext-component-manifest.json
+  bext-install-manifest.json bext-noinstall-manifest.json
+  bext-install-exclude-manifest.json bext-content-stamp bext.spdx.json
+  bext.cdx.json bext-component-manifest.json bext-package-component-manifest.json
   bext-vex-evidence.json bext-vex-report.json bext.build.spdx.json
   bext.build.cdx.json bext.build.conan.spdx.json bext.build.conan.cdx.json
-  bext.build.conan.spdx.coverage.json bext.build.conan.cdx.coverage.json)
+  bext.build.conan.spdx.coverage.json bext.build.conan.cdx.coverage.json
+  bext-package-vex-evidence.json bext-package-vex-report.json
+  bext-package.build.spdx.json bext-package.build.cdx.json
+  bext-package.build.conan.spdx.json bext-package.build.conan.cdx.json
+  bext-package.build.conan.spdx.coverage.json
+  bext-package.build.conan.cdx.coverage.json)
 foreach(name IN LISTS evidence_files)
   file(WRITE "${prefix}/${name}" "{}")
 endforeach()
 file(WRITE "${prefix}/bext-install-manifest.json" "{\"files\":[]}")
+file(WRITE "${prefix}/bext-noinstall-manifest.json"
+  "{\"files\":[\"${tool_relative}\",\"tracked\"]}")
 file(WRITE "${prefix}/bext.spdx.json"
   "{\"documentNamespace\":\"https://example.invalid/source\"}")
 file(WRITE "${prefix}/bext-vex-evidence.json"
   "{\"sourceDocument\":\"https://example.invalid/source\",\"buildId\":\"fixture-build\"}")
+file(WRITE "${prefix}/bext-package-vex-evidence.json"
+  "{\"sourceDocument\":\"https://example.invalid/source\",\"buildId\":\"package-build\"}")
+file(WRITE "${prefix}/bext-package-vex-report.json"
+  "{\"vexGenerated\":false,\"buildId\":\"package-build\"}")
 set(archive "${TEST_ROOT}/dependencies.tar.gz")
 
 function(package vex_generated expected_success)
@@ -48,10 +63,13 @@ endfunction()
 package(false TRUE)
 read_archive(members)
 foreach(name bext-vex-evidence.json bext.build.cdx.json bext-component-manifest.json
-    bext.spdx.json bext.cdx.json bext-install-exclude-manifest.json bext-content-stamp)
+    bext.spdx.json bext.cdx.json bext-install-exclude-manifest.json bext-content-stamp
+    bext-package.build.spdx.json bext-package-component-manifest.json)
   bext_test_require_contains("${members}" "${name}\n" "Dependency archive")
 endforeach()
 bext_test_require_not_contains("${members}" "bext.openvex.json" "Unreviewed dependency archive")
+bext_test_require_contains("${members}" "noinstall/tracked\n" "Recorded noinstall output")
+bext_test_require_not_contains("${members}" "noinstall/unrecorded" "Unrecorded noinstall output")
 
 package(true FALSE)
 if(EXISTS "${archive}")

@@ -230,6 +230,60 @@ foreach(subcomponent ${subcomponents})
   list(APPEND components "${project}|${subcomponent}|${url}|${sha}|${name}|${spdx_id}|CHILD|${parent_id}")
 endforeach()
 
+# The release archive contains the native supply-chain tool in addition to
+# third-party projects.  Model that first-party tool and its incorporated JSON
+# implementation explicitly so archive-level inventories remain complete.
+set(tool_project bext-supply-chain)
+set(tool_path CMake/SupplyChain)
+set(tool_id SPDXRef-Package-bext-supply-chain)
+set(tool_url https://github.com/BRL-CAD/bext)
+list(APPEND components
+  "${tool_project}|${tool_path}|${tool_url}|${bext_commit}|bext supply-chain tools|${tool_id}|TOP|NONE")
+_bext_inventory_set("${tool_project}" OUTPUT noinstall)
+_bext_inventory_set("${tool_project}" GROUPS "always considered")
+_bext_inventory_set("${tool_project}" DEPS nlohmann-json)
+_bext_inventory_set("${tool_path}" SBOM_VERSION "${bext_revision}")
+_bext_inventory_set("${tool_path}" SBOM_DOWNLOAD_LOCATION
+  "https://github.com/BRL-CAD/bext/archive/${bext_commit}.tar.gz")
+_bext_inventory_set("${tool_path}" SBOM_PURL
+  "pkg:github/BRL-CAD/bext@${bext_commit}#CMake/SupplyChain")
+_bext_inventory_set("${tool_path}" SBOM_LICENSE LicenseRef-Public-Domain)
+_bext_inventory_set("${tool_path}" SBOM_LICENSE_CONCLUDED LicenseRef-Public-Domain)
+_bext_inventory_set("${tool_path}" SBOM_LICENSE_NAME "Public domain")
+_bext_inventory_set("${tool_path}" SBOM_LICENSE_FILE
+  "@/CMake/licenses/bext-supply-chain-public-domain.txt")
+_bext_inventory_set("${tool_path}" SBOM_COPYRIGHT_TEXT
+  "Published in 2026 by the United States Government")
+_bext_inventory_set("${tool_path}" SBOM_PURPOSE APPLICATION)
+_bext_inventory_set("${tool_path}" SBOM_SCOPE BUILD)
+_bext_inventory_set("${tool_path}" SBOM_SOURCE_INFO
+  "Native supply-chain tooling maintained in the bext repository")
+_bext_set_package_alias("${tool_project}" "${tool_id}")
+
+set(json_project nlohmann-json)
+set(json_path CMake/json.hpp)
+set(json_id SPDXRef-Package-nlohmann-json)
+set(json_source_hash 853b2eb3bf7632c949f4a2dd6fb8a629c5ff25cc0059d29c7d21915dc719487f)
+list(APPEND components
+  "${json_project}|${json_path}|https://github.com/nlohmann/json|${json_source_hash}|JSON for Modern C++|${json_id}|TOP|NONE")
+_bext_inventory_set("${json_project}" OUTPUT noinstall)
+_bext_inventory_set("${json_project}" GROUPS "always considered")
+_bext_inventory_set("${json_path}" SBOM_VERSION 3.11.3)
+_bext_inventory_set("${json_path}" SBOM_DOWNLOAD_LOCATION
+  "https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp")
+_bext_inventory_set("${json_path}" SBOM_PURL "pkg:github/nlohmann/json@3.11.3")
+_bext_inventory_set("${json_path}" SBOM_LICENSE MIT)
+_bext_inventory_set("${json_path}" SBOM_LICENSE_CONCLUDED MIT)
+_bext_inventory_set("${json_path}" SBOM_LICENSE_FILE
+  "@/CMake/licenses/nlohmann-json.txt")
+_bext_inventory_set("${json_path}" SBOM_COPYRIGHT_TEXT
+  "Copyright (c) 2013-2022 Niels Lohmann")
+_bext_inventory_set("${json_path}" SBOM_PURPOSE LIBRARY)
+_bext_inventory_set("${json_path}" SBOM_SCOPE BUILD)
+_bext_inventory_set("${json_path}" SBOM_SOURCE_INFO
+  "Vendored single-header nlohmann/json 3.11.3 used by the bext supply-chain tools")
+_bext_set_package_alias("${json_project}" "${json_id}")
+
 string(SHA256 namespace_nonce "${bext_revision}|${components}")
 
 get_filename_component(sbom_dir "${BEXT_SBOM_OUTPUT}" DIRECTORY)
@@ -332,6 +386,7 @@ foreach(component ${components})
   bext_inventory_get(license_comment "${path}" SBOM_LICENSE_COMMENT)
   bext_inventory_get(purpose "${path}" SBOM_PURPOSE)
   bext_inventory_get(scope "${path}" SBOM_SCOPE)
+  bext_inventory_get(source_info "${path}" SBOM_SOURCE_INFO)
   if (NOT version)
     set(version "${sha}")
   endif()
@@ -368,7 +423,9 @@ foreach(component ${components})
       string(APPEND download_location "/archive/${sha}.tar.gz")
     endif()
   endif()
-  if (component_kind STREQUAL "CHILD")
+  if(source_info)
+    # Explicit source descriptions cover vendored and first-party components.
+  elseif (component_kind STREQUAL "CHILD")
     bext_inventory_get(parent_path "${path}" SBOM_PARENT)
     bext_inventory_get(component_path "${path}" SBOM_COMPONENT)
     if(upstream_url)

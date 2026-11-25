@@ -31,6 +31,10 @@ class DependencyMetadataTests(unittest.TestCase):
                      'GenerateSbom.cmake', 'ValidateSbom.cmake',
                      'BextSbomJson.cmake', 'BextCycloneDx.cmake'):
             shutil.copyfile(MODULE / name, modules / name)
+        licenses = modules / 'licenses'
+        licenses.mkdir()
+        for name in ('bext-supply-chain-public-domain.txt', 'nlohmann-json.txt'):
+            shutil.copyfile(MODULE / 'licenses' / name, licenses / name)
         (self.source / 'CMakeLists.txt').write_text('add_project(probe GROUPS "BRLCAD;APPLESEED")\n')
         (self.source / '.gitmodules').write_text(
             '[submodule "probe/source"]\n\tpath = probe/source\n'

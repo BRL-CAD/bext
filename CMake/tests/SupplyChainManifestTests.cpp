@@ -1,3 +1,8 @@
+/*
+ * Published in 2026 by the United States Government.
+ * This work is in the public domain.
+ */
+
 #include "SupplyChainTests.hpp"
 
 namespace bext::tests {
@@ -29,6 +34,8 @@ void run_component_manifest_test(const std::string &name, Context &context)
       document["packages"][0]["output"] = output;
       require_success(validate(context, document, output), "component manifest " + output + " scope");
     }
+    Json package = manifest(); package["install_root"] = ".";
+    require_success(validate(context, package, "package-root"), "package component manifest root");
     return;
   }
   if (name == "invalid-output") {
