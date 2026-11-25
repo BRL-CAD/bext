@@ -172,16 +172,26 @@ std::map<std::string, std::vector<Json>> installed_files(const Json &manifest, c
   }
   std::vector<Json> entries = manifest.at("files").get<std::vector<Json>>();
   std::sort(entries.begin(), entries.end(), [](const Json &left, const Json &right) { return left.at("path") < right.at("path"); });
-  struct Work { std::string name; std::string component; fs::path path; };
+  struct Work { std::string name; std::string component; fs::path path; bool symlink; };
+  const fs::path resolved_root = resolved_path(root);
   std::set<std::string> names;
   std::vector<Work> work;
   work.reserve(entries.size());
   for (const Json &entry : entries) {
     const std::string name = relative_name(entry.at("path"));
     if (!names.insert(name).second) throw std::runtime_error("duplicate installed artifact: " + name);
-    const fs::path path = inside(root, name);
-    if (!fs::is_regular_file(path)) throw std::runtime_error("finalized artifact is missing: " + name);
-    work.push_back({name, entry.at("component"), path});
+    const fs::path path = resolved_root / fs::u8path(name);
+    const fs::file_status status = fs::symlink_status(path);
+    const bool symlink = fs::is_symlink(status);
+    if ((!symlink && !fs::is_regular_file(status)) || (symlink && !fs::exists(path))) {
+      throw std::runtime_error("finalized artifact is missing: " + name);
+    }
+    const fs::path target = resolved_path(path);
+    if (!is_within(resolved_root, target)) throw std::runtime_error("finalized artifact escapes its root: " + name);
+    if (symlink && !fs::is_regular_file(target) && !fs::is_directory(target)) {
+      throw std::runtime_error("finalized artifact has an unsupported symlink target: " + name);
+    }
+    work.push_back({name, entry.at("component"), path, symlink});
   }
   std::vector<Json> records(work.size());
   std::atomic<std::size_t> next{0};
@@ -195,8 +205,10 @@ std::map<std::string, std::vector<Json>> installed_files(const Json &manifest, c
       const std::size_t index = next.fetch_add(1);
       if (index >= work.size()) return;
       try {
-        Json record = {{"path", work[index].name}, {"sha256", file_sha256(work[index].path)}};
-        if (fs::is_symlink(fs::symlink_status(work[index].path))) record["linkTarget"] = fs::relative(resolved_path(work[index].path), resolved_path(root)).generic_string();
+        const Work &item = work[index];
+        Json record = {{"path", item.name},
+          {"sha256", item.symlink ? sha256(fs::read_symlink(item.path).u8string()) : file_sha256(item.path)}};
+        if (item.symlink) record["linkTarget"] = fs::relative(resolved_path(item.path), resolved_root).generic_string();
         records[index] = record;
       } catch (const std::exception &exception) {
         std::lock_guard<std::mutex> lock(error_mutex);

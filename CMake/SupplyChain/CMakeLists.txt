@@ -16,6 +16,7 @@ if(BUILD_TESTING)
 
   add_executable(bext_supply_chain_tests
     "${CMAKE_CURRENT_LIST_DIR}/../tests/SupplyChainFilesystemTests.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../tests/SupplyChainGenerateTests.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../tests/SupplyChainManifestTests.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../tests/SupplyChainScannerTests.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../tests/SupplyChainScanTests.cpp"
@@ -52,7 +53,7 @@ if(BUILD_TESTING)
       updates-invalid-membership updates-committed-gitlink updates-online-candidates
       updates-tool-failure updates-failed-selection
       manifest-output-scopes manifest-invalid-output manifest-remapping
-      filesystem-remove-retry)
+      filesystem-remove-retry generate-directory-symlink)
     bext_add_supply_chain_test("${name}" "supply-chain-native")
   endforeach()
   foreach(name scanner-grype scanner-trivy scanner-mixed-variants)

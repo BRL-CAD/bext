@@ -128,6 +128,7 @@ int main(int argc, char **argv)
     else if (!name.rfind("updates-", 0)) bext::tests::run_dependency_update_test(name.substr(8), context);
     else if (!name.rfind("manifest-", 0)) bext::tests::run_component_manifest_test(name.substr(9), context);
     else if (!name.rfind("filesystem-", 0)) bext::tests::run_filesystem_test(name.substr(11), context);
+    else if (!name.rfind("generate-", 0)) bext::tests::run_generation_test(name.substr(9), context);
     else if (!name.rfind("scanner-", 0)) return bext::tests::run_vex_scanner_test(name.substr(8), context);
     else throw std::runtime_error("unknown test case " + name);
     std::cout << "Passed " << name << '\n';

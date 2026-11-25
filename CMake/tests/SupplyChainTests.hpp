@@ -48,6 +48,7 @@ void run_scan_report_test(const std::string &name, Context &context);
 void run_dependency_update_test(const std::string &name, Context &context);
 void run_component_manifest_test(const std::string &name, Context &context);
 void run_filesystem_test(const std::string &name, Context &context);
+void run_generation_test(const std::string &name, Context &context);
 int run_vex_scanner_test(const std::string &name, Context &context);
 
 }
