@@ -16,6 +16,27 @@ workaround to Tcl 8.6.15's `Tcl_NewObjectInstance` behavior; earlier Itcl 4
 releases fail when Iwidgets classes are loaded after Tk.  A newer Tcl release
 does not by itself raise the complete system-stack requirement.
 
+Documentation
+-------------
+
+BEXT_TCL_ENABLE_DOCS controls building and installing manuals for the bundled
+Tcl/Tk stack.  It defaults to OFF.  Configure with
+-DBEXT_TCL_ENABLE_DOCS=ON to include Tcl, its selected bundled packages
+(including Itcl, Thread, and the optional database packages), Tk, Itk, and
+Tkhtml manuals.  The same option applies on Unix-like platforms and Windows;
+Windows uses each package's native documentation targets and available
+sources.  Iwidgets and Tktable currently have no manual-install targets in
+our bundled CMake builds.  Runtime Tcl scripts, package metadata, and license
+notices are installed independently of this setting.  System packages are
+unaffected.
+
+Bext applies documentation-suppression patches only when the option is OFF.
+Changing the option invalidates the affected staged source builds, so the
+next build uses the corresponding upstream or patched install rules.  As
+with other install options, disabling it does not remove manuals already
+present in an existing output prefix; use a clean prefix when checking the
+installed file set.
+
 zlib selection
 --------------
 

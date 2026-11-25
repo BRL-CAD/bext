@@ -85,3 +85,240 @@
  !if $(SYMBOLS)
  install:    install-pdbs
  !endif
+--- a/pkgs/itcl4.3.7/Makefile.in
++++ b/pkgs/itcl4.3.7/Makefile.in
+@@ -197,7 +197,7 @@
+ # for the BINARIES that you specified above have already been done.
+ #========================================================================
+ 
+-all: binaries libraries doc
++all: binaries libraries
+ 
+ #========================================================================
+ # The binaries target builds executable programs, Windows .dll's, unix
+@@ -218,7 +218,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+--- a/pkgs/sqlite3.53.0/Makefile.in
++++ b/pkgs/sqlite3.53.0/Makefile.in
+@@ -190,7 +190,7 @@
+ # for the BINARIES that you specified above have already been done.
+ #========================================================================
+ 
+-all: binaries libraries doc
++all: binaries libraries
+ 
+ #========================================================================
+ # The binaries target builds executable programs, Windows .dll's, unix
+@@ -215,7 +215,7 @@
+ 	@echo "        xml2nroff sample.xml > sample.n"
+ 	@echo "        xml2html sample.xml > sample.html"
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+--- a/pkgs/tdbc1.1.13/Makefile.in
++++ b/pkgs/tdbc1.1.13/Makefile.in
+@@ -192,7 +192,7 @@
+ # for the BINARIES that you specified above have already been done.
+ #========================================================================
+ 
+-all: binaries libraries doc
++all: binaries libraries
+ 
+ #========================================================================
+ # The binaries target builds executable programs, Windows .dll's, unix
+@@ -213,7 +213,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+--- a/pkgs/tdbcmysql1.1.13/Makefile.in
++++ b/pkgs/tdbcmysql1.1.13/Makefile.in
+@@ -200,7 +200,7 @@
+ # for the BINARIES that you specified above have already been done.
+ #========================================================================
+ 
+-all: binaries libraries doc
++all: binaries libraries
+ 
+ #========================================================================
+ # The binaries target builds executable programs, Windows .dll's, unix
+@@ -221,7 +221,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+--- a/pkgs/tdbcodbc1.1.13/Makefile.in
++++ b/pkgs/tdbcodbc1.1.13/Makefile.in
+@@ -200,7 +200,7 @@
+ # for the BINARIES that you specified above have already been done.
+ #========================================================================
+ 
+-all: binaries libraries doc
++all: binaries libraries
+ 
+ #========================================================================
+ # The binaries target builds executable programs, Windows .dll's, unix
+@@ -221,7 +221,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+--- a/pkgs/tdbcpostgres1.1.13/Makefile.in
++++ b/pkgs/tdbcpostgres1.1.13/Makefile.in
+@@ -200,7 +200,7 @@
+ # for the BINARIES that you specified above have already been done.
+ #========================================================================
+ 
+-all: binaries libraries doc
++all: binaries libraries
+ 
+ #========================================================================
+ # The binaries target builds executable programs, Windows .dll's, unix
+@@ -221,7 +221,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+--- a/pkgs/tdbcsqlite3-1.1.13/Makefile.in
++++ b/pkgs/tdbcsqlite3-1.1.13/Makefile.in
+@@ -200,7 +200,7 @@
+ # for the BINARIES that you specified above have already been done.
+ #========================================================================
+ 
+-all: binaries libraries doc
++all: binaries libraries
+ 
+ #========================================================================
+ # The binaries target builds executable programs, Windows .dll's, unix
+@@ -221,7 +221,7 @@
+ 
+ doc:
+ 
+-install: all install-tm install-doc
++install: all install-tm
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+--- a/pkgs/thread2.8.13/Makefile.in
++++ b/pkgs/thread2.8.13/Makefile.in
+@@ -192,7 +192,7 @@
+ # for the BINARIES that you specified above have already been done.
+ #========================================================================
+ 
+-all: binaries libraries doc
++all: binaries libraries
+ 
+ #========================================================================
+ # The binaries target builds executable programs, Windows .dll's, unix
+@@ -213,7 +213,7 @@
+ 
+ doc:
+ 
+-install: all install-binaries install-libraries install-doc
++install: all install-binaries install-libraries
+ 
+ install-binaries: binaries install-lib-binaries install-bin-binaries
+ 
+--- a/pkgs/sqlite3.53.0/win/makefile.vc
++++ b/pkgs/sqlite3.53.0/win/makefile.vc
+@@ -63,7 +63,7 @@
+ 	@echo } >> $(OUT_DIR)\pkgIndex.tcl
+ 
+ # Install the manpage though on Windows, doubt it does much good
+-install:    default-install-docs-n
++install:
+ 
+ # Explicit dependency rules
+ $(GENERICDIR)\tclsqlite3.c : $(TMP_DIR)\sqlite3Uuid.h
+--- a/pkgs/tdbc1.1.13/win/makefile.vc
++++ b/pkgs/tdbc1.1.13/win/makefile.vc
+@@ -104,7 +104,7 @@
+ 
+ # TDBC has additional installation in addition to that provided by
+ # the default installation targets.
+-install: default-install-docs-n
++install:
+ default-install-libraries: install-tdbc-extras
+ 
+ install-tdbc-extras: $(OUT_DIR)\tdbcConfig.sh
+--- a/pkgs/tdbcmysql1.1.13/win/makefile.vc
++++ b/pkgs/tdbcmysql1.1.13/win/makefile.vc
+@@ -87,7 +87,7 @@
+ !include "$(_RULESDIR)\targets.vc"
+ 
+ # Additional default actions for install
+-install: default-install-docs-n
++install:
+ 
+ # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
+ # all replacements below so define our own target.
+--- a/pkgs/tdbcodbc1.1.13/win/makefile.vc
++++ b/pkgs/tdbcodbc1.1.13/win/makefile.vc
+@@ -89,7 +89,7 @@
+ !include "$(_RULESDIR)\targets.vc"
+ 
+ # Additional default actions for install
+-install: default-install-docs-n
++install:
+ 
+ # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
+ # all replacements below so define our own target.
+--- a/pkgs/tdbcpostgres1.1.13/win/makefile.vc
++++ b/pkgs/tdbcpostgres1.1.13/win/makefile.vc
+@@ -87,7 +87,7 @@
+ !include "$(_RULESDIR)\targets.vc"
+ 
+ # Additional default actions for install
+-install: default-install-docs-n
++install:
+ 
+ # The TIP 477 generation of pkgIndex.tcl from pkgIndex.tcl.in does not include
+ # all replacements below so define our own target.
+--- a/pkgs/tdbcsqlite3-1.1.13/win/makefile.vc
++++ b/pkgs/tdbcsqlite3-1.1.13/win/makefile.vc
+@@ -26,7 +26,7 @@
+ $(PROJECT):
+ 	@echo "This is a pure Tcl module and does not require a build step. Do a nmake install to install"
+ setup: default-setup
+-install: install-tm default-install-docs-n
++install: install-tm
+ clean: default-clean
+ realclean: hose
+ hose: default-hose
+--- a/pkgs/thread2.8.13/win/makefile.vc
++++ b/pkgs/thread2.8.13/win/makefile.vc
+@@ -48,7 +48,7 @@
+ 
+ !include "$(_RULESDIR)\targets.vc"
+ 
+-install:    default-install-docs-html
++install:
+ pkgindex:   default-pkgindex-tea
+ 
+ $(ROOT)\manifest.uuid:

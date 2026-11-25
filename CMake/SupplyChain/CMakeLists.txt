@@ -61,6 +61,7 @@ if(BUILD_TESTING)
   endforeach()
   bext_add_cmake_test(appleseed-stages TestAppleseedStages.cmake)
   bext_add_cmake_test(finalize-ownership TestFinalizeOwnership.cmake)
+  bext_add_cmake_test(manpage-ownership TestManpageOwnership.cmake)
   bext_add_cmake_test(package-dependencies TestPackageDependencies.cmake)
   bext_add_cmake_test(spdx-refresh TestSpdxRefresh.cmake)
 

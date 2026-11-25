@@ -11,7 +11,7 @@
       "status": "not_affected",
       "scope": "component",
       "impactStatement": "The SQLite Tcl extension embeds the maintained engine and Tcl binding. It does not compile the SQLite command-line shell or its .recover command handler.",
-      "reviewedAt": "2026-11-06T00:00:00Z",
+      "reviewedAt": "2026-11-09T21:47:33Z",
       "references": [
         "https://nvd.nist.gov/vuln/detail/CVE-2026-119586",
         "https://sqlite.org/recovery.html"
@@ -22,10 +22,10 @@
           "sqlite3/sqlite3": "b7dd4ceb2815cb1432775c2844fe3d3136e90c23"
         },
         "inputs": {
-          "tcl/CMakeLists.txt": "1aaed9ebc83b21573c1fe0e81813a9afde4f810f496ec9ce8ab5c383654f8572",
+          "tcl/CMakeLists.txt": "aa89380681762fc09181a5ab068ed153f4489d466f81970fd585d64f11b42df0",
           "tcl/tcl_sqlite3.cmake.in": "8e09616cd41a48a97ed536432fd1d9a27d13f3b9d8b22afa2e7ad9c18f4fcdca",
           "tcl/tcl-z_brl.patch": "6779f42eadfd7fa6882158f3ae4a11d1af798a6bfdbcccbdafd79811d57d5fce",
-          "tcl/tcl_disable_docs.patch": "f0581d99e226869ff1bd6bb34aa60d9f809883cefe5b554ce71dc8d8c8ab37bc",
+          "tcl/tcl_disable_docs.patch": "591d5a708efb41fad8ec2fb0a288a33d871c9c60ebe33ea52719df8f76cb6df1",
           "tcl/tcl_incremental_install.patch": "77126f2c4ae5d69daea0e66f2caa37ee60a60a0b80459c694f0d250ed4140c14",
           "tcl/tcl_relocatable_config.patch": "c4e17a80194beb39a98aacdd13bbbbd9be039af0d81fb10022842077354f6938",
           "tcl/tcl_unix_build.patch": "7c278d1403917330db17fc323420c55ba6e3b598231e9b1bfc893c81287735a0",
@@ -33,7 +33,7 @@
           "sqlite3/sqlite3/sqlite3.c": "0c657666d819f261cc4007526ad57e1669de9949df7a8ea847aa284a2bf0ee52",
           "sqlite3/sqlite3/sqlite3.h": "d6c84557261893439b341d2e6c35187ae3ea24fbfd843ad94616f72d89242b8c",
           "sqlite3/sqlite3/sqlite3ext.h": "48963abfefb41ac329ef9d706acb5eadba952a99a748285c9ded6b5e0942721b",
-          "tcl/BuildSettings.cmake": "765ef934ed2f5de7bd0e3ed02f2658d9f8091d47e6c98a884e125c5d3e593361"
+          "tcl/BuildSettings.cmake": "466b61e44ddf0d3f7ca17d776d1475a4db9a1eb0853d1bad463b460b8de8937e"
         },
         "requiredInputs": [
           "tcl/CMakeLists.txt",
