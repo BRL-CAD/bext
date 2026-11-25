@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "poissonrecon/PoissonRecon",
+      "kind": "manual",
+      "reason": "Upstream Git tags stop at older code versions; updates require a reviewed snapshot or branch policy."
+    }
+  ]
+}

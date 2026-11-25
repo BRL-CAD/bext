@@ -7,6 +7,8 @@ bext_enable(JPEG)
 
 if (ENABLE_JPEG)
 
+  bext_install_exclude("(^|/)(bin|libexec)/(cjpeg|djpeg|jpegtran|rdjpgcom|tjbench|wrjpgcom)([.]exe)?$")
+
   git_submodule_init(libjpeg-turbo CMakeLists.txt)
 
   RegisterDeps(JPEG)

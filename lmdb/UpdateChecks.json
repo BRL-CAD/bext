@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "lmdb/lmdb",
+      "versioning": "regex:^LMDB_(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$"
+    }
+  ]
+}

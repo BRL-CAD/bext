@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.26)
+
+function(bext_test_reset directory)
+  file(REMOVE_RECURSE "${directory}")
+  file(MAKE_DIRECTORY "${directory}")
+endfunction()
+
+function(bext_test_require_contains content expected message_text)
+  string(FIND "${content}" "${expected}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "${message_text}: missing '${expected}'")
+  endif()
+endfunction()
+
+function(bext_test_require_not_contains content unexpected message_text)
+  string(FIND "${content}" "${unexpected}" position)
+  if(NOT position EQUAL -1)
+    message(FATAL_ERROR "${message_text}: found '${unexpected}'")
+  endif()
+endfunction()

@@ -1,3 +1,32 @@
+# Prefer system tools: building the Unix variants requires an Autotools toolchain.
+if (ENABLE_ALL)
+  if (NOT DEFINED ENABLE_BISON)
+    set(ENABLE_BISON ON)
+  endif (NOT DEFINED ENABLE_BISON)
+endif (ENABLE_ALL)
+
+if (NOT ENABLE_FLEX)
+  find_package(FLEX 2.6)
+
+  if (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
+    set(ENABLE_FLEX ON)
+  endif (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
+endif (NOT ENABLE_FLEX)
+
+if (NOT ENABLE_BISON)
+  find_package(BISON 3.0)
+
+  if (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
+    set(ENABLE_BISON ON)
+  endif (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
+endif (NOT ENABLE_BISON)
+
+# Leave automatically discovered system tools uncached, so a later configure
+# can build the local tools if those system installations disappear.
+if (NOT ENABLE_FLEX AND NOT ENABLE_BISON)
+  return()
+endif ()
+
 if (WIN32)
   # With winflexbison do all or nothing
   if (ENABLE_FLEX OR ENABLE_BISON)

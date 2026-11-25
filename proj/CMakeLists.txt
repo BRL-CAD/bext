@@ -7,6 +7,8 @@ bext_enable(PROJ)
 
 if (ENABLE_PROJ)
 
+  bext_install_exclude("(^|/)(bin|libexec)/(cct|cs2cs|geod|gie|invgeod|invproj|proj|projinfo)([.]exe)?$")
+
   set(PROJ_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/proj.patch")
   if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     list(APPEND PROJ_PATCH_FILES

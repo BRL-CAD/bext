@@ -30,6 +30,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build native supply-chain tools
+        run: |
+          cmake -S CMake/SupplyChain -B "$RUNNER_TEMP/supply-chain" -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$RUNNER_TEMP/supply-chain" --parallel 2
+          echo "BEXT_SUPPLY_CHAIN_TOOL=$RUNNER_TEMP/supply-chain/bext_supply_chain" >> "$GITHUB_ENV"
+          echo "BEXT_TEST_SUPPLY_CHAIN=$RUNNER_TEMP/supply-chain/bext_supply_chain" >> "$GITHUB_ENV"
+          echo "BEXT_SUPPLY_CHAIN_FIXTURE=$RUNNER_TEMP/supply-chain/bext_supply_chain_fixture" >> "$GITHUB_ENV"
+
+      - name: Run native supply-chain tests
+        run: ctest --test-dir "$RUNNER_TEMP/supply-chain" --output-on-failure -L supply-chain-native
+
+      - name: Install SBOM validators
+        run: |
+          python3 -m venv "$RUNNER_TEMP/sbom-tools"
+          "$RUNNER_TEMP/sbom-tools/bin/python" -m pip install -r CMake/sbom-requirements.txt
+          echo "$RUNNER_TEMP/sbom-tools/bin" >> "$GITHUB_PATH"
+
       - name: Validate build scheduling and working-tree cleanup
         run: python3 CMake/tests/test_release_build.py -v
 
@@ -39,17 +56,46 @@ jobs:
       - name: Validate committed and staged dependency metadata
         run: python3 CMake/tests/test_dependency_metadata.py -v
 
+      - name: Validate inventories with optional checkouts absent or partial
+        run: python3 CMake/tests/test_source_inventory_checkouts.py -v
+
+      - name: Test dependency-local regressions
+        run: python3 CMake/tests/test_dependency_regressions.py -v
+
+      - name: Validate SBOM formats and advisory projections
+        run: python3 CMake/tests/test_sbom_formats.py -v
+
+      - name: Validate VEX evidence and generation
+        run: python3 CMake/tests/test_vex_generation.py -v
+
       - name: Validate dependency metadata and documentation
         run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_DOC_MODE=CHECK -P CMake/GenerateDependencyDocs.cmake
 
-      - name: Generate SPDX SBOM
-        run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_SBOM_OUTPUT="$RUNNER_TEMP/bext.spdx.json" -P CMake/GenerateSbom.cmake
+      - name: Generate source SBOMs
+        run: cmake -DBEXT_SOURCE_DIR="$GITHUB_WORKSPACE" -DBEXT_SBOM_OUTPUT="$RUNNER_TEMP/bext.spdx.json" -DBEXT_CYCLONEDX_OUTPUT="$RUNNER_TEMP/bext.cdx.json" -P CMake/TestSbom.cmake
 
-      - name: Upload SPDX SBOM
+      - name: Validate SBOM specifications and parity
+        run: |
+          cmake -DBEXT_SBOM_INPUT="$RUNNER_TEMP/bext.spdx.json" -P CMake/ValidateSbom.cmake
+          "$RUNNER_TEMP/sbom-tools/bin/python" CMake/ValidateSbom.py --spdx "$RUNNER_TEMP/bext.spdx.json" --cyclonedx "$RUNNER_TEMP/bext.cdx.json"
+          "$BEXT_SUPPLY_CHAIN_TOOL" sbom-validate --spdx "$RUNNER_TEMP/bext.spdx.json" --cyclonedx "$RUNNER_TEMP/bext.cdx.json"
+
+      - name: Generate and validate advisory projections
+        run: |
+          for format in spdx cdx; do
+            "$BEXT_SUPPLY_CHAIN_TOOL" sbom-project --input "$RUNNER_TEMP/bext.$format.json" --output "$RUNNER_TEMP/bext.conan.$format.json" --report "$RUNNER_TEMP/bext.conan.$format.coverage.json" --aliases "$GITHUB_WORKSPACE"
+          done
+          "$RUNNER_TEMP/sbom-tools/bin/python" CMake/ValidateSbom.py --spdx "$RUNNER_TEMP/bext.conan.spdx.json"
+          "$RUNNER_TEMP/sbom-tools/bin/python" CMake/ValidateSbom.py --cyclonedx "$RUNNER_TEMP/bext.conan.cdx.json"
+
+      - name: Upload source inventories and advisory coverage
         uses: actions/upload-artifact@v4
         with:
-          name: bext-spdx-sbom
-          path: ${{ runner.temp }}/bext.spdx.json
+          name: bext-source-inventories
+          path: |
+            ${{ runner.temp }}/bext.spdx.json
+            ${{ runner.temp }}/bext.cdx.json
+            ${{ runner.temp }}/bext.conan.*.json
 
   linux_configure_presets:
     needs: changes
@@ -79,6 +125,9 @@ jobs:
           sudo apt-get install libgl-dev
           sudo apt-get install libinput-dev
           sudo apt-get clean
+
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
 
       - name: Configure
         run: |
@@ -111,6 +160,9 @@ jobs:
 
       - name: Validate excluded dependency targets with MSBuild
         run: python CMake/tests/test_release_build.py ReleaseBuildTests.test_excluded_wrappers_visual_studio -v
+
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
 
       - name: Configure
         shell: cmd
@@ -150,6 +202,9 @@ jobs:
 
       - name: Add cl.exe to PATH
         uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
 
       - name: Configure
         shell: cmd

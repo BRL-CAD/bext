@@ -1,0 +1,46 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "synthetic-scanner-control",
+  "documentNamespace": "https://example.invalid/bext/scanner-control/zlib-1.2.11",
+  "comment": "Synthetic positive control for scanner matching. Never use as a release inventory.",
+  "creationInfo": {
+    "created": "2026-01-01T00:00:00Z",
+    "creators": ["Tool: bext-scanner-fixture"]
+  },
+  "packages": [
+    {
+      "name": "zlib",
+      "SPDXID": "SPDXRef-zlib",
+      "versionInfo": "1.2.11",
+      "downloadLocation": "https://zlib.net/fossils/zlib-1.2.11.tar.gz",
+      "packageSourceInfo": "Synthetic fixture describing a known-vulnerable upstream release; no source is bundled with this fixture.",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Zlib",
+      "copyrightText": "NOASSERTION",
+      "comment": "Exercises both ecosystem-PURL matching and CPE matching.",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:conan/zlib@1.2.11"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceType": "cpe23Type",
+          "referenceLocator": "cpe:2.3:a:zlib:zlib:1.2.11:*:*:*:*:*:*:*"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-zlib"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "bullet/bullet3",
+      "kind": "manual",
+      "reason": "The pinned snapshot has conflicting version declarations and no matching reviewed release baseline."
+    }
+  ]
+}

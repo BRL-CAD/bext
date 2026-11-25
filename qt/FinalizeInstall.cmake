@@ -15,3 +15,6 @@ file(GLOB_RECURSE qt_target_files
 _qt_relativize_metadata("${qt_target_files}" "\${_IMPORT_PREFIX}")
 file(GLOB_RECURSE qt_qmake_files "${BEXT_INSTALL_ROOT}/mkspecs/*.pri")
 _qt_relativize_metadata("${qt_qmake_files}" "$$[QT_INSTALL_PREFIX]")
+
+include("${BEXT_SOURCE_ROOT}/CMake/RefreshSpdx.cmake")
+bext_refresh_spdx("${BEXT_INSTALL_ROOT}")

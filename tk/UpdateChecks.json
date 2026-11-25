@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "tk/tk",
+      "versioning": "regex:^core-(?<major>[0-9]+)-(?<minor>[0-9]+)-(?<patch>[0-9]+)$"
+    }
+  ]
+}

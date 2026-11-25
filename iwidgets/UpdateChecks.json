@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "iwidgets/iwidgets",
+      "kind": "manual",
+      "reason": "Review the historical import and Tcl stack compatibility before selecting an upstream release feed."
+    }
+  ]
+}

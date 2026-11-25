@@ -299,6 +299,7 @@ set(STALE_INSTALL_WARN FALSE)
 file(GLOB BEXT_GRAPH_PROJECT_FILES
   RELATIVE "${CMAKE_SOURCE_DIR}"
   "*/*.deps"
+  "*/BextPackage.cmake"
   "*/CMakeLists.txt"
 )
 list(REMOVE_DUPLICATES BEXT_GRAPH_PROJECT_FILES)
@@ -311,6 +312,15 @@ list(SORT BEXT_GRAPH_PROJECT_FILES)
 ###############################################################################
 include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/Utils.cmake")
 bext_windows_long_path_check("${CMAKE_SOURCE_DIR}")
+include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/BextDependencyInventory.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/BextVex.cmake")
+
+# Load shared settings before wrappers select implementation-coupled stacks.
+file(GLOB BEXT_PACKAGE_SETTINGS CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/*/BuildSettings.cmake")
+foreach(package_settings IN LISTS BEXT_PACKAGE_SETTINGS)
+  include("${package_settings}")
+endforeach()
 
 
 ###############################################################################
@@ -328,6 +338,7 @@ option(USE_GDAL         "GDAL terrain support"                       ON)
 option(USE_OSPRAY       "OSPRay rendering system"                    OFF)
 option(USE_QT           "Qt graphical toolkit support"               ON)
 option(USE_TCL          "Tcl/Tk support"                             ON)
+option(BEXT_SBOM_ALLOW_DIRTY "Allow non-release SBOMs from dirty source trees" OFF)
 
 # An Xmin prefix selects a coherent toolkit build profile.  Individual
 # dependency logic applies the version-matched patches only when that
@@ -346,23 +357,6 @@ endif ()
 
 
 ###############################################################################
-# Python is a build-time dependency for both LLVM and ISPC.  I think
-# it's only build time in both cases, but short of a lot of rework the
-# upstreams probably wouldn't be inclined to take anyway we're going
-# to have to have it available.  Unfortunately, bootstrapping our own
-# local copy is problematic on Linux right now - saw this issue immediately
-# when I tried:  https://github.com/python/cpython/issues/90737
-#
-# What we might be able to do for this is try building Python3 IFF we don't
-# find a system Python3 if we really don't need to bundle it - if we don't
-# have a system version available there wont' be anything to conflict with.
-# For now just hard require it and move on...
-if (USE_APPLESEED OR USE_OSPRAY)
-  find_package(Python3 REQUIRED)
-endif (USE_APPLESEED OR USE_OSPRAY)
-###############################################################################
-
-###############################################################################
 # Applying patch files cross platform is a challenging problem due to the
 # shortage of portable tools and issues with LF vs CRLF files - see
 # https://gitlab.kitware.com/cmake/cmake/-/issues/16854 for more background on
@@ -371,50 +365,7 @@ endif (USE_APPLESEED OR USE_OSPRAY)
 ###############################################################################
 add_project(patch)
 
-###############################################################################
-# Although we have bundled flex and bison programs, they can be problematic to
-# build - they require working Autotools tool chains (except on Windows where
-# we have winflexbison).  We therefore attempt these builds only if we need to.
-# This check must come after the patch subdirectory, since if we DO add_project
-# the flexbison directory it will need the patch executable.
-###############################################################################
-if (USE_APPLESEED OR USE_OSPRAY)
-
-  if (ENABLE_ALL)
-    if (NOT DEFINED ENABLE_BISON)
-      set(ENABLE_BISON ON)
-    endif (NOT DEFINED ENABLE_BISON)
-  endif (ENABLE_ALL)
-
-  if (NOT ENABLE_FLEX)
-    find_package(FLEX 2.6)
-
-    if (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
-      set(ENABLE_FLEX ON)
-    endif (NOT FLEX_FOUND AND NOT DEFINED ENABLE_FLEX)
-  endif (NOT ENABLE_FLEX)
-
-  if (NOT ENABLE_BISON)
-    find_package(BISON 3.0)
-
-    if (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
-      set(ENABLE_BISON ON)
-    endif (NOT BISON_FOUND AND NOT DEFINED ENABLE_BISON)
-  endif (NOT ENABLE_BISON)
-
-  if (ENABLE_FLEX OR ENABLE_BISON)
-    add_project(flexbison GROUPS "APPLESEED;OSPRAY")
-  endif (ENABLE_FLEX OR ENABLE_BISON)
-
-  # Whether or not we actually added the subdirectories, let subsequent targets
-  # know we have handled the FLEX and BISON dependencies.  Some will list these
-  # as potential build targets, since we may try to compile them, but as the
-  # default orientation for these is "build only if we have to" the find
-  # process itself needs to satisfy the check.
-  set(FLEX_ADDED 1)
-  set(BISON_ADDED 1)
-
-endif (USE_APPLESEED OR USE_OSPRAY)
+add_project(flexbison GROUPS "APPLESEED;OSPRAY")
 
 # ISPC requires GNU-compatible m4 behavior.  Prefer a system m4 when one is
 # available, and otherwise build the portable OpenBSD implementation after its
@@ -667,18 +618,6 @@ add_project(embree GROUPS "APPLESEED;OSPRAY")
 # TCL - scripting language.  For Tcl/Tk builds we want
 # static lib building on so we get the stub libraries.
 # https://www.tcl.tk
-set(TCL_ENABLE_TK ON CACHE BOOL "enable tk")
-# Tcl 8.6.18 bundles Itcl 4.3.7.  Itk remains a separate upstream project.
-# Keep the compatibility floors distinct from the bundled versions so a newer
-# system installation can be used without changing the versions we ship.
-set(BEXT_ITCL_MIN_VERSION "4.3.0")
-set(BEXT_ITCL_BUNDLED_VERSION "4.3.7")
-set(BEXT_ITCL_BUNDLED_SOURCE_DIR
-  "${CMAKE_SOURCE_DIR}/tcl/tcl/pkgs/itcl${BEXT_ITCL_BUNDLED_VERSION}"
-  )
-set(BEXT_ITK_MIN_VERSION "4.2.3")
-set(BEXT_ITK_BUNDLED_VERSION "4.2.7")
-set(BEXT_TK_COMPONENTS "archer;mged;bwish;rtwizard;brlman")
 add_project(tcl GROUPS "TCL")
 add_project(tk GROUPS "TCL")
 add_project(itk GROUPS "TCL")
@@ -711,35 +650,54 @@ add_project(ospray GROUPS "OSPRAY")
 # BRL-CAD can then consume the manifest without repeating file classification
 # during every configure pass.
 ###############################################################################
-set(BEXT_STRCLEAR_EXPECTED
-  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/strclear${CMAKE_EXECUTABLE_SUFFIX}")
-if (TARGET STRCLEAR_BLD)
-  set(BEXT_STRCLEAR_EXECUTABLE "${BEXT_STRCLEAR_EXPECTED}")
-else ()
-  find_program(BEXT_STRCLEAR_EXECUTABLE NAMES strclear HINTS "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}")
-endif ()
-if (NOT BEXT_STRCLEAR_EXECUTABLE)
-  message(FATAL_ERROR "bext finalization requires strclear")
-endif ()
-
-set(BEXT_PLIEF_EXPECTED
-  "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}/plief${CMAKE_EXECUTABLE_SUFFIX}")
-if (TARGET PLIEF_BLD)
-  set(BEXT_PLIEF_EXECUTABLE "${BEXT_PLIEF_EXPECTED}")
-else ()
-  find_program(BEXT_PLIEF_EXECUTABLE NAMES plief patchelf HINTS "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/${BIN_DIR}")
-endif ()
+get_property(BEXT_STRCLEAR_EXECUTABLE GLOBAL PROPERTY BEXT_STRCLEAR_EXECUTABLE)
+get_property(BEXT_PLIEF_EXECUTABLE GLOBAL PROPERTY BEXT_PLIEF_EXECUTABLE)
 
 configure_file("${CMAKE_SOURCE_DIR}/CMake/RefreshSpdx.cmake"
   "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/bext/RefreshSpdx.cmake" COPYONLY)
 
+# Prebuilt consumers need the matching generators and policy fragments without
+# checking out another copy of the dependency sources.
+set(BEXT_SBOM_TOOLS_ROOT "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/share/bext/supply-chain")
+file(GLOB BEXT_SBOM_ALIAS_FILES RELATIVE "${CMAKE_SOURCE_DIR}" CONFIGURE_DEPENDS
+  "${CMAKE_SOURCE_DIR}/*/SbomScanAliases.json")
+set(BEXT_SBOM_TOOL_FILES
+  CMake/WriteCycloneDx.cmake CMake/BextCycloneDx.cmake CMake/BextSbomJson.cmake
+  CMake/BextComponentManifest.schema.json CMake/SbomScanProfiles.json
+  ${BEXT_SBOM_ALIAS_FILES})
+file(REMOVE_RECURSE "${BEXT_SBOM_TOOLS_ROOT}")
+foreach(tool_file IN LISTS BEXT_SBOM_TOOL_FILES)
+  configure_file("${CMAKE_SOURCE_DIR}/${tool_file}" "${BEXT_SBOM_TOOLS_ROOT}/${tool_file}" COPYONLY)
+endforeach()
+
 set(BEXT_INSTALL_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-manifest.json")
+set(BEXT_INSTALL_EXCLUDE_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-exclude-manifest.json")
+set(BEXT_INSTALL_EXCLUDE_RULES "${CMAKE_BINARY_DIR}/CMakeFiles/bext-install-exclude-patterns.txt")
+get_property(BEXT_INSTALL_EXCLUDE_PATTERNS GLOBAL PROPERTY BEXT_INSTALL_EXCLUDE_PATTERNS)
+list(REMOVE_DUPLICATES BEXT_INSTALL_EXCLUDE_PATTERNS)
+list(SORT BEXT_INSTALL_EXCLUDE_PATTERNS)
+string(REPLACE ";" "\n" BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT "${BEXT_INSTALL_EXCLUDE_PATTERNS}")
+file(WRITE "${BEXT_INSTALL_EXCLUDE_RULES}" "${BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT}\n")
+set(BEXT_COMPONENT_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-component-manifest.json")
+set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
+set(BEXT_CYCLONEDX_OUTPUT "${CMAKE_BINARY_DIR}/bext.cdx.json")
+set(BEXT_COMPONENT_OWNERSHIP_RULES_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-component-ownership-rules.txt")
 set(BEXT_ACTIVE_COMPONENTS_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-active-components.txt")
+set(BEXT_SBOM_SELECTORS_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-sbom-selectors.cmake")
+get_property(BEXT_COMPONENT_OWNERSHIP_RULES GLOBAL PROPERTY BEXT_COMPONENT_OWNERSHIP_RULES)
+list(REMOVE_DUPLICATES BEXT_COMPONENT_OWNERSHIP_RULES)
+list(SORT BEXT_COMPONENT_OWNERSHIP_RULES)
+string(REPLACE ";" "\n" BEXT_COMPONENT_OWNERSHIP_RULES_TEXT "${BEXT_COMPONENT_OWNERSHIP_RULES}")
+file(WRITE "${BEXT_COMPONENT_OWNERSHIP_RULES_FILE}" "${BEXT_COMPONENT_OWNERSHIP_RULES_TEXT}\n")
 get_property(BEXT_ACTIVE_COMPONENTS GLOBAL PROPERTY BEXT_SUMMARY_LOCAL_PROJECTS)
 list(REMOVE_DUPLICATES BEXT_ACTIVE_COMPONENTS)
 list(SORT BEXT_ACTIVE_COMPONENTS)
 string(REPLACE ";" "\n" BEXT_ACTIVE_COMPONENTS_TEXT "${BEXT_ACTIVE_COMPONENTS}")
 file(WRITE "${BEXT_ACTIVE_COMPONENTS_FILE}" "${BEXT_ACTIVE_COMPONENTS_TEXT}\n")
+bext_write_sbom_selectors("${BEXT_SBOM_SELECTORS_FILE}")
+set(BEXT_VEX_REGISTRY "${CMAKE_BINARY_DIR}/CMakeFiles/bext-vex/registry.json")
+set(BEXT_VEX_PROOF "${CMAKE_BINARY_DIR}/CMakeFiles/bext-vex/finalization.json")
+bext_configure_vex("${BEXT_VEX_REGISTRY}")
 set(BEXT_FINALIZE_SCRIPT "${CMAKE_SOURCE_DIR}/CMake/FinalizeInstall.cmake")
 get_property(BEXT_INSTALL_TARGETS GLOBAL PROPERTY BEXT_INSTALL_TARGETS)
 list(REMOVE_DUPLICATES BEXT_INSTALL_TARGETS)
@@ -748,30 +706,72 @@ set(BEXT_FINALIZE_ALL ALL)
 if (BEXT_DISCARD_WORK)
   set(BEXT_FINALIZE_ALL)
 endif ()
+add_executable(bext_fingerprint CMake/BextFingerprint.cpp)
+add_executable(bext_ownership CMake/BextOwnership.cpp)
+include(CMake/BextSupplyChain.cmake)
+bext_add_supply_chain_tool()
+add_custom_target(qt_attribution_refresh
+  COMMAND "$<TARGET_FILE:bext_supply_chain>" qt-attributions
+    --package-dir "${CMAKE_SOURCE_DIR}/qt"
+  DEPENDS bext_supply_chain
+  USES_TERMINAL VERBATIM)
+add_executable(bext_supply_chain_fixture EXCLUDE_FROM_ALL
+  CMake/tests/SupplyChainToolFixture.cpp)
 add_custom_target(bext_finalize ${BEXT_FINALIZE_ALL}
+  COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+    "$<TARGET_FILE:bext_supply_chain>"
+    "${CMAKE_NOBUNDLE_INSTALL_PREFIX}/bin/$<TARGET_FILE_NAME:bext_supply_chain>"
+  COMMAND "$<TARGET_FILE:bext_supply_chain>" vex-capture
+    --before-finalize "${BEXT_VEX_REGISTRY}"
+    --install-root "${CMAKE_BUNDLE_INSTALL_PREFIX}" --output "${BEXT_VEX_PROOF}"
+    --previous-evidence "${CMAKE_INSTALL_PREFIX}/bext-vex-evidence.json"
+    --previous-vex "${CMAKE_INSTALL_PREFIX}/bext.openvex.json"
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_INSTALL_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DBEXT_MANIFEST=${BEXT_INSTALL_MANIFEST}
+    -DBEXT_INSTALL_EXCLUDE_MANIFEST=${BEXT_INSTALL_EXCLUDE_MANIFEST}
+    -DBEXT_INSTALL_EXCLUDE_RULES=${BEXT_INSTALL_EXCLUDE_RULES}
+    -DBEXT_COMPONENT_MANIFEST=${BEXT_COMPONENT_MANIFEST}
+    -DBEXT_COMPONENT_OWNERSHIP_RULES=${BEXT_COMPONENT_OWNERSHIP_RULES_FILE}
     -DBEXT_ACTIVE_COMPONENTS=${BEXT_ACTIVE_COMPONENTS_FILE}
+    -DBEXT_SBOM_SELECTORS=${BEXT_SBOM_SELECTORS_FILE}
+    -DBEXT_SBOM=${BEXT_SBOM_OUTPUT}
     -DBEXT_SOURCE_ROOT=${CMAKE_SOURCE_DIR}
     -DBEXT_BINARY_ROOT=${CMAKE_BINARY_DIR}
     -DBEXT_NOINSTALL_ROOT=${CMAKE_NOBUNDLE_INSTALL_PREFIX}
+    -DBEXT_FINGERPRINT=$<TARGET_FILE:bext_fingerprint>
+    -DBEXT_OWNERSHIP=$<TARGET_FILE:bext_ownership>
     -DBEXT_STRCLEAR=${BEXT_STRCLEAR_EXECUTABLE}
     -DBEXT_PLIEF=${BEXT_PLIEF_EXECUTABLE}
     -DBEXT_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
     -DBIN_DIR=${BIN_DIR}
     -DLIB_DIR=${LIB_DIR}
     -P ${BEXT_FINALIZE_SCRIPT}
-  DEPENDS ${BEXT_INSTALL_TARGETS}
+  COMMAND "$<TARGET_FILE:bext_supply_chain>" vex-generate
+    --sbom "${BEXT_SBOM_OUTPUT}" --manifest "${BEXT_COMPONENT_MANIFEST}"
+    --install-root "${CMAKE_BUNDLE_INSTALL_PREFIX}"
+    --registry "${BEXT_VEX_REGISTRY}" --proof "${BEXT_VEX_PROOF}"
+    --output-dir "${CMAKE_INSTALL_PREFIX}" --aliases "${CMAKE_SOURCE_DIR}"
+  COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+    "${BEXT_SBOM_OUTPUT}" "${BEXT_CYCLONEDX_OUTPUT}"
+    "${CMAKE_BINARY_DIR}/bext-content-stamp" "${CMAKE_INSTALL_PREFIX}"
+  DEPENDS ${BEXT_INSTALL_TARGETS} bext_fingerprint bext_ownership bext_supply_chain
+  USES_TERMINAL
   VERBATIM
 )
-if (TARGET STRCLEAR_BLD-install)
-  add_dependencies(bext_finalize STRCLEAR_BLD-install)
-endif ()
-if (TARGET PLIEF_BLD-install)
-  add_dependencies(bext_finalize PLIEF_BLD-install)
-endif ()
-foreach(fixup tclsh_cpy tcl_permissionsfix tk_permissionsfix)
+get_property(BEXT_VEX_TARGETS GLOBAL PROPERTY BEXT_VEX_TARGETS)
+if(BEXT_VEX_TARGETS)
+  add_dependencies(bext_finalize ${BEXT_VEX_TARGETS})
+endif()
+add_custom_target(vex_scan
+    COMMAND "$<TARGET_FILE:bext_supply_chain>" vex-scan
+      --input "${CMAKE_INSTALL_PREFIX}/bext.build.spdx.json"
+      --vex "${CMAKE_INSTALL_PREFIX}/bext.openvex.json"
+      --output-dir "${CMAKE_BINARY_DIR}/bext-vex-scans" --cmake "${CMAKE_COMMAND}"
+    DEPENDS bext_finalize
+    VERBATIM)
+get_property(BEXT_INSTALL_FIXUP_TARGETS GLOBAL PROPERTY BEXT_INSTALL_FIXUP_TARGETS)
+foreach(fixup IN LISTS BEXT_INSTALL_FIXUP_TARGETS)
   if (TARGET ${fixup})
     add_dependencies(bext_finalize ${fixup})
   endif ()
@@ -860,27 +860,117 @@ add_custom_target(update_staged_dependency_docs
     -P ${CMAKE_SOURCE_DIR}/CMake/GenerateDependencyDocs.cmake
   VERBATIM
 )
+add_custom_target(sbom_metadata_report
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_REPORT_OUTPUT=${CMAKE_BINARY_DIR}/sbom-metadata-gaps.md
+    -P ${CMAKE_SOURCE_DIR}/CMake/ReportSbomMetadata.cmake
+  BYPRODUCTS "${CMAKE_BINARY_DIR}/sbom-metadata-gaps.md"
+  VERBATIM
+)
+add_custom_target(sbom_copyright_candidates
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_REPORT_OUTPUT=${CMAKE_BINARY_DIR}/sbom-copyright-candidates.md
+    -P ${CMAKE_SOURCE_DIR}/CMake/ReportCopyrightCandidates.cmake
+  BYPRODUCTS "${CMAKE_BINARY_DIR}/sbom-copyright-candidates.md"
+  VERBATIM
+)
 
 # Logic for generating a Software Bill of Materials (SBOM)
 # from committed bext repository information. Regenerate on each request:
 # a new commit or gitlink pin can change HEAD without touching wrapper files.
-set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
 add_custom_target(sbom
   COMMAND ${CMAKE_COMMAND}
     -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DBEXT_SBOM_OUTPUT=${BEXT_SBOM_OUTPUT}
+    -DBEXT_CYCLONEDX_OUTPUT=${BEXT_CYCLONEDX_OUTPUT}
+    -DBEXT_SBOM_ALLOW_DIRTY=${BEXT_SBOM_ALLOW_DIRTY}
     -P ${CMAKE_SOURCE_DIR}/CMake/GenerateSbom.cmake
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SBOM_INPUT=${BEXT_SBOM_OUTPUT}
+    -P ${CMAKE_SOURCE_DIR}/CMake/ValidateSbom.cmake
   DEPENDS
     ${CMAKE_SOURCE_DIR}/CMake/BextDependencyInventory.cmake
     ${CMAKE_SOURCE_DIR}/CMake/GenerateSbom.cmake
+    ${CMAKE_SOURCE_DIR}/CMake/BextCycloneDx.cmake
+    ${CMAKE_SOURCE_DIR}/CMake/BextSbomJson.cmake
     ${CMAKE_SOURCE_DIR}/CMakeLists.txt
     ${CMAKE_SOURCE_DIR}/.gitmodules
     ${BEXT_GRAPH_DEPENDS}
-  BYPRODUCTS "${BEXT_SBOM_OUTPUT}"
+  BYPRODUCTS "${BEXT_SBOM_OUTPUT}" "${BEXT_CYCLONEDX_OUTPUT}"
   VERBATIM
 )
+add_dependencies(bext_finalize sbom)
+
+find_program(BEXT_RENOVATE_EXECUTABLE NAMES renovate renovate.cmd)
+set(BEXT_RENOVATE_COMMAND renovate)
+if(BEXT_RENOVATE_EXECUTABLE)
+  set(BEXT_RENOVATE_COMMAND "${BEXT_RENOVATE_EXECUTABLE}")
+endif()
+set(BEXT_UPDATE_REPORT_COMPONENTS "" CACHE STRING "Limit manual release lookups to these dependencies")
+set(BEXT_UPDATE_REPORT_GROUPS "" CACHE STRING "Limit manual update lookups to these consumer groups")
+set(BEXT_UPDATE_LOOKUP_TIMEOUT "1800" CACHE STRING "Renovate lookup timeout in seconds")
+set(BEXT_UPDATE_ANCESTRY_TIMEOUT "300" CACHE STRING "Timeout per Git ancestry command in seconds")
+set(BEXT_UPDATE_REPORT_ARGS --lookup-timeout "${BEXT_UPDATE_LOOKUP_TIMEOUT}"
+  --ancestry-timeout "${BEXT_UPDATE_ANCESTRY_TIMEOUT}")
+foreach(component IN LISTS BEXT_UPDATE_REPORT_COMPONENTS)
+  list(APPEND BEXT_UPDATE_REPORT_ARGS --only "${component}")
+endforeach()
+foreach(group IN LISTS BEXT_UPDATE_REPORT_GROUPS)
+  list(APPEND BEXT_UPDATE_REPORT_ARGS --group "${group}")
+endforeach()
+add_custom_target(dependency_update_inputs
+    COMMAND "$<TARGET_FILE:bext_supply_chain>" dependency-updates
+      --sbom "${BEXT_SBOM_OUTPUT}" --source-root "${CMAKE_SOURCE_DIR}"
+      --output-dir "${CMAKE_BINARY_DIR}/dependency-updates" --generate-only
+      ${BEXT_UPDATE_REPORT_ARGS}
+    DEPENDS sbom
+    VERBATIM)
+add_custom_target(dependency_update_report
+    COMMAND "$<TARGET_FILE:bext_supply_chain>" dependency-updates
+      --sbom "${BEXT_SBOM_OUTPUT}" --source-root "${CMAKE_SOURCE_DIR}"
+      --output-dir "${CMAKE_BINARY_DIR}/dependency-updates"
+      --renovate "${BEXT_RENOVATE_COMMAND}" --cmake "${CMAKE_COMMAND}" ${BEXT_UPDATE_REPORT_ARGS}
+    DEPENDS sbom
+    USES_TERMINAL VERBATIM)
+find_program(BEXT_SPDX_VALIDATOR NAMES pyspdxtools)
+if(BEXT_SPDX_VALIDATOR)
+  add_custom_command(TARGET sbom POST_BUILD
+    COMMAND "${BEXT_SPDX_VALIDATOR}" --infile "${BEXT_SBOM_OUTPUT}" --version SPDX-2.3
+    VERBATIM
+  )
+endif()
 add_custom_target(supply_chain_check
-  DEPENDS check_dependency_metadata sbom
+  DEPENDS check_dependency_metadata sbom sbom_metadata_report
+)
+add_custom_target(sbom_scan_inputs DEPENDS sbom bext_supply_chain)
+add_custom_target(sbom_validate
+  COMMAND "$<TARGET_FILE:bext_supply_chain>" sbom-validate
+    --spdx "${BEXT_SBOM_OUTPUT}" --cyclonedx "${BEXT_CYCLONEDX_OUTPUT}"
+  DEPENDS sbom bext_supply_chain
+  VERBATIM
+)
+foreach(format spdx cdx)
+  add_custom_command(TARGET sbom_scan_inputs POST_BUILD
+    COMMAND "$<TARGET_FILE:bext_supply_chain>" sbom-project
+      --input "${CMAKE_BINARY_DIR}/bext.${format}.json"
+      --output "${CMAKE_BINARY_DIR}/bext.conan.${format}.json"
+      --report "${CMAKE_BINARY_DIR}/bext.conan.${format}.coverage.json"
+      --aliases "${CMAKE_SOURCE_DIR}"
+    BYPRODUCTS
+      "${CMAKE_BINARY_DIR}/bext.conan.${format}.json"
+      "${CMAKE_BINARY_DIR}/bext.conan.${format}.coverage.json"
+    VERBATIM
+  )
+endforeach()
+add_custom_target(sbom_regress
+  COMMAND ${CMAKE_COMMAND}
+    -DBEXT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBEXT_SBOM_OUTPUT=${CMAKE_BINARY_DIR}/bext-test.spdx.json
+    -DBEXT_CYCLONEDX_OUTPUT=${CMAKE_BINARY_DIR}/bext-test.cdx.json
+    -P ${CMAKE_SOURCE_DIR}/CMake/TestSbom.cmake
+  VERBATIM
 )
 
 ###############################################################################

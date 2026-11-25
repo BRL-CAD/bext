@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:git/gitlab.com/libtiff/libtiff@v4.7.2",
+      "targetPurl": "pkg:conan/libtiff@4.7.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/libtiff/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same tiff 4.7.2 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

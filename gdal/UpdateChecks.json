@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "gdal/gdal/ogr/ogrsf_frmts/geojson/libjson",
+      "currentValueFrom": "version",
+      "extractVersion": "^json-c-(?<version>[0-9]+\\.[0-9]+(?:\\.[0-9]+)?)(?:-[0-9]{8})?$"
+    },
+    {
+      "source": "gdal/gdal/frmts/gif/giflib",
+      "kind": "manual",
+      "reason": "Review giflib release archives and GDAL integration; no verified Git tag feed is configured."
+    },
+    {
+      "source": "gdal/gdal/frmts/jpeg/libjpeg",
+      "kind": "manual",
+      "reason": "Review IJG archive releases and GDAL compatibility; its release identifiers have letter suffixes."
+    }
+  ]
+}

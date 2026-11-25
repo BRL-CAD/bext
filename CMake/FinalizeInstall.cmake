@@ -1,12 +1,22 @@
+cmake_minimum_required(VERSION 3.26)
+
 # Finalize the bundled bext output and publish its file-processing manifest.
 
 foreach(required_var
     BEXT_INSTALL_ROOT
     BEXT_MANIFEST
+    BEXT_INSTALL_EXCLUDE_MANIFEST
+    BEXT_INSTALL_EXCLUDE_RULES
+    BEXT_COMPONENT_MANIFEST
+    BEXT_COMPONENT_OWNERSHIP_RULES
     BEXT_ACTIVE_COMPONENTS
+    BEXT_SBOM_SELECTORS
+    BEXT_SBOM
     BEXT_SOURCE_ROOT
     BEXT_BINARY_ROOT
     BEXT_NOINSTALL_ROOT
+    BEXT_FINGERPRINT
+    BEXT_OWNERSHIP
     BEXT_STRCLEAR
     BEXT_SYSTEM_NAME
     BIN_DIR
@@ -26,42 +36,46 @@ function(bext_json_escape outvar value)
 endfunction()
 
 function(bext_write_json_array manifest key values)
-  file(APPEND "${manifest}" "  \"${key}\": [\n")
-  set(first TRUE)
+  set(content "  \"${key}\": [\n")
+  set(separator "")
   foreach(value ${${values}})
     bext_json_escape(escaped "${value}")
-    if (first)
-      set(first FALSE)
-    else ()
-      file(APPEND "${manifest}" ",\n")
-    endif ()
-    file(APPEND "${manifest}" "    \"${escaped}\"")
+    string(APPEND content "${separator}    \"${escaped}\"")
+    set(separator ",\n")
   endforeach()
-  file(APPEND "${manifest}" "\n  ]")
+  string(APPEND content "\n  ]")
+  file(APPEND "${manifest}" "${content}")
 endfunction()
 
 function(bext_write_file_list outvar filename values)
-  file(WRITE "${filename}" "")
+  set(content "")
   foreach(value ${${values}})
-    file(APPEND "${filename}" "${value}\n")
+    string(APPEND content "${value}\n")
   endforeach()
+  file(WRITE "${filename}" "${content}")
   set(${outvar} "${filename}" PARENT_SCOPE)
 endfunction()
 
 function(bext_content_fingerprints outvar root label file_list_var)
-  set(records "")
-  foreach(relative IN LISTS ${file_list_var})
-    set(path "${root}/${relative}")
-    if (IS_SYMLINK "${path}")
-      file(READ_SYMLINK "${path}" value)
-      string(APPEND records "L ${label}/${relative} ${value}\n")
-    else ()
-      file(SHA256 "${path}" value)
-      string(APPEND records "F ${label}/${relative} ${value}\n")
-    endif ()
-  endforeach()
+  set(file_list "${BEXT_BINARY_ROOT}/CMakeFiles/bext-${label}-fingerprint-files.txt")
+  set(output "${BEXT_BINARY_ROOT}/CMakeFiles/bext-${label}-fingerprints.txt")
+  bext_write_file_list(file_list "${file_list}" ${file_list_var})
+  execute_process(
+    COMMAND "${BEXT_FINGERPRINT}"
+      --root "${root}" --label "${label}" --files "${file_list}" --output "${output}"
+    RESULT_VARIABLE result
+  )
+  if (NOT result EQUAL 0)
+    message(FATAL_ERROR "Unable to fingerprint ${label} files")
+  endif ()
+  file(READ "${output}" records)
   set(${outvar} "${records}" PARENT_SCOPE)
 endfunction()
+
+macro(bext_claim_component_file relative component)
+  string(SHA256 ownership_key "${relative}")
+  list(APPEND ownership_components_${ownership_key} "${component}")
+endmacro()
 
 function(bext_relative_path outvar path)
   file(RELATIVE_PATH relative "${BEXT_INSTALL_ROOT}" "${path}")
@@ -223,28 +237,95 @@ function(bext_run_component_hooks phase)
 endfunction()
 
 file(STRINGS "${BEXT_ACTIVE_COMPONENTS}" active_components)
-
-# TEA configuration files describe the original source/build trees and are
-# already excluded by BRL-CAD staging.  Keep them available to the dependency
-# builds, but omit them from the finalized relocatable bundle.
-file(GLOB_RECURSE build_config_files
-  "${BEXT_INSTALL_ROOT}/*/tclConfig.sh"
-  "${BEXT_INSTALL_ROOT}/*/tkConfig.sh"
-  "${BEXT_INSTALL_ROOT}/*/itclConfig.sh"
-  "${BEXT_INSTALL_ROOT}/*/itkConfig.sh"
-  "${BEXT_INSTALL_ROOT}/*/tdbcConfig.sh")
-if(build_config_files)
-  file(REMOVE ${build_config_files})
-endif()
+message(STATUS "Finalizing bext install bundle")
+bext_run_component_hooks(PrepareInstall)
 
 file(MAKE_DIRECTORY "${BEXT_BINARY_ROOT}/CMakeFiles")
-file(GLOB_RECURSE installed_files
+file(GLOB_RECURSE install_tree_files
   LIST_DIRECTORIES false
   RELATIVE "${BEXT_INSTALL_ROOT}"
   "${BEXT_INSTALL_ROOT}/*"
 )
-list(SORT installed_files)
+list(SORT install_tree_files)
 
+# Native install manifests define files installed by this configured build.
+# Explicit ownership rules cover files copied by wrapper logic outside those
+# native manifests. Anything else may be residue from another configuration;
+# retain it on disk, but exclude it from this build's manifest and SBOM.
+file(GLOB_RECURSE native_install_manifests
+  LIST_DIRECTORIES false
+  "${BEXT_BINARY_ROOT}/*/install_manifest.txt"
+)
+set(installed_files)
+foreach(native_manifest ${native_install_manifests})
+  file(RELATIVE_PATH manifest_relative "${BEXT_BINARY_ROOT}" "${native_manifest}")
+  string(REPLACE "\\" "/" manifest_relative "${manifest_relative}")
+  string(REGEX REPLACE "/.*$" "" component "${manifest_relative}")
+  string(TOLOWER "${component}" component)
+  list(FIND active_components "${component}" active_component_index)
+  if(active_component_index EQUAL -1)
+    continue()
+  endif()
+  file(STRINGS "${native_manifest}" native_installed_files)
+  foreach(installed_path ${native_installed_files})
+    file(RELATIVE_PATH relative "${BEXT_INSTALL_ROOT}" "${installed_path}")
+    string(REPLACE "\\" "/" relative "${relative}")
+    if(NOT relative MATCHES "(^|/)\\.\\.(/|$)" AND EXISTS "${BEXT_INSTALL_ROOT}/${relative}")
+      list(APPEND installed_files "${relative}")
+      bext_claim_component_file("${relative}" "${component}")
+    endif()
+  endforeach()
+endforeach()
+set(ownership_files "${BEXT_BINARY_ROOT}/CMakeFiles/bext-ownership-files.txt")
+set(ownership_matches "${BEXT_BINARY_ROOT}/CMakeFiles/bext-ownership-matches.txt")
+bext_write_file_list(ownership_files "${ownership_files}" install_tree_files)
+execute_process(
+  COMMAND "${BEXT_OWNERSHIP}"
+    --files "${ownership_files}"
+    --rules "${BEXT_COMPONENT_OWNERSHIP_RULES}"
+    --active "${BEXT_ACTIVE_COMPONENTS}"
+    --output "${ownership_matches}"
+  RESULT_VARIABLE ownership_result
+)
+if (NOT ownership_result EQUAL 0)
+  message(FATAL_ERROR "Unable to match explicit component ownership rules")
+endif ()
+file(STRINGS "${ownership_matches}" explicit_ownership_records)
+foreach(record ${explicit_ownership_records})
+  string(FIND "${record}" "|" separator)
+  if(separator LESS 1)
+    message(FATAL_ERROR "Invalid explicit ownership record: ${record}")
+  endif()
+  string(SUBSTRING "${record}" 0 ${separator} component)
+  math(EXPR relative_start "${separator} + 1")
+  string(SUBSTRING "${record}" ${relative_start} -1 relative)
+  list(APPEND installed_files "${relative}")
+  string(SHA256 ownership_key "${relative}")
+  if(NOT explicit_ownership_${ownership_key})
+    set(ownership_components_${ownership_key})
+    set(explicit_ownership_${ownership_key} TRUE)
+  endif()
+  bext_claim_component_file("${relative}" "${component}")
+endforeach()
+list(REMOVE_DUPLICATES installed_files)
+list(SORT installed_files)
+set(untracked_install_files ${install_tree_files})
+if(installed_files)
+  list(REMOVE_ITEM untracked_install_files ${installed_files})
+endif()
+list(SORT untracked_install_files)
+set(untracked_report "${BEXT_BINARY_ROOT}/bext-untracked-install-files.txt")
+if(untracked_install_files)
+  list(LENGTH untracked_install_files untracked_install_count)
+  bext_write_file_list(untracked_report "${untracked_report}" untracked_install_files)
+  message(STATUS
+    "Excluded ${untracked_install_count} files not recorded by this build's install manifests; see ${untracked_report}")
+else()
+  file(REMOVE "${untracked_report}")
+endif()
+
+list(LENGTH installed_files installed_file_count)
+message(STATUS "Classifying ${installed_file_count} installed files")
 set(classify_files)
 set(skipped_files)
 foreach(relative ${installed_files})
@@ -414,7 +495,125 @@ foreach(relative ${text_files})
 endforeach()
 list(SORT cmake_files)
 list(SORT plain_text_files)
+list(LENGTH text_files text_file_count)
+list(LENGTH binary_probe_files binary_file_count)
+message(STATUS "Classified ${text_file_count} text and ${binary_file_count} binary files")
 
+set(install_excluded_files ${untracked_install_files})
+file(STRINGS "${BEXT_INSTALL_EXCLUDE_RULES}" install_exclude_patterns)
+foreach(relative ${installed_files})
+  foreach(pattern ${install_exclude_patterns})
+    if("${relative}" MATCHES "${pattern}")
+      list(APPEND install_excluded_files "${relative}")
+      break()
+    endif()
+  endforeach()
+endforeach()
+list(REMOVE_DUPLICATES install_excluded_files)
+list(SORT install_excluded_files)
+
+set(component_records)
+set(unowned_files)
+set(conflicting_files)
+message(STATUS "Attributing ${installed_file_count} installed files to components")
+foreach(relative ${installed_files})
+  list(FIND install_excluded_files "${relative}" excluded_file_index)
+  if(NOT excluded_file_index EQUAL -1)
+    continue()
+  endif()
+  string(SHA256 ownership_key "${relative}")
+  set(owners ${ownership_components_${ownership_key}})
+  list(REMOVE_DUPLICATES owners)
+  list(LENGTH owners owner_count)
+  if(owner_count EQUAL 0)
+    list(APPEND unowned_files "${relative}")
+  elseif(owner_count GREATER 1)
+    list(JOIN owners "," owner_text)
+    list(APPEND conflicting_files "${relative}: ${owner_text}")
+  else()
+    list(GET owners 0 component)
+    list(APPEND component_records "${relative}|${component}")
+  endif()
+endforeach()
+if(unowned_files OR conflicting_files)
+  list(JOIN unowned_files "\n  " unowned_text)
+  list(JOIN conflicting_files "\n  " conflicting_text)
+  message(FATAL_ERROR
+    "Bext component ownership is incomplete or ambiguous.\n"
+    "Unowned files:\n  ${unowned_text}\n"
+    "Conflicting files:\n  ${conflicting_text}")
+endif()
+list(SORT component_records)
+
+# Some projects ship source for optional third-party libraries. Record only
+# packages selected by their completed configure so downstream installed
+# SBOMs do not mistake unused bundled source for code present in the binaries.
+include("${BEXT_SBOM_SELECTORS}")
+set(selection_components)
+set(selected_package_records)
+foreach(selector_id IN LISTS BEXT_SBOM_SELECTOR_IDS)
+  set(selector_prefix "BEXT_SBOM_SELECTOR_${selector_id}")
+  set(component "${${selector_prefix}_COMPONENT}")
+  list(FIND active_components "${component}" active_component_index)
+  if(active_component_index EQUAL -1)
+    continue()
+  endif()
+  set(selector_script "${${selector_prefix}_SCRIPT}")
+  set(selector_function "${${selector_prefix}_FUNCTION}")
+  set(selector_cache "${${selector_prefix}_CACHE}")
+  set(preserved_selector_cache "${${selector_prefix}_PRESERVED_CACHE}")
+  set(selector_arguments "${${selector_prefix}_ARGUMENTS}")
+  if(NOT EXISTS "${selector_script}")
+    message(FATAL_ERROR "Installed SBOM selector for ${component} is unavailable: ${selector_script}")
+  endif()
+  if(NOT EXISTS "${selector_cache}")
+    set(selector_cache "${preserved_selector_cache}")
+  endif()
+  if(NOT EXISTS "${selector_cache}")
+    message(FATAL_ERROR
+      "${component} is active but neither its configure cache nor its preserved "
+      "installed SBOM cache is available: ${${selector_prefix}_CACHE}; ${preserved_selector_cache}")
+  endif()
+  include("${selector_script}")
+  if(NOT COMMAND "${selector_function}")
+    message(FATAL_ERROR "Installed SBOM selector ${selector_script} does not define ${selector_function}")
+  endif()
+  unset(selected_packages)
+  cmake_language(CALL "${selector_function}" selected_packages "${selector_cache}" ${selector_arguments})
+  if(NOT DEFINED selected_packages)
+    message(FATAL_ERROR "Installed SBOM selector ${selector_function} did not return a package list for ${component}")
+  endif()
+  list(APPEND selection_components "${component}")
+  foreach(spdx_id IN LISTS selected_packages)
+    list(APPEND selected_package_records "${component}|${spdx_id}")
+  endforeach()
+endforeach()
+
+include("${BEXT_SOURCE_ROOT}/CMake/BextDependencyInventory.cmake")
+bext_collect_dependency_inventory("${BEXT_SOURCE_ROOT}")
+bext_inventory_package_records(inventory_package_records)
+set(package_records)
+foreach(record ${inventory_package_records})
+  string(REPLACE "|" ";" record_parts "${record}")
+  list(GET record_parts 0 component)
+  list(FIND active_components "${component}" active_component_index)
+  if(active_component_index EQUAL -1)
+    continue()
+  endif()
+  list(GET record_parts 2 spdx_id)
+  list(FIND selection_components "${component}" selection_component_index)
+  if(NOT selection_component_index EQUAL -1)
+    list(FIND selected_package_records "${component}|${spdx_id}" selected_package_index)
+    if(selected_package_index EQUAL -1)
+      continue()
+    endif()
+  endif()
+  list(APPEND package_records "${record}")
+endforeach()
+list(REMOVE_DUPLICATES package_records)
+list(SORT package_records)
+
+message(STATUS "Normalizing finalized text and binary files")
 # Normalize the install prefix first, then replace its enclosing build and
 # source roots.  strclear -p preserves the replacement root, so subsequent
 # passes also leave already-correct install paths intact.
@@ -473,9 +672,7 @@ bext_run_rpath_update("${rpath_paths}")
 
 bext_run_component_hooks(FinalizeInstall)
 
-include("${CMAKE_CURRENT_LIST_DIR}/RefreshSpdx.cmake")
-bext_refresh_spdx("${BEXT_INSTALL_ROOT}")
-
+message(STATUS "Writing finalized install manifests")
 file(WRITE "${BEXT_MANIFEST}.tmp" "{\n")
 file(APPEND "${BEXT_MANIFEST}.tmp" "  \"schema\": 1,\n")
 bext_json_escape(platform "${BEXT_SYSTEM_NAME}")
@@ -502,6 +699,59 @@ file(APPEND "${BEXT_MANIFEST}.tmp" "\n}\n")
 file(COPY_FILE "${BEXT_MANIFEST}.tmp" "${BEXT_MANIFEST}" ONLY_IF_DIFFERENT)
 file(REMOVE "${BEXT_MANIFEST}.tmp")
 
+string(ASCII 34 json_quote)
+file(WRITE "${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp" "{\n")
+file(APPEND "${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp" "  ${json_quote}schema${json_quote}: 1,\n")
+file(APPEND "${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp" "  ${json_quote}platform${json_quote}: ${json_quote}${platform}${json_quote},\n")
+file(APPEND "${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp" "  ${json_quote}install_root${json_quote}: ${json_quote}install${json_quote},\n")
+file(APPEND "${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp" "  ${json_quote}generated_by${json_quote}: ${json_quote}bext${json_quote},\n")
+bext_write_json_array("${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp" "files" install_excluded_files)
+file(APPEND "${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp" "\n}\n")
+file(COPY_FILE "${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp" "${BEXT_INSTALL_EXCLUDE_MANIFEST}" ONLY_IF_DIFFERENT)
+file(REMOVE "${BEXT_INSTALL_EXCLUDE_MANIFEST}.tmp")
+
+file(WRITE "${BEXT_COMPONENT_MANIFEST}.tmp" "{\n")
+file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" "  ${json_quote}schema${json_quote}: ${json_quote}https://brlcad.org/schema/bext-component-manifest-v2${json_quote},\n")
+file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" "  ${json_quote}platform${json_quote}: ${json_quote}${platform}${json_quote},\n")
+file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" "  ${json_quote}install_root${json_quote}: ${json_quote}install${json_quote},\n")
+file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" "  ${json_quote}generated_by${json_quote}: ${json_quote}bext${json_quote},\n")
+file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" "  ${json_quote}files${json_quote}: [\n")
+set(component_entries "")
+set(component_separator "")
+foreach(record ${component_records})
+  string(REPLACE "|" ";" record_parts "${record}")
+  list(GET record_parts 0 relative)
+  list(GET record_parts 1 component)
+  bext_json_escape(relative_json "${relative}")
+  bext_json_escape(component_json "${component}")
+  string(APPEND component_entries
+    "${component_separator}    {${json_quote}path${json_quote}: ${json_quote}${relative_json}${json_quote}, ${json_quote}component${json_quote}: ${json_quote}${component_json}${json_quote}}")
+  set(component_separator ",\n")
+endforeach()
+file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" "${component_entries}\n  ],\n")
+file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" "  ${json_quote}packages${json_quote}: [\n")
+set(package_entries "")
+set(package_separator "")
+foreach(record ${package_records})
+  string(REPLACE "|" ";" record_parts "${record}")
+  list(GET record_parts 0 component)
+  list(GET record_parts 1 id)
+  list(GET record_parts 2 spdx_id)
+  list(GET record_parts 3 primary)
+  bext_inventory_get(package_output "${component}" OUTPUT)
+  string(TOLOWER "${primary}" primary)
+  bext_json_escape(component_json "${component}")
+  bext_json_escape(id_json "${id}")
+  bext_json_escape(spdx_id_json "${spdx_id}")
+  bext_json_escape(package_output_json "${package_output}")
+  string(APPEND package_entries
+    "${package_separator}    {${json_quote}component${json_quote}: ${json_quote}${component_json}${json_quote}, ${json_quote}id${json_quote}: ${json_quote}${id_json}${json_quote}, ${json_quote}spdx_id${json_quote}: ${json_quote}${spdx_id_json}${json_quote}, ${json_quote}primary${json_quote}: ${primary}, ${json_quote}output${json_quote}: ${json_quote}${package_output_json}${json_quote}}")
+  set(package_separator ",\n")
+endforeach()
+file(APPEND "${BEXT_COMPONENT_MANIFEST}.tmp" "${package_entries}\n  ]\n}\n")
+file(COPY_FILE "${BEXT_COMPONENT_MANIFEST}.tmp" "${BEXT_COMPONENT_MANIFEST}" ONLY_IF_DIFFERENT)
+file(REMOVE "${BEXT_COMPONENT_MANIFEST}.tmp")
+
 # Existing files are watched by downstream builds.  This list also detects
 # additions and removals without changing its timestamp on a no-op build.
 file(GLOB_RECURSE noinstall_files
@@ -524,10 +774,15 @@ bext_content_fingerprints(installed_content "${BEXT_INSTALL_ROOT}" "install"
 bext_content_fingerprints(noinstall_content "${BEXT_NOINSTALL_ROOT}" "noinstall"
   noinstall_files)
 file(SHA256 "${BEXT_MANIFEST}" manifest_digest)
+file(SHA256 "${BEXT_INSTALL_EXCLUDE_MANIFEST}" install_exclude_manifest_digest)
+file(SHA256 "${BEXT_COMPONENT_MANIFEST}" component_manifest_digest)
+file(SHA256 "${BEXT_SBOM}" sbom_digest)
 string(SHA256 content_digest
-  "${installed_content}${noinstall_content}M ${manifest_digest}\n")
+  "${installed_content}${noinstall_content}M ${manifest_digest}\nX ${install_exclude_manifest_digest}\nC ${component_manifest_digest}\nS ${sbom_digest}\n")
 set(content_stamp "${BEXT_BINARY_ROOT}/bext-content-stamp")
 file(WRITE "${content_stamp}.tmp" "${content_digest}\n")
 file(COPY_FILE "${content_stamp}.tmp" "${content_stamp}" ONLY_IF_DIFFERENT)
 file(REMOVE "${content_stamp}.tmp")
 message(STATUS "Generated bext install manifest: ${BEXT_MANIFEST}")
+message(STATUS "Generated bext install exclusion manifest: ${BEXT_INSTALL_EXCLUDE_MANIFEST}")
+message(STATUS "Generated bext component manifest: ${BEXT_COMPONENT_MANIFEST}")

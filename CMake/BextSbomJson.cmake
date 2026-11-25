@@ -1,0 +1,15 @@
+include_guard(GLOBAL)
+
+function(_bext_json_escape out value)
+  string(REPLACE "\\" "\\\\" value "${value}")
+  string(REPLACE "\"" "\\\"" value "${value}")
+  string(REPLACE "\n" "\\n" value "${value}")
+  string(REPLACE "\r" "\\r" value "${value}")
+  string(REPLACE "\t" "\\t" value "${value}")
+  set(${out} "${value}" PARENT_SCOPE)
+endfunction()
+
+function(_bext_json_string out value)
+  _bext_json_escape(escaped "${value}")
+  set(${out} "\"${escaped}\"" PARENT_SCOPE)
+endfunction()

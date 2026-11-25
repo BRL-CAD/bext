@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/apache/xerces-c@v3.3.0",
+      "targetPurl": "pkg:conan/xerces-c@3.3.0",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/18da6c751aea0459e2f976a3852a0fb49b5215da/recipes/xerces-c/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same xerces-c 3.3.0 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

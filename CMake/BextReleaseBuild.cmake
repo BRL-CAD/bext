@@ -1,8 +1,12 @@
 include_guard(GLOBAL)
 include(ExternalProject)
+include(${CMAKE_CURRENT_LIST_DIR}/BextSupplyChain.cmake)
 
 option(BEXT_DISCARD_WORK "Discard successful dependency working trees during sequential builds" OFF)
 if (BEXT_DISCARD_WORK)
+  if (NOT CMAKE_CXX_COMPILER_LOADED)
+    enable_language(CXX)
+  endif ()
   # A discarded compilation directory cannot support BUILD_ALWAYS.
   set(EXT_BUILD_ALWAYS OFF)
 endif ()
@@ -75,13 +79,17 @@ function(ExternalProject_Add name)
     foreach(step BUILD INSTALL)
       string(TOLOWER "${step}" lower_step)
       if (NOT has_${lower_step}_command)
-        string(APPEND ep_call " ${step}_COMMAND")
+        # These builds set their own parallelism and may use a different make
+        # implementation than the parent, whose jobserver flags are incompatible.
+        string(APPEND ep_call
+          " ${step}_COMMAND [==[${CMAKE_COMMAND}]==] -E env --unset=MAKEFLAGS --unset=MFLAGS")
         if (CMAKE_HOST_WIN32 AND WIN32 AND CMAKE_BUNDLE_INSTALL_PREFIX)
           # Tools running from a dependency's build directory may load DLLs
           # already installed by another dependency.
           string(APPEND ep_call
-            " [==[${CMAKE_COMMAND}]==] -E env --modify"
-            " [==[PATH=path_list_prepend:${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}]==] --")
+            " --modify [==[PATH=path_list_prepend:${CMAKE_BUNDLE_INSTALL_PREFIX}/${BIN_DIR}]==] --")
+        else ()
+          string(APPEND ep_call " --")
         endif ()
         string(APPEND ep_call " [==[${CMAKE_COMMAND}]==] --build <BINARY_DIR> --parallel ${BEXT_BUILD_JOBS}")
         if (CMAKE_CONFIGURATION_TYPES)
@@ -102,6 +110,9 @@ function(ExternalProject_Add name)
   endif ()
   string(APPEND ep_call ")")
   cmake_language(EVAL CODE "${ep_call}")
+  if(COMMAND bext_register_vex)
+    bext_register_vex("${name}")
+  endif()
   set_property(GLOBAL APPEND PROPERTY BEXT_EXTERNAL_PROJECTS "${name}")
   if (TARGET ${name}-install)
     get_property(_bext_install_targets GLOBAL PROPERTY BEXT_INSTALL_TARGETS)
@@ -132,7 +143,7 @@ function(bext_configure_release_build)
   if (NOT BEXT_DISCARD_WORK)
     return()
   endif ()
-  find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
+  bext_add_supply_chain_tool()
   set(plan "{}")
   foreach(field build_root source_root prefix jobs)
     if (field STREQUAL "build_root")
@@ -161,6 +172,7 @@ function(bext_configure_release_build)
   string(JSON plan SET "${plan}" install_roots 1 "${quoted}")
   string(JSON plan SET "${plan}" projects "[]")
   get_property(projects GLOBAL PROPERTY BEXT_EXTERNAL_PROJECTS)
+  get_property(unmatched_selector_ids GLOBAL PROPERTY BEXT_SBOM_SELECTOR_IDS)
   set(index 0)
   foreach(project IN LISTS projects)
     if (NOT TARGET ${project}-install)
@@ -190,21 +202,55 @@ function(bext_configure_release_build)
     endif ()
     _bext_json_quote(quoted "${upstream}")
     string(JSON record SET "${record}" upstream "${quoted}")
+    get_target_property(wrapper_binary_dir ${project} BINARY_DIR)
+    _bext_json_quote(quoted
+      "${wrapper_binary_dir}/CMakeFiles/bext-install-manifests/${project}/install_manifest.txt")
+    string(JSON record SET "${record}" preserved_install_manifest "${quoted}")
+    string(JSON record SET "${record}" selector_caches "[]")
+    set(selector_cache_index 0)
+    foreach(selector_id IN LISTS unmatched_selector_ids)
+      get_property(selector_target GLOBAL PROPERTY "BEXT_SBOM_SELECTOR_${selector_id}_TARGET")
+      if (NOT selector_target STREQUAL project)
+        continue()
+      endif ()
+      set(cache_record "{}")
+      foreach(field CACHE PRESERVED_CACHE)
+        get_property(value GLOBAL PROPERTY "BEXT_SBOM_SELECTOR_${selector_id}_${field}")
+        _bext_json_quote(quoted "${value}")
+        string(TOLOWER "${field}" key)
+        string(JSON cache_record SET "${cache_record}" "${key}" "${quoted}")
+      endforeach()
+      string(JSON record SET "${record}" selector_caches
+        ${selector_cache_index} "${cache_record}")
+      math(EXPR selector_cache_index "${selector_cache_index} + 1")
+      list(REMOVE_ITEM unmatched_selector_ids "${selector_id}")
+    endforeach()
     set(deferred false)
-    if (project MATCHES "^(TCL|TK|ITCL|ITK)_BLD$")
+    get_target_property(retain_work ${project} BEXT_RETAIN_WORK_UNTIL_FINALIZE)
+    if(retain_work)
       set(deferred true)
     endif ()
     string(JSON record SET "${record}" deferred "${deferred}")
     string(JSON plan SET "${plan}" projects ${index} "${record}")
     math(EXPR index "${index} + 1")
   endforeach()
+  if (unmatched_selector_ids)
+    list(GET unmatched_selector_ids 0 selector_id)
+    get_property(component GLOBAL PROPERTY "BEXT_SBOM_SELECTOR_${selector_id}_COMPONENT")
+    get_property(selector_target GLOBAL PROPERTY "BEXT_SBOM_SELECTOR_${selector_id}_TARGET")
+    message(FATAL_ERROR
+      "Installed SBOM selector for ${component} names unknown ExternalProject target: ${selector_target}")
+  endif ()
   # These are wrapper inputs, not the populated third-party source trees.
   file(GLOB inputs
     "${CMAKE_SOURCE_DIR}/CMakeLists.txt" "${CMAKE_SOURCE_DIR}/.gitmodules"
-    "${CMAKE_SOURCE_DIR}/CMake/*.cmake" "${CMAKE_SOURCE_DIR}/CMake/*.py"
+    "${CMAKE_SOURCE_DIR}/CMake/*.cmake"
+    "${CMAKE_SOURCE_DIR}/CMake/*.json"
+    "${CMAKE_SOURCE_DIR}/CMake/SupplyChain/*.cpp"
+    "${CMAKE_SOURCE_DIR}/CMake/SupplyChain/*.hpp"
     "${CMAKE_SOURCE_DIR}/*/CMakeLists.txt" "${CMAKE_SOURCE_DIR}/*/*.cmake"
     "${CMAKE_SOURCE_DIR}/*/*.in" "${CMAKE_SOURCE_DIR}/*/*.patch"
-    "${CMAKE_SOURCE_DIR}/*/*.deps")
+    "${CMAKE_SOURCE_DIR}/*/*.deps" "${CMAKE_SOURCE_DIR}/*/*.json")
   string(JSON plan SET "${plan}" inputs "[]")
   set(index 0)
   foreach(input IN LISTS inputs)
@@ -215,9 +261,10 @@ function(bext_configure_release_build)
   set(plan_file "${CMAKE_BINARY_DIR}/bext-release-$<CONFIG>.json")
   file(GENERATE OUTPUT "${plan_file}" CONTENT "${plan}\n")
   add_custom_target(bext_release ALL
-    COMMAND "${CMAKE_COMMAND}" "-DPLAN=${plan_file}" "-DPYTHON=${Python3_EXECUTABLE}"
-      "-DDRIVER=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/release_build.py"
+    COMMAND "${CMAKE_COMMAND}" "-DPLAN=${plan_file}"
+      "-DTOOL=$<TARGET_FILE:bext_supply_chain>"
       -P "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/BextRunReleaseBuild.cmake"
+    DEPENDS bext_supply_chain
     USES_TERMINAL VERBATIM)
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_CLEAN_FILES
     "${CMAKE_BINARY_DIR}/bext-release-state.json")

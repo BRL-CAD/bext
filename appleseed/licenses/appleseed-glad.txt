@@ -1,0 +1,20 @@
+glad 0.1.29 generated-code license evidence
+===========================================
+
+The generated files identify themselves as output from glad 0.1.29.  The
+upstream README for that exact release states in its FAQ:
+
+    What's the license of glad generated code? [#101]
+
+    Any of Public Domain, WTFPL or CC0.
+
+Source: https://github.com/Dav1dde/glad/blob/v0.1.29/README.md
+
+For this SPDX declaration, bext selects the offered CC0-1.0 option for the
+generated glad.c and glad.h files.
+
+The separately bundled KHR/khrplatform.h retains a permission grant with the
+same substantive terms accepted by the SPDX MIT template, including its
+"Materials" alternatives.  The appleseed CMake integration also carries an
+explicit MIT grant.  Those source notices are separately hash-pinned by the
+bext SBOM metadata.

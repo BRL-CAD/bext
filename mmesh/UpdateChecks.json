@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "mmesh/mmesh",
+      "kind": "commit",
+      "branch": "main"
+    }
+  ]
+}

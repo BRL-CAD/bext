@@ -1,0 +1,57 @@
+include("${CMAKE_CURRENT_LIST_DIR}/CMakeTestHelpers.cmake")
+bext_test_reset("${TEST_ROOT}")
+
+set(check_script "${TEST_ROOT}/select.cmake")
+file(WRITE "${check_script}" [=[
+include("${SERIES_FILE}")
+string(JOIN "\n" selected ${APPLESEED_PATCH_FILES})
+file(WRITE "${OUTPUT}" "${selected}\n")
+]=])
+
+foreach(stage CORE ART DEFAULT)
+  set(output "${TEST_ROOT}/${stage}.txt")
+  set(arguments "-DSERIES_FILE=${SOURCE_ROOT}/appleseed/Series.cmake" "-DOUTPUT=${output}")
+  if(NOT stage STREQUAL DEFAULT)
+    list(APPEND arguments "-DAPPLESEED_PATCH_STAGE=${stage}")
+  endif()
+  execute_process(COMMAND "${CMAKE_COMMAND}" ${arguments} -P "${check_script}"
+    RESULT_VARIABLE result ERROR_VARIABLE error)
+  if(NOT result EQUAL 0)
+    message(FATAL_ERROR "Unable to select ${stage} Appleseed patches: ${error}")
+  endif()
+  file(STRINGS "${output}" selected_${stage})
+  set(unique ${selected_${stage}})
+  list(REMOVE_DUPLICATES unique)
+  list(LENGTH selected_${stage} selected_count)
+  list(LENGTH unique unique_count)
+  if(selected_count EQUAL 0 OR NOT selected_count EQUAL unique_count)
+    message(FATAL_ERROR "${stage} Appleseed patch selection is empty or duplicated")
+  endif()
+  foreach(path IN LISTS selected_${stage})
+    if(NOT EXISTS "${path}")
+      message(FATAL_ERROR "Selected Appleseed patch does not exist: ${path}")
+    endif()
+  endforeach()
+endforeach()
+
+list(LENGTH selected_CORE core_count)
+list(LENGTH selected_ART art_count)
+if(NOT core_count LESS art_count)
+  message(FATAL_ERROR "CORE must be a strict prefix of ART")
+endif()
+list(SUBLIST selected_ART 0 ${core_count} art_core)
+if(NOT selected_CORE STREQUAL art_core OR NOT selected_ART STREQUAL selected_DEFAULT)
+  message(FATAL_ERROR "Appleseed stage ordering or default selection changed")
+endif()
+
+foreach(stage "" cor OTHER)
+  execute_process(COMMAND "${CMAKE_COMMAND}"
+    "-DSERIES_FILE=${SOURCE_ROOT}/appleseed/Series.cmake"
+    "-DOUTPUT=${TEST_ROOT}/invalid.txt" "-DAPPLESEED_PATCH_STAGE=${stage}"
+    -P "${check_script}" RESULT_VARIABLE result ERROR_VARIABLE error)
+  if(result EQUAL 0)
+    message(FATAL_ERROR "Invalid Appleseed patch stage '${stage}' was accepted")
+  endif()
+  bext_test_require_contains("${error}" "must be CORE or ART"
+    "Invalid Appleseed stage diagnostic")
+endforeach()

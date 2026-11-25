@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "regex/regex",
+      "kind": "commit",
+      "branch": "main",
+      "reason": "Track the maintained source import; this does not establish coverage of original upstream releases."
+    }
+  ]
+}

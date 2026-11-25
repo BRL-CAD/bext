@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/libjpeg-turbo/libjpeg-turbo@3.2.0",
+      "targetPurl": "pkg:conan/libjpeg-turbo@3.2.0",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/libjpeg-turbo/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same libjpeg-turbo upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

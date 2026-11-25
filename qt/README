@@ -43,7 +43,8 @@ SQLite selection
 Qt Base's source archive includes SQLite 3.53.4, but bext configures Qt with
 -system-sqlite and SQLite3_ROOT pointing to its dependency installation.
 The SQL plugin uses the maintained standalone SQLite library rather than
-compiling Qt's private copy.
+compiling Qt's private copy. The source SBOM still inventories that private
+copy; the build selection excludes it when system_sqlite is enabled.
 
 FreeBSD compiler runtime checks
 ------------------------------
@@ -68,3 +69,19 @@ Relocatable metadata
 Finalization makes exported Qt link paths relative to _IMPORT_PREFIX and
 uses $$[QT_INSTALL_PREFIX] in qmake metadata. Consumers can move the bundle
 and stage dependencies without changing those files.
+
+SBOM attribution snapshots
+--------------------------
+
+Source inventories read the reviewed Qt attribution files in attributions/
+and the revision and checksums in attributions.json. They do not require a Qt
+checkout. When sources are present, the inventory checks the original JSON
+and PCRE2 notice and rejects additional security-critical components.
+
+After preparing a candidate source revision in qt/qt, run:
+
+  cmake --build <build> --target qt_attribution_refresh
+
+The helper reads committed source blobs. Review changes to the component set,
+licenses, build selectors, and vulnerability decisions before staging the
+refreshed snapshots alongside the Qt source pin.

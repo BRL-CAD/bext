@@ -1,0 +1,100 @@
+{
+  "toolVersion": "44.221.6",
+  "cases": [
+    {
+      "coverage": {
+        "package": "SPDXRef-Package-zlib-zlib",
+        "checkKind": "release",
+        "query": {
+          "currentValue": "v1.4",
+          "datasource": "git-tags",
+          "depName": "SPDXRef-Package-zlib-zlib",
+          "depType": "zlib",
+          "packageName": "https://github.com/madler/zlib.git",
+          "versioning": "semver-coerced"
+        }
+      },
+      "result": {
+        "depName": "SPDXRef-Package-zlib-zlib",
+        "updates": [],
+        "warnings": [],
+        "currentVersion": "v1.4",
+        "fixedVersion": "v1.4"
+      },
+      "expectedStatus": "current"
+    },
+    {
+      "coverage": {
+        "package": "SPDXRef-Package-openimageio-oiio",
+        "checkKind": "release",
+        "query": {
+          "currentValue": "v2.5.12.0",
+          "datasource": "git-tags",
+          "depName": "SPDXRef-Package-openimageio-oiio",
+          "depType": "openimageio",
+          "packageName": "https://github.com/AcademySoftwareFoundation/OpenImageIO.git",
+          "versioning": "regex:^v?(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)\\.(?<build>[0-9]+)$"
+        }
+      },
+      "result": {
+        "depName": "SPDXRef-Package-openimageio-oiio",
+        "updates": [
+          {
+            "bucket": "non-major",
+            "newVersion": "v2.5.19.1",
+            "newValue": "v2.5.19.1",
+            "newMajor": 2,
+            "newMinor": 5,
+            "newPatch": 19,
+            "updateType": "patch",
+            "isBreaking": false,
+            "branchName": "renovate/spdxref-package-openimageio-oiio-2.x"
+          },
+          {
+            "bucket": "major",
+            "newVersion": "v3.2.2.0",
+            "newValue": "v3.2.2.0",
+            "newMajor": 3,
+            "newMinor": 2,
+            "newPatch": 2,
+            "updateType": "major",
+            "isBreaking": true,
+            "branchName": "renovate/spdxref-package-openimageio-oiio-3.x"
+          }
+        ],
+        "warnings": [],
+        "currentVersion": "v2.5.12.0",
+        "fixedVersion": "v2.5.12.0"
+      },
+      "expectedStatus": "updates_available"
+    },
+    {
+      "coverage": {
+        "package": "SPDXRef-Package-lemon-lemon",
+        "checkKind": "commit",
+        "query": {
+          "currentDigest": "b0e459f6feb0ee5ed4167192bdbbb0270eaf0ecd",
+          "currentValue": "main",
+          "datasource": "git-refs",
+          "depName": "SPDXRef-Package-lemon-lemon",
+          "depType": "lemon",
+          "packageName": "https://github.com/BRL-CAD/lemon",
+          "versioning": "git"
+        }
+      },
+      "result": {
+        "depName": "SPDXRef-Package-lemon-lemon",
+        "updates": [
+          {
+            "updateType": "digest",
+            "newValue": "main",
+            "newDigest": "06da559e490c23ba391c77c3b8f001283ade550b",
+            "branchName": "renovate/spdxref-package-lemon-lemon-digest"
+          }
+        ],
+        "warnings": []
+      },
+      "expectedStatus": "commit_changed"
+    }
+  ]
+}

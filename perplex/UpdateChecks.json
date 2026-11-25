@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "perplex/perplex",
+      "kind": "commit",
+      "branch": "main"
+    }
+  ]
+}

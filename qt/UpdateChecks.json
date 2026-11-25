@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "qt/qt/qtbase",
+      "datasource": "git-tags",
+      "packageName": "https://code.qt.io/qt/qtbase.git",
+      "currentValueFrom": "version"
+    },
+    {
+      "source": "qt/qt/qtsvg",
+      "datasource": "git-tags",
+      "packageName": "https://code.qt.io/qt/qtsvg.git",
+      "currentValueFrom": "version"
+    },
+    {
+      "source": "qt/qt",
+      "kind": "parent",
+      "coveredBy": [
+        "qt/qt/qtbase",
+        "qt/qt/qtsvg"
+      ]
+    },
+    {
+      "source": "qt/qt/qtbase/src/3rdparty/freetype",
+      "versioning": "regex:^VER-(?<major>[0-9]+)-(?<minor>[0-9]+)-(?<patch>[0-9]+)$"
+    },
+    {
+      "source": "qt/qt/qtbase/src/3rdparty/pcre2",
+      "versioning": "regex:^pcre2-(?<major>[0-9]+)\\.(?<minor>[0-9]+)(?:\\.(?<patch>[0-9]+))?$"
+    },
+    {
+      "source": "qt/qt/qtbase/src/3rdparty/md4c",
+      "currentValueFrom": "version",
+      "extractVersion": "^release-(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+    },
+    {
+      "source": "qt/qt/qtbase/src/3rdparty/sqlite",
+      "currentValueFrom": "version",
+      "extractVersion": "^version-(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+    }
+  ]
+}

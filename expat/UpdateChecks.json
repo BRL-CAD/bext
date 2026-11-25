@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "expat/libexpat",
+      "versioning": "regex:^R_(?<major>[0-9]+)_(?<minor>[0-9]+)_(?<patch>[0-9]+)$"
+    }
+  ]
+}

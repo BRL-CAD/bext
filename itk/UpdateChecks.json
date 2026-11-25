@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "itk/itk",
+      "kind": "manual",
+      "reason": "The pinned tree declares a newer version than the mirrored Git tags; verify releases in the original Tcl repository."
+    }
+  ]
+}

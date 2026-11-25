@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/facebook/zstd@v1.5.6",
+      "targetPurl": "pkg:conan/zstd@1.5.6",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/zstd/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same facebook/zstd upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

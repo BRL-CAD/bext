@@ -117,6 +117,28 @@ set(DISABLE_TCL "${DISABLE_TCL}" CACHE BOOL "Disable tcl build")
 
 if (ENABLE_TCL)
 
+  bext_sbom_selector(tcl
+    TARGET TCL_BLD
+    SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/SbomSelection.cmake"
+    FUNCTION bext_tcl_selected_packages
+    CACHE "${CMAKE_BINARY_DIR}/CMakeCache.txt")
+
+  set(TCL_COMPONENT_OWNERSHIP
+    "^bin/tcl[^/]*"
+    "^include/(itcl|tcl)[^/]*"
+    "^lib/(dde|itcl|nmake|reg[0-9]|tcl|thread)[^/]*(/|$)"
+    "^lib/lib(tcl|itcl)(stub)?[0-9.][^/]*$"
+    "^lib/pkgconfig/tcl[.]pc$"
+  )
+  if (BEXT_TCL_ENABLE_DATABASE_PACKAGES)
+    list(APPEND TCL_COMPONENT_OWNERSHIP
+      "^include/tdbc[^/]*"
+      "^lib/(sqlite3|tdbc)[^/]*(/|$)"
+      )
+  endif ()
+  bext_component_ownership(tcl ${TCL_COMPONENT_OWNERSHIP})
+  unset(TCL_COMPONENT_OWNERSHIP)
+
   set(TCL_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/tcl_relocatable_config.patch")
   if (NOT MSVC)
@@ -135,7 +157,8 @@ if (ENABLE_TCL)
   endif ()
   list(APPEND TCL_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/tcl_disable_docs.patch")
-  set(TCL_INPUT_FILES)
+  set(TCL_INPUT_FILES "${CMAKE_CURRENT_LIST_FILE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/BuildSettings.cmake")
   set(TCL_SQLITE_SETUP_COMMANDS)
   if (BEXT_TCL_ENABLE_DATABASE_PACKAGES)
     set(TCL_SQLITE_SOURCE_DIR "${PROJECT_SOURCE_DIR}/sqlite3/sqlite3")
@@ -217,6 +240,22 @@ if (ENABLE_TCL)
     endforeach ()
     unset(TCL_EXCLUDED_PACKAGE)
   endif ()
+
+  # Bundled Itcl and Thread still install manuals even when Tcl's own
+  # documentation is disabled.  Include optional packages only when built.
+  file(GLOB TCL_PACKAGE_SOURCE_DIRS LIST_DIRECTORIES true
+    "${CMAKE_CURRENT_SOURCE_DIR}/tcl/pkgs/*")
+  foreach(TCL_PACKAGE_SOURCE_DIR IN LISTS TCL_PACKAGE_SOURCE_DIRS)
+    get_filename_component(TCL_PACKAGE_NAME "${TCL_PACKAGE_SOURCE_DIR}" NAME)
+    if (NOT TCL_PACKAGE_NAME IN_LIST TCL_EXCLUDED_PACKAGES)
+      bext_component_manpage_ownership(tcl
+        "${TCL_PACKAGE_SOURCE_DIR}/doc/*.n"
+        "${TCL_PACKAGE_SOURCE_DIR}/doc/man/*.n")
+    endif ()
+  endforeach()
+  unset(TCL_PACKAGE_NAME)
+  unset(TCL_PACKAGE_SOURCE_DIR)
+  unset(TCL_PACKAGE_SOURCE_DIRS)
 
   if (TARGET ZLIB_BLD)
     set(ZLIB_SETUP_COMMANDS
@@ -387,6 +426,8 @@ if (ENABLE_TCL)
 
   endif (NOT MSVC)
 
+  # Downstream toolkit builds still need this staged implementation tree.
+  set_property(TARGET TCL_BLD PROPERTY BEXT_RETAIN_WORK_UNTIL_FINALIZE TRUE)
   TargetInstallDeps(TCL TCL_DEPENDS)
 
   # Scripts expect a non-versioned tclsh program, but the Tcl build doesn't provide one,
@@ -402,6 +443,8 @@ if (ENABLE_TCL)
       DEPENDS TCL_BLD-install
       )
   endif ()
+
+  set_property(GLOBAL APPEND PROPERTY BEXT_INSTALL_FIXUP_TARGETS tclsh_cpy)
 
   # The library file permissions end up a bit strange - fix them
   find_program(CHMOD_EXECUTABLE chmod)
@@ -420,6 +463,7 @@ if (ENABLE_TCL)
       COMMAND ${CHMOD_EXECUTABLE} a-x,u+w ${CMAKE_BUNDLE_INSTALL_PREFIX}/${LIB_DIR}/${LIB_PREFIX}tclstub${TCL_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}
       DEPENDS TCL_BLD-install
       )
+    set_property(GLOBAL APPEND PROPERTY BEXT_INSTALL_FIXUP_TARGETS tcl_permissionsfix)
   endif ()
 
   # Copy the license into position in CMAKE_BUNDLE_INSTALL_PREFIX

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "tktable/tktable",
+      "versioning": "regex:^(?:tktable-)?(?<major>[0-9]+)[.-](?<minor>[0-9]+)[.-](?<patch>[0-9]+)$",
+      "currentValueFrom": "version"
+    }
+  ]
+}

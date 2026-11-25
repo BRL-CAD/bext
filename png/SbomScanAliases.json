@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/pnggroup/libpng@v1.6.57",
+      "targetPurl": "pkg:conan/libpng@1.6.57",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/61c7c71dd2c17f822f1dc3be0d6a8a474fe6339a/recipes/libpng/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same libpng 1.6.57 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:github/pnggroup/libpng@v1.6.58",
+      "targetPurl": "pkg:conan/libpng@1.6.58",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/38b852d48946bb469874e70eb90425789d4360a2/recipes/libpng/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same libpng 1.6.58 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

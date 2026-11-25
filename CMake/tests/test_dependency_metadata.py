@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline checks for committed and staged dependency metadata snapshots."""
 
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -27,7 +28,8 @@ class DependencyMetadataTests(unittest.TestCase):
         modules = self.source / 'CMake'
         modules.mkdir()
         for name in ('BextDependencyInventory.cmake', 'GenerateDependencyDocs.cmake',
-                     'GenerateSbom.cmake'):
+                     'GenerateSbom.cmake', 'ValidateSbom.cmake',
+                     'BextSbomJson.cmake', 'BextCycloneDx.cmake'):
             shutil.copyfile(MODULE / name, modules / name)
         (self.source / 'CMakeLists.txt').write_text('add_project(probe GROUPS "BRLCAD;APPLESEED")\n')
         (self.source / '.gitmodules').write_text(
@@ -63,6 +65,9 @@ class DependencyMetadataTests(unittest.TestCase):
     def wrapper(self, name):
         directory = self.source / name
         directory.mkdir()
+        (directory / 'BextPackage.cmake').write_text(
+            f'bext_package({name} OUTPUT install GROUPS BRLCAD APPLESEED)\n'
+            f'bext_sbom_component("{name}/source")\n')
         (directory / 'CMakeLists.txt').write_text('''
 git_submodule_init(source CMakeLists.txt)
 ExternalProject_Add(PROBE_BLD
@@ -79,6 +84,7 @@ ExternalProject_Add(PROBE_BLD
     def inventory(self, mode, success=True):
         script = self.source / 'inventory.cmake'
         script.write_text('''
+cmake_minimum_required(VERSION 3.26)
 include("@MODULE@/BextDependencyInventory.cmake")
 bext_collect_dependency_inventory("@SOURCE@")
 foreach(project ${BEXT_INVENTORY_PROJECTS})
@@ -132,6 +138,89 @@ endforeach()
         self.docs('INDEX')
         self.docs('HEAD')
 
+    def test_descriptors_and_license_evidence_use_the_selected_snapshot(self):
+        evidence = self.source / 'probe/license.txt'
+        license_text = 'Reviewed probe license \N{COPYRIGHT SIGN}\n'
+        evidence.write_text(license_text, encoding='utf-8', newline='')
+        digest = hashlib.sha256(license_text.encode()).hexdigest()
+        descriptor = self.source / 'probe/BextPackage.cmake'
+        descriptor.write_text(
+            'bext_package(probe OUTPUT install GROUPS BRLCAD APPLESEED)\n'
+            'bext_sbom_component("probe/source" NAME "Reviewed probe"\n'
+            ' LICENSE "LicenseRef-Probe" LICENSE_NAME "Probe terms"\n'
+            ' LICENSE_FILE "@/probe/license.txt"\n'
+            f' LICENSE_SHA256 "{digest}" REVIEWED_REVISION "{self.first}")\n')
+        self.git('add', 'probe/BextPackage.cmake', 'probe/license.txt')
+        # INDEX uses staged descriptors and evidence even when they are absent
+        # or invalid in the working tree. HEAD still uses the old descriptor.
+        descriptor.write_text('invalid unstaged descriptor\n')
+        evidence.unlink()
+        self.inventory('INDEX')
+        self.inventory('HEAD')
+        self.git('commit', '-qm', 'Review probe license')
+        output = self.source / 'sbom.json'
+        cyclonedx_output = self.source / 'sbom.cdx.json'
+        self.command('cmake', f'-DBEXT_SOURCE_DIR={self.source}',
+                     f'-DBEXT_SBOM_OUTPUT={output}', '-DBEXT_SBOM_ALLOW_DIRTY=ON',
+                     f'-DBEXT_CYCLONEDX_OUTPUT={cyclonedx_output}',
+                     '-P', MODULE / 'GenerateSbom.cmake')
+        document = json.loads(output.read_text(encoding='utf-8'))
+        self.assertEqual(document['packages'][0]['name'], 'Reviewed probe')
+        self.assertEqual(document['hasExtractedLicensingInfos'][0]['extractedText'],
+                         license_text)
+        cyclonedx = json.loads(cyclonedx_output.read_text())
+        self.assertEqual(cyclonedx['components'][0]['name'], 'Reviewed probe')
+        self.assertEqual(cyclonedx['components'][0]['evidence']['licenses'][0]
+                         ['license']['text']['content'], license_text)
+
+    def test_repository_evidence_must_belong_to_the_selected_snapshot(self):
+        evidence = self.source / 'probe/license.txt'
+        license_text = 'Reviewed license terms\n'
+        evidence.write_text(license_text, encoding='utf-8')
+        digest = hashlib.sha256(license_text.encode()).hexdigest()
+        descriptor = self.source / 'probe/BextPackage.cmake'
+        for path in ('@/probe/license.txt', '../license.txt'):
+            with self.subTest(path=path):
+                descriptor.write_text(
+                    'bext_package(probe OUTPUT install GROUPS BRLCAD APPLESEED)\n'
+                    'bext_sbom_component("probe/source" LICENSE "LicenseRef-Probe" LICENSE_NAME "Probe terms"\n'
+                    f' LICENSE_FILE "{path}" LICENSE_SHA256 "{digest}"\n'
+                    f' REVIEWED_REVISION "{self.first}")\n')
+                self.git('add', 'probe/BextPackage.cmake')
+                self.assertIn('missing from INDEX', self.inventory('INDEX', success=False))
+                self.git('add', 'probe/license.txt')
+                self.inventory('INDEX')
+                self.git('restore', '--staged', 'probe/license.txt')
+        self.git('add', 'probe/license.txt')
+        self.git('commit', '-qm', 'Review repository evidence')
+        self.git('rm', '--cached', 'probe/license.txt')
+        self.assertTrue(evidence.is_file())
+        self.assertIn('missing from INDEX', self.inventory('INDEX', success=False))
+        self.inventory('HEAD')
+
+    def test_local_license_snapshot_requires_current_reviewed_revision(self):
+        evidence = self.source / 'probe/license.txt'
+        license_text = 'Reviewed probe license\n'
+        evidence.write_text(license_text, newline='')
+        digest = hashlib.sha256(license_text.encode()).hexdigest()
+        descriptor = self.source / 'probe/BextPackage.cmake'
+        metadata = (
+            'bext_package(probe OUTPUT install GROUPS BRLCAD APPLESEED)\n'
+            'bext_sbom_component("probe/source" LICENSE "LicenseRef-Probe"\n'
+            ' LICENSE_NAME "Probe terms" LICENSE_FILE "@/probe/license.txt"\n'
+            f' LICENSE_SHA256 "{digest}"{{}})\n')
+        descriptor.write_text(metadata.format(''))
+        self.git('add', 'probe/BextPackage.cmake', 'probe/license.txt')
+        message = self.inventory('INDEX', success=False)
+        self.assertIn('Repository-local license evidence', message)
+        self.assertIn('REVIEWED_REVISION', message)
+
+        descriptor.write_text(metadata.format(f' REVIEWED_REVISION "{self.first}"'))
+        self.git('add', 'probe/BextPackage.cmake')
+        self.inventory('INDEX')
+        self.pin('probe', self.second)
+        self.assertIn('but the pinned source is', self.inventory('INDEX', success=False))
+
     def test_unmerged_gitlink_is_rejected(self):
         self.git('update-index', '--force-remove', 'probe/source')
         self.git('update-index', '--index-info', input=(
@@ -146,9 +235,10 @@ endforeach()
         self.git('add', 'CMakeLists.txt')
         output = self.source / 'sbom.json'
         self.command('cmake', f'-DBEXT_SOURCE_DIR={self.source}',
-                     f'-DBEXT_SBOM_OUTPUT={output}', '-P', MODULE / 'GenerateSbom.cmake')
+                     f'-DBEXT_SBOM_OUTPUT={output}', '-DBEXT_SBOM_ALLOW_DIRTY=ON',
+                     '-P', MODULE / 'GenerateSbom.cmake')
         document = json.loads(output.read_text())
-        self.assertTrue(document['documentNamespace'].endswith(self.second))
+        self.assertIn('/' + self.second + '-dirty-', document['documentNamespace'])
         self.assertEqual(document['packages'][0]['versionInfo'], self.first)
         self.assertEqual(document['packages'][0]['name'], 'probe')
         message = self.command('cmake', f'-DBEXT_SOURCE_DIR={self.source}',
@@ -171,6 +261,8 @@ function(add_project)
 endfunction()
 add_project(probe GROUPS "BRLCAD;APPLESEED")
 set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
+set(BEXT_CYCLONEDX_OUTPUT "${CMAKE_BINARY_DIR}/bext.cdx.json")
+set(BEXT_SBOM_ALLOW_DIRTY ON)
 ''' + target)
         self.git('add', 'CMakeLists.txt')
         self.git('commit', '-qm', 'Add production SBOM target')
@@ -178,13 +270,17 @@ set(BEXT_SBOM_OUTPUT "${CMAKE_BINARY_DIR}/bext.spdx.json")
         self.command('cmake', '-S', self.source, '-B', build, '-G', 'Ninja')
         self.command('cmake', '--build', build, '--target', 'sbom')
         first = json.loads((build / 'bext.spdx.json').read_text())
+        first_cyclonedx = json.loads((build / 'bext.cdx.json').read_text())
         self.pin('probe', self.second)
         self.git('commit', '-qm', 'Update only the dependency pin')
         self.command('cmake', '--build', build, '--target', 'sbom')
         second = json.loads((build / 'bext.spdx.json').read_text())
+        second_cyclonedx = json.loads((build / 'bext.cdx.json').read_text())
         self.assertNotEqual(first['documentNamespace'], second['documentNamespace'])
         self.assertEqual(second['packages'][0]['versionInfo'], self.second)
-        self.assertTrue(second['documentNamespace'].endswith(self.git('rev-parse', 'HEAD').strip()))
+        self.assertNotEqual(first_cyclonedx['serialNumber'], second_cyclonedx['serialNumber'])
+        self.assertEqual(second_cyclonedx['components'][0]['version'], self.second)
+        self.assertIn('/' + self.git('rev-parse', 'HEAD').strip(), second['documentNamespace'])
 
 
 if __name__ == '__main__':

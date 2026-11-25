@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/libexpat/libexpat@R_2_6_2",
+      "targetPurl": "pkg:conan/expat@2.6.2",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/ae76e2ae44bae9f7af947e5ec6aab5408ee03d09/recipes/expat/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same expat 2.6.2 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "strclear/strclear",
+      "kind": "commit",
+      "branch": "main"
+    }
+  ]
+}

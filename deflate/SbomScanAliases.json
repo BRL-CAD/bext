@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/ebiggers/libdeflate@v1.20",
+      "targetPurl": "pkg:conan/libdeflate@1.20",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/36b57d3bc07657e26de7be98f687cfa850618e42/recipes/libdeflate/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same libdeflate 1.20 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

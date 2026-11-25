@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Offline integration checks using real ExternalProject builds and cleanup."""
 
-import importlib.util
 import json
 import os
 from pathlib import Path
 import shutil
-import stat
 import subprocess
 import tempfile
 import unittest
@@ -15,9 +13,6 @@ from unittest import mock
 
 MODULE = Path(__file__).resolve().parents[1]
 WINDOWS_PRIVILEGE_NOT_HELD = 1314
-spec = importlib.util.spec_from_file_location('release_build', MODULE / 'release_build.py')
-driver = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(driver)
 
 
 class ReleaseBuildTests(unittest.TestCase):
@@ -42,7 +37,9 @@ class ReleaseBuildTests(unittest.TestCase):
         return result.stdout
 
     def fixture(self, deferred=False, nested=False):
-        names = ['FIRST', 'SECOND'] + (['TCL', 'TK', 'ITK'] if deferred else [])
+        (self.source / 'SbomSelection.cmake').write_text(
+            'function(fixture_packages)\nendfunction()\n')
+        names = ['FIRST', 'SECOND'] + (['PROVIDER_A', 'PROVIDER_B', 'CONSUMER'] if deferred else [])
         for name in names:
             upstream = self.source / name.lower()
             upstream.mkdir()
@@ -58,9 +55,9 @@ find_library(first_library first PATHS "${CMAKE_INSTALL_PREFIX}/lib" NO_DEFAULT_
 '''
                 extra = 'target_link_libraries(second PRIVATE "${first_library}")\n'
                 body = 'return first();'
-            if name == 'ITK':
+            if name == 'CONSUMER':
                 checks = '''
-if(NOT EXISTS "${TCL_WORK}" OR NOT EXISTS "${TK_WORK}")
+if(NOT EXISTS "${PROVIDER_A_WORK}" OR NOT EXISTS "${PROVIDER_B_WORK}")
   message(FATAL_ERROR "Deferred dependency was discarded too early")
 endif()
 '''
@@ -85,6 +82,7 @@ set(CMAKE_BUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/install")
 set(CMAKE_NOBUNDLE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/noinstall")
 file(MAKE_DIRECTORY "${CMAKE_NOBUNDLE_INSTALL_PREFIX}")
 include("@MODULE@/BextReleaseBuild.cmake")
+include("@MODULE@/Utils.cmake")
 '''.replace('@MODULE@', MODULE.as_posix())
         for index, name in enumerate(names):
             failure = self.failure if name == 'SECOND' else self.root / 'never-fail'
@@ -95,13 +93,15 @@ include("@MODULE@/BextReleaseBuild.cmake")
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DEXPECT_DISCARD=${BEXT_DISCARD_WORK}
     -DFIRST_WORK=${CMAKE_BINARY_DIR}/FIRST_BLD-prefix/src/FIRST_BLD-build
-    -DTCL_WORK=${CMAKE_BINARY_DIR}/TCL_BLD-prefix/src/TCL_BLD-build
-    -DTK_WORK=${CMAKE_BINARY_DIR}/TK_BLD-prefix/src/TK_BLD-build
+    -DPROVIDER_A_WORK=${CMAKE_BINARY_DIR}/PROVIDER_A_BLD-prefix/src/PROVIDER_A_BLD-build
+    -DPROVIDER_B_WORK=${CMAKE_BINARY_DIR}/PROVIDER_B_BLD-prefix/src/PROVIDER_B_BLD-build
     -DFAIL_SWITCH=@FAILURE@
   STEP_TARGETS install LOG_CONFIGURE ON LOG_BUILD ON LOG_INSTALL ON LOG_OUTPUT_ON_FAILURE ON)
 '''.replace('@NAME@', name).replace('@name@', name.lower()).replace('@FAILURE@', failure.as_posix())
             if index:
                 wrapper += 'ExternalProject_Add_StepDependencies(' + name + '_BLD configure ' + names[index - 1] + '_BLD-install)\n'
+            if deferred and name in ('PROVIDER_A', 'PROVIDER_B', 'CONSUMER'):
+                wrapper += f'set_property(TARGET {name}_BLD PROPERTY BEXT_RETAIN_WORK_UNTIL_FINALIZE TRUE)\n'
             if nested:
                 directory = self.source / 'wrappers' / name.lower()
                 directory.mkdir(parents=True)
@@ -109,9 +109,32 @@ include("@MODULE@/BextReleaseBuild.cmake")
                 cmake += 'add_subdirectory(wrappers/' + name.lower() + ' EXCLUDE_FROM_ALL)\n'
             else:
                 cmake += wrapper
+            if name == 'FIRST':
+                cmake += '''bext_sbom_selector(first
+  TARGET FIRST_BLD
+  SCRIPT "${CMAKE_SOURCE_DIR}/SbomSelection.cmake"
+  FUNCTION fixture_packages
+  CACHE "${CMAKE_BINARY_DIR}/FIRST_BLD-prefix/src/FIRST_BLD-build/CMakeCache.txt")
+'''
         finalize = '''
+if(EXPECT_DISCARD)
+  file(GLOB_RECURSE native_manifests "@BUILD@/*/install_manifest.txt")
+  list(LENGTH native_manifests native_manifest_count)
+  if(native_manifest_count LESS @COUNT@)
+    message(FATAL_ERROR "Native install manifests were lost before finalization")
+  endif()
+  file(GLOB selector_caches "@BUILD@/CMakeFiles/bext-sbom-selector-caches/*.cache")
+  list(LENGTH selector_caches selector_cache_count)
+  if(NOT selector_cache_count EQUAL 1)
+    message(FATAL_ERROR "Expected one preserved selector cache")
+  endif()
+  file(READ "${selector_caches}" selector_cache)
+  if(NOT selector_cache MATCHES "CMAKE_PROJECT_NAME:STATIC=FIRST")
+    message(FATAL_ERROR "Preserved selector cache is invalid")
+  endif()
+endif()
 if(@DEFERRED@)
-  foreach(name TCL TK ITK)
+  foreach(name PROVIDER_A PROVIDER_B CONSUMER)
     if(NOT EXISTS "@BUILD@/${name}_BLD-prefix/src/${name}_BLD-build")
       message(FATAL_ERROR "Missing deferred tree at finalization")
     endif()
@@ -121,7 +144,7 @@ if(EXISTS "@FAIL_FINALIZE@")
   message(FATAL_ERROR "Requested finalization failure")
 endif()
 file(WRITE "@PREFIX@/finalized" "done")
-'''.replace('@DEFERRED@', 'TRUE' if deferred else 'FALSE').replace('@BUILD@', self.build.as_posix()).replace('@PREFIX@', self.prefix.as_posix()).replace('@FAIL_FINALIZE@', self.final_failure.as_posix())
+'''.replace('@COUNT@', str(len(names))).replace('@DEFERRED@', 'TRUE' if deferred else 'FALSE').replace('@BUILD@', self.build.as_posix()).replace('@PREFIX@', self.prefix.as_posix()).replace('@FAIL_FINALIZE@', self.final_failure.as_posix())
         (self.source / 'finalize.cmake').write_text(finalize)
         cmake += '''
 set(finalize_all ALL)
@@ -129,7 +152,8 @@ if(BEXT_DISCARD_WORK)
   set(finalize_all)
 endif()
 add_custom_target(bext_finalize ${finalize_all}
-  COMMAND ${CMAKE_COMMAND} -P "${CMAKE_SOURCE_DIR}/finalize.cmake"
+  COMMAND ${CMAKE_COMMAND} -DEXPECT_DISCARD=${BEXT_DISCARD_WORK}
+    -P "${CMAKE_SOURCE_DIR}/finalize.cmake"
   DEPENDS @INSTALLS@)
 bext_configure_release_build()
 '''.replace('@INSTALLS@', ' '.join(name + '_BLD-install' for name in names))
@@ -150,6 +174,12 @@ bext_configure_release_build()
     def plan(self):
         return json.loads((self.build / 'bext-release-Release.json').read_text())
 
+    def run_driver(self, plan, success=False):
+        path = self.build / 'modified-release-plan.json'
+        path.write_text(json.dumps(plan))
+        tool = self.build / ('bext_supply_chain.exe' if os.name == 'nt' else 'bext_supply_chain')
+        return self.run_command(tool, 'release-build', '--plan', path, success=success)
+
     def directory_symlink(self, link, target):
         try:
             link.symlink_to(target, target_is_directory=True)
@@ -168,6 +198,10 @@ bext_configure_release_build()
                 self.assertFalse(Path(project[key]).exists())
             self.assertTrue(Path(project['stamp_dir']).is_dir())
             self.assertTrue(Path(project['tmp_dir']).is_dir())
+            manifest = Path(project['preserved_install_manifest'])
+            self.assertTrue(manifest.is_file())
+            for name in manifest.read_text().splitlines():
+                self.assertTrue(Path(name).exists())
         self.assertTrue((self.source / 'first/first.c').is_file())
         self.assertTrue(list((self.prefix / 'install/lib').glob('*first*')))
         self.assertTrue((self.build / 'bext-release-logs/FIRST_BLD.log').is_file())
@@ -206,40 +240,12 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         self.assertTrue(list((self.prefix / 'install/lib').glob('*first*')))
         self.assertIn('up to date', self.compile())
 
-    def test_readonly_cleanup_retries_windows_deletion(self):
-        path = self.root / 'readonly.txt'
-        path.write_text('Read_only')
-        path.chmod(stat.S_IREAD)
-        self.addCleanup(lambda: path.exists() and path.chmod(stat.S_IREAD | stat.S_IWRITE))
-        error = PermissionError('Access is denied')
-        # Exercise Windows recovery on every host; actual deletion is still real.
-        with mock.patch.object(driver, 'os', wraps=os) as windows:
-            windows.name = 'nt'
-            driver.remove_readonly(windows.unlink, path, (PermissionError, error, None))
-            windows.unlink.assert_called_once_with(path)
-        self.assertFalse(path.exists())
-
-    def test_readonly_cleanup_preserves_other_errors(self):
-        path = self.root / 'writable.txt'
-        path.write_text('Writable')
-        for error in (PermissionError('File is locked'), OSError('Other error')):
-            with self.subTest(error=error):
-                with mock.patch.object(driver, 'os', wraps=os) as windows:
-                    windows.name = 'nt'
-                    with self.assertRaises(type(error)) as raised:
-                        driver.remove_readonly(windows.unlink, path,
-                                               (type(error), error, None))
-                    self.assertIs(raised.exception, error)
-                    windows.chmod.assert_not_called()
-                    windows.unlink.assert_not_called()
-        self.assertTrue(path.exists())
-
-    def test_deferred_tcl_stack_survives_until_finalization(self):
+    def test_deferred_dependency_chain_survives_until_finalization(self):
         self.fixture(deferred=True)
         self.configure()
         self.compile()
         self.assertTrue((self.prefix / 'finalized').is_file())
-        for name in ('TCL', 'TK', 'ITK'):
+        for name in ('PROVIDER_A', 'PROVIDER_B', 'CONSUMER'):
             self.assertFalse((self.build / (name + '_BLD-prefix/src/' + name + '_BLD-build')).exists())
 
     def test_failed_finalization_retains_deferred_work_for_retry(self):
@@ -247,11 +253,11 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         self.configure()
         self.final_failure.touch()
         self.compile(success=False)
-        for name in ('TCL', 'TK', 'ITK'):
+        for name in ('PROVIDER_A', 'PROVIDER_B', 'CONSUMER'):
             self.assertTrue((self.build / (name + '_BLD-prefix/src/' + name + '_BLD-build')).is_dir())
         self.final_failure.unlink()
         self.compile()
-        for name in ('TCL', 'TK', 'ITK'):
+        for name in ('PROVIDER_A', 'PROVIDER_B', 'CONSUMER'):
             self.assertFalse((self.build / (name + '_BLD-prefix/src/' + name + '_BLD-build')).exists())
 
     def test_default_prefix_inside_build_tree_is_retained(self):
@@ -379,37 +385,45 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         self.compile()
         self.assertIn('up to date', self.compile())
 
+    @unittest.skipUnless(shutil.which('gmake') or shutil.which('make'), 'make is required')
+    def test_cmake_steps_do_not_inherit_parent_make_flags(self):
+        self.fixture()
+        project = self.source / 'CMakeLists.txt'
+        project.write_text(project.read_text().replace(
+            '  CMAKE_ARGS ', '  CMAKE_GENERATOR "Unix Makefiles"\n  CMAKE_ARGS '))
+        self.configure(discard=False)
+        # A BSD make jobserver uses flags that GNU make cannot parse.
+        with mock.patch.dict(os.environ, {'MAKEFLAGS': '-J 3,4 -j 2',
+                                          'MFLAGS': '-J 3,4 -j 2'}):
+            self.compile()
+        self.assertTrue((self.prefix / 'finalized').is_file())
+
     def test_unsafe_work_directory_is_rejected(self):
         self.fixture()
         self.configure()
+        self.compile(target='bext_supply_chain')
         plan = self.plan()
         plan['projects'][0]['binary_dir'] = str(self.build)
-        with self.assertRaisesRegex(ValueError, 'Unsafe working directory'):
-            driver.work_paths(plan, plan['projects'][0])
+        self.assertIn('Unsafe working directory', self.run_driver(plan))
         plan['projects'][0]['binary_dir'] = str(self.build / 'CMakeFiles')
-        with self.assertRaisesRegex(ValueError, 'overlaps retained files'):
-            driver.work_paths(plan, plan['projects'][0])
-
-        plan['projects'][0]['binary_dir'] = str(self.prefix / 'install')
-        # Outside the build tree is retained, never considered for deletion.
-        self.assertNotIn(self.prefix / 'install', driver.work_paths(plan, plan['projects'][0]))
+        self.assertIn('overlaps retained files', self.run_driver(plan))
         plan['install_roots'][0] = str(self.build / 'keep-install')
         plan['projects'][0]['binary_dir'] = plan['install_roots'][0]
-        with self.assertRaisesRegex(ValueError, 'overlaps retained files'):
-            driver.work_paths(plan, plan['projects'][0])
+        self.assertIn('overlaps retained files', self.run_driver(plan))
 
     def test_symlink_work_directory_is_rejected(self):
         self.fixture()
         self.configure()
+        self.compile(target='bext_supply_chain')
         plan = self.plan()
         plan['projects'][0]['source_dir'] = str(self.build / 'link')
         self.directory_symlink(self.build / 'link', self.source)
-        with self.assertRaisesRegex(ValueError, 'Unsafe working directory'):
-            driver.work_paths(plan, plan['projects'][0])
+        self.assertIn('Unsafe working directory', self.run_driver(plan))
 
     def test_symlink_work_directory_below_a_build_alias_is_rejected(self):
         self.fixture()
         self.configure()
+        self.compile(target='bext_supply_chain')
         alias = self.root / 'build-alias'
         self.directory_symlink(alias, self.build)
         retained = self.build / 'retained'
@@ -418,8 +432,7 @@ file(CHMOD "${CMAKE_CURRENT_BINARY_DIR}/tests/testfiles/readonly.txt"
         plan = self.plan()
         plan['build_root'] = str(alias)
         plan['projects'][0]['binary_dir'] = str(alias / 'work-link')
-        with self.assertRaisesRegex(ValueError, 'Unsafe working directory'):
-            driver.work_paths(plan, plan['projects'][0])
+        self.assertIn('Unsafe working directory', self.run_driver(plan))
 
     def test_prefix_owned_by_another_build_is_rejected(self):
         self.fixture()

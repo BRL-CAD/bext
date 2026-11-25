@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:generic/sqlite@3.53.4",
+      "targetPurl": "pkg:conan/sqlite3@3.53.4",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/sqlite3/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same sqlite3 3.53.4 upstream release. Match upstream advisories; review bext patches separately."
+    },
+    {
+      "sourcePurl": "pkg:generic/sqlite@3.54.1",
+      "targetPurl": "pkg:conan/sqlite3@3.54.1",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/sqlite3/all/conandata.yml"
+      ],
+      "reason": "The versioned Conan recipe identifies the same sqlite3 3.54.1 upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

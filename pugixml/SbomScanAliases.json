@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/zeux/pugixml@v1.16",
+      "targetPurl": "pkg:conan/pugixml@1.16",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/pugixml/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same zeux/pugixml upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

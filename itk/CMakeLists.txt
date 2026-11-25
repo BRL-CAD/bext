@@ -19,6 +19,10 @@ set(ENABLE_ITK "${ENABLE_ITK}" CACHE BOOL "Enable itk build")
 
 if (ENABLE_ITK)
 
+  bext_component_ownership(itk
+    "^lib/itk[^/]*(/|$)"
+    "^include/itk[^/]*$")
+
   if (NOT TARGET TCL_BLD OR NOT TARGET TK_BLD)
     message(FATAL_ERROR
       "A local Itk build requires bext's bundled Tcl and Tk because Itk uses "
@@ -40,6 +44,7 @@ if (ENABLE_ITK)
       "${CMAKE_CURRENT_SOURCE_DIR}/itk_mingw.patch")
   endif ()
   git_submodule_init(itk configure PATCH_FILES ${ITK_PATCH_FILES} ${ITK_MINGW_PATCH_FILES})
+  bext_component_manpage_ownership(itk "${CMAKE_CURRENT_SOURCE_DIR}/itk/doc/*.n")
 
   RegisterDeps(ITK)
 
@@ -121,6 +126,7 @@ if (ENABLE_ITK)
       "${CMAKE_CURRENT_BINARY_DIR}/itk_install.cmake")
   endif (NOT MSVC)
 
+  set_property(TARGET ITK_BLD PROPERTY BEXT_RETAIN_WORK_UNTIL_FINALIZE TRUE)
   TargetInstallDeps(ITK ITK_DEPENDS)
 
   configure_file(

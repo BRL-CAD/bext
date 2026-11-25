@@ -53,11 +53,19 @@ jobs:
           sudo apt-get install libinput-dev
           sudo apt-get clean
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         run: cmake -S . -G Ninja -B build -DENABLE_ALL=ON -DBEXT_DISCARD_WORK=ON -DBEXT_BUILD_JOBS=2 -DGIT_SHALLOW_CLONE=ON -DCMAKE_BUILD_TYPE=Release -DEXT_BUILD_VERBOSE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/bext_output"
 
       - name: Build
         run: cmake --build build --parallel 1 --verbose
+
+      - name: Validate finalized supply-chain metadata
+        uses: ./.github/actions/validate-supply-chain
+        with:
+          prefix: ${{ runner.temp }}/bext_output
 
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'
@@ -69,7 +77,7 @@ jobs:
           test -d install
           test -d noinstall
           test -f bext-install-manifest.json
-          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+          cmake -DBEXT_PACKAGE_ROOT="$PWD" -DBEXT_PACKAGE_ARCHIVE="$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" -P "$GITHUB_WORKSPACE/CMake/PackageDependencies.cmake"
 
       - name: Upload dependency tree
         if: github.ref == 'refs/heads/main'
@@ -106,6 +114,9 @@ jobs:
       - name: Add cl.exe to PATH
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         shell: pwsh
         run: |
@@ -118,6 +129,11 @@ jobs:
         shell: pwsh
         run: cmake --build build --parallel 1 --verbose
 
+      - name: Validate finalized supply-chain metadata
+        uses: ./.github/actions/validate-supply-chain
+        with:
+          prefix: ${{ runner.temp }}/bext_output
+
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'
         shell: bash
@@ -128,7 +144,7 @@ jobs:
           test -d install
           test -d noinstall
           test -f bext-install-manifest.json
-          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+          cmake -DBEXT_PACKAGE_ROOT="$PWD" -DBEXT_PACKAGE_ARCHIVE="$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" -P "$GITHUB_WORKSPACE/CMake/PackageDependencies.cmake"
 
       - name: Upload dependency tree
         if: github.ref == 'refs/heads/main'
@@ -158,6 +174,9 @@ jobs:
       - name: Install Xquartz
         run: brew install xquartz --cask
 
+      - name: Validate source metadata before building
+        uses: ./.github/actions/validate-source-sbom
+
       - name: Configure
         env:
           CC: clang
@@ -166,6 +185,11 @@ jobs:
 
       - name: Build
         run: cmake --build build --parallel 1 --verbose
+
+      - name: Validate finalized supply-chain metadata
+        uses: ./.github/actions/validate-supply-chain
+        with:
+          prefix: ${{ runner.temp }}/bext_output
 
       - name: Package dependency tree
         if: github.ref == 'refs/heads/main'
@@ -177,7 +201,7 @@ jobs:
           test -d install
           test -d noinstall
           test -f bext-install-manifest.json
-          cmake -E tar cfz "$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" --format=gnutar install noinstall bext-install-manifest.json
+          cmake -DBEXT_PACKAGE_ROOT="$PWD" -DBEXT_PACKAGE_ARCHIVE="$RUNNER_TEMP/bext-$BEXT_CHANNEL.tar.gz" -P "$GITHUB_WORKSPACE/CMake/PackageDependencies.cmake"
 
       - name: Upload dependency tree
         if: github.ref == 'refs/heads/main'

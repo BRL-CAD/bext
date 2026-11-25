@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "appleseed/appleseed",
+      "kind": "manual",
+      "reason": "Review the maintained subset and establish its upstream release baseline before comparing releases."
+    }
+  ]
+}

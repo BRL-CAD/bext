@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "patch/patch",
+      "kind": "manual",
+      "reason": "Establish the approved release or branch policy for this BSD patch implementation."
+    }
+  ]
+}

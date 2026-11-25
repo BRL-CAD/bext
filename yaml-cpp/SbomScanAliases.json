@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "sourcePurl": "pkg:github/jbeder/yaml-cpp@0.8.0",
+      "targetPurl": "pkg:conan/yaml-cpp@0.8.0",
+      "evidence": [
+        "https://github.com/conan-io/conan-center-index/blob/08d9ba53fce3cf3d5a9157da1fdecd32371c452a/recipes/yaml-cpp/all/conandata.yml"
+      ],
+      "reason": "The Conan recipe uses the same jbeder/yaml-cpp upstream release. Match upstream advisories; review bext patches separately."
+    }
+  ]
+}

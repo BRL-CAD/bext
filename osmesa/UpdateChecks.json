@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "osmesa/osmesa",
+      "kind": "commit",
+      "branch": "main"
+    }
+  ]
+}

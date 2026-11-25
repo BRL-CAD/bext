@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "flexbison/bison",
+      "kind": "manual",
+      "reason": "Review the maintained Bison import and its original GNU release baseline."
+    }
+  ]
+}
