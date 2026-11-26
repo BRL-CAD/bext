@@ -160,13 +160,17 @@ endfunction()
 ]=])
   file(WRITE "${build}/active-components.txt" "pathprobe\n")
   file(WRITE "${build}/component-ownership.txt" "inactive|.*\npathprobe|.*\n")
-  file(WRITE "${build}/install-exclude.txt" "")
+  file(WRITE "${build}/package-groups.cmake" "set(BEXT_PACKAGE_GROUP_IDS)\n")
   file(WRITE "${build}/sbom-selectors.cmake" "set(BEXT_SBOM_SELECTOR_IDS)\n")
   file(WRITE "${build}/bext.spdx.json" "{}\n")
   set(finalize "${CMAKE_COMMAND}"
     "-DBEXT_INSTALL_ROOT=${install}" "-DBEXT_MANIFEST=${manifest}"
     "-DBEXT_INSTALL_EXCLUDE_MANIFEST=${output}/bext-install-exclude.json"
-    "-DBEXT_INSTALL_EXCLUDE_RULES=${build}/install-exclude.txt"
+    "-DBEXT_PACKAGE_GROUPS_FILE=${build}/package-groups.cmake"
+    -DBEXT_PACKAGE_PROFILE=RUNTIME
+    -DBEXT_PACKAGE_LICENSE_POLICY=REDISTRIBUTABLE
+    -DBEXT_PACKAGE_FILTER_LARGE_UNUSED=ON
+    -DBEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB=25
     "-DBEXT_COMPONENT_MANIFEST=${output}/bext-component-manifest.json"
     "-DBEXT_COMPONENT_OWNERSHIP_RULES=${build}/component-ownership.txt"
     "-DBEXT_ACTIVE_COMPONENTS=${build}/active-components.txt"

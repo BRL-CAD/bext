@@ -5,6 +5,7 @@ if (ENABLE_STRUETYPE)
   git_submodule_init(struetype struetype.h INPUT_FILES install.cmake.in)
 
   RegisterDeps(STRUETYPE)
+  bext_component_ownership(struetype "^include/struetype[.]h$")
   configure_file(install.cmake.in InstallStruetype.cmake @ONLY)
   ExternalProject_Add(STRUETYPE_BLD
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/struetype"

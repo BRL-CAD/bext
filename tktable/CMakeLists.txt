@@ -33,6 +33,7 @@ if (ENABLE_TKTABLE)
     PATCH_FILES ${TKTABLE_PATCH_FILES}
     PATCH_COMMAND_VAR TKTABLE_PATCH_COMMAND)
   RegisterDeps(TKTABLE)
+  bext_component_ownership(tktable "^lib/(Tktable|tktable)[^/]*/")
 
   set(TKTABLE_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/TKTABLE_BLD-prefix/src/TKTABLE_BLD")
   set(TKTABLE_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/TKTABLE_BLD-prefix/src/TKTABLE_BLD-build")

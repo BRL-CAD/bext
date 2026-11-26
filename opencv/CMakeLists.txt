@@ -13,7 +13,10 @@ if (ENABLE_OPENCV)
     FUNCTION bext_opencv_selected_packages
     CACHE "${CMAKE_CURRENT_BINARY_DIR}/OPENCV_BLD-prefix/src/OPENCV_BLD-build/CMakeCache.txt")
 
-  bext_install_exclude(
+  bext_package_group(
+    NAME opencv_cli
+    CATEGORY AUXILIARY_TOOL
+    PATTERNS
     "(^|/)(bin|libexec)/opencv_version(_win32)?([.]exe)?$"
     "(^|/)(bin|libexec)/setup_vars_opencv[^/]*[.](cmd|sh)$"
   )

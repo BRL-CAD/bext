@@ -27,8 +27,13 @@ if (ENABLE_LLVM)
     -DLLVM_PARALLEL_LINK_JOBS=${BEXT_LINK_JOBS}
     -DLLVM_PARALLEL_TABLEGEN_JOBS=${BEXT_BUILD_JOBS}
   )
-  bext_component_ownership(llvm "^bin/(clang[^/]*|llvm-[^/]*)([.]exe)?$")
-  bext_install_exclude("^bin/(clang[^/]*|llvm-[^/]*)([.]exe)?$")
+  set(llvm_tool_pattern
+    "^bin/(amdgpu-arch|clang[^/]*|llvm-[^/]*|nvptx-arch)([.]exe)?$")
+  bext_component_ownership(llvm "${llvm_tool_pattern}")
+  bext_package_group(
+    NAME llvm_tools
+    CATEGORY BUILD_TOOL
+    PATTERNS "${llvm_tool_pattern}")
 
   if (TARGET ZLIB_BLD)
     set(Z_PREFIX_STR "brl_")

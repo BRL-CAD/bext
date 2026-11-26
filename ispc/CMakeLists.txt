@@ -3,6 +3,11 @@ bext_enable(ISPC)
 
 if (ENABLE_ISPC)
 
+  bext_package_group(
+    NAME ispc_compiler
+    CATEGORY BUILD_TOOL
+    PATTERNS "^bin/ispc([.]exe|[.]dll)?$")
+
   # You may need to install some packages on Linux:
   # libc6-dev-i386
   # libstdc++-dev-i386-cross

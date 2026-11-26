@@ -7,7 +7,10 @@ bext_enable(JPEG)
 
 if (ENABLE_JPEG)
 
-  bext_install_exclude("(^|/)(bin|libexec)/(cjpeg|djpeg|jpegtran|rdjpgcom|tjbench|wrjpgcom)([.]exe)?$")
+  bext_package_group(
+    NAME jpeg_cli
+    CATEGORY AUXILIARY_TOOL
+    PATTERNS "(^|/)(bin|libexec)/(cjpeg|djpeg|jpegtran|rdjpgcom|tjbench|wrjpgcom)([.]exe)?$")
 
   git_submodule_init(libjpeg-turbo CMakeLists.txt)
 

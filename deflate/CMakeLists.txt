@@ -11,8 +11,10 @@ if (ENABLE_DEFLATE)
   RegisterDeps(DEFLATE)
   bext_component_ownership(deflate
     "^bin/libdeflate-(gzip|gunzip)([.]exe)?$")
-  bext_install_exclude(
-    "^bin/libdeflate-(gzip|gunzip)([.]exe)?$")
+  bext_package_group(
+    NAME deflate_cli
+    CATEGORY AUXILIARY_TOOL
+    PATTERNS "^bin/libdeflate-(gzip|gunzip)([.]exe)?$")
 
   ExternalProject_Add(DEFLATE_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/libdeflate"

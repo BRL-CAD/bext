@@ -9,6 +9,8 @@ if (ENABLE_OPENEXR)
     PATCH_COMMAND_VAR OPENEXR_PATCH_COMMAND)
 
   RegisterDeps(OPENEXR)
+  bext_component_ownership(openexr
+    "^share/doc/legal/other/openexr-openjph[.]txt$")
 
   ExternalProject_Add(OPENEXR_BLD
     URL "${CMAKE_CURRENT_SOURCE_DIR}/openexr"

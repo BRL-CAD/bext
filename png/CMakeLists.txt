@@ -22,7 +22,10 @@ if (ENABLE_PNG)
 
   # Current libpng honors SKIP_INSTALL_EXECUTABLES, but keep stale outputs
   # from older build trees out of downstream packages as well.
-  bext_install_exclude("(^|/)(bin|libexec)/(pngfix|png-fix-itxt)([.]exe)?$")
+  bext_package_group(
+    NAME png_cli
+    CATEGORY AUXILIARY_TOOL
+    PATTERNS "(^|/)(bin|libexec)/(pngfix|png-fix-itxt)([.]exe)?$")
 
   set(PNG_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/png.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/png_mingw_import.patch")

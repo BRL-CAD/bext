@@ -12,7 +12,7 @@ file(WRITE "${build}/native/install_manifest.txt"
   "${install}/man/native\n${install}/man/override\n")
 file(WRITE "${build}/active" "native\nowner\n")
 file(WRITE "${build}/rules" "inactive|^man/.*\nowner|^man/(override|explicit)$\n")
-file(WRITE "${build}/exclude" "")
+file(WRITE "${build}/package-groups.cmake" "set(BEXT_PACKAGE_GROUP_IDS)\n")
 file(WRITE "${build}/selectors" "set(BEXT_SBOM_SELECTOR_IDS)\n")
 file(WRITE "${build}/sbom" "{}")
 file(WRITE "${source}/CMake/BextDependencyInventory.cmake" [=[
@@ -28,7 +28,11 @@ execute_process(COMMAND "${CMAKE_COMMAND}"
   "-DBEXT_MANIFEST=${TEST_ROOT}/manifest.json"
   "-DBEXT_INSTALL_EXCLUDE_MANIFEST=${TEST_ROOT}/excluded.json"
   "-DBEXT_COMPONENT_MANIFEST=${TEST_ROOT}/components.json"
-  "-DBEXT_INSTALL_EXCLUDE_RULES=${build}/exclude"
+  "-DBEXT_PACKAGE_GROUPS_FILE=${build}/package-groups.cmake"
+  -DBEXT_PACKAGE_PROFILE=RUNTIME
+  -DBEXT_PACKAGE_LICENSE_POLICY=REDISTRIBUTABLE
+  -DBEXT_PACKAGE_FILTER_LARGE_UNUSED=ON
+  -DBEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB=25
   "-DBEXT_COMPONENT_OWNERSHIP_RULES=${build}/rules"
   "-DBEXT_ACTIVE_COMPONENTS=${build}/active"
   "-DBEXT_SBOM_SELECTORS=${build}/selectors"

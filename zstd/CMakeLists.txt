@@ -3,6 +3,14 @@ bext_enable(ZSTD)
 
 if (ENABLE_ZSTD)
 
+  bext_package_group(
+    NAME zstd_cli
+    CATEGORY AUXILIARY_TOOL
+    PATTERNS
+    "(^|/)(bin|libexec)/(pzstd|unzstd|zstd|zstdcat|zstdgrep|zstdless)([.]exe)?$"
+    "(^|/)share/man/man1/(pzstd|unzstd|zstd|zstdcat|zstdgrep|zstdless)[.]1$"
+  )
+
   git_submodule_init(zstd LICENSE)
 
   RegisterDeps(ZSTD)

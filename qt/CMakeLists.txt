@@ -41,23 +41,30 @@ set(ENABLE_QT "${ENABLE_QT}" CACHE BOOL "Enable Qt6 build")
 if (ENABLE_QT)
 
   bext_component_ownership(qt
-    "^bin/(androiddeployqt6|qmake6|qtpaths6|wasmdeployqt6|windeployqt6)([.]exe)?$"
+    "^bin/(androiddeployqt6|harmonydeployqt6|qmake6|qtpaths6|wasmdeployqt6|windeployqt6)([.]exe)?$"
     "^share/qt6/"
     "^sbom/(qtbase|qtsvg)-"
   )
 
-  option(BEXT_QT_INSTALL_SDK_TOOLS "Include Qt SDK tools in downstream installations" OFF)
-  if (NOT BEXT_QT_INSTALL_SDK_TOOLS)
-    # Qt host and deployment tools are required while compiling consumers, but
-    # are not part of the runtime payload published by those consumers.
-    bext_install_exclude(
-      "(^|/)(bin|libexec)/(androiddeployqt|androidtestrunner|cmake_automoc_parser|moc|qdbuscpp2xml|qdbusxml2cpp|qlalr|qmake|qtpaths|qvkgen|rcc|syncqt|tracegen|tracepointgen|uic|wasmdeployqt|windeployqt)6?([.]exe)?$"
-      "(^|/)(bin|libexec)/(qt-cmake|qt-cmake-create|qt-cmake-private|qt-cmake-standalone-test|qt-configure-module|qt-internal-configure-examples|qt-internal-configure-tests)([.]bat)?$"
-      "(^|/)(bin|libexec)/qt-cmake-private-install[.]cmake$"
-      "(^|/)(bin|libexec)/(qt_cyclonedx_generator|qt-android-runner)[.]py$"
-      "(^|/)(bin|libexec)/syncqt[.]pdb$"
-    )
-  endif (NOT BEXT_QT_INSTALL_SDK_TOOLS)
+  set(qt_sdk_tool_patterns
+    "(^|/)(bin|libexec)/(androiddeployqt|androidtestrunner|cmake_automoc_parser|harmonydeployqt|harmonyostestrunner|moc|qdbuscpp2xml|qdbusxml2cpp|qlalr|qmake|qtpaths|qvkgen|rcc|syncqt|tracegen|tracepointgen|uic|wasmdeployqt|windeployqt)6?([.]exe)?$"
+    "(^|/)(bin|libexec)/(qt-cmake|qt-cmake-create|qt-cmake-private|qt-cmake-standalone-test|qt-configure-module|qt-internal-configure-examples|qt-internal-configure-tests)([.]bat)?$"
+    "(^|/)(bin|libexec)/qt-cmake-private-install[.]cmake$"
+    "(^|/)(bin|libexec)/(qt_cyclonedx_generator|qt-android-runner)[.]py$"
+    "(^|/)(bin|libexec)/syncqt[.]pdb$")
+  bext_package_group(
+    NAME qt_sdk_tools
+    CATEGORY BUILD_TOOL
+    PATTERNS ${qt_sdk_tool_patterns})
+  bext_package_group(
+    NAME qt_gpl_tools
+    CATEGORY LICENSE_RESTRICTED
+    PATTERNS ${qt_sdk_tool_patterns})
+  set(qt_include_sdk_tools OFF)
+  if(NOT BEXT_PACKAGE_PROFILE STREQUAL "RUNTIME" AND
+     BEXT_PACKAGE_LICENSE_POLICY STREQUAL "UNRESTRICTED")
+    set(qt_include_sdk_tools ON)
+  endif()
 
   option(QT_ALLOW_HEADLESS "Allow building Qt without a window-capable platform plugin" OFF)
 
@@ -148,7 +155,7 @@ if (ENABLE_QT)
     SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/SbomSelection.cmake"
     FUNCTION bext_qt_selected_packages
     CACHE "${QT_BUILD_DIR}/CMakeCache.txt"
-    ARGUMENTS "${BEXT_QT_INSTALL_SDK_TOOLS}")
+    ARGUMENTS "${qt_include_sdk_tools}")
   # Qt rejects symlinks anywhere in its build path (e.g. /home on FreeBSD).
   # Create the directory first so REAL_PATH can resolve every component, then
   # use that physical path in ExternalProject and all Qt wrapper scripts.

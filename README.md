@@ -241,6 +241,8 @@ output trees under that prefix:
 * `bext-install-manifest.json` - relative file classifications and the
   platform metadata and producer install prefixes needed by downstream
   staging builds
+* `bext-install-exclude-manifest.json` - profile-driven downstream package
+  exclusions and an audit trail for excluded and retained large files
 * `bext-noinstall-manifest.json` - build-only files recorded by the current
   build; untracked residue is excluded from release archives
 * `bext-package.build.spdx.json` and `bext-package.build.cdx.json` - the

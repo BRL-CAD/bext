@@ -3,6 +3,14 @@ bext_enable(EXPAT)
 
 if (ENABLE_EXPAT)
 
+  bext_package_group(
+    NAME expat_cli
+    CATEGORY AUXILIARY_TOOL
+    PATTERNS
+    "(^|/)(bin|libexec)/xmlwf([.]exe)?$"
+    "(^|/)share/man/man1/xmlwf[.]1$"
+  )
+
   set(EXPAT_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/expat.patch")
   git_submodule_init(libexpat expat/CMakeLists.txt
     PATCH_FILES ${EXPAT_PATCH_FILES}

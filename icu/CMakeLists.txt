@@ -5,6 +5,14 @@ if (NOT WIN32 AND NOT APPLE)
 
   if (ENABLE_ICU)
 
+    bext_package_group(
+      NAME icu_cli
+      CATEGORY AUXILIARY_TOOL
+      PATTERNS
+      "(^|/)(bin|sbin|libexec)/(derb|genbrk|genccode|gencfu|gencmn|gencnval|gendict|genrb|gensprep|icu-config|icuinfo|icupkg|makeconv|pkgdata|uconv)([.]exe)?$"
+      "(^|/)share/man/man(1|8)/(derb|genbrk|genccode|gencfu|gencmn|gencnval|gendict|genrb|gensprep|icu-config|icuinfo|icupkg|makeconv|pkgdata|uconv)[.](1|8)$"
+    )
+
     # Keep UTF-8 path handling consistent with the Linux and macOS defaults.
     set(ICU_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/icu.patch")
     git_submodule_init(icu icu4c/source/configure

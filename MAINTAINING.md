@@ -435,6 +435,7 @@ in a fresh output tree when removed or changed products could remain installed.
 | `install/` | Libraries, headers, runtime assets, and notices intended for downstream bundling. |
 | `noinstall/` | Build tools and compile-time-only assets; not automatically part of a downstream binary distribution. |
 | `bext-install-manifest.json` | Finalized installed-file classifications and producer-prefix information used by downstream staging. |
+| `bext-install-exclude-manifest.json` | Profile-driven downstream exclusions, per-file decisions, and retained-large-file audit records. |
 | `bext-noinstall-manifest.json` | Build-only files tracked for the current archive; stale unrecorded files are excluded. |
 | `bext.spdx.json` | Repository dependency inventory for a committed bext revision, including projects outside the active build profile. |
 | `bext.cdx.json` | The same source inventory serialized as CycloneDX 1.6 JSON. |
@@ -456,6 +457,33 @@ its own staging-specific changes. `BRLCAD_EXT_DIR` names the directory holding
 both `install/` and `noinstall/`, for example `build/auto/Release` for the `auto`
 preset. Requested and physical producer prefixes are recorded for symlink
 aliases; test use through a different alias and after moving the bundle.
+
+Downstream packaging is selected with `BEXT_PACKAGE_PROFILE`: `RUNTIME`
+excludes development files, build tools, auxiliary tools, tests, and eligible
+large-unused files; `SDK` retains development files and build tools but
+excludes auxiliary tools and tests; `COMPLETE` retains all optional categories.
+`BEXT_PACKAGE_LICENSE_POLICY` independently
+controls `LICENSE_RESTRICTED` groups and defaults to `REDISTRIBUTABLE`.
+`BEXT_PACKAGE_FILTER_LARGE_UNUSED` and
+`BEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB` control size-gated runtime exclusions.
+Files above the threshold that remain included are always reported for review.
+
+Wrappers classify related outputs once rather than assigning roles per file:
+
+```cmake
+bext_package_group(
+  NAME llvm_tools
+  CATEGORY BUILD_TOOL
+  PATTERNS "^bin/(clang[^/]*|llvm-[^/]*)([.]exe)?$")
+```
+
+Valid categories are `ALWAYS`, `LICENSE_RESTRICTED`, `DEVELOPMENT`,
+`BUILD_TOOL`, `AUXILIARY_TOOL`, `TEST`, and `LARGE_UNUSED`. Bext declares
+headers, link-time libraries, and CMake/pkg-config metadata as broad
+`DEVELOPMENT` groups rather than assigning roles to individual files. Groups
+may overlap when policy decisions are independent, such as a build tool that
+also has redistribution restrictions. The complete bext install tree is
+preserved; the generated manifest tells downstream staging which files to omit.
 
 Keep metadata products distinct. The SPDX inventory records declared source
 provenance and dependency relationships from committed metadata; it is not an

@@ -7,6 +7,15 @@ bext_enable(GDAL)
 
 if (ENABLE_GDAL)
 
+  bext_package_group(
+    NAME gdal_config
+    CATEGORY BUILD_TOOL
+    PATTERNS
+    "(^|/)(bin|libexec)/gdal-config([.](bat|cmd|exe|sh))?$"
+    "(^|/)share/bash-completion/completions/gdal-config$"
+    "(^|/)share/man/man1/gdal-config[.]1$"
+  )
+
   bext_sbom_selector(gdal
     TARGET GDAL_BLD
     SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/SbomSelection.cmake"

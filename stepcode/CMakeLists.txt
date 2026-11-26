@@ -9,7 +9,10 @@ if (ENABLE_STEPCODE)
 
   # BRL-CAD uses these generators while compiling its STEP converters, but
   # they are not runtime components of the installed application.
-  bext_install_exclude("(^|/)(bin|libexec)/(check-express|exp2cxx|exppp)([.]exe)?$")
+  bext_package_group(
+    NAME stepcode_generators
+    CATEGORY BUILD_TOOL
+    PATTERNS "(^|/)(bin|libexec)/(check-express|exp2cxx|exppp)([.]exe)?$")
 
   set(STEPCODE_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/stepcode_complex_string_pool.patch"

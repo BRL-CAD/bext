@@ -27,6 +27,37 @@ cmake_minimum_required(VERSION 3.26)
 
 project(BEXT)
 
+set(BEXT_PACKAGE_PROFILE "RUNTIME" CACHE STRING
+  "Downstream package profile: RUNTIME, SDK, or COMPLETE")
+set_property(CACHE BEXT_PACKAGE_PROFILE PROPERTY STRINGS RUNTIME SDK COMPLETE)
+string(TOUPPER "${BEXT_PACKAGE_PROFILE}" BEXT_PACKAGE_PROFILE)
+set(BEXT_PACKAGE_PROFILE "${BEXT_PACKAGE_PROFILE}" CACHE STRING
+  "Downstream package profile: RUNTIME, SDK, or COMPLETE" FORCE)
+if(NOT BEXT_PACKAGE_PROFILE MATCHES "^(RUNTIME|SDK|COMPLETE)$")
+  message(FATAL_ERROR "Invalid BEXT_PACKAGE_PROFILE: ${BEXT_PACKAGE_PROFILE}")
+endif()
+
+set(BEXT_PACKAGE_LICENSE_POLICY "REDISTRIBUTABLE" CACHE STRING
+  "Downstream package license policy: REDISTRIBUTABLE or UNRESTRICTED")
+set_property(CACHE BEXT_PACKAGE_LICENSE_POLICY PROPERTY STRINGS
+  REDISTRIBUTABLE UNRESTRICTED)
+string(TOUPPER "${BEXT_PACKAGE_LICENSE_POLICY}" BEXT_PACKAGE_LICENSE_POLICY)
+set(BEXT_PACKAGE_LICENSE_POLICY "${BEXT_PACKAGE_LICENSE_POLICY}" CACHE STRING
+  "Downstream package license policy: REDISTRIBUTABLE or UNRESTRICTED" FORCE)
+if(NOT BEXT_PACKAGE_LICENSE_POLICY MATCHES "^(REDISTRIBUTABLE|UNRESTRICTED)$")
+  message(FATAL_ERROR
+    "Invalid BEXT_PACKAGE_LICENSE_POLICY: ${BEXT_PACKAGE_LICENSE_POLICY}")
+endif()
+
+option(BEXT_PACKAGE_FILTER_LARGE_UNUSED
+  "Exclude large files declared unused by runtime packages" ON)
+set(BEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB "25" CACHE STRING
+  "Size threshold in MiB for package filtering and audit reporting")
+if(NOT BEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB MATCHES "^[0-9]+$")
+  message(FATAL_ERROR
+    "BEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB must be a nonnegative integer")
+endif()
+
 # With this policy the ExternalProject_Add() STEP_TARGETS option, and the
 # ExternalProject_Add_StepTargets() function, can be used to create build
 # targets for individual steps of an external project.  We make use of
@@ -646,6 +677,27 @@ add_project(ospray GROUPS "OSPRAY")
 
 
 ###############################################################################
+# Files needed to compile consumers remain available in the complete bext
+# install tree, but are not part of downstream runtime packages.
+###############################################################################
+bext_package_group(
+  NAME development_headers
+  CATEGORY DEVELOPMENT
+  PATTERNS "^include/")
+bext_package_group(
+  NAME development_libraries
+  CATEGORY DEVELOPMENT
+  PATTERNS "^lib/.*[.](a|lib)$")
+bext_package_group(
+  NAME development_metadata
+  CATEGORY DEVELOPMENT
+  PATTERNS
+    "(^|/)(cmake|pkgconfig)/"
+    "^lib/.*-config$"
+    "^lib/.*[.]la$")
+
+
+###############################################################################
 # Finalize the bundled output after all external projects have installed.
 # BRL-CAD can then consume the manifest without repeating file classification
 # during every configure pass.
@@ -677,12 +729,8 @@ endforeach()
 
 set(BEXT_INSTALL_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-manifest.json")
 set(BEXT_INSTALL_EXCLUDE_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-install-exclude-manifest.json")
-set(BEXT_INSTALL_EXCLUDE_RULES "${CMAKE_BINARY_DIR}/CMakeFiles/bext-install-exclude-patterns.txt")
-get_property(BEXT_INSTALL_EXCLUDE_PATTERNS GLOBAL PROPERTY BEXT_INSTALL_EXCLUDE_PATTERNS)
-list(REMOVE_DUPLICATES BEXT_INSTALL_EXCLUDE_PATTERNS)
-list(SORT BEXT_INSTALL_EXCLUDE_PATTERNS)
-string(REPLACE ";" "\n" BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT "${BEXT_INSTALL_EXCLUDE_PATTERNS}")
-file(WRITE "${BEXT_INSTALL_EXCLUDE_RULES}" "${BEXT_INSTALL_EXCLUDE_PATTERNS_TEXT}\n")
+set(BEXT_PACKAGE_GROUPS_FILE "${CMAKE_BINARY_DIR}/CMakeFiles/bext-package-groups.cmake")
+bext_write_package_groups("${BEXT_PACKAGE_GROUPS_FILE}")
 set(BEXT_COMPONENT_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-component-manifest.json")
 set(BEXT_NOINSTALL_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-noinstall-manifest.json")
 set(BEXT_PACKAGE_COMPONENT_MANIFEST "${CMAKE_INSTALL_PREFIX}/bext-package-component-manifest.json")
@@ -740,7 +788,11 @@ add_custom_target(bext_finalize ${BEXT_FINALIZE_ALL}
     -DBEXT_INSTALL_ROOT=${CMAKE_BUNDLE_INSTALL_PREFIX}
     -DBEXT_MANIFEST=${BEXT_INSTALL_MANIFEST}
     -DBEXT_INSTALL_EXCLUDE_MANIFEST=${BEXT_INSTALL_EXCLUDE_MANIFEST}
-    -DBEXT_INSTALL_EXCLUDE_RULES=${BEXT_INSTALL_EXCLUDE_RULES}
+    -DBEXT_PACKAGE_GROUPS_FILE=${BEXT_PACKAGE_GROUPS_FILE}
+    -DBEXT_PACKAGE_PROFILE=${BEXT_PACKAGE_PROFILE}
+    -DBEXT_PACKAGE_LICENSE_POLICY=${BEXT_PACKAGE_LICENSE_POLICY}
+    -DBEXT_PACKAGE_FILTER_LARGE_UNUSED=${BEXT_PACKAGE_FILTER_LARGE_UNUSED}
+    -DBEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB=${BEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB}
     -DBEXT_COMPONENT_MANIFEST=${BEXT_COMPONENT_MANIFEST}
     -DBEXT_COMPONENT_OWNERSHIP_RULES=${BEXT_COMPONENT_OWNERSHIP_RULES_FILE}
     -DBEXT_ACTIVE_COMPONENTS=${BEXT_ACTIVE_COMPONENTS_FILE}
