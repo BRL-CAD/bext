@@ -11,7 +11,7 @@
       "status": "fixed",
       "scope": "component",
       "impactStatement": "The official Qt 6.12 patch guards empty CBOR URL payloads during JSON conversion. The staged implementation and the installed Qt Core artifacts are verified for this build.",
-      "reviewedAt": "2026-11-07T00:56:29Z",
+      "reviewedAt": "2026-11-27T16:07:30Z",
       "references": [
         "https://download.qt.io/official_releases/qt/6.12/CVE-2026-105924-qtbase-6.12.diff"
       ],
@@ -20,8 +20,9 @@
           "qt/qt": "3178765365af3497b0fe60d6cb0e1012027d9b75"
         },
         "inputs": {
-          "qt/CMakeLists.txt": "9b087643c36ef9167b2e8018ef8502002eaa9a5ce167a1f6b2001656568d4f3d",
+          "qt/CMakeLists.txt": "4a800072996f7a9c37f94f6f2154544365a7e4222499cd262b2fc6c00151cae8",
           "qt/qt_CVE-2026-105924.patch": "c27d27b86aaf2cdab0c18d513fbb94a432e98782eddfc5f856387e4be68be50b",
+          "qt/qt_bext_zlib.patch": "f03f5ad63432c4c49b7cae59ccba1fa99c79402b42666824cc2cef3661734599",
           "qt/qt_metadata.patch": "11c6d1d32b25da8f68528c944267f035417a4b2b28134416ae7a840550bc3315",
           "qt/qt_xmin.patch": "9a0fc10b188a59b01e2692b4a1dfe5bf4cc4776ae35c9cd7a5af4b2d6d1c7677",
           "qt/qtsvg.patch": "7787bf5287c3aff99b2bcc0ac9b49903cf705b4fd0d5c95f3f5c1c49dfc5e916",

@@ -22,7 +22,9 @@ if (ENABLE_SQLite3)
     CATEGORY AUXILIARY_TOOL
     PATTERNS "(^|/)(bin|libexec)/sqlite3([.]exe)?$")
 
-  set(SQLITE3_PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3.patch")
+  set(SQLITE3_PATCH_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3_CVE-2026-119586.patch")
   git_submodule_init(sqlite3 sqlite3.c
     PATCH_FILES ${SQLITE3_PATCH_FILES}
     INPUT_FILES "${CMAKE_CURRENT_LIST_FILE}"
