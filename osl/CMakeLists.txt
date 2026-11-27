@@ -56,9 +56,21 @@ if (ENABLE_OSL)
   endif (FLEX_TARGET)
 
   set(OSL_MACOS_ARGS)
-  if (APPLE AND CMAKE_OSX_SYSROOT)
+  if (APPLE)
+    set(OSL_MACOS_SYSROOT "${CMAKE_OSX_SYSROOT}")
+    if (NOT OSL_MACOS_SYSROOT)
+      execute_process(
+        COMMAND xcrun --sdk macosx --show-sdk-path
+        OUTPUT_VARIABLE OSL_MACOS_SYSROOT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE OSL_MACOS_SDK_RESULT
+      )
+      if (NOT OSL_MACOS_SDK_RESULT STREQUAL "0" OR NOT IS_DIRECTORY "${OSL_MACOS_SYSROOT}")
+        message(FATAL_ERROR "Unable to locate the macOS SDK required by OSL")
+      endif ()
+    endif ()
     list(APPEND OSL_MACOS_ARGS
-      "-DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}"
+      "-DCMAKE_OSX_SYSROOT=${OSL_MACOS_SYSROOT}"
       )
   endif ()
 
