@@ -12,7 +12,8 @@ if (ENABLE_ISPC)
   set(ISPC_PATCH_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/ispc.patch"
     "${CMAKE_CURRENT_SOURCE_DIR}/ispc_cpu_intrinsics.patch"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ispc_llvm_23_1.patch")
+    "${CMAKE_CURRENT_SOURCE_DIR}/ispc_llvm_23_1.patch"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ispc_flex_header.patch")
   if (MINGW)
     list(APPEND ISPC_PATCH_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/ispc_mingw.patch")

@@ -1,0 +1,61 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -359,15 +359,18 @@
+     if (FLEX_FOUND)
+         set(FLEX_INPUT  src/lex.ll)
+         set(FLEX_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lex.cpp)
++        set(FLEX_HEADER ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lex.h)
+         add_custom_command(
+-            OUTPUT ${FLEX_OUTPUT}
++            OUTPUT ${FLEX_OUTPUT} ${FLEX_HEADER}
+             COMMAND ${FLEX_EXECUTABLE}
+                 --outfile=${FLEX_OUTPUT}
++                --header-file=${FLEX_HEADER}
+                 ${FLEX_INPUT}
+             MAIN_DEPENDENCY ${FLEX_INPUT}
+             COMMENT "Generating lex.cpp"
+             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+         )
++        add_custom_target(generate-lexer DEPENDS ${FLEX_OUTPUT} ${FLEX_HEADER})
+     endif()
+ 
+ if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT RISCV_ENABLED AND NOT WASM_ENABLED AND NOT XE_ENABLED)
+@@ -1008,13 +1011,13 @@
+ 
+ add_library(frontend OBJECT EXCLUDE_FROM_ALL ${FRONTEND_SOURCES})
+ configure_ispc_obj(frontend)
+-add_dependencies(frontend generate-parser)
++add_dependencies(frontend generate-parser generate-lexer)
+ 
+ if (ISPC_LIBRARY)
+     add_library(frontend-lib OBJECT EXCLUDE_FROM_ALL ${FRONTEND_SOURCES})
+     configure_ispc_obj(frontend-lib)
+     target_compile_definitions(frontend-lib PRIVATE ISPC_IS_LIBRARY)
+-    add_dependencies(frontend-lib generate-parser)
++    add_dependencies(frontend-lib generate-parser generate-lexer)
+ endif()
+ 
+ # builtin target is created in GenerateBuiltins.cmake
+--- a/src/module.cpp
++++ b/src/module.cpp
+@@ -16,6 +16,7 @@
+ #include "func.h"
+ #include "ispc_version.h"
+ #include "llvmutil.h"
++#include "lex.h"
+ #include "opt.h"
+ #include "stmt.h"
+ #include "sym.h"
+@@ -330,12 +331,7 @@
+     }
+ }
+ 
+-extern FILE *yyin;
+ extern int yyparse();
+-typedef struct yy_buffer_state *YY_BUFFER_STATE;
+-extern void yy_switch_to_buffer(YY_BUFFER_STATE);
+-extern YY_BUFFER_STATE yy_create_buffer(FILE *, int);
+-extern void yy_delete_buffer(YY_BUFFER_STATE);
+ extern void ParserInit();
+ 
+ int Module::parse() {
