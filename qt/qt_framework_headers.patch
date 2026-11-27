@@ -1,0 +1,37 @@
+--- a/cmake/QtFrameworkHelpers.cmake
++++ b/cmake/QtFrameworkHelpers.cmake
+@@ -1,3 +1,20 @@
++if(DEFINED QT_FRAMEWORK_HEADERS_SOURCE AND DEFINED QT_FRAMEWORK_HEADERS_DESTINATION)
++    # Staging includes forwarders to framework headers; do not overwrite the real headers.
++    file(GLOB_RECURSE headers RELATIVE "${QT_FRAMEWORK_HEADERS_SOURCE}" LIST_DIRECTORIES false
++        "${QT_FRAMEWORK_HEADERS_SOURCE}/*")
++    foreach(header IN LISTS headers)
++        file(READ "${QT_FRAMEWORK_HEADERS_SOURCE}/${header}" content LIMIT 32)
++        if(content MATCHES "^#include_next[ \t]")
++            continue()
++        endif()
++        get_filename_component(directory "${QT_FRAMEWORK_HEADERS_DESTINATION}/${header}" DIRECTORY)
++        file(MAKE_DIRECTORY "${directory}")
++        file(COPY_FILE "${QT_FRAMEWORK_HEADERS_SOURCE}/${header}"
++            "${QT_FRAMEWORK_HEADERS_DESTINATION}/${header}" ONLY_IF_DIFFERENT)
++    endforeach()
++    return()
++endif()
++
+ # Copyright (C) 2022 The Qt Company Ltd.
+ # SPDX-License-Identifier: BSD-3-Clause
+ 
+@@ -145,9 +162,10 @@
+     list(REMOVE_DUPLICATES in_files)
+ 
+     set(copy_fw_sync_headers_command
+-        "${CMAKE_COMMAND}" -E copy_directory
+-        "${module_build_interface_include_dir}/.syncqt_staging"
+-        "${output_dir}/${fw_versioned_header_dir}"
++        "${CMAKE_COMMAND}"
++        "-DQT_FRAMEWORK_HEADERS_SOURCE=${module_build_interface_include_dir}/.syncqt_staging"
++        "-DQT_FRAMEWORK_HEADERS_DESTINATION=${output_dir}/${fw_versioned_header_dir}"
++        -P "${CMAKE_CURRENT_FUNCTION_LIST_FILE}"
+     )
+ 
+     set(copy_fw_sync_headers_marker_file
