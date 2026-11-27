@@ -10,7 +10,7 @@ endforeach()
 
 function(bext_track_noinstall path component)
   string(REPLACE "\\" "/" path "${path}")
-  if(IS_ABSOLUTE "${path}" OR path MATCHES "(^|/)\.\.(/|$)")
+  if(IS_ABSOLUTE "${path}" OR path MATCHES "(^|/)[.][.](/|$)")
     return()
   endif()
   if(NOT EXISTS "${BEXT_NOINSTALL_ROOT}/${path}" OR

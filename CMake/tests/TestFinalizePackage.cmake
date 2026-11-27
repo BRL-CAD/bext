@@ -3,9 +3,10 @@ bext_test_reset("${TEST_ROOT}")
 set(install "${TEST_ROOT}/install")
 set(noinstall "${TEST_ROOT}/noinstall")
 set(binary "${TEST_ROOT}/build")
-file(MAKE_DIRECTORY "${install}/lib" "${noinstall}/bin"
+file(MAKE_DIRECTORY "${install}/lib" "${noinstall}/ab" "${noinstall}/bin"
   "${noinstall}/share/bext" "${noinstall}/share/doc/legal" "${binary}/tool")
 file(WRITE "${install}/lib/owned" "install")
+file(WRITE "${noinstall}/ab/owned" "two-character path component")
 file(WRITE "${noinstall}/bin/helper" "helper")
 if(WIN32)
   set(supply_chain_tool "bin/bext_supply_chain.exe")
@@ -18,7 +19,8 @@ file(WRITE "${noinstall}/share/doc/legal/bext-supply-chain-public-domain.txt" "p
 file(WRITE "${noinstall}/share/doc/legal/nlohmann-json.txt" "MIT")
 file(WRITE "${noinstall}/build-stamp" "stamp")
 file(WRITE "${noinstall}/stale" "stale")
-file(WRITE "${binary}/tool/install_manifest.txt" "${noinstall}/bin/helper\n")
+file(WRITE "${binary}/tool/install_manifest.txt"
+  "${noinstall}/ab/owned\n${noinstall}/bin/helper\n")
 file(WRITE "${TEST_ROOT}/active.txt" "tool\n")
 file(WRITE "${TEST_ROOT}/components.json"
   "{\"schema\":\"https://brlcad.org/schema/bext-component-manifest-v2\",\"platform\":\"fixture\",\"install_root\":\"install\",\"generated_by\":\"bext\",\"files\":[{\"path\":\"lib/owned\",\"component\":\"installed\"}],\"packages\":[{\"component\":\"installed\",\"id\":\"installed\",\"spdx_id\":\"SPDXRef-Package-installed\",\"primary\":true,\"output\":\"install\"}]}")
@@ -35,7 +37,8 @@ execute_process(COMMAND "${CMAKE_COMMAND}"
 file(READ "${TEST_ROOT}/noinstall.json" noinstall_manifest)
 file(READ "${TEST_ROOT}/package.json" package_manifest)
 file(READ "${binary}/bext-untracked-noinstall-files.txt" untracked)
-foreach(path "bin/helper" "${supply_chain_tool}" "share/doc/legal/nlohmann-json.txt")
+foreach(path "ab/owned" "bin/helper" "${supply_chain_tool}"
+    "share/doc/legal/nlohmann-json.txt")
   bext_test_require_contains("${noinstall_manifest}" "\"${path}\"" "Noinstall manifest")
 endforeach()
 bext_test_require_not_contains("${noinstall_manifest}" "stale" "Noinstall manifest")
