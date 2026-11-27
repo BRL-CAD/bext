@@ -245,8 +245,8 @@ diff -Naur appleseed/src/appleseed/renderer/modeling/shadergroup/shadergroup.cpp
 +        size_t operator()(const SurfaceAreaKey& key) const noexcept
 +        {
 +            return combine_hashes(
-+                std::hash<const AssemblyInstance*>()(key.first),
-+                std::hash<const ObjectInstance*>()(key.second));
++                static_cast<std::uint64_t>(std::hash<const AssemblyInstance*>()(key.first)),
++                static_cast<std::uint64_t>(std::hash<const ObjectInstance*>()(key.second)));
 +        }
 +    };
 +
