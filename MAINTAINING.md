@@ -458,15 +458,10 @@ both `install/` and `noinstall/`, for example `build/auto/Release` for the `auto
 preset. Requested and physical producer prefixes are recorded for symlink
 aliases; test use through a different alias and after moving the bundle.
 
-Downstream packaging is selected with `BEXT_PACKAGE_PROFILE`: `RUNTIME`
-excludes development files, build tools, auxiliary tools, tests, and eligible
-large-unused files; `SDK` retains development files and build tools but
-excludes auxiliary tools and tests; `COMPLETE` retains all optional categories.
-`BEXT_PACKAGE_LICENSE_POLICY` independently
-controls `LICENSE_RESTRICTED` groups and defaults to `REDISTRIBUTABLE`.
-`BEXT_PACKAGE_FILTER_LARGE_UNUSED` and
-`BEXT_PACKAGE_LARGE_FILE_THRESHOLD_MB` control size-gated runtime exclusions.
-Files above the threshold that remain included are always reported for review.
+The [SBOM guide](SBOM.md#choose-a-downstream-package-policy) documents the
+public package profiles, license policy, large-file controls, and category
+decision matrix. Treat that behavior as part of the downstream bundle
+contract when adding or changing classifications.
 
 Wrappers classify related outputs once rather than assigning roles per file:
 
@@ -477,9 +472,7 @@ bext_package_group(
   PATTERNS "^bin/(clang[^/]*|llvm-[^/]*)([.]exe)?$")
 ```
 
-Valid categories are `ALWAYS`, `LICENSE_RESTRICTED`, `DEVELOPMENT`,
-`BUILD_TOOL`, `AUXILIARY_TOOL`, `TEST`, and `LARGE_UNUSED`. Bext declares
-headers, link-time libraries, and CMake/pkg-config metadata as broad
+Declare headers, link-time libraries, and CMake/pkg-config metadata as broad
 `DEVELOPMENT` groups rather than assigning roles to individual files. Groups
 may overlap when policy decisions are independent, such as a build tool that
 also has redistribution restrictions. The complete bext install tree is
@@ -620,12 +613,13 @@ requirements include JSON validation only; XML libraries are unnecessary.
 FreeBSD may compile Python dependencies locally, requiring an available C/Rust
 toolchain. Ordinary SBOM generation does not need these validation packages.
 
-For an already configured build, set `BEXT_SBOM_PYTHON` to the virtual
-environment's Python at configure time, then build `sbom_validate` or
-`sbom_scan_inputs`. The former runs both specification validators and parity;
-the latter generates advisory projections and coverage reports. Neither target
-builds the dependency libraries. Weekly CI installs the validators explicitly,
-runs both formats and projections, and fails on validation errors.
+For an already configured build, build `sbom_validate` to run the native
+semantic and format-parity checks, or build `sbom_scan_inputs` to generate
+advisory projections and coverage reports. Neither target builds the dependency
+libraries. Run `CMake/ValidateSbom.py` with the virtual environment's Python for
+independent SPDX and CycloneDX specification validation. Weekly CI installs the
+validators explicitly, runs both formats and projections, and fails on
+validation errors.
 
 ### Setting up the external supply-chain tools
 
@@ -751,9 +745,9 @@ running CTest to enable the repeated RPATH rewrite and runtime loading
 regression. The test is skipped when the variable is unset.
 
 In PowerShell use `venv/Scripts/python.exe` for the remaining Python tests and
-set `$env:BEXT_VEX_SCANNER_TESTS = '1'` before the scanner tests. Configure
-`BEXT_SBOM_PYTHON` with the environment's Python when using CMake validation
-targets. The scanner fixture deliberately contains an old vulnerable zlib:
+set `$env:BEXT_VEX_SCANNER_TESTS = '1'` before the scanner tests. Invoke
+`CMake/ValidateSbom.py` with that Python for independent specification
+validation. The scanner fixture deliberately contains an old vulnerable zlib:
 its successful detection and selective VEX suppression verify matching, rather
 than asserting anything about the installed product. Extra inspection tools
 and their installation examples are listed below the VEX documentation.

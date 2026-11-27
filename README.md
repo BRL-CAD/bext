@@ -259,6 +259,9 @@ other redistribution consumers. The separate `bext-package.build.*` inventory
 describes the reusable bext archive itself, including its native build tools
 and incorporated vendored code.
 
+See the [SBOM guide](SBOM.md) for source inventories, generation commands,
+validation, and choosing the correct build inventory.
+
 Source, build, and install directories may use symlink aliases.  The manifest's
 `install_prefixes` array records both the requested and physical install roots,
 so BRL-CAD can replace embedded paths even when it accesses the bundle through
@@ -311,6 +314,7 @@ cmake ../brlcad \
 
 * [INSTALL.md](INSTALL.md) - platform prerequisites, checkout options, and
   setup caveats
+* [SBOM.md](SBOM.md) - generate, select, and validate source and build SBOMs
 * [DEPENDENCIES.md](DEPENDENCIES.md) - package-to-group reference, output
   classification, and dependency addition workflow
 * [MAINTAINING.md](MAINTAINING.md) - dependency lifecycle, wrapper conventions,
