@@ -11,7 +11,9 @@ set(ENABLE_M4 "${ENABLE_M4}" CACHE BOOL "Enable portable m4 build")
 
 if (ENABLE_M4)
   git_submodule_init(m4 LICENSE
-    PATCH_FILES "${CMAKE_CURRENT_SOURCE_DIR}/m4_windows.patch"
+    PATCH_FILES
+      "${CMAKE_CURRENT_SOURCE_DIR}/m4_windows.patch"
+      "${CMAKE_CURRENT_SOURCE_DIR}/m4_strlcpy.patch"
     PATCH_COMMAND_VAR M4_PATCH_COMMAND)
 
   RegisterDeps(M4)

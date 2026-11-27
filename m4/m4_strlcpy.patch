@@ -1,0 +1,16 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -88,10 +88,11 @@
+ 
+ set(STRLCPYCHECK_SRC "
+ #include <string.h>
+-int main(void){strlcpy(NULL,NULL,0);return 0;}
++int main(void){char dst[2];return strlcpy(dst, \"x\", sizeof(dst)) != 1;}
+ ")
+ if(NOT DEFINED HAVE_STRLCPY)
+-  check_c_source_runs("${STRLCPY_SRC}" HAVE_STRLCPY)
++  include(CheckCSourceCompiles)
++  check_c_source_compiles("${STRLCPYCHECK_SRC}" HAVE_STRLCPY)
+ endif(NOT DEFINED HAVE_STRLCPY)
+ 
+ set(STRTONUMCHECK_SRC "
