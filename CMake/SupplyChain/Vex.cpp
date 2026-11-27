@@ -36,6 +36,18 @@ std::vector<std::string> lines(const fs::path &path)
   return result;
 }
 
+std::string review_source_sha256(const fs::path &path)
+{
+  std::string contents = read_text(path);
+  std::string::iterator output = contents.begin();
+  for (std::string::const_iterator input = contents.cbegin(); input != contents.cend(); ++input) {
+    if (*input == '\r' && input + 1 != contents.cend() && input[1] == '\n') continue;
+    *output++ = *input;
+  }
+  contents.erase(output, contents.end());
+  return sha256(contents);
+}
+
 std::string utc_now()
 {
   const std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -116,7 +128,7 @@ Json capture_component(const Json &config)
       if (inputs.contains(relative) && inputs.at(relative) != expected) {
         throw std::runtime_error("conflicting source input: " + relative);
       }
-      inputs[relative] = expected;
+      inputs[relative] = actual ? review_source_sha256(path) : expected;
     }
   }
   std::set<std::string> source_names, stage_names, patterns;
@@ -141,7 +153,7 @@ Json capture_component(const Json &config)
   Json staged = Json::object();
   for (const std::string &name : stage_names) {
     const fs::path path = inside(stage_root, name);
-    staged[name] = fs::is_regular_file(path) ? Json(file_sha256(path)) : Json(nullptr);
+    staged[name] = fs::is_regular_file(path) ? Json(review_source_sha256(path)) : Json(nullptr);
   }
   const fs::path install_root = resolved_path(fs::u8path(config.at("installRoot").get<std::string>()));
   const fs::path build_root = fs::u8path(config.at("buildRoot").get<std::string>());

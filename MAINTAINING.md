@@ -1054,11 +1054,14 @@ ExternalProject `target`, and a nonempty `reviews` list. Each review records:
   Every group needs an installed match. Optional `forbiddenArtifacts`
   patterns reject packaging that contradicts the decision.
 
-All recorded paths use relative POSIX syntax. Artifact patterns are matched
-against finalized component-owned paths, using case-sensitive shell glob
-rules. The native `bext_supply_chain` catalog validator rejects unknown fields,
-malformed identities, and incomplete conditions. See the existing catalogs
-for concrete records rather than creating a separate per-scanner exception.
+Reviewed input and staged-source hashes canonicalize CRLF line endings to LF
+so checkout policy does not invalidate an otherwise identical review.
+Installed artifact hashes remain byte-exact. All recorded paths use relative
+POSIX syntax. Artifact patterns are matched against finalized component-owned
+paths, using case-sensitive shell glob rules. The native `bext_supply_chain`
+catalog validator rejects unknown fields, malformed identities, and incomplete
+conditions. See the existing catalogs for concrete records rather than
+creating a separate per-scanner exception.
 
 An ExternalProject post-install step captures clean source revisions, the
 inputs actually used by source preparation, relevant staged files, and

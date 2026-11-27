@@ -39,15 +39,15 @@ class VexGenerationTests(unittest.TestCase):
         for directory in (self.install / 'lib', self.binary, self.stage, self.source):
             directory.mkdir(parents=True)
         self.engine = self.stage / 'engine.c'
-        self.engine.write_text('reviewed source\n')
-        (self.source / 'engine.c').write_text(self.engine.read_text())
+        self.engine.write_bytes(b'reviewed source\n')
+        (self.source / 'engine.c').write_bytes(self.engine.read_bytes())
         self.git('init', '-q')
         self.git('add', 'engine.c')
         self.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
                  'commit', '-qm', 'Initial fixture')
         self.revision = self.git('rev-parse', 'HEAD').strip()
         self.patch = self.root / 'probe' / 'fix.patch'
-        self.patch.write_text('reviewed patch\n')
+        self.patch.write_bytes(b'reviewed patch\n')
         self.library = self.install / 'lib' / 'libz.so'
         self.library.write_bytes(b'reviewed binary fixture')
         (self.binary / 'install_manifest.txt').write_text(str(self.library) + '\n')
@@ -373,6 +373,20 @@ class VexGenerationTests(unittest.TestCase):
         self.assertTrue(self.capture(self.config)['errors'])
         (self.source / 'engine.c').write_text('dirty source')
         self.assertFalse(self.capture(self.config)['sources']['probe/source']['clean'])
+
+    def test_capture_normalizes_reviewed_source_line_endings(self):
+        expected_patch = file_digest(self.patch)
+        expected_engine = file_digest(self.engine)
+        self.patch.write_bytes(b'reviewed patch\r\n')
+        self.engine.write_bytes(b'reviewed source\r\n')
+        self.state.write_text(
+            self.revision + '\n' + str(self.patch) + ':' + file_digest(self.patch))
+
+        capture = self.capture(self.config)
+
+        self.assertEqual(capture['errors'], [])
+        self.assertEqual(capture['inputs']['probe/fix.patch'], expected_patch)
+        self.assertEqual(capture['stagedFiles']['engine.c'], expected_engine)
 
     def test_malformed_reviews_and_exported_evidence_are_rejected(self):
         for field, value in [('status', []), ('requiredInputs', [{}]),
