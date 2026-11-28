@@ -63,6 +63,21 @@ if(BUILD_TESTING)
     bext_add_supply_chain_test("${name}" "supply-chain-native")
   endforeach()
   set_tests_properties(supply-chain-filesystem-process-timeout-tree PROPERTIES TIMEOUT 15)
+  if(UNIX)
+    # Syscall wrappers make process-group timing and failures deterministic.
+    add_library(bext_process_group_test_runner OBJECT Process.cpp)
+    target_compile_features(bext_process_group_test_runner PRIVATE cxx_std_17)
+    target_compile_definitions(bext_process_group_test_runner PRIVATE
+      setpgid=bext_test_setpgid getpgid=bext_test_getpgid)
+    add_executable(bext_process_group_tests "${CMAKE_CURRENT_LIST_DIR}/../tests/ProcessGroupTests.cpp"
+      $<TARGET_OBJECTS:bext_process_group_test_runner>)
+    target_compile_features(bext_process_group_tests PRIVATE cxx_std_17)
+    foreach(name normal parent-grouped child-grouped parent-denied query-failed child-denied)
+      add_test(NAME "supply-chain-process-group-${name}" COMMAND bext_process_group_tests "${name}")
+      set_tests_properties("supply-chain-process-group-${name}" PROPERTIES
+        LABELS "supply-chain-native" TIMEOUT 30)
+    endforeach()
+  endif()
   foreach(name scanner-grype scanner-trivy scanner-mixed-variants)
     bext_add_supply_chain_test("${name}" "supply-chain-scanner")
     set_tests_properties("supply-chain-${name}" PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)

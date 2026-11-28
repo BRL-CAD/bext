@@ -7,6 +7,7 @@
 
 #include <array>
 #include <stdexcept>
+#include <system_error>
 #include <thread>
 
 #ifdef _WIN32
@@ -174,6 +175,16 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
 
 namespace {
 
+int create_process_group(pid_t process)
+{
+  if (!setpgid(process, process)) return 0;
+  const int error = errno;
+  // macOS can reject overlapping requests after the other caller creates the group.
+  if (error == EPERM && getpgid(process) == (process ? process : getpid())) return 0;
+  if (process && (error == EACCES || error == ESRCH)) return 0;
+  return error;
+}
+
 std::string read_descriptor(int descriptor, const ProcessOutput &output)
 {
   std::string result;
@@ -188,7 +199,6 @@ std::string read_descriptor(int descriptor, const ProcessOutput &output)
 }
 
 }
-
 
 ProcessResult run_process(const std::vector<std::string> &arguments,
   const std::filesystem::path &working_directory, std::chrono::seconds timeout,
@@ -210,7 +220,7 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
     throw std::runtime_error("unable to fork process");
   }
   if (!process) {
-    if (setpgid(0, 0)) _exit(127);
+    if (create_process_group(0)) _exit(127);
     dup2(output_pipe[1], STDOUT_FILENO);
     dup2(merge_error ? output_pipe[1] : error_pipe[1], STDERR_FILENO);
     close(output_pipe[0]); close(output_pipe[1]);
@@ -223,12 +233,14 @@ ProcessResult run_process(const std::vector<std::string> &arguments,
     execvp(command.front(), command.data());
     _exit(127);
   }
-  if (setpgid(process, process) && errno != EACCES && errno != ESRCH) {
+  if (const int error = create_process_group(process)) {
     kill(process, SIGKILL);
-    waitpid(process, nullptr, 0);
+    while (waitpid(process, nullptr, 0) < 0 && errno == EINTR) {}
     close(output_pipe[0]); close(output_pipe[1]);
     if (!merge_error) { close(error_pipe[0]); close(error_pipe[1]); }
-    throw std::runtime_error("unable to create process group");
+    throw std::system_error(error, std::generic_category(),
+      "unable to create process group for " + arguments.front() +
+      " (errno " + std::to_string(error) + ')');
   }
   close(output_pipe[1]);
   if (!merge_error) close(error_pipe[1]);
