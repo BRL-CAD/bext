@@ -1,0 +1,1416 @@
+diff --git a/include/cldai/sdaiEnum.h b/include/cldai/sdaiEnum.h
+--- a/include/cldai/sdaiEnum.h
++++ b/include/cldai/sdaiEnum.h
+@@ -92,7 +92,7 @@
+ class SC_DAI_EXPORT SDAI_LOGICAL :
+     public SDAI_Enum  {
+     public:
+-        const char * Name() const;
++        const char * Name() const override;
+ 
+         SDAI_LOGICAL( const char * val = 0 );
+         SDAI_LOGICAL( Logical state );
+@@ -101,8 +101,8 @@
+ 
+         virtual ~SDAI_LOGICAL();
+ 
+-        virtual int no_elements() const;
+-        virtual const char * element_at( int n ) const;
++        int no_elements() const override;
++        const char * element_at( int n ) const override;
+ 
+         operator Logical() const;
+         SDAI_LOGICAL & operator=( const SDAI_LOGICAL & t );
+@@ -110,21 +110,21 @@
+         SDAI_LOGICAL operator==( const SDAI_LOGICAL & t ) const;
+ 
+         // these 2 are redefined because LUnknown has cardinal value > LUnset
+-        int exists() const; // return 0 if unset otherwise return 1
+-        void nullify(); // change the receiver to an unset status
++        int exists() const override; // return 0 if unset otherwise return 1
++        void nullify() override; // change the receiver to an unset status
+ 
+     protected:
+-        virtual int set_value( const int n );
+-        virtual int set_value( const char * n );
+-        virtual Severity ReadEnum( istream & in, ErrorDescriptor * err,
+-                                   int AssignVal = 1, int needDelims = 1 );
++        int set_value( const int n ) override;
++        int set_value( const char * n ) override;
++        Severity ReadEnum( istream & in, ErrorDescriptor * err,
++                                   int AssignVal = 1, int needDelims = 1 ) override;
+ 
+ };
+ 
+ class SC_DAI_EXPORT SDAI_BOOLEAN :
+     public SDAI_Enum  {
+     public:
+-        const char * Name() const;
++        const char * Name() const override;
+ 
+         SDAI_BOOLEAN( char * val = 0 );
+         SDAI_BOOLEAN( ::Boolean state );
+@@ -133,8 +133,8 @@
+         SDAI_BOOLEAN( const SDAI_LOGICAL & val );
+         virtual ~SDAI_BOOLEAN();
+ 
+-        virtual int no_elements() const;
+-        virtual const char * element_at( int n ) const;
++        int no_elements() const override;
++        const char * element_at( int n ) const override;
+ 
+         operator ::Boolean() const;
+         SDAI_BOOLEAN & operator=( const SDAI_LOGICAL & t );
+diff --git a/include/cleditor/cmdmgr.h b/include/cleditor/cmdmgr.h
+--- a/include/cleditor/cmdmgr.h
++++ b/include/cleditor/cmdmgr.h
+@@ -106,7 +106,7 @@
+         ReplicateList()  { }
+         ~ReplicateList() { }
+ 
+-        virtual SingleLinkNode * NewNode() {
++        SingleLinkNode * NewNode() override {
+             return new ReplicateLinkNode;
+         }
+ 
+diff --git a/include/cllazyfile/instMgrHelper.h b/include/cllazyfile/instMgrHelper.h
+--- a/include/cllazyfile/instMgrHelper.h
++++ b/include/cllazyfile/instMgrHelper.h
+@@ -30,7 +30,7 @@
+         inline void setInstance( instanceID id ) {
+             _id = id;
+         }
+-        inline SDAI_Application_instance * GetSTEPentity() {
++        inline SDAI_Application_instance * GetSTEPentity() override {
+             /* Attribute resolution must not convert a batch-owned cache hit
+              * into a process-lifetime retained instance. */
+             return _lim->loadInstance( _id, true, false );
+@@ -51,7 +51,7 @@
+     public:
+         instMgrAdapter( lazyInstMgr * lim ): InstMgrBase(), _mn( lim ) {}
+ 
+-        inline mgrNodeHelper * FindFileId( int fileId ) {
++        inline mgrNodeHelper * FindFileId( int fileId ) override {
+             //TODO check if fileId exists. if not, return null
+             _mn.setInstance( fileId );
+             return &_mn;
+diff --git a/include/cllazyfile/lazyP21DataSectionReader.h b/include/cllazyfile/lazyP21DataSectionReader.h
+--- a/include/cllazyfile/lazyP21DataSectionReader.h
++++ b/include/cllazyfile/lazyP21DataSectionReader.h
+@@ -13,12 +13,12 @@
+     public:
+         lazyP21DataSectionReader( lazyFileReader * parent, std::ifstream & file, std::streampos start, sectionID sid );
+ 
+-        void findSectionStart();
++        void findSectionStart() override;
+         /** gets information (start, end, name, etc) about the next
+          * instance in the file and returns it in a namedLazyInstance
+          * \sa p21HeaderSectionReader::nextInstance()
+          */
+-        const namedLazyInstance nextInstance();
++        const namedLazyInstance nextInstance() override;
+ 
+ };
+ 
+diff --git a/include/cllazyfile/p21HeaderSectionReader.h b/include/cllazyfile/p21HeaderSectionReader.h
+--- a/include/cllazyfile/p21HeaderSectionReader.h
++++ b/include/cllazyfile/p21HeaderSectionReader.h
+@@ -7,12 +7,12 @@
+ class SC_LAZYFILE_EXPORT p21HeaderSectionReader: public headerSectionReader {
+     public:
+         p21HeaderSectionReader( lazyFileReader * parent, std::ifstream & file, std::streampos start, sectionID sid );
+-        void findSectionStart();
++        void findSectionStart() override;
+         /** gets information (start, end, name, etc) about the next
+          * instance in the file and returns it in a namedLazyInstance
+          * \sa lazyP21DataSectionReader::nextInstance()
+          */
+-        const namedLazyInstance nextInstance();
++        const namedLazyInstance nextInstance() override;
+ };
+ 
+ #endif //P21HEADERSECTIONREADER_H
+diff --git a/include/clstepcore/STEPaggrBinary.h b/include/clstepcore/STEPaggrBinary.h
+--- a/include/clstepcore/STEPaggrBinary.h
++++ b/include/clstepcore/STEPaggrBinary.h
+@@ -14,8 +14,8 @@
+  */
+ class SC_CORE_EXPORT BinaryAggregate  :  public STEPaggregate {
+ public:
+-    virtual SingleLinkNode * NewNode();
+-    virtual STEPaggregate & ShallowCopy( const STEPaggregate & );
++    SingleLinkNode * NewNode() override;
++    STEPaggregate & ShallowCopy( const STEPaggregate & ) override;
+ 
+     BinaryAggregate();
+     virtual ~BinaryAggregate();
+@@ -33,16 +33,16 @@
+ public:
+     SDAI_Binary  value;
+     //  INPUT
+-    virtual Severity StrToVal( const char * s, ErrorDescriptor * err );
+-    virtual Severity StrToVal( istream & in, ErrorDescriptor * err );
++    Severity StrToVal( const char * s, ErrorDescriptor * err ) override;
++    Severity StrToVal( istream & in, ErrorDescriptor * err ) override;
+ 
+-    virtual Severity STEPread( const char * s, ErrorDescriptor * err );
+-    virtual Severity STEPread( istream & in, ErrorDescriptor * err );
++    Severity STEPread( const char * s, ErrorDescriptor * err ) override;
++    Severity STEPread( istream & in, ErrorDescriptor * err ) override;
+ 
+     //  OUTPUT
+-    virtual const char * asStr( std::string & s );
+-    virtual const char * STEPwrite( std::string & s, const char * = 0 );
+-    virtual void    STEPwrite( ostream & out = cout );
++    const char * asStr( std::string & s ) override;
++    const char * STEPwrite( std::string & s, const char * = 0 ) override;
++    void    STEPwrite( ostream & out = cout ) override;
+ 
+     //  CONSTRUCTORS
+     BinaryNode( BinaryNode & bn );
+diff --git a/include/clstepcore/STEPaggrEntity.h b/include/clstepcore/STEPaggrEntity.h
+--- a/include/clstepcore/STEPaggrEntity.h
++++ b/include/clstepcore/STEPaggrEntity.h
+@@ -10,14 +10,14 @@
+ 
+ class SC_CORE_EXPORT EntityAggregate  :  public  STEPaggregate {
+ public:
+-    virtual Severity ReadValue( istream & in, ErrorDescriptor * err,
++    Severity ReadValue( istream & in, ErrorDescriptor * err,
+                                 const TypeDescriptor * elem_type,
+                                 InstMgrBase * insts, int addFileId = 0,
+                                 int assignVal = 1, int ExchangeFileFormat = 1,
+-                                const char * currSch = 0 );
++                                const char * currSch = 0 ) override;
+ 
+-    virtual  SingleLinkNode * NewNode();
+-    virtual  STEPaggregate & ShallowCopy( const STEPaggregate & );
++     SingleLinkNode * NewNode() override;
++     STEPaggregate & ShallowCopy( const STEPaggregate & ) override;
+ 
+     EntityAggregate();
+     virtual ~EntityAggregate();
+@@ -46,9 +46,9 @@
+                                const TypeDescriptor * elem_type,
+                                InstMgrBase * insts, int addFileId = 0 );
+     //  OUTPUT
+-    virtual const char * asStr( std::string & s );
+-    virtual const char * STEPwrite( std::string & s, const char * = 0 );
+-    virtual void    STEPwrite( ostream & out = cout );
++    const char * asStr( std::string & s ) override;
++    const char * STEPwrite( std::string & s, const char * = 0 ) override;
++    void    STEPwrite( ostream & out = cout ) override;
+ 
+     //  CONSTRUCTORS
+     EntityNode( SDAI_Application_instance  * e );
+@@ -58,23 +58,23 @@
+     virtual SingleLinkNode   *  NewNode();
+ 
+     // Calling these functions is an error.
+-    Severity StrToVal( const char * s, ErrorDescriptor * err ) {
++    Severity StrToVal( const char * s, ErrorDescriptor * err ) override {
+         cerr << "Internal error:  " << __FILE__ <<  __LINE__
+         << "\n" << _POC_ "\n";
+         return StrToVal( s, err, 0, 0, 0 );
+     }
+-    Severity StrToVal( istream & in, ErrorDescriptor * err ) {
++    Severity StrToVal( istream & in, ErrorDescriptor * err ) override {
+         cerr << "Internal error:  " << __FILE__ <<  __LINE__
+         << "\n" << _POC_ "\n";
+         return StrToVal( in, err, 0, 0, 0 );
+     }
+ 
+-    Severity STEPread( const char * s, ErrorDescriptor * err ) {
++    Severity STEPread( const char * s, ErrorDescriptor * err ) override {
+         cerr << "Internal error:  " << __FILE__ <<  __LINE__
+         << "\n" << _POC_ "\n";
+         return STEPread( s, err, 0, 0, 0 );
+     }
+-    Severity STEPread( istream & in, ErrorDescriptor * err ) {
++    Severity STEPread( istream & in, ErrorDescriptor * err ) override {
+         cerr << "Internal error:  " << __FILE__ <<  __LINE__
+         << "\n" << _POC_ "\n";
+         return STEPread( in, err, 0, 0, 0 );
+diff --git a/include/clstepcore/STEPaggrEnum.h b/include/clstepcore/STEPaggrEnum.h
+--- a/include/clstepcore/STEPaggrEnum.h
++++ b/include/clstepcore/STEPaggrEnum.h
+@@ -13,8 +13,8 @@
+  */
+ class SC_CORE_EXPORT EnumAggregate  :  public STEPaggregate {
+ public:
+-    virtual SingleLinkNode * NewNode();
+-    virtual STEPaggregate & ShallowCopy( const STEPaggregate & );
++    SingleLinkNode * NewNode() override;
++    STEPaggregate & ShallowCopy( const STEPaggregate & ) override;
+ 
+     EnumAggregate();
+     virtual ~EnumAggregate();
+@@ -26,7 +26,7 @@
+ 
+ class SC_CORE_EXPORT LOGICALS  : public EnumAggregate {
+ public:
+-    virtual SingleLinkNode * NewNode();
++    SingleLinkNode * NewNode() override;
+ 
+     LOGICALS();
+     virtual ~LOGICALS();
+@@ -40,7 +40,7 @@
+ 
+ class SC_CORE_EXPORT BOOLEANS  : public EnumAggregate {
+ public:
+-    virtual SingleLinkNode * NewNode();
++    SingleLinkNode * NewNode() override;
+ 
+     BOOLEANS();
+     virtual ~BOOLEANS();
+@@ -61,16 +61,16 @@
+ public:
+     SDAI_Enum  * node;
+     //  INPUT
+-    virtual Severity StrToVal( const char * s, ErrorDescriptor * err );
+-    virtual Severity StrToVal( istream & in, ErrorDescriptor * err );
++    Severity StrToVal( const char * s, ErrorDescriptor * err ) override;
++    Severity StrToVal( istream & in, ErrorDescriptor * err ) override;
+ 
+-    virtual Severity STEPread( const char * s, ErrorDescriptor * err );
+-    virtual Severity STEPread( istream & in, ErrorDescriptor * err );
++    Severity STEPread( const char * s, ErrorDescriptor * err ) override;
++    Severity STEPread( istream & in, ErrorDescriptor * err ) override;
+ 
+     //  OUTPUT
+-    virtual const char * asStr( std::string & s );
+-    virtual const char * STEPwrite( std::string & s, const char * = 0 );
+-    virtual void    STEPwrite( ostream & out = cout );
++    const char * asStr( std::string & s ) override;
++    const char * STEPwrite( std::string & s, const char * = 0 ) override;
++    void    STEPwrite( ostream & out = cout ) override;
+ 
+     //  CONSTRUCTORS
+     EnumNode( SDAI_Enum  * e );
+diff --git a/include/clstepcore/STEPaggrGeneric.h b/include/clstepcore/STEPaggrGeneric.h
+--- a/include/clstepcore/STEPaggrGeneric.h
++++ b/include/clstepcore/STEPaggrGeneric.h
+@@ -15,8 +15,8 @@
+  */
+ class SC_CORE_EXPORT GenericAggregate  :  public STEPaggregate {
+ public:
+-    virtual SingleLinkNode * NewNode();
+-    virtual STEPaggregate & ShallowCopy( const STEPaggregate & );
++    SingleLinkNode * NewNode() override;
++    STEPaggregate & ShallowCopy( const STEPaggregate & ) override;
+ 
+     GenericAggregate();
+     virtual ~GenericAggregate();
+@@ -33,16 +33,16 @@
+ public:
+     SCLundefined value;
+     //  INPUT
+-    virtual Severity StrToVal( const char * s, ErrorDescriptor * err );
+-    virtual Severity StrToVal( istream & in, ErrorDescriptor * err );
++    Severity StrToVal( const char * s, ErrorDescriptor * err ) override;
++    Severity StrToVal( istream & in, ErrorDescriptor * err ) override;
+ 
+-    virtual Severity STEPread( const char * s, ErrorDescriptor * err );
+-    virtual Severity STEPread( istream & in, ErrorDescriptor * err );
++    Severity STEPread( const char * s, ErrorDescriptor * err ) override;
++    Severity STEPread( istream & in, ErrorDescriptor * err ) override;
+ 
+     //  OUTPUT
+-    virtual const char * asStr( std::string & s );
+-    virtual const char * STEPwrite( std::string & s, const char * = 0 );
+-    virtual void    STEPwrite( ostream & out = cout );
++    const char * asStr( std::string & s ) override;
++    const char * STEPwrite( std::string & s, const char * = 0 ) override;
++    void    STEPwrite( ostream & out = cout ) override;
+ 
+     //  CONSTRUCTORS
+     GenericAggrNode( const char * str );
+diff --git a/include/clstepcore/STEPaggrInt.h b/include/clstepcore/STEPaggrInt.h
+--- a/include/clstepcore/STEPaggrInt.h
++++ b/include/clstepcore/STEPaggrInt.h
+@@ -7,8 +7,8 @@
+ class SC_CORE_EXPORT IntAggregate  : public STEPaggregate  {
+ 
+ public:
+-    virtual SingleLinkNode * NewNode();
+-    virtual STEPaggregate & ShallowCopy( const STEPaggregate & );
++    SingleLinkNode * NewNode() override;
++    STEPaggregate & ShallowCopy( const STEPaggregate & ) override;
+ 
+     IntAggregate();
+     virtual ~IntAggregate();
+@@ -23,16 +23,16 @@
+ public:
+     SDAI_Integer  value; // long int
+     //  INPUT
+-    virtual Severity StrToVal( const char * s, ErrorDescriptor * err );
+-    virtual Severity StrToVal( istream & in, ErrorDescriptor * err );
++    Severity StrToVal( const char * s, ErrorDescriptor * err ) override;
++    Severity StrToVal( istream & in, ErrorDescriptor * err ) override;
+ 
+-    virtual Severity STEPread( const char * s, ErrorDescriptor * err );
+-    virtual Severity STEPread( istream & in, ErrorDescriptor * err );
++    Severity STEPread( const char * s, ErrorDescriptor * err ) override;
++    Severity STEPread( istream & in, ErrorDescriptor * err ) override;
+ 
+     //  OUTPUT
+-    virtual const char * asStr( std::string & s );
+-    virtual const char * STEPwrite( std::string & s, const char * = 0 );
+-    virtual void    STEPwrite( ostream & out = cout );
++    const char * asStr( std::string & s ) override;
++    const char * STEPwrite( std::string & s, const char * = 0 ) override;
++    void    STEPwrite( ostream & out = cout ) override;
+ 
+     //  CONSTRUCTORS
+     IntNode( SDAI_Integer v );
+diff --git a/include/clstepcore/STEPaggrReal.h b/include/clstepcore/STEPaggrReal.h
+--- a/include/clstepcore/STEPaggrReal.h
++++ b/include/clstepcore/STEPaggrReal.h
+@@ -7,8 +7,8 @@
+ class SC_CORE_EXPORT RealAggregate  : public STEPaggregate  {
+ 
+ public:
+-    virtual SingleLinkNode * NewNode();
+-    virtual STEPaggregate & ShallowCopy( const STEPaggregate & );
++    SingleLinkNode * NewNode() override;
++    STEPaggregate & ShallowCopy( const STEPaggregate & ) override;
+ 
+     RealAggregate();
+     virtual ~RealAggregate();
+@@ -22,16 +22,16 @@
+ public:
+     SDAI_Real  value; // double
+     //  INPUT
+-    virtual Severity StrToVal( const char * s, ErrorDescriptor * err );
+-    virtual Severity StrToVal( istream & in, ErrorDescriptor * err );
++    Severity StrToVal( const char * s, ErrorDescriptor * err ) override;
++    Severity StrToVal( istream & in, ErrorDescriptor * err ) override;
+ 
+-    virtual Severity STEPread( const char * s, ErrorDescriptor * err );
+-    virtual Severity STEPread( istream & in, ErrorDescriptor * err );
++    Severity STEPread( const char * s, ErrorDescriptor * err ) override;
++    Severity STEPread( istream & in, ErrorDescriptor * err ) override;
+ 
+     //  OUTPUT
+-    virtual const char * asStr( std::string & s );
+-    virtual const char * STEPwrite( std::string & s, const char * = 0 );
+-    virtual void    STEPwrite( ostream & out = cout );
++    const char * asStr( std::string & s ) override;
++    const char * STEPwrite( std::string & s, const char * = 0 ) override;
++    void    STEPwrite( ostream & out = cout ) override;
+ 
+     //  CONSTRUCTORS
+     RealNode( SDAI_Real v );
+diff --git a/include/clstepcore/STEPaggrSelect.h b/include/clstepcore/STEPaggrSelect.h
+--- a/include/clstepcore/STEPaggrSelect.h
++++ b/include/clstepcore/STEPaggrSelect.h
+@@ -20,14 +20,14 @@
+     const SelectTypeDescriptor * _select_type;
+ 
+ public:
+-    virtual Severity ReadValue( istream & in, ErrorDescriptor * err,
++    Severity ReadValue( istream & in, ErrorDescriptor * err,
+                                 const TypeDescriptor * elem_type,
+                                 InstMgrBase * insts, int addFileId = 0,
+                                 int assignVal = 1, int ExchangeFileFormat = 1,
+-                                const char * currSch = 0 );
++                                const char * currSch = 0 ) override;
+ 
+-    virtual SingleLinkNode * NewNode();
+-    virtual STEPaggregate & ShallowCopy( const STEPaggregate & );
++    SingleLinkNode * NewNode() override;
++    STEPaggregate & ShallowCopy( const STEPaggregate & ) override;
+ 
+     explicit SelectAggregate( const SelectTypeDescriptor * select_type = 0 );
+     virtual ~SelectAggregate();
+@@ -62,9 +62,9 @@
+                                InstMgrBase * insts, int addFileId = 0,
+                                const char * currSch = 0 );
+     //  OUTPUT
+-    virtual const char * asStr( std::string & s );
+-    virtual const char * STEPwrite( std::string & s, const char * = 0 );
+-    virtual void    STEPwrite( ostream & out = cout );
++    const char * asStr( std::string & s ) override;
++    const char * STEPwrite( std::string & s, const char * = 0 ) override;
++    void    STEPwrite( ostream & out = cout ) override;
+ 
+     //  CONSTRUCTORS
+     SelectNode( SDAI_Select  * s );
+@@ -74,23 +74,23 @@
+     virtual SingleLinkNode   *  NewNode();
+ 
+     // Calling these functions is an error.
+-    Severity StrToVal( const char * s, ErrorDescriptor * err ) {
++    Severity StrToVal( const char * s, ErrorDescriptor * err ) override {
+         cerr << "Internal error:  " << __FILE__ <<  __LINE__
+         << "\n" << _POC_ "\n";
+         return StrToVal( s, err, 0, 0, 0 );
+     }
+-    Severity StrToVal( istream & in, ErrorDescriptor * err ) {
++    Severity StrToVal( istream & in, ErrorDescriptor * err ) override {
+         cerr << "Internal error:  " << __FILE__ <<  __LINE__
+         << "\n" << _POC_ "\n";
+         return StrToVal( in, err, 0, 0, 0 );
+     }
+ 
+-    Severity STEPread( const char * s, ErrorDescriptor * err ) {
++    Severity STEPread( const char * s, ErrorDescriptor * err ) override {
+         cerr << "Internal error:  " << __FILE__ <<  __LINE__
+         << "\n" << _POC_ "\n";
+         return STEPread( s, err, 0, 0, 0 );
+     }
+-    Severity STEPread( istream & in, ErrorDescriptor * err ) {
++    Severity STEPread( istream & in, ErrorDescriptor * err ) override {
+         cerr << "Internal error:  " << __FILE__ <<  __LINE__
+         << "\n" << _POC_ "\n";
+         return STEPread( in, err, 0, 0, 0 );
+diff --git a/include/clstepcore/STEPaggrString.h b/include/clstepcore/STEPaggrString.h
+--- a/include/clstepcore/STEPaggrString.h
++++ b/include/clstepcore/STEPaggrString.h
+@@ -14,8 +14,8 @@
+  */
+ class SC_CORE_EXPORT StringAggregate  :  public STEPaggregate {
+ public:
+-    virtual SingleLinkNode * NewNode();
+-    virtual STEPaggregate & ShallowCopy( const STEPaggregate & );
++    SingleLinkNode * NewNode() override;
++    STEPaggregate & ShallowCopy( const STEPaggregate & ) override;
+ 
+     StringAggregate();
+     virtual ~StringAggregate();
+@@ -33,16 +33,16 @@
+ public:
+     SDAI_String  value;
+     //  INPUT
+-    virtual Severity StrToVal( const char * s, ErrorDescriptor * err );
+-    virtual Severity StrToVal( istream & in, ErrorDescriptor * err );
++    Severity StrToVal( const char * s, ErrorDescriptor * err ) override;
++    Severity StrToVal( istream & in, ErrorDescriptor * err ) override;
+ 
+-    virtual Severity STEPread( const char * s, ErrorDescriptor * err );
+-    virtual Severity STEPread( istream & in, ErrorDescriptor * err );
++    Severity STEPread( const char * s, ErrorDescriptor * err ) override;
++    Severity STEPread( istream & in, ErrorDescriptor * err ) override;
+ 
+     //  OUTPUT
+-    virtual const char * asStr( std::string & s );
+-    virtual const char * STEPwrite( std::string & s, const char * = 0 );
+-    virtual void    STEPwrite( ostream & out = cout );
++    const char * asStr( std::string & s ) override;
++    const char * STEPwrite( std::string & s, const char * = 0 ) override;
++    void    STEPwrite( ostream & out = cout ) override;
+ 
+     //  CONSTRUCTORS
+     StringNode( StringNode & sn );
+diff --git a/include/clstepcore/STEPaggregate.h b/include/clstepcore/STEPaggregate.h
+--- a/include/clstepcore/STEPaggregate.h
++++ b/include/clstepcore/STEPaggregate.h
+@@ -73,9 +73,9 @@
+         virtual const char * asStr( std::string & s ) const;
+         virtual void STEPwrite( ostream & out = cout, const char * = 0 ) const;
+ 
+-        virtual SingleLinkNode * NewNode();
++        SingleLinkNode * NewNode() override;
+         void AddNode( SingleLinkNode * );
+-        void Empty();
++        void Empty() override;
+ 
+         STEPaggregate();
+         virtual ~STEPaggregate();
+diff --git a/include/clstepcore/STEPcomplex.h b/include/clstepcore/STEPcomplex.h
+--- a/include/clstepcore/STEPcomplex.h
++++ b/include/clstepcore/STEPcomplex.h
+@@ -62,24 +62,24 @@
+         STEPcomplex * EntityPart( const char * name, const char * currSch = 0 );
+ 
+ 
+-        virtual const EntityDescriptor * IsA( const EntityDescriptor * ) const;
++        const EntityDescriptor * IsA( const EntityDescriptor * ) const override;
+ 
+-        virtual Severity ValidLevel( ErrorDescriptor * error, InstMgrBase * im,
+-                                     int clearError = 1 );
++        Severity ValidLevel( ErrorDescriptor * error, InstMgrBase * im,
++                                     int clearError = 1 ) override;
+ // READ
+-        virtual Severity STEPread( int id, int addFileId,
++        Severity STEPread( int id, int addFileId,
+                                    class InstMgrBase * instance_set,
+                                    istream & in = cin, const char * currSch = NULL,
+-                                   bool useTechCor = true, bool strict = true );
++                                   bool useTechCor = true, bool strict = true ) override;
+ 
+-        virtual void STEPread_error( char c, int index, istream& in, const char * schnm );
++        void STEPread_error( char c, int index, istream& in, const char * schnm ) override;
+ 
+ // WRITE
+-        virtual void STEPwrite( ostream & out = cout, const char * currSch = NULL,
+-                                int writeComment = 1 );
+-        virtual const char * STEPwrite( std::string & buf, const char * currSch = NULL );
++        void STEPwrite( ostream & out = cout, const char * currSch = NULL,
++                                int writeComment = 1 ) override;
++        const char * STEPwrite( std::string & buf, const char * currSch = NULL ) override;
+ 
+-        SDAI_Application_instance * Replicate();
++        SDAI_Application_instance * Replicate() override;
+ 
+         virtual void WriteExtMapEntities( ostream & out = cout,
+                                           const char * currSch = NULL );
+@@ -88,7 +88,7 @@
+         virtual void AppendEntity( STEPcomplex * stepc );
+ 
+     protected:
+-        virtual void CopyAs( SDAI_Application_instance * se );
++        void CopyAs( SDAI_Application_instance * se ) override;
+         void BuildAttrs( const char * s );
+         void AddEntityPart( const char * name );
+         void AssignDerives();
+diff --git a/include/clstepcore/STEPinvAttrList.h b/include/clstepcore/STEPinvAttrList.h
+--- a/include/clstepcore/STEPinvAttrList.h
++++ b/include/clstepcore/STEPinvAttrList.h
+@@ -60,7 +60,7 @@
+         getterI_t getter() {
+             return get;
+         }
+-        virtual bool isAggregate() {
++        bool isAggregate() override {
+             return false;
+         }
+ };
+@@ -79,7 +79,7 @@
+         getterA_t getter() {
+             return get;
+         }
+-        virtual bool isAggregate() {
++        bool isAggregate() override {
+             return true;
+         }
+ };
+diff --git a/include/clstepcore/SubSuperIterators.h b/include/clstepcore/SubSuperIterators.h
+--- a/include/clstepcore/SubSuperIterators.h
++++ b/include/clstepcore/SubSuperIterators.h
+@@ -170,13 +170,13 @@
+  */
+ class supertypesIterator : public recursiveEntDescripIterator {
+     protected:
+-        EntityDescLinkNode * listHead( const EntityDescriptor * t ) const {     ///< returns the head of an EntityDescriptorList
++        EntityDescLinkNode * listHead( const EntityDescriptor * t ) const override {     ///< returns the head of an EntityDescriptorList
+             if( !t ) {
+                 return 0;
+             }
+             return ( EntityDescLinkNode * ) t->Supertypes().GetHead();
+         }
+-        EntityDescriptor * nodeContent( const EntityDescLinkNode * n ) const {  ///< returns the content of a EntityDescLinkNode
++        EntityDescriptor * nodeContent( const EntityDescLinkNode * n ) const override {  ///< returns the content of a EntityDescLinkNode
+             if( !n ) {
+                 return 0;
+             }
+@@ -193,13 +193,13 @@
+  */
+ class subtypesIterator: public recursiveEntDescripIterator {
+     protected:
+-        EntityDescLinkNode * listHead( const EntityDescriptor * t ) const {     ///< returns the head of an EntityDescriptorList
++        EntityDescLinkNode * listHead( const EntityDescriptor * t ) const override {     ///< returns the head of an EntityDescriptorList
+             if( !t ) {
+                 return 0;
+             }
+             return ( EntityDescLinkNode * ) t->Subtypes().GetHead();
+         }
+-        EntityDescriptor * nodeContent( const EntityDescLinkNode * n ) const {  ///< returns the content of a EntityDescLinkNode
++        EntityDescriptor * nodeContent( const EntityDescLinkNode * n ) const override {  ///< returns the content of a EntityDescLinkNode
+             if( !n ) {
+                 return 0;
+             }
+diff --git a/include/clstepcore/attrDescriptorList.h b/include/clstepcore/attrDescriptorList.h
+--- a/include/clstepcore/attrDescriptorList.h
++++ b/include/clstepcore/attrDescriptorList.h
+@@ -32,7 +32,7 @@
+         AttrDescriptorList();
+         virtual ~AttrDescriptorList();
+ 
+-        virtual SingleLinkNode * NewNode() {
++        SingleLinkNode * NewNode() override {
+             return new AttrDescLinkNode;
+         }
+ 
+diff --git a/include/clstepcore/complexSupport.h b/include/clstepcore/complexSupport.h
+--- a/include/clstepcore/complexSupport.h
++++ b/include/clstepcore/complexSupport.h
+@@ -223,16 +223,16 @@
+         const char * Name() {
+             return name;
+         }
+-        bool contains( char * nm ) {
++        bool contains( char * nm ) override {
+             return *this == nm;
+         }
+-        bool hit( char * nm ) {
++        bool hit( char * nm ) override {
+             return *this == nm;
+         }
+-        MatchType matchNonORs( EntNode * );
+-        bool acceptChoice( EntNode * );
+-        void unmarkAll( EntNode * );
+-        void reset() {
++        MatchType matchNonORs( EntNode * ) override;
++        bool acceptChoice( EntNode * ) override;
++        void unmarkAll( EntNode * ) override;
++        void reset() override {
+             viable = UNKNOWN;
+             I_marked = NOMARK;
+         }
+@@ -256,9 +256,9 @@
+         MultList( JoinType j ) : EntList( j ), supertype( 0 ), numchildren( 0 ),
+             childList( 0 ) {}
+         ~MultList();
+-        void setLevel( int );
+-        bool contains( char * );
+-        bool hit( char * );
++        void setLevel( int ) override;
++        bool contains( char * ) override;
++        bool hit( char * ) override;
+         void appendList( EntList * );
+         EntList * copyList( EntList * );
+         virtual MatchType matchORs( EntNode * ) = 0;
+@@ -272,9 +272,9 @@
+         EntList * getLast() {
+             return ( getChild( numchildren - 1 ) );
+         }
+-        void unmarkAll( EntNode * );
++        void unmarkAll( EntNode * ) override;
+         bool prevKnown( EntList * );
+-        void reset();
++        void reset() override;
+ 
+     protected:
+         int supertype;  ///< do I represent a supertype?
+@@ -297,7 +297,7 @@
+         JoinList( JoinType j ) : MultList( j ) {}
+         ~JoinList() {}
+         void setViableVal( EntNode * );
+-        bool acceptChoice( EntNode * );
++        bool acceptChoice( EntNode * ) override;
+ };
+ 
+ class SC_CORE_EXPORT AndOrList : public JoinList {
+@@ -306,8 +306,8 @@
+     public:
+         AndOrList() : JoinList( ANDOR ) {}
+         ~AndOrList() {}
+-        MatchType matchNonORs( EntNode * );
+-        MatchType matchORs( EntNode * );
++        MatchType matchNonORs( EntNode * ) override;
++        MatchType matchORs( EntNode * ) override;
+ };
+ 
+ class SC_CORE_EXPORT AndList : public JoinList {
+@@ -317,24 +317,24 @@
+     public:
+         AndList() : JoinList( AND ) {}
+         ~AndList() {}
+-        MatchType matchNonORs( EntNode * );
+-        MatchType matchORs( EntNode * );
++        MatchType matchNonORs( EntNode * ) override;
++        MatchType matchORs( EntNode * ) override;
+ };
+ 
+ class SC_CORE_EXPORT OrList : public MultList {
+     public:
+         OrList() : MultList( OR ), choice( -1 ), choice1( -1 ), choiceCount( 0 ) {}
+         ~OrList() {}
+-        bool hit( char * );
+-        MatchType matchORs( EntNode * );
+-        MatchType tryNext( EntNode * );
+-        void unmarkAll( EntNode * );
+-        bool acceptChoice( EntNode * );
++        bool hit( char * ) override;
++        MatchType matchORs( EntNode * ) override;
++        MatchType tryNext( EntNode * ) override;
++        void unmarkAll( EntNode * ) override;
++        bool acceptChoice( EntNode * ) override;
+         bool acceptNextChoice( EntNode * ents ) {
+             choice++;
+             return ( acceptChoice( ents ) );
+         }
+-        void reset() {
++        void reset() override {
+             choice = -1;
+             choice1 = -2;
+             choiceCount = 0;
+diff --git a/include/clstepcore/derivedAttribute.h b/include/clstepcore/derivedAttribute.h
+--- a/include/clstepcore/derivedAttribute.h
++++ b/include/clstepcore/derivedAttribute.h
+@@ -19,7 +19,7 @@
+             const EntityDescriptor & owner
+         );
+         virtual ~Derived_attribute();
+-        const char * AttrExprDefStr( std::string & s ) const;
++        const char * AttrExprDefStr( std::string & s ) const override;
+ 
+         const char * initializer_() {
+             return _initializer;
+diff --git a/include/clstepcore/dispnode.h b/include/clstepcore/dispnode.h
+--- a/include/clstepcore/dispnode.h
++++ b/include/clstepcore/dispnode.h
+@@ -76,7 +76,7 @@
+         int ChangeState( displayStateEnum s );
+         int ChangeList( DisplayNodeList * cmdList );
+ 
+-        void Remove();
++        void Remove() override;
+ 
+     protected:
+ };
+diff --git a/include/clstepcore/dispnodelist.h b/include/clstepcore/dispnodelist.h
+--- a/include/clstepcore/dispnodelist.h
++++ b/include/clstepcore/dispnodelist.h
+@@ -41,12 +41,12 @@
+ 
+ // REDEFINED functions
+         // deletes node from its previous list & appends
+-        virtual void Append( GenericNode * node );
++        void Append( GenericNode * node ) override;
+         // deletes newNode from its previous list & inserts in
+         //  relation to existNode
+-        virtual void InsertAfter( GenericNode * newNode, GenericNode * existNode );
+-        virtual void InsertBefore( GenericNode * newNode, GenericNode * existNode );
+-        virtual void Remove( GenericNode * node );
++        void InsertAfter( GenericNode * newNode, GenericNode * existNode ) override;
++        void InsertBefore( GenericNode * newNode, GenericNode * existNode ) override;
++        void Remove( GenericNode * node ) override;
+ 
+     protected:
+     private:
+diff --git a/include/clstepcore/entityDescriptor.h b/include/clstepcore/entityDescriptor.h
+--- a/include/clstepcore/entityDescriptor.h
++++ b/include/clstepcore/entityDescriptor.h
+@@ -78,7 +78,7 @@
+ 
+         void InitIAttrs( Registry & reg, const char * schNm );
+ 
+-        const char * GenerateExpress( std::string & buf ) const;
++        const char * GenerateExpress( std::string & buf ) const override;
+ 
+         const char * QualifiedName( std::string & s ) const;
+ 
+@@ -125,15 +125,15 @@
+         }
+ 
+         virtual const EntityDescriptor * IsA( const EntityDescriptor * ) const;
+-        virtual const TypeDescriptor * IsA( const TypeDescriptor * td ) const;
+-        virtual const TypeDescriptor * IsA( const char * n ) const {
++        const TypeDescriptor * IsA( const TypeDescriptor * td ) const override;
++        const TypeDescriptor * IsA( const char * n ) const override {
+             return TypeDescriptor::IsA( n );
+         }
+-        virtual const TypeDescriptor * CanBe( const TypeDescriptor * o ) const {
++        const TypeDescriptor * CanBe( const TypeDescriptor * o ) const override {
+             return o -> IsA( this );
+         }
+ 
+-        virtual const TypeDescriptor * CanBe( const char * n ) const {
++        const TypeDescriptor * CanBe( const char * n ) const override {
+             return TypeDescriptor::CanBe( n );
+         }
+ 
+diff --git a/include/clstepcore/entityDescriptorList.h b/include/clstepcore/entityDescriptorList.h
+--- a/include/clstepcore/entityDescriptorList.h
++++ b/include/clstepcore/entityDescriptorList.h
+@@ -35,7 +35,7 @@
+         EntityDescriptorList();
+         virtual ~EntityDescriptorList();
+ 
+-        virtual SingleLinkNode * NewNode() {
++        SingleLinkNode * NewNode() override {
+             return new EntityDescLinkNode;
+         }
+ 
+diff --git a/include/clstepcore/enumTypeDescriptor.h b/include/clstepcore/enumTypeDescriptor.h
+--- a/include/clstepcore/enumTypeDescriptor.h
++++ b/include/clstepcore/enumTypeDescriptor.h
+@@ -11,7 +11,7 @@
+     public:
+         EnumCreator CreateNewEnum;
+ 
+-        const char * GenerateExpress( std::string & buf ) const;
++        const char * GenerateExpress( std::string & buf ) const override;
+ 
+         void AssignEnumCreator( EnumCreator f = 0 ) {
+             CreateNewEnum = f;
+diff --git a/include/clstepcore/explicitItemId.h b/include/clstepcore/explicitItemId.h
+--- a/include/clstepcore/explicitItemId.h
++++ b/include/clstepcore/explicitItemId.h
+@@ -98,7 +98,7 @@
+     : Explicit_item_id( foreign_schema, ld, oi, ni ) {}
+     virtual ~Used_item() {}
+ 
+-    const char * EXPRESS_type() {
++    const char * EXPRESS_type() override {
+         return "USE";
+     }
+ };
+@@ -113,7 +113,7 @@
+     : Explicit_item_id( foreign_schema, ld, oi, ni ) {}
+     virtual ~Referenced_item() {}
+ 
+-    const char * EXPRESS_type() {
++    const char * EXPRESS_type() override {
+         return "REFERENCE";
+     }
+ };
+diff --git a/include/clstepcore/instmgr.h b/include/clstepcore/instmgr.h
+--- a/include/clstepcore/instmgr.h
++++ b/include/clstepcore/instmgr.h
+@@ -85,7 +85,7 @@
+             return &( *master ) [index];
+         }
+ 
+-        MgrNode * FindFileId( int fileId );
++        MgrNode * FindFileId( int fileId ) override;
+         // get the index into display list given a SDAI_Application_instance
+         //  called by see initiated functions
+         int GetIndex( SDAI_Application_instance * se );
+diff --git a/include/clstepcore/inverseAttribute.h b/include/clstepcore/inverseAttribute.h
+--- a/include/clstepcore/inverseAttribute.h
++++ b/include/clstepcore/inverseAttribute.h
+@@ -26,7 +26,7 @@
+         { }
+         virtual ~Inverse_attribute() { }
+ 
+-        const char * AttrExprDefStr( std::string & s ) const;
++        const char * AttrExprDefStr( std::string & s ) const override;
+ 
+         const char * inverted_attr_id_() const {
+             return _inverted_attr_id;
+diff --git a/include/clstepcore/inverseAttributeList.h b/include/clstepcore/inverseAttributeList.h
+--- a/include/clstepcore/inverseAttributeList.h
++++ b/include/clstepcore/inverseAttributeList.h
+@@ -25,7 +25,7 @@
+ class SC_CORE_EXPORT Inverse_attributeList : public  SingleLinkList {
+     private:
+     protected:
+-        virtual SingleLinkNode * NewNode() {
++        SingleLinkNode * NewNode() override {
+             return new Inverse_attributeLinkNode;
+         }
+     public:
+diff --git a/include/clstepcore/mgrnode.h b/include/clstepcore/mgrnode.h
+--- a/include/clstepcore/mgrnode.h
++++ b/include/clstepcore/mgrnode.h
+@@ -94,7 +94,7 @@
+ 
+         // Removes from current list.
+         //  Called before adding to diff list or when destructor is called.
+-        void Remove();
++        void Remove() override;
+ 
+ // DISPLAY LIST OPERATIONS
+         void * SEE();
+@@ -135,7 +135,7 @@
+         }
+ 
+         // OBSOLETE
+-        SDAI_Application_instance  * GetSTEPentity()   {
++        SDAI_Application_instance  * GetSTEPentity()   override {
+             return se;
+         }
+     protected:
+diff --git a/include/clstepcore/mgrnodearray.h b/include/clstepcore/mgrnodearray.h
+--- a/include/clstepcore/mgrnodearray.h
++++ b/include/clstepcore/mgrnodearray.h
+@@ -46,16 +46,16 @@
+ // REDEFINED functions
+         // need to redefine Append() & Insert(GenericNode *) so they call
+         //  MgrNodeArray::Insert(GenericNode *, int index);
+-        virtual int Insert( GenericNode * gn, int index );
+-        virtual void Append( GenericNode * gn )    {
++        int Insert( GenericNode * gn, int index ) override;
++        void Append( GenericNode * gn )    override {
+             Insert( gn, _count );
+         }
+-        virtual int Insert( GenericNode * gn )     {
++        int Insert( GenericNode * gn )     override {
+             return Insert( gn, _count );
+         }
+-        virtual void Remove( int index );
+-        virtual void ClearEntries();
+-        virtual void DeleteEntries();
++        void Remove( int index ) override;
++        void ClearEntries() override;
++        void DeleteEntries() override;
+ 
+ // ADDED functions
+         virtual int MgrNodeIndex( int fileId );
+@@ -76,21 +76,21 @@
+         ~MgrNodeArraySorted() { }
+ 
+ // REDEFINED functions
+-        virtual int Index( GenericNode * gn );
+-        virtual int Index( GenericNode ** gn );
++        int Index( GenericNode * gn ) override;
++        int Index( GenericNode ** gn ) override;
+ 
+-        virtual int Insert( GenericNode * gn );
+-        virtual int Insert( GenericNode * gn, int index ) {
++        int Insert( GenericNode * gn ) override;
++        int Insert( GenericNode * gn, int index ) override {
+             cerr <<
+                  "Call MgrNodeArraySorted::Insert() without index argument instead.\n"
+                  << "index argument: " << index << " being ignored.\n";
+             return Insert( gn );
+         }
+-        virtual void Append( GenericNode * gn )        {
++        void Append( GenericNode * gn )        override {
+             Insert( gn );
+         }
+-        virtual void ClearEntries();
+-        virtual void DeleteEntries();
++        void ClearEntries() override;
++        void DeleteEntries() override;
+ 
+ // ADDED functions
+         virtual int MgrNodeIndex( int fileId );
+diff --git a/include/clstepcore/mgrnodelist.h b/include/clstepcore/mgrnodelist.h
+--- a/include/clstepcore/mgrnodelist.h
++++ b/include/clstepcore/mgrnodelist.h
+@@ -39,12 +39,12 @@
+ 
+ // REDEFINED functions
+         // deletes node from its previous list & appends
+-        virtual void Append( GenericNode * node );
++        void Append( GenericNode * node ) override;
+         // deletes newNode from its previous list & inserts in
+         //  relation to existNode
+-        virtual void InsertAfter( GenericNode * newNode, GenericNode * existNode );
+-        virtual void InsertBefore( GenericNode * newNode, GenericNode * existNode );
+-        virtual void Remove( GenericNode * node );
++        void InsertAfter( GenericNode * newNode, GenericNode * existNode ) override;
++        void InsertBefore( GenericNode * newNode, GenericNode * existNode ) override;
++        void Remove( GenericNode * node ) override;
+ 
+     protected:
+         stateEnum listType;
+diff --git a/include/clstepcore/selectTypeDescriptor.h b/include/clstepcore/selectTypeDescriptor.h
+--- a/include/clstepcore/selectTypeDescriptor.h
++++ b/include/clstepcore/selectTypeDescriptor.h
+@@ -38,14 +38,14 @@
+     int UniqueElements() const {
+         return _unique_elements;
+     }
+-    virtual const TypeDescriptor * IsA( const TypeDescriptor * ) const;
+-    virtual const TypeDescriptor * IsA( const char * n ) const {
++    const TypeDescriptor * IsA( const TypeDescriptor * ) const override;
++    const TypeDescriptor * IsA( const char * n ) const override {
+         return TypeDescriptor::IsA( n );
+     }
+-    virtual const TypeDescriptor * CanBe( const TypeDescriptor * ) const;
+-    virtual const TypeDescriptor * CanBe( const char * n ) const;
+-    virtual const TypeDescriptor * CanBeSet( const char *, const char * )
+-    const;
++    const TypeDescriptor * CanBe( const TypeDescriptor * ) const override;
++    const TypeDescriptor * CanBe( const char * n ) const override;
++    const TypeDescriptor * CanBeSet( const char *, const char * )
++    const override;
+ };
+ 
+ #endif //SELECTTYPEDESCRIPTOR_H
+diff --git a/include/clstepcore/typeDescriptorList.h b/include/clstepcore/typeDescriptorList.h
+--- a/include/clstepcore/typeDescriptorList.h
++++ b/include/clstepcore/typeDescriptorList.h
+@@ -32,7 +32,7 @@
+         TypeDescriptorList();
+         virtual ~TypeDescriptorList();
+ 
+-        virtual SingleLinkNode * NewNode() {
++        SingleLinkNode * NewNode() override {
+             return new TypeDescLinkNode;
+         }
+ 
+diff --git a/src/clstepcore/aggrTypeDescriptor.cc b/src/clstepcore/aggrTypeDescriptor.cc
+--- a/src/clstepcore/aggrTypeDescriptor.cc
++++ b/src/clstepcore/aggrTypeDescriptor.cc
+@@ -14,7 +14,7 @@
+         : _enumType( enumType ) {
+     }
+ 
+-    virtual SingleLinkNode * NewNode() {
++    SingleLinkNode * NewNode() override {
+         return new EnumNode( _enumType ? _enumType->CreateEnum() : 0 );
+     }
+ };
+diff --git a/src/clstepcore/enumTypeDescriptor.cc b/src/clstepcore/enumTypeDescriptor.cc
+--- a/src/clstepcore/enumTypeDescriptor.cc
++++ b/src/clstepcore/enumTypeDescriptor.cc
+@@ -82,15 +82,15 @@
+         nullify();
+     }
+ 
+-    virtual int no_elements() const {
++    int no_elements() const override {
+         return static_cast<int>( _elements.size() );
+     }
+ 
+-    virtual const char * Name() const {
++    const char * Name() const override {
+         return _name.c_str();
+     }
+ 
+-    virtual const char * element_at( int index ) const {
++    const char * element_at( int index ) const override {
+         return index >= 0 && static_cast<size_t>( index ) < _elements.size() ?
+             _elements[index].c_str() : "UNSET";
+     }
+diff --git a/src/clstepcore/test/test_operators_SDAI_Select.cc b/src/clstepcore/test/test_operators_SDAI_Select.cc
+--- a/src/clstepcore/test/test_operators_SDAI_Select.cc
++++ b/src/clstepcore/test/test_operators_SDAI_Select.cc
+@@ -25,7 +25,7 @@
+             SDAI_Select::operator=( other );
+             return *this;
+         }
+-        SDAI_Select& operator=( const SDAI_Select& other ) {
++        SDAI_Select& operator=( const SDAI_Select& other ) override {
+             SDAI_Select::operator=( other );
+             return *this;
+         }
+@@ -41,12 +41,12 @@
+         }
+ 
+         // dummy implementations of pure virtual funcs
+-        const TypeDescriptor* AssignEntity( SDAI_Application_instance * /*i*/ ) { return (TypeDescriptor *)0; }
+-        SDAI_Select* NewSelect(){ return (SDAI_Select *)0; }
+-        BASE_TYPE ValueType() const { return sdaiBOOLEAN; }
+-        void STEPwrite_content( std::ostream& /*o*/, const char* /*a*/ ) const {}
+-        Severity StrToVal_content( const char* /*a*/, InstMgrBase* /*m*/ ) { return SEVERITY_NULL; }
+-        Severity STEPread_content(std::istream& i, InstMgrBase* m, const char* c, int n, const char* d) {
++        const TypeDescriptor* AssignEntity( SDAI_Application_instance * /*i*/ ) override { return (TypeDescriptor *)0; }
++        SDAI_Select* NewSelect()override { return (SDAI_Select *)0; }
++        BASE_TYPE ValueType() const override { return sdaiBOOLEAN; }
++        void STEPwrite_content( std::ostream& /*o*/, const char* /*a*/ ) const override {}
++        Severity StrToVal_content( const char* /*a*/, InstMgrBase* /*m*/ ) override { return SEVERITY_NULL; }
++        Severity STEPread_content(std::istream& i, InstMgrBase* m, const char* c, int n, const char* d) override {
+             (void)i; (void)m; (void)c; (void)n; (void)d; return SEVERITY_NULL;
+         }
+ };
+diff --git a/src/exp2cxx/classes_type.c b/src/exp2cxx/classes_type.c
+--- a/src/exp2cxx/classes_type.c
++++ b/src/exp2cxx/classes_type.c
+@@ -231,11 +231,11 @@
+              EnumName( TYPEget_name( type ) ) );
+ 
+     /*      others          */
+-    fprintf( inc, "\n        inline virtual const char * Name () const\n" );
++    fprintf( inc, "\n        inline const char * Name () const override\n" );
+     fprintf( inc, "                {  return type->Name();  }\n" );
+-    fprintf( inc, "        inline virtual int no_elements () const"
++    fprintf( inc, "        inline int no_elements () const override"
+              "  {  return %d;  }\n", cnt );
+-    fprintf( inc, "        virtual const char * element_at (int n) const;\n" );
++    fprintf( inc, "        const char * element_at (int n) const override;\n" );
+ 
+     /*  end class definition  */
+     fprintf( inc, "};\n" );
+@@ -258,7 +258,7 @@
+     fprintf( inc, "  public:\n" );
+     fprintf( inc, "    %s_agg( EnumTypeDescriptor * =%s);\n", n, tdnm );
+     fprintf( inc, "    virtual ~%s_agg();\n", n );
+-    fprintf( inc, "    virtual SingleLinkNode * NewNode()\n" );
++    fprintf( inc, "    SingleLinkNode * NewNode() override\n" );
+     fprintf( inc, "        { return new EnumNode (new %s( \"\", enum_type )); }"
+              "\n", n );
+ 
+diff --git a/src/exp2cxx/complexSupport.h b/src/exp2cxx/complexSupport.h
+--- a/src/exp2cxx/complexSupport.h
++++ b/src/exp2cxx/complexSupport.h
+@@ -208,21 +208,21 @@
+         const char * Name() {
+             return name;
+         }
+-        int contains( const char * nm ) {
++        int contains( const char * nm ) override {
+             return *this == nm;
+         }
+-        int hit( const char * nm ) {
++        int hit( const char * nm ) override {
+             return *this == nm;
+         }
+-        int isDependent( const char * );
+-        MatchType matchNonORs( EntNode * );
+-        int acceptChoice( EntNode * );
+-        void unmarkAll( EntNode * );
+-        void reset() {
++        int isDependent( const char * ) override;
++        MatchType matchNonORs( EntNode * ) override;
++        int acceptChoice( EntNode * ) override;
++        void unmarkAll( EntNode * ) override;
++        void reset() override {
+             viable = UNKNOWN;
+             I_marked = NOMARK;
+         }
+-        void write( ostream & );
++        void write( ostream & ) override;
+ 
+     private:
+         char name[BUFSIZ+1];    // Name of entity we correspond to.
+@@ -240,11 +240,11 @@
+     public:
+         MultList( JoinType j ) : EntList( j ), numchildren( 0 ), childList( 0 ) {}
+         ~MultList();
+-        void setLevel( int );
+-        int getMaxLevel();
+-        int contains( const char * );
+-        int hit( const char * );
+-        int isDependent( const char * );
++        void setLevel( int ) override;
++        int getMaxLevel() override;
++        int contains( const char * ) override;
++        int hit( const char * ) override;
++        int isDependent( const char * ) override;
+         void appendList( EntList * );
+         EntList * copyList( EntList * );
+         void processSubExp( Expression, Entity, ComplexCollect * );
+@@ -260,10 +260,10 @@
+         EntList * getLast() {
+             return ( getChild( numchildren - 1 ) );
+         }
+-        void unmarkAll( EntNode * );
++        void unmarkAll( EntNode * ) override;
+         int prevKnown( EntList * );
+-        void reset();
+-        void write( ostream & );
++        void reset() override;
++        void write( ostream & ) override;
+ 
+     protected:
+         int numchildren;
+@@ -281,7 +281,7 @@
+         JoinList( JoinType j ) : MultList( j ) {}
+         ~JoinList() {}
+         void setViableVal( EntNode * );
+-        int acceptChoice( EntNode * );
++        int acceptChoice( EntNode * ) override;
+ };
+ 
+ class AndOrList : public JoinList {
+@@ -290,8 +290,8 @@
+     public:
+         AndOrList() : JoinList( ANDOR ) {}
+         ~AndOrList() {}
+-        MatchType matchNonORs( EntNode * );
+-        MatchType matchORs( EntNode * );
++        MatchType matchNonORs( EntNode * ) override;
++        MatchType matchORs( EntNode * ) override;
+ };
+ 
+ class AndList : public JoinList {
+@@ -302,9 +302,9 @@
+     public:
+         AndList() : JoinList( AND ), supertype( 0 ) {}
+         ~AndList() {}
+-        int isDependent( const char * );
+-        MatchType matchNonORs( EntNode * );
+-        MatchType matchORs( EntNode * );
++        int isDependent( const char * ) override;
++        MatchType matchNonORs( EntNode * ) override;
++        MatchType matchORs( EntNode * ) override;
+ 
+     private:
+         int supertype;  // do I represent a supertype?
+@@ -314,16 +314,16 @@
+     public:
+         OrList() : MultList( OR ), choice( -1 ), choice1( -2 ), choiceCount( 0 ) {}
+         ~OrList() {}
+-        int hit( const char * );
+-        MatchType matchORs( EntNode * );
+-        MatchType tryNext( EntNode * );
+-        void unmarkAll( EntNode * );
+-        int acceptChoice( EntNode * );
++        int hit( const char * ) override;
++        MatchType matchORs( EntNode * ) override;
++        MatchType tryNext( EntNode * ) override;
++        void unmarkAll( EntNode * ) override;
++        int acceptChoice( EntNode * ) override;
+         int acceptNextChoice( EntNode * ents ) {
+             choice++;
+             return ( acceptChoice( ents ) );
+         }
+-        void reset() {
++        void reset() override {
+             choice = -1;
+             choice1 = -2;
+             choiceCount = 0;
+diff --git a/src/exp2cxx/selects.c b/src/exp2cxx/selects.c
+--- a/src/exp2cxx/selects.c
++++ b/src/exp2cxx/selects.c
+@@ -521,24 +521,24 @@
+ 
+     fprintf( f, "\n  public:\n" );
+     fprintf( f,
+-             "    virtual const TypeDescriptor * AssignEntity (SDAI_Application_instance * se);\n"
+-             "    virtual SDAI_Select * NewSelect ();\n"
++             "    const TypeDescriptor * AssignEntity (SDAI_Application_instance * se) override;\n"
++             "    SDAI_Select * NewSelect () override;\n"
+            );
+ 
+-    fprintf( f, "\n    virtual BASE_TYPE ValueType() const;\n" );
++    fprintf( f, "\n    BASE_TYPE ValueType() const override;\n" );
+ 
+     fprintf( f, "\n\n// STEP Part 21\n" );
+-    fprintf( f, "    virtual void STEPwrite_content (ostream& out =std::cout,\n"
+-             "                    const char *currSch =0) const;\n" );
+-    fprintf( f, "    virtual void STEPwrite_verbose (ostream& out =std::cout,\n"
+-             "                    const char *currSch =0) const;\n" );
+-    fprintf( f, "    virtual Severity STEPread_content (istream& in =cin,\n"
++    fprintf( f, "    void STEPwrite_content (ostream& out =std::cout,\n"
++             "                    const char *currSch =0) const override;\n" );
++    fprintf( f, "    void STEPwrite_verbose (ostream& out =std::cout,\n"
++             "                    const char *currSch =0) const override;\n" );
++    fprintf( f, "    Severity STEPread_content (istream& in =cin,\n"
+              "        InstMgrBase * instances =0, const char *utype =0,\n"
+-             "        int addFileId =0, const char *currSch =0);\n" );
++             "        int addFileId =0, const char *currSch =0) override;\n" );
+ 
+     /*  read StrToVal_content   */
+-    fprintf( f, "    virtual Severity StrToVal_content "
+-             "(const char *,\n        InstMgrBase * instances =0);\n" );
++    fprintf( f, "    Severity StrToVal_content "
++             "(const char *,\n        InstMgrBase * instances =0) override;\n" );
+ 
+     /*  constructor(s)  */
+     fprintf( f, "\n// STEP Part 22:  SDAI\n" );
+@@ -643,7 +643,7 @@
+ 
+     fprintf( f, "\n#ifdef COMPILER_DEFINES_OPERATOR_EQ\n#else\n" );
+     fprintf( f, "    %s& operator =( %s * const & );\n", n, n );
+-    fprintf( f, "    SDAI_Select& operator =( const SDAI_Select& );\n" );
++    fprintf( f, "    SDAI_Select& operator =( const SDAI_Select& ) override;\n" );
+     fprintf( f, "#endif\n" );
+ 
+     fprintf( f, "\n    //  part 5\n" );
+@@ -684,7 +684,7 @@
+     fprintf( f, "  public:\n" );
+     fprintf( f, "    %s_agg( SelectTypeDescriptor * =%s );\n", n, tdnm );
+     fprintf( f, "    ~%s_agg();\n", n );
+-    fprintf( f, "    virtual SingleLinkNode * NewNode()\n" );
++    fprintf( f, "    SingleLinkNode * NewNode() override\n" );
+     fprintf( f, "     { return new SelectNode (new %s( sel_type )); }\n", n );
+     fprintf( f, "};\n" );
+ 
+diff --git a/src/exp2python/src/complexSupport.h b/src/exp2python/src/complexSupport.h
+--- a/src/exp2python/src/complexSupport.h
++++ b/src/exp2python/src/complexSupport.h
+@@ -208,21 +208,21 @@
+         const char * Name() {
+             return name;
+         }
+-        int contains( const char * nm ) {
++        int contains( const char * nm ) override {
+             return *this == nm;
+         }
+-        int hit( const char * nm ) {
++        int hit( const char * nm ) override {
+             return *this == nm;
+         }
+-        int isDependent( const char * );
+-        MatchType matchNonORs( EntNode * );
+-        int acceptChoice( EntNode * );
+-        void unmarkAll( EntNode * );
+-        void reset() {
++        int isDependent( const char * ) override;
++        MatchType matchNonORs( EntNode * ) override;
++        int acceptChoice( EntNode * ) override;
++        void unmarkAll( EntNode * ) override;
++        void reset() override {
+             viable = UNKNOWN;
+             I_marked = NOMARK;
+         }
+-        void write( ostream & );
++        void write( ostream & ) override;
+ 
+     private:
+         char name[BUFSIZ+1];    // Name of entity we correspond to.
+@@ -240,11 +240,11 @@
+     public:
+         MultList( JoinType j ) : EntList( j ), numchildren( 0 ), childList( 0 ) {}
+         ~MultList();
+-        void setLevel( int );
+-        int getMaxLevel();
+-        int contains( const char * );
+-        int hit( const char * );
+-        int isDependent( const char * );
++        void setLevel( int ) override;
++        int getMaxLevel() override;
++        int contains( const char * ) override;
++        int hit( const char * ) override;
++        int isDependent( const char * ) override;
+         void appendList( EntList * );
+         EntList * copyList( EntList * );
+         void processSubExp( Expression, Entity, ComplexCollect * );
+@@ -260,10 +260,10 @@
+         EntList * getLast() {
+             return ( getChild( numchildren - 1 ) );
+         }
+-        void unmarkAll( EntNode * );
++        void unmarkAll( EntNode * ) override;
+         int prevKnown( EntList * );
+-        void reset();
+-        void write( ostream & );
++        void reset() override;
++        void write( ostream & ) override;
+ 
+     protected:
+         int numchildren;
+@@ -281,7 +281,7 @@
+         JoinList( JoinType j ) : MultList( j ) {}
+         ~JoinList() {}
+         void setViableVal( EntNode * );
+-        int acceptChoice( EntNode * );
++        int acceptChoice( EntNode * ) override;
+ };
+ 
+ class AndOrList : public JoinList {
+@@ -290,8 +290,8 @@
+     public:
+         AndOrList() : JoinList( ANDOR ) {}
+         ~AndOrList() {}
+-        MatchType matchNonORs( EntNode * );
+-        MatchType matchORs( EntNode * );
++        MatchType matchNonORs( EntNode * ) override;
++        MatchType matchORs( EntNode * ) override;
+ };
+ 
+ class AndList : public JoinList {
+@@ -302,9 +302,9 @@
+     public:
+         AndList() : JoinList( AND ), supertype( 0 ) {}
+         ~AndList() {}
+-        int isDependent( const char * );
+-        MatchType matchNonORs( EntNode * );
+-        MatchType matchORs( EntNode * );
++        int isDependent( const char * ) override;
++        MatchType matchNonORs( EntNode * ) override;
++        MatchType matchORs( EntNode * ) override;
+ 
+     private:
+         int supertype;  // do I represent a supertype?
+@@ -314,16 +314,16 @@
+     public:
+         OrList() : MultList( OR ), choice( -1 ), choice1( -2 ), choiceCount( 0 ) {}
+         ~OrList() {}
+-        int hit( const char * );
+-        MatchType matchORs( EntNode * );
+-        MatchType tryNext( EntNode * );
+-        void unmarkAll( EntNode * );
+-        int acceptChoice( EntNode * );
++        int hit( const char * ) override;
++        MatchType matchORs( EntNode * ) override;
++        MatchType tryNext( EntNode * ) override;
++        void unmarkAll( EntNode * ) override;
++        int acceptChoice( EntNode * ) override;
+         int acceptNextChoice( EntNode * ents ) {
+             choice++;
+             return ( acceptChoice( ents ) );
+         }
+-        void reset() {
++        void reset() override {
+             choice = -1;
+             choice1 = -2;
+             choiceCount = 0;
